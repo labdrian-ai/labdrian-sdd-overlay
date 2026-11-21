@@ -1,0 +1,28 @@
+{
+  "kind": "sweep",
+  "base": "4748e19a0685220f03735056599458041561cfc0",
+  "head": "079981c74ed9a40e9345f6065ce71e3d976e64a0",
+  "diff_sha256": "c4fa415829cbf20f03df39f17adaa68f5dfa21a726c2e2998f32aee3460d6de1",
+  "outcome": "fired",
+  "t1": {
+    "deleted_or_renamed": [],
+    "removed_names": [
+      {
+        "name": "isDir",
+        "hits": [
+          "longterm-mem/internal/ops/doctor.go",
+          "longterm-mem/internal/ops/doctor_vaultfiles_port_test.go",
+          "longterm-mem/internal/vaultfs/vault_test.go"
+        ]
+      }
+    ]
+  },
+  "t2": [],
+  "t3": [
+    " M odd/tasks/labdrian-orchestrator-opencode.md"
+  ],
+  "t4": {
+    "leftovers": [],
+    "orphaned_fixtures": []
+  }
+}

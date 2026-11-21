@@ -17,12 +17,13 @@ import (
 //
 // Phase 7 builds the Claude Code implementation task by task, and a Claude
 // Code claim is upgraded in the commit that adds the tests proving it, so the
-// table states only what the tests at that commit prove. Codex, Pi, and
-// OpenCode are declared only: they state what is proven today (installation)
-// and an honest unsupported, with the limit written, for the rest, except for
-// Codex's partial MCP memory gate (C23 M12b). OpenCode is also declared untested:
-// it is installed here but outside the regular runtime set, and no test exercises
-// it (one recorded live probe aside).
+// table states only what the tests at that commit prove. Codex and Pi are
+// declared only: they state what is proven today (installation) and an honest
+// unsupported, with the limit written, for the rest, except for Codex's partial
+// MCP memory gate (C23 M12b). OpenCode has claims of its own (T16): its adapter,
+// both plugins and the engine source are tested at file level, under node and
+// against a real opencode binary when there is one, and it is declared untested
+// only for what needs a model session, which T17 observes.
 //
 // Skills, added in Phase 8, is the exception to "declared only": every runtime
 // states what its own tests prove about carrying skills into it, and all four are
@@ -33,20 +34,31 @@ var declarations = []Declaration{
 		Target: TargetClaude,
 		Claims: []Claim{
 			supported(Installation,
-				"Install, update, uninstall, and status of the overlay's lifecycle hook families in Claude Code settings.json, among them the Stop hook that asks for each thing the first commit with unfinished review steps misses, once per session and commit, and the builder guard on the Agent tool that denies a builder launch without a task the shaper designed (a speed bump). Hook changes load only after a Claude Code restart, so install and update report restart_required.",
+				"Install, update, uninstall, and status of the overlay's lifecycle hook families in Claude Code settings.json, among them the Stop hook that asks for each thing the first commit with unfinished review steps misses, once per session and commit, and the builder guard on the Agent tool that denies a launch without a task the shaper designed (a speed bump), and the \"agent\": \"foreman\" and \"outputStyle\": \"labdrian\" keys, each owned by value, never overwriting another. Install and update report restart_required.",
+				"cmd:TestMergeSettingsKeepsAForeignOutputStyleAndSaysSoOnStderr",
+				"cmd:TestUninstallHooksRemovesTheOutputStyleKeyOnlyWhenItIsLabdrian",
+				"runtime:TestClaudeInstallAndUpdateCarryTheNoticeOfAForeignMainAgentValue",
+				"runtime:TestClaudeInstallAndUpdateKeepAForeignOutputStyleAndSayIt",
+				"runtime:TestClaudeInstallAndUpdateWriteTheOutputStyleKey",
 				"runtime:TestClaudeInstallWritesLifecycleHooksAndReportsSupportedStatus",
 				"runtime:TestClaudeInstallWritesTheBuilderGuard",
 				"runtime:TestClaudeInstallWritesTheReviewStopHook",
 				"runtime:TestClaudeStatusFailsWhenSettingsIsMalformed",
+				"runtime:TestClaudeStatusIsPartialAndNamesAForeignMainAgentValue",
+				"runtime:TestClaudeStatusIsPartialAndNamesAForeignOutputStyleValue",
 				"runtime:TestClaudeStatusIsPartialUntilInstallHooksIsRerunForTheBuilderGuard",
 				"runtime:TestClaudeStatusIsPartialUntilInstallHooksIsRerunForTheReviewStopHook",
 				"runtime:TestClaudeStatusIsPartialWhenTheBuilderGuardEntryDrifted",
+				"runtime:TestClaudeStatusIsPartialWhenTheMainAgentKeyIsMissing",
+				"runtime:TestClaudeStatusIsPartialWhenTheOutputStyleKeyIsMissing",
 				"runtime:TestClaudeStatusIsPartialWhenTheReviewStopHookEntryDrifted",
 				"runtime:TestClaudeStatusRequiresFullLifecycleState",
 				"runtime:TestClaudeUninstallRemovesOwnedHooksAndReturnsUnhealthyStatus",
 				"runtime:TestClaudeUninstallRemovesTheBuilderGuardAndKeepsForeignAgentEntries",
+				"runtime:TestClaudeUninstallRemovesTheOutputStyleKeyOnlyWhenItIsLabdrian",
 				"runtime:TestClaudeUninstallRemovesTheReviewStopHookAndKeepsForeignStopEntries",
 				"runtime:TestClaudeUpdateRefreshesLifecycleAndKeepsSupportedStatus",
+				"status:TestAForeignOutputStyleIsReportedAsAConflict",
 				"status:TestTheBuilderGuardNamesWhatIsMissingOrDriftedAndTheLimitOfAGuard",
 				"status:TestTheReviewStopHookNamesWhatIsMissingOrDriftedAndAsksForARestart",
 			),
@@ -186,22 +198,109 @@ var declarations = []Declaration{
 	},
 	{
 		Target:   TargetOpenCode,
-		Untested: "OpenCode is outside the regular runtime set here and no test exercises it",
-		Claims: append([]Claim{
+		Untested: "No test drives a model session. The adapter, both plugins and the engine source run at file level and under node against a recording engine (skipped without node), and one test loads both installed plugins into the real opencode binary (skipped without it). What needs a model session stays untested: context reaching a session, a captured Key Learnings item, the prompt and execute.after shapes, compaction (T17).",
+		Claims: []Claim{
 			partial(Installation,
-				"Install, update, uninstall, and status are tested at file level against a temporary config root. Status reaches supported only after a running OpenCode plugin writes its active marker; tests write that marker by hand, so plugin loading by a real OpenCode is unverified.",
+				"Install, update, uninstall and status are tested at file level against a temporary config root: three owned opencode.json entries, one AGENTS.md block, the parity plugin and the memorycard plugin. Status reaches supported only when both plugins wrote their active marker; a test with the real opencode binary loads both installed plugins (it skips without the binary). A restart is owed after install and update.",
+				"cmd:TestRuntimeCLIOpenCodeInstallStatusUninstallInASandboxHome",
+				"runtime:TestOpenCodeAGENTSIsNotRewrittenWhenCurrent",
+				"runtime:TestOpenCodeAGENTSKeepsEveryByteOutsideTheBlockAndReplacesItInPlace",
+				"runtime:TestOpenCodeAGENTSOfTheShippedOverlayHoldsTheOwnerRulesAndTheStyleBody",
+				"runtime:TestOpenCodeAGENTSWithBrokenMarkersIsRefusedAndKept",
+				"runtime:TestOpenCodeDropsTheStyleFrontmatterInEveryShape",
+				"runtime:TestOpenCodeInstallKeepsEveryForeignKeyAndWritesABackupOnce",
+				"runtime:TestOpenCodeInstallKeepsTheBytesAroundAContainerItHasToCreate",
+				"runtime:TestOpenCodeInstallLeavesAForeignDefaultAgentAndSaysSo",
+				"runtime:TestOpenCodeInstallLeavesAForeignMCPEntryAndSaysSo",
+				"runtime:TestOpenCodeInstallOverACheckoutWithNoInstructionSourcesIsTheBaseResultWithANote",
+				"runtime:TestOpenCodeInstallRefusesAFileItCannotParseAndChangesNothing",
+				"runtime:TestOpenCodeInstallRefusesDuplicateKeysAndTrailingContent",
+				"runtime:TestOpenCodeInstallSplicesOnlyTheOwnedEntriesIntoTheOwnersBytes",
+				"runtime:TestOpenCodeInstallTwiceWritesNothingTheSecondTime",
 				"runtime:TestOpenCodeInstallUpdatePreservesLoadedMarkerUntilRestart",
+				"runtime:TestOpenCodeInstallWritesAGENTSFromTheRulesTheStyleBodyAndTheMemorycardBlock",
+				"runtime:TestOpenCodeInstallWritesNoSkillAndSaysNothingWhenThereAreNoCopies",
 				"runtime:TestOpenCodeInstallWritesPluginConfigAndRestartRequiredStatus",
+				"runtime:TestOpenCodeInstallWritesTheMemorycardPluginAndItsRecord",
+				"runtime:TestOpenCodeInstallWritesTheV2ConfigWithForemanAndTheMCPServers",
+				"runtime:TestOpenCodeLeavesAMemorycardPluginItDidNotWriteAndSaysSo",
+				"runtime:TestOpenCodeLoadsTheInstalledPluginAndItWritesItsActiveMarker",
+				"runtime:TestOpenCodeMemorycardBlockNamesTheToolsAndNeverTheOldStore",
+				"runtime:TestOpenCodeRefusedAGENTSDoesNotStopTheConfigAndNamesItsReason",
+				"runtime:TestOpenCodeRefusedConfigDoesNotStopAGENTSNorTheSkillsReport",
+				"runtime:TestOpenCodeReportsLabdrianSkillsFoundWhereOpenCodeReadsThemFirst",
+				"runtime:TestOpenCodeStatusIsPartialWhileAGENTSIsMissingOrStale",
+				"runtime:TestOpenCodeStatusIsPartialWhileTheOwnedEntriesAreMissing",
+				"runtime:TestOpenCodeStatusIsSupportedOnlyWhenBothPluginsAreActive",
 				"runtime:TestOpenCodeStatusRejectsTamperedPromptConfig",
 				"runtime:TestOpenCodeStatusSupportedWhenActiveMarkerMatchesHash",
+				"runtime:TestOpenCodeUninstallGivesBackAnAbsentFileAbsentAndKeepsAForeignAgent",
+				"runtime:TestOpenCodeUninstallNamesBothCleanupsThatFailed",
+				"runtime:TestOpenCodeUninstallOfAFileItCannotParseSaysSoAndKeepsIt",
+				"runtime:TestOpenCodeUninstallRemovesOnlyTheBlockAndGivesBackTheFile",
+				"runtime:TestOpenCodeUninstallRemovesOnlyTheOwnedEntries",
 				"runtime:TestOpenCodeUninstallRemovesPluginAndConfig",
+				"runtime:TestOpenCodeUninstallRemovesTheMemorycardPluginAndRecordAndNothingElseInItsDirectory",
+				"runtime:TestOpenCodeUpdateRewritesAChangedMemorycardPluginAndTheProgramItRuns",
+				"runtime:TestOpenCodeWritesTheAbsolutePathOfTheServersItFinds",
 			),
-		}, declaredOnlyClaims("OpenCode", "Not implemented: the engine does not check whether OpenCode has credentials, and the presence prober has no credentials check for it.",
+			// OpenCode has its own claims since T16 (S14), so it no longer takes the
+			// declared-only list that Codex and Pi still share. A claim is partial
+			// only when a test named here backs it; what needs a model session is
+			// unsupported or says so, and points at T17.
+			partial(Projection,
+				"The parity plugin runs projection hook --source opencode: SessionStart context goes on the system prompt of every model call of the session, byte-stable, and UserPromptSubmit context joins the user's prompt text. Tests run the plugin under node against a recording engine (skipped without node). The prompt and execute.after shapes come from the binary only; no test observes a model session receiving the context (T17).",
+				"cmd:TestTheSameSessionIdUnderTwoSourcesIsTwoSessions",
+				"runtime:TestOpenCodeBridgeAddsNothingToTheModelCallWhenTheEngineHasNoBlock",
+				"runtime:TestOpenCodeBridgeCarriesThePromptContextInTheUsersPromptAndNeverInTheSystemPrompt",
+				"runtime:TestOpenCodeBridgeKeepsTheSystemPromptByteStableAcrossPrompts",
+				"runtime:TestOpenCodeBridgeLeavesAPromptAloneWhenTheEngineHasNothingToAdd",
+				"runtime:TestOpenCodeBridgeLogsOncePerProcessAnAnswerItCannotPutInAPromptOfAnUnexpectedShape",
+				"runtime:TestOpenCodeBridgePutsTheSessionStartContextIntoEveryModelCallOfTheSession",
+				"runtime:TestOpenCodeBridgeSessionEventsSurviveAnEngineThatFails",
+			),
+			partial(Dispatch,
+				"The engine never starts sessions. The same bridge asks the engine at session start and at each prompt whose block changed (T35), and the Stop hook (experimental.idle, an experimental OpenCode API) forces another turn when the engine blocks the stop. Tests run it under node against a recording engine that answers as told, so no workflow binding is exercised; no test observes a model session being steered (T17).",
+				"runtime:TestOpenCodeBridgeAsksTheStopOfMainSessionsOnly",
+				"runtime:TestOpenCodeBridgeForcesAnotherTurnWhenTheEngineBlocksTheStop",
+				"runtime:TestOpenCodeBridgeKeepsTheStopGuardAcrossThePromptItCaused",
+				"runtime:TestOpenCodeBridgeLetsTheSessionStopWhenTheEngineDoesNotBlock",
+				"runtime:TestOpenCodeBridgePutsTheSessionStartContextIntoEveryModelCallOfTheSession",
+			),
+			partial(Cancellation,
+				"The bridge throws Tool.Error with the reason of the engine's PreToolUse denial (node, recording engine); that the denied call then does not run is an L10 recording, unproven with a model until T17. The engine maps patch to Edit (hookwire test); the paused-workflow edit gate is proven for Claude Code tool names, not through --source opencode or patch. An in-flight tool call cannot be interrupted, and shell is never gated.",
+				"cmd:TestPreToolUseDeniesTheEditToolsOfAPausedWorkflow",
+				"hookwire:TestAdaptToolNameOpencode",
+				"runtime:TestOpenCodeBridgeDeniesACallTheEngineDeniesWithToolError",
+				"runtime:TestOpenCodeBridgeLetsACallThroughWhenTheEngineFailsAndSaysSoOnce",
+			),
+			unsupported(Persistence,
+				"Not implemented: the plugin stores no binding between an OpenCode session and a workflow. The engine's binding belongs to the repository, and no test ties it to a model session (T17)."),
+			unsupported(Restart,
+				"Not implemented: no test shows a new OpenCode session re-binding to an on-disk workflow. The bridge asks the engine at each session start, which only a model session can show (T17)."),
+			unsupported(Authentication,
+				"Not implemented: the engine does not check whether OpenCode has credentials, and the presence prober has no credentials check for it. A provider login is observed only with a model session (T17)."),
+			partial(MemoryEnforcement,
+				"Gate via --source opencode: the OpencodeAdaptsBeforeGate and OpencodeMemorycardReads subtests of cmd:TestCodexSourceProcesses answer longterm-mem and memorycard reads as Claude Code; execute (not mapped) stays silent; a bridge test pins an execute and its inner memorycard call. The plugin puts context on new main sessions and sends each subagent's final text to memorycard capture (fake memorycard). No memory write is blocked; a saved Key Learnings item and a real session are untested (T17).",
+				"cmd:TestCodexSourceProcesses",
+				"hookwire:TestAdaptToolNameOpencode",
+				"runtime:TestMemorycardPluginAsksNothingInAChildSession",
+				"runtime:TestMemorycardPluginCapturesTheFinalTextOfASubagentOnStdin",
+				"runtime:TestMemorycardPluginPutsTheMemorycardContextOnTheSystemPromptOfANewSession",
+				"runtime:TestOpenCodeBridgeDeniesACallTheEngineDeniesWithToolError",
+				"runtime:TestOpenCodeBridgeJudgesTheInnerMemorycardCallOfACodeModeExecute",
+				"runtime:TestOpenCodeBridgeThrowsTheEnginesReasonForADeniedInnerMemorycardRead",
+			),
 			partial(Skills,
-				"labdrian apply copies global skills into OpenCode's skills directory, tested only on a fixture overlay and a sandbox home, never the real skills. A live OpenCode 1.18.31 session on 2026-09-30 discovered project skills under .agents/skills and .claude/skills (recorded, not tested); the global tier was not observed live, its names also existing in several global directories. No test observes OpenCode loading a skill, and no test connects the project tier to OpenCode.",
+				"labdrian apply copies no skill for OpenCode, which reads the global .claude/skills: a copy in its own directory would shadow that one. Install, update and status only report labdrian skills found where OpenCode reads first, and never write or remove one (tested on a fixture overlay and a sandbox home, never the real skills). A live OpenCode 1.18.31 session on 2026-09-30 discovered project skills under .agents/skills and .claude/skills (recorded, not tested). No test observes OpenCode loading a skill.",
 				"installer:TestApply_AgentsLandInNativeAgentDirs",
+				"installer:TestSyncCheck_OpenCodeChecksItsAgentsWithNoSkillsDirectory",
 				"installer:TestUnrelatedSkillUnchanged",
-			))...),
+				"runtime:TestOpenCodeInstallWritesNoSkillAndSaysNothingWhenThereAreNoCopies",
+				"runtime:TestOpenCodeReportsLabdrianSkillsFoundWhereOpenCodeReadsThemFirst",
+				"runtime:TestOpenCodeStatusReportsShadowingSkillsWhateverItsOutcome",
+			),
+		},
 	},
 }
 
@@ -290,8 +389,8 @@ func (d Declaration) clone() Declaration {
 	return out
 }
 
-// memoryEnforcementDetail bounds the Codex MCP gate and the remaining
-// declared-only runtimes without changing any other runtime's claim.
+// memoryEnforcementDetail bounds the Codex MCP gate and the text of Pi, the one
+// other declared-only runtime (OpenCode states its own claim since T16).
 func memoryEnforcementDetail(runtime, scope string) string {
 	if runtime == "Codex" {
 		return "PreToolUse checks plan sources for MCP Engram reads, memorycard reads and longterm-mem query/get; searches/queries check project, goal-scoped queries check goal. install-hooks installs --source codex; trust each new or changed handler in the Codex TUI. Limits: Codex fails open on hook failure; no procedural skills, Bash or apply_patch enforcement; no project check for reads by id; agent_id ignored. PostToolUse records successful MCP reads only. Proven by engine hook processes, not live validation."

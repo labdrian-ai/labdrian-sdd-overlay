@@ -1,0 +1,46 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "4d142c012aed3590a46b9cb636cf7b0365302ad4",
+    "head": "bf421c581e83c4b3a491cb3f7e3704022d66b2e9",
+    "diff_sha256": "41d9c13baa65b94703b7ee7010eb31ebe88e001ffd16b8ecd34f2404c3b38690",
+    "paths": [
+      "odd/tasks/labdrian-orchestrator-opencode.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "4d142c012aed3590a46b9cb636cf7b0365302ad4",
+      "head": "bf421c581e83c4b3a491cb3f7e3704022d66b2e9",
+      "diff_sha256": "41d9c13baa65b94703b7ee7010eb31ebe88e001ffd16b8ecd34f2404c3b38690"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/labdrian-orchestrator-opencode.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/labdrian-orchestrator-opencode.md:627",
+        "claim": "L71 states a future shaper re-entry will add a task before T22, but the diff adds no such task or Specs/Tasks update. The log entry therefore refers to work not yet recorded elsewhere in the document, which could be missed. Also 'de todos lados' is cited as an owner quote not shown in this diff, so its provenance cannot be verified here.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/labdrian-orchestrator-opencode.md:627"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff is a single appended log line (L71) in a docs-only file; no code or behavior is changed.",
+      "The line follows the format of L68-L70 (date, verbatim owner quote, decision, consequence).",
+      "The claim 'Risk: none' is consistent with a documentation-only change."
+    ]
+  }
+}

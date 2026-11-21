@@ -1,0 +1,48 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "bd6a9526b4ae0004272207bbce467e1d2022431b",
+    "head": "fcf39a17d81a813ee8db35ad47b09b2b72138496",
+    "diff_sha256": "6f1ce2290222341f104ed7e5d2de9ce4ee22f6d919db17b3cd844e6becd7fadf",
+    "paths": [
+      "engine/hookwire/source_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "bd6a9526b4ae0004272207bbce467e1d2022431b",
+      "head": "fcf39a17d81a813ee8db35ad47b09b2b72138496",
+      "diff_sha256": "6f1ce2290222341f104ed7e5d2de9ce4ee22f6d919db17b3cd844e6becd7fadf"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/hookwire/source_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "engine/hookwire/source_test.go:52",
+        "claim": "The new case 'a tool name keeps its own underscores' uses input memorycard_mem_search and expected mcp__memorycard__mem_search, identical to the existing 'server_tool is an mcp name' case on the line above (line 50 in head). It adds no coverage and duplicates a row, so it does not pin anything new; a distinct input (e.g. one with several tool-side underscores and a different server) would make it meaningful.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/hookwire/source_test.go:50",
+          "engine/hookwire/source_test.go:52"
+        ]
+      }
+    ],
+    "evidence": [
+      "Only one file changed, a test table gaining two rows.",
+      "Row 'the server ends at the first underscore' (long_term_query -> mcp__long__term_query) is distinct and adds coverage.",
+      "Row 'a tool name keeps its own underscores' has the same input and output as the existing row 'server_tool is an mcp name'."
+    ]
+  }
+}

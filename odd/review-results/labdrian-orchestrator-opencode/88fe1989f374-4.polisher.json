@@ -1,0 +1,31 @@
+{
+  "kind": "polisher",
+  "base": "b3ce2931f12e01ae3256ada57dffd544d8aa585c",
+  "head": "88fe1989f37494e90d584c3bc5d634acd7df9897",
+  "diff_sha256": "7455fed43e22be31861f90d32cf2e67e30b07a7dd6e350cab0a9902e46b3c9fe",
+  "findings": {
+    "findings": [
+      {
+        "id": "A-F4",
+        "severity": "WARNING",
+        "location": "engine/runtime/opencode.go:192-197",
+        "claim": "An install predating the plugin reports partial until update. Answered: intended, the message names the verb that fixes it (engine runtime update --target opencode); c132652e orders the parity checks first.",
+        "evidence": [
+          "judge A F4; c132652e body."
+        ]
+      },
+      {
+        "id": "B-F7",
+        "severity": "SUGGESTION",
+        "location": "engine/runtime/opencode_memorycard.go:42-50",
+        "claim": "ActivationMarker and PluginConfigScope written but never read. Fixed in c132652e (dropped from the record).",
+        "evidence": [
+          "judge B F7; c132652e body."
+        ]
+      }
+    ],
+    "evidence": [
+      "judges A and B; recheck C8."
+    ]
+  }
+}

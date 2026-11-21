@@ -1,0 +1,29 @@
+{
+  "kind": "polisher",
+  "base": "068db6faac1a8e33bbf862dcb7286408ddb0df6b",
+  "head": "3825add9c9ef31d98da884383fbc57509a9bd302",
+  "diff_sha256": "36a0bd72a77fd2c4ff927b051c260cc96b22702bd40a8a8adda9787c704ae23d",
+  "findings": {
+    "findings": [
+      {
+        "location": "engine/runtime/opencode_bridge_skills_test.go:192",
+        "severity": "SUGGESTION",
+        "claim": "The new must-not-contain assertion spells out the old wording \"does not accept this plugin's call\". L177's own check, `rg -n \"does not accept this plugin\" engine CHANGELOG.md` finding nothing, therefore fails on this file. The builder disclosed the clash. The check as written cannot pass, so the verifier or a later gate that runs it literally will get a false failure. Fix: build the banned string from two pieces, or narrow the check to exclude the test file.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "evidence": [
+          "Grep \"does not accept this plugin\" in the review worktree matches opencode_bridge_skills_test.go:192 in engine/. The plugin source and CHANGELOG no longer match.",
+          "T60 commit D (L102) lists that rg check among its checks and says it must find nothing, but the spec also requires the test to assert the phrase is absent, so the two requirements conflict."
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full diff t60d.diff. The plugin change is only the exit-1 return sentence of skillPathsRefusal plus two comments, matching the exact text in T60 commit D (L102 and L177) character for character.",
+      "Plugin version is -20 in opencode_plugin.go; the six goldens carry -20; Grep finds no remaining runtime-parity-19 outside odd/.",
+      "The CHANGELOG T60 item is edited in place with the -20 version and the new exit-1 sentence.",
+      "The comment line references (roles_skill_paths.go:56-58, 75-78, 89-91) match the failure sites.",
+      "The exit-1 table has the six specified rows with exact text and must-not-contain checks; code-less rows have exact text and no-remedy assertions; exit-3 rows are in the exit-2 table.",
+      "No tests run."
+    ]
+  }
+}

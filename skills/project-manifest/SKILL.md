@@ -3,7 +3,7 @@ name: project-manifest
 description: "Create project manifest: manifiesto, project manifest, /project-manifest, bootstrap proyecto, definir proyecto, PRD inicial. Produces context, mission and rules; no code or technical architecture."
 license: MIT
 metadata:
-  author: gentleman-programming
+  author: labdrian
   version: "1.0"
 ---
 

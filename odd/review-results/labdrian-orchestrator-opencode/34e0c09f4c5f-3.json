@@ -1,0 +1,59 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "4be8648416ce364eb15e13324a169ff9d477b7bb",
+    "head": "34e0c09f4c5f166ed89281013f3031c9e77bfea0",
+    "diff_sha256": "ae86f8e235621f1c7fcd4830383ffa36cf5d8cd9a7dc049c971c702a618e078a",
+    "paths": [
+      "CHANGELOG.md",
+      "engine/skills/branch_pr_artifact_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "4be8648416ce364eb15e13324a169ff9d477b7bb",
+      "head": "34e0c09f4c5f166ed89281013f3031c9e77bfea0",
+      "diff_sha256": "ae86f8e235621f1c7fcd4830383ffa36cf5d8cd9a7dc049c971c702a618e078a"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "engine/skills/branch_pr_artifact_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "engine/skills/branch_pr_artifact_test.go:104-106",
+        "claim": "The pinned Hard Rule match uses exact newline-delimited text (\"\\n- A merge needs ... line.\\n\"). If the skill file uses CRLF line endings, a different bullet marker, or the rule is the last line without a trailing newline, the test fails despite the rule being present. The diff does not show the skill body, so whether the current body matches this exact line cannot be confirmed from here.",
+        "evidence_class": "inferential",
+        "causal_disposition": "unknown",
+        "proof_refs": [
+          "engine/skills/branch_pr_artifact_test.go:104"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "engine/skills/branch_pr_artifact_test.go:111-113",
+        "claim": "The new test pins a long literal phrase, so any rewording of the skill breaks it even if the closing-entry location is still stated. This is brittle, though the commit asked for it. It also assumes the phrase sits on one line, so a line wrap in the skill body would fail the test.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/skills/branch_pr_artifact_test.go:111"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff touches only a changelog sentence and two tests; no production code changed.",
+      "The CHANGELOG addition cites L75 as the Log entry that justifies keeping systemic-issue-triage upstream, and the diff cannot verify that reference.",
+      "The skill body is not in the diff, so the tests' exact strings cannot be checked against it."
+    ]
+  }
+}

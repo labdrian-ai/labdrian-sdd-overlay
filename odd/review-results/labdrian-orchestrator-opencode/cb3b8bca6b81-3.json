@@ -1,0 +1,36 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "ac151d719da4c8a375800233b8fe64c1f2284ec2",
+    "head": "cb3b8bca6b81a0262efd1bff4d3b192bc2ada487",
+    "diff_sha256": "5ab8cbb4aa683ffcd94bcffcb4a999abe96a3da81ba82009e5644738bd022872",
+    "paths": [
+      "engine/skills/gentle_detach_test.go",
+      "overlay.manifest"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "ac151d719da4c8a375800233b8fe64c1f2284ec2",
+      "head": "cb3b8bca6b81a0262efd1bff4d3b192bc2ada487",
+      "diff_sha256": "5ab8cbb4aa683ffcd94bcffcb4a999abe96a3da81ba82009e5644738bd022872"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/skills/gentle_detach_test.go",
+        "overlay.manifest"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The five manifest rows changed from managed to custom (chained-pr, go-testing, judgment-day, skill-creator and skill-improver references) match the commit's claim.",
+      "The new test loop checks every manifest row under an adopted skill directory, skipping _shared as stated. The prefix match uses dir+\"/\", so it cannot match a sibling directory with a similar name.",
+      "From the diff alone I cannot see adoptedSkillDirs or the full manifest. If another adopted-skill file were still managed, the test would fail loudly rather than silently pass, so it is not a defect in this change."
+    ]
+  }
+}

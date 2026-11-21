@@ -3,7 +3,7 @@ name: inception-pipeline
 description: "First skill for start project, bootstrap, feature, chore, fix, hotfix, change request; arrancá el proyecto, empezar proyecto, nueva feature, arreglo chico. Selects tier and enters the role chain. Invoke project-inception directly only for trilogy."
 license: Apache-2.0
 metadata:
-  author: gentleman-programming
+  author: labdrian
   version: "3.0.0"
 ---
 
@@ -33,11 +33,9 @@ Delegations carry `model`, unique `(phase, fingerprint)` and skill paths. Builde
 
 Load `skills/role-chain/SKILL.md`; it owns subsequent hops. Inception writes role-chain records only; it opens no workflow. Only the parent appends with `labdrian roles append --project {project} --goal {change} --chain {change} --stdin`; goal and chain equal `change-name`. First: `shaper → estimator`, or `prototyper → shaper` with `exploration` if a premise is open.
 
-   ```json
-   {"version":1,"project_id":"acme-shop","goal_id":"add-wishlist","chain_id":"add-wishlist","seq":1,"from_role":"shaper","to_role":"estimator","prev_sha256":"0000000000000000000000000000000000000000000000000000000000000000","payload_kind":"feature-doc","payload_sha256":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","evidence":[],"context":{"summary":"Feature document odd/tasks/add-wishlist.md shaped: 4 tasks, 1 slice.","decisions":[],"open_questions":[]},"status":"completed"}
-   ```
+The first record, as an example: `references/chain-entry.md`.
 
-The parent names `odd/tasks/<feature>.md`; shaper writes Specs and Tasks; estimator receives its sha256. Replace example IDs and digest; `prev_sha256` has 64 zeros. Builder records progress in its Log and delivery adds its final Log entry in place; `progress` and `close-report` are handoff kinds, not files. Bind closure to it and result/verifier files.
+The parent names `odd/tasks/<feature>.md`; shaper writes Specs and Tasks; estimator receives its sha256. Replace example IDs and digest; `prev_sha256` has 64 zeros. Builder records progress in its Log and delivery adds its final Log entry in place and returns to the parent, the `foreman`, not the owner; `progress` and `close-report` are handoff kinds, not files. Bind closure to it and result/verifier files.
 
 ## Closure-Feedback (plan → validate → execute; single writer)
 

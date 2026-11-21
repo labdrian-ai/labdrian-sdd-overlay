@@ -1,0 +1,39 @@
+{
+  "verdicts": [
+    {
+      "id": "F1",
+      "result": "reproduced",
+      "command": "Focused scratch test at head: sessionAvailability{memorycardStore: <tmp>/memory.db written as 0 bytes, stat: os.Stat}.storeProblem(); then, under a temp MEMORYCARD_DB with MEMORYCARD_EMBED=off: `: > $MEMORYCARD_DB; stat -c %s; sha256sum; memorycard list --topic-prefix labdrian/session-probe/ --project labdrian-session-probe; stat -c %s; sha256sum`; and `go test ./cmd/ -run TestMemoryWiringAcceptance -count=1 -v` at head.",
+      "output": "storeProblem(0-byte file) = \"\". memorycard 0.4.0-dev+3d41c89: before 0 bytes sha256 e3b0c442...; the list printed `no results`, exit 0; after 81920 bytes sha256 190a0d26..., so the probe wrote the schema. The acceptance test's available case uses an empty regular file as the store and expects no memorycard line. Base: the probe runs `engram stats` (session_availability.go:90) and opens no memorycard store.",
+      "base_result": "not-reproduced"
+    },
+    {
+      "id": "F2",
+      "result": "reproduced",
+      "command": "Head scratch copy: t.Logf of the no-store SessionStart stdout added at memory_acceptance_test.go:193; `go test ./cmd/ -run TestMemoryWiringAcceptance -count=1 -v`; base test run unmodified and base projection/availability.go:50 read.",
+      "output": "Head, no store: one block holds `- Do not call the memorycard tools: memorycard is unavailable in this session (the memorycard store .../.memorycard/memory.db does not exist), though the plan allows its reads.` and `- Memory writes (mem_save, promote) are not limited by the plan.`; PASS. Base line: `- Do not call the Engram tools: Engram is unavailable in this session (the engram program was not found); this does not apply to memorycard.`",
+      "base_result": "not-reproduced"
+    },
+    {
+      "id": "F3",
+      "result": "not-reproduced",
+      "command": "Read-only: `rg -n -i 'memorycard|MEMORYCARD_' ~/.claude.json ~/.claude/settings*.json ~/.codex/config.toml ~/.config/opencode/*.json ~/.pi/agent/*.json`; `rg -n MEMORYCARD_DB` on the same files and the shell rc files; `printenv MEMORYCARD_DB`.",
+      "output": "Every installed memorycard MCP entry (Claude ~/.claude.json:4367 env {}, Codex ~/.codex/config.toml:37 no env, OpenCode ~/.config/opencode/opencode.json:199 no environment, Pi ~/.pi/agent/mcp.json:12 no env) runs `memorycard mcp` with no store selector; MEMORYCARD_DB is set nowhere (rg exit 1, printenv exit 1). Hook and MCP server both resolve ~/.memorycard/memory.db. Reachable only if an MCP entry sets MEMORYCARD_DB or a runtime drops an exported one from the server's environment (not verified for Codex).",
+      "base_result": "not-reproduced"
+    },
+    {
+      "result": "not-run",
+      "command": "none",
+      "output": "SUGGESTION: folded into the T64 correction design.",
+      "base_result": "not-run",
+      "id": "F4"
+    },
+    {
+      "result": "not-run",
+      "command": "none",
+      "output": "SUGGESTION: folded into the T64 correction design.",
+      "base_result": "not-run",
+      "id": "F5"
+    }
+  ]
+}

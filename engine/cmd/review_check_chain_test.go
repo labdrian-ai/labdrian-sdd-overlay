@@ -348,7 +348,7 @@ func (w *reviewWorld) sweepCommits(feature string, commits ...string) {
 // with --no-ff and with no Risk trailer, as a GitHub merge has none. topic is made on M with one commit, main moves on
 // past M, and topic merges main in (the merge commit declares its risk) and gets one more commit. Every commit of topic
 // is reviewed from its first parent and swept under the feature; topic stays checked out, main is at the commit it moved to. It returns M,
-// the first commit of topic and the merge of main into topic.
+// the first commit of topic, the merge of main into topic and the last commit of topic.
 func (w *reviewWorld) topicMadeOnAMainMerge(feature string) (m, first, merged, tip string) {
 	w.t.Helper()
 	w.git("checkout", "-q", "-b", "side")

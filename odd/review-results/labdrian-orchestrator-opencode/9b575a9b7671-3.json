@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "b55302b5fa7966acb56ce904937c82e68af6e0b8",
+    "head": "9b575a9b7671438fd1a723a3239d6c83323bf236",
+    "diff_sha256": "76c7cbe76619a9e68098ad08fa92e42ee2528de43e53b9c81b2ba91f4f037b9a",
+    "paths": [
+      "engine/agentgen/models.go",
+      "engine/agentgen/models_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "b55302b5fa7966acb56ce904937c82e68af6e0b8",
+      "head": "9b575a9b7671438fd1a723a3239d6c83323bf236",
+      "diff_sha256": "76c7cbe76619a9e68098ad08fa92e42ee2528de43e53b9c81b2ba91f4f037b9a"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/agentgen/models.go",
+        "engine/agentgen/models_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "models.go: the heading is now matched with strings.TrimSpace, which handles both CRLF and trailing space. The len(head)==0 guard only adds a safety check before indexing head[0].",
+      "models_test.go: the new tests are consistent with the production change. The diff does not show splitRow, the section-end logic or the output directory name, so I could not check how they behave. I found no defect that this commit introduces."
+    ]
+  }
+}

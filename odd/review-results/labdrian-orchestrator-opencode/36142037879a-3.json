@@ -1,0 +1,34 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "ba282961c1c1c2a98f9ac9fb4a886d3022d190eb",
+    "head": "36142037879ada9c334715fb9d276a400130e67a",
+    "diff_sha256": "8420b3719cdd6e10f7f106d1c144864ce9d5efcdfd2afae9c1996b3cd97fa872",
+    "paths": [
+      "odd/tasks/labdrian-orchestrator-opencode.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "ba282961c1c1c2a98f9ac9fb4a886d3022d190eb",
+      "head": "36142037879ada9c334715fb9d276a400130e67a",
+      "diff_sha256": "8420b3719cdd6e10f7f106d1c144864ce9d5efcdfd2afae9c1996b3cd97fa872"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/labdrian-orchestrator-opencode.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The diff changes one documentation file. It swaps T30's BLOCKED clause for 'L62 risk 1 answered \"keep\" (L73)', and appends L73 recording the owner's verbatim answer.",
+      "L73 matches the unblocking: the owner's 'bueno vamos a dejarlo' is a keep, so T30 proceeds. The other tasks visible in the diff (T28, T29, T22) keep their L62 risk 2 conditions, which L73 does not touch.",
+      "I found no inconsistency in the visible lines. Parts of the feature document outside the diff, such as a status header, could still call T30 blocked, but the diff does not show that."
+    ]
+  }
+}

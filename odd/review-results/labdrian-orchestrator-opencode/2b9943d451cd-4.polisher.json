@@ -1,0 +1,76 @@
+{
+  "kind": "polisher",
+  "base": "cdb4e9d488e99f07e17a149d5d0a3cd142cba9cb",
+  "head": "2b9943d451cd99da6188ad5e068bb403cadbeb11",
+  "diff_sha256": "7f4616f417df5665dda451f0d854e244771af9951bb967ad9e7ba7a39531fe88",
+  "findings": {
+    "findings": [
+      {
+        "id": "A-F2",
+        "severity": "WARNING",
+        "location": "labdrian-runtime-parity-plugin.mjs askEngine/parseAnswer",
+        "claim": "Unparseable stdout from an exit-0 engine allowed the call with no note. Fixed in dd99e6e5 (non-JSON output is a failure with the note).",
+        "evidence": [
+          "judge A; verifier probe d; recheck A item 2."
+        ]
+      },
+      {
+        "id": "A-F4",
+        "severity": "WARNING",
+        "location": "labdrian-runtime-parity-plugin.mjs runEngine",
+        "claim": "SIGTERM only, unbounded buffers, 30 s per call on a hung engine. Fixed in dd99e6e5 (SIGKILL escalation, 2 MiB cap, pause) and 4e96003d (the gate is never paused; end() acts once).",
+        "evidence": [
+          "judge A; verifier 135 s for four calls; series review of dd99e6e5; recheck A items 4."
+        ]
+      },
+      {
+        "id": "S-1",
+        "severity": "WARNING",
+        "location": "labdrian-runtime-parity-plugin.mjs",
+        "claim": "JSON.stringify inside the Promise executor; the note lost when the first failing call never completed; notes leaked. Fixed in dd99e6e5.",
+        "evidence": [
+          "series review of 6b2a2043/2b9943d4; recheck A items 1,3,5."
+        ]
+      },
+      {
+        "id": "A-F1",
+        "severity": "CRITICAL",
+        "location": "engine/hookwire/source.go",
+        "claim": "Lowercase edit/write/multiedit pass unmapped. Answered: L10 T2 lists patch as the only v2 edit tool (mapped to Edit since T9); the real gap was read/skill, mapped in dd99e6e5 with path/id judged as OpenCode acts on them (4e96003d).",
+        "evidence": [
+          "verifier probe b; L10 T2 tool list."
+        ]
+      },
+      {
+        "id": "A-F3",
+        "severity": "WARNING",
+        "location": "labdrian-runtime-parity-plugin.mjs toolEnvelope",
+        "claim": "cwd is process.cwd(). Answered: v2 hooks carry no directory; T17 checks it live.",
+        "evidence": [
+          "judge A; builder assumption."
+        ]
+      },
+      {
+        "id": "A-F6",
+        "severity": "SUGGESTION",
+        "location": "engineBinary()",
+        "claim": "Engine binary from LABDRIAN_ENGINE_BINARY or the home path without integrity check. Answered: the same trust boundary as the Claude hook binary.",
+        "evidence": [
+          "judge A."
+        ]
+      },
+      {
+        "id": "A-F7",
+        "severity": "SUGGESTION",
+        "location": "bridge scope",
+        "claim": "Other Claude PreToolUse guards (builder-guard, shaper guard-hook, skills guard-hook, review-receipt) are not bridged. Answered: outside S10 (projection hook events); routed to T16 declarations and an owner question.",
+        "evidence": [
+          "judge A; verifier scope note."
+        ]
+      }
+    ],
+    "evidence": [
+      "Blind judges A and B and the series review on 6b2a2043; independent verifier on 6b2a2043 (suite 85 ok, probes a-e, claude/codex differential identical); correction dd99e6e5 with bounded recheck (B clean; A R1 the pause window, fixed in 4e96003d); series review of 4e96003d: the lost interpolation, fixed in 54b0cbdd."
+    ]
+  }
+}

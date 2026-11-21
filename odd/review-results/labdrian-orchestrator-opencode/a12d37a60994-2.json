@@ -1,0 +1,65 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "fc84aacc5e90fe780834d53acf05a3186f25b1f0",
+    "head": "a12d37a609942e7a76a0ff3074c89aaf89b7db64",
+    "diff_sha256": "276f7211429ec642839ef46ac44b8f290372a75d40e691f4b7702acd8a990beb",
+    "paths": [
+      "engine/skills/foreman_restored_duties_test.go",
+      "engine/skills/foreman_skills_test.go",
+      "engine/skills/odd_role_skills_artifact_test.go",
+      "skills/odd-feature-doc/SKILL.md",
+      "skills/odd-feature-doc/references/format.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "fc84aacc5e90fe780834d53acf05a3186f25b1f0",
+      "head": "a12d37a609942e7a76a0ff3074c89aaf89b7db64",
+      "diff_sha256": "276f7211429ec642839ef46ac44b8f290372a75d40e691f4b7702acd8a990beb"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/skills/foreman_restored_duties_test.go",
+        "engine/skills/foreman_skills_test.go",
+        "engine/skills/odd_role_skills_artifact_test.go",
+        "skills/odd-feature-doc/SKILL.md",
+        "skills/odd-feature-doc/references/format.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "skills/odd-feature-doc/SKILL.md:22",
+        "claim": "The header bullet became 'Header, two or three lines.' and no longer says where its contents are defined. The pointer 'header contents' was attached to the task-line bullet, so a reader of the header rule is not sent to the new '## The header' section in references/format.md. The test asserts the 'header contents' needle against the header rule, which is satisfied only by text in a different bullet.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "skills/odd-feature-doc/SKILL.md:20-22"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "engine/skills/foreman_restored_duties_test.go:104-108",
+        "claim": "The headroom guard was loosened from 690 to 700 tokens, so the body may now sit exactly at the lint budget. The test name still says 'HasHeadroom', which no longer matches what it checks. The comment that explained the 10-token margin was also removed.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/skills/foreman_restored_duties_test.go:101-108"
+        ]
+      }
+    ],
+    "evidence": [
+      "Compared the diff of SKILL.md bullets at lines 20-22 against the test needle edits in odd_role_skills_artifact_test.go.",
+      "The foreman row edits are consistent with the updated foreman_skills_test.go fragments."
+    ]
+  }
+}

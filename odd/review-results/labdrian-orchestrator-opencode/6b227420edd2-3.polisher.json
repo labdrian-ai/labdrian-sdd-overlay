@@ -1,0 +1,18 @@
+{
+  "kind": "polisher",
+  "base": "bd090aafa08c47aac6ec9b6918175271c9534d32",
+  "head": "6b227420edd2da17f78c2ffa4a0a966b10ca434c",
+  "diff_sha256": "617edde01a15662c4ff078de1cb4bbcee46f1e3ee71364075b36ac24da165562",
+  "findings": {
+    "findings": [],
+    "evidence": [
+      "Read the full diff t58.diff and T58 at L100 of odd/tasks/labdrian-orchestrator-opencode.md.",
+      "Checked engine/projection/render.go:300-348. The line is added only when plan.Sources holds engram, after degradationLines and before instructionsProjectLine, and the text is byte-identical to the task text. Scope-none takes the other branch. The line is inside boundContext, whose cap is MaxContextBytes = 16384; one extra line stays far below it.",
+      "Grepped for 'Read memory only from' and '- Engram reads'. Every file that pins the block is covered by the diff: instructions_test.go, availability_test.go, gate/instructions_test.go, plan_instructions_test.go, memory_acceptance_test.go, codex_hooks_test.go and memory_live_acceptance_test.go. tools/memory-live-acceptance/run.sh and skills/memory-plan/SKILL.md do not pin the block.",
+      "The moved test anchors in codex_hooks_test.go and memory_acceptance_test.go insert the degradation lines before '- memorycard is', matching the render order.",
+      "docs/architecture/adr-c23-m6-plan-instructions.md:49-61 shows the block without the new line; it was already out of date before this commit and the task does not list it. Not a defect of this target.",
+      "engine/gate has no non-test code that mentions memorycard, so the gate is unchanged, as scoped.",
+      "Not run: no go test or differential."
+    ]
+  }
+}

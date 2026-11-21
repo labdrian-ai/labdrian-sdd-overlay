@@ -1,0 +1,67 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "a610792c389d10edd5916c56c445c081b9b0ac62",
+    "head": "6ed8ea51028630bc0d897ac9aa85f201e91ce1de",
+    "diff_sha256": "be0b4124471b6ddf150d45559b00c9c8573991cadd851d37e45c5353632b3fc0",
+    "paths": [
+      "skills/issue-creation/references/procedure.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "a610792c389d10edd5916c56c445c081b9b0ac62",
+      "head": "6ed8ea51028630bc0d897ac9aa85f201e91ce1de",
+      "diff_sha256": "be0b4124471b6ddf150d45559b00c9c8573991cadd851d37e45c5353632b3fc0"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "skills/issue-creation/references/procedure.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "skills/issue-creation/references/procedure.md:10",
+        "claim": "Step 2 filters candidates to those whose title 'matches the request' without defining the match. The cap of 10 applies after this subjective filter, so a duplicate whose title differs from the request wording is never read or compared, and the duplicate check can pass while a real duplicate exists. Step 1 searches title and body, so body-only matches are dropped silently.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "skills/issue-creation/references/procedure.md:10"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "WARNING",
+        "location": "skills/issue-creation/references/procedure.md:18",
+        "claim": "The normalization (CRLF to LF, trailing white space dropped) is stated for the compare, but it is not said to apply to both sides. Trailing whitespace trimming also hides real differences, and the rule does not cover other GitHub transformations such as a trailing newline or leading blank lines. A legitimate submission may still be reported unknown, or the rule is applied to one side only and the result is unreliable. The claim that GitHub 'may' normalize is unverified.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "skills/issue-creation/references/procedure.md:18"
+        ]
+      },
+      {
+        "id": "F3",
+        "severity": "SUGGESTION",
+        "location": "skills/issue-creation/references/procedure.md:10",
+        "claim": "A stop at more than 10 candidates 'asks the owner', but the procedure does not say what the owner's answer allows (continue with a subset, or skip creation), so the stop has no defined exit.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "skills/issue-creation/references/procedure.md:10"
+        ]
+      }
+    ],
+    "evidence": [
+      "Only one file changed, a documentation procedure; no code paths executed.",
+      "Line 10 adds the title-match filter and the at-most-10 stop; line 14 adds the unknown rule for a missing URL; line 18 adds the normalization rule."
+    ]
+  }
+}

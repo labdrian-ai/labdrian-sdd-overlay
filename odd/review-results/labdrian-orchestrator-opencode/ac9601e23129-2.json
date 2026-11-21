@@ -1,0 +1,48 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "7ff8826fd115475677b53afc75a012790305b98b",
+    "head": "ac9601e231297e036001bd34d2ff4b5e24786068",
+    "diff_sha256": "c1de7e369fcc649f703f1b946b3f821c97fbfbe951eb10bd73f0bce99a4c0363",
+    "paths": [
+      "odd/tasks/labdrian-orchestrator-opencode.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "7ff8826fd115475677b53afc75a012790305b98b",
+      "head": "ac9601e231297e036001bd34d2ff4b5e24786068",
+      "diff_sha256": "c1de7e369fcc649f703f1b946b3f821c97fbfbe951eb10bd73f0bce99a4c0363"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/labdrian-orchestrator-opencode.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/labdrian-orchestrator-opencode.md:34",
+        "claim": "The S17 acceptance now states the same condition twice: 'no settings.json hook runs the gentle-ai binary' and 'no remaining hook or entry in either file invokes the gentle-ai binary'. The same paragraph says the `gentle-ai-overlay` hook commands stay, so 'invokes the gentle-ai binary' can be misread as covering them. The check that gentle-ai sync leaves both files byte-identical is also dropped, so any other task text that still refers to T20's sync check would no longer match the Specs. The diff does not show those other tasks, so this cannot be confirmed.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/labdrian-orchestrator-opencode.md:34"
+        ]
+      }
+    ],
+    "evidence": [
+      "Only one file changed, a feature document. I checked each rewritten Spec, Task and Log entry against the others for consistency.",
+      "The 18 bullets in L19 match the 18 findings it claims to answer.",
+      "T12's two commit ranges (140-260 and 80-180 lines) sum to the stated 220-440 forecast.",
+      "S7's foreman permission set agrees with T12 and with the S13 and S16 B6 references."
+    ]
+  }
+}

@@ -6,6 +6,7 @@ package projection_test
 
 import (
 	"reflect"
+	"slices"
 	"strings"
 	"testing"
 
@@ -46,7 +47,8 @@ func TestAnUnavailableSourceOfThePlanGetsOneDegradationLine(t *testing.T) {
 		projectSourcesLine,
 		"- Do not read longterm-mem: it is unavailable in this session (the longterm-mem binary did not answer).",
 		"- Do not read procedural-skills: it is unavailable in this session (no procedural skills lock: none installed).",
-		`- Engram reads (mem_search, mem_context) name project "proj-1"; longterm-mem query and get name project "github.com/acme/proj-1".`,
+		instructionsMemorycard,
+		`- Engram and memorycard reads (mem_search, mem_context) name project "proj-1"; longterm-mem query and get name project "github.com/acme/proj-1".`,
 		instructionsWrites,
 		instructionsProcedural,
 	}
@@ -56,6 +58,89 @@ func TestAnUnavailableSourceOfThePlanGetsOneDegradationLine(t *testing.T) {
 	wantAsked := []memoryscope.Source{memoryscope.SourceEngram, memoryscope.SourceLongtermMem, memoryscope.SourceProceduralSkills}
 	if !reflect.DeepEqual(asked, wantAsked) {
 		t.Errorf("the probe was asked about %v, want the sources of the plan %v", asked, wantAsked)
+	}
+}
+
+// The probe of source engram asks memorycard, whose reads are of source engram, so when it is
+// unavailable the block names the memorycard tools and says the plan still allows its reads: the gate
+// reads no probe. A source other than engram keeps its own line.
+func TestAnUnavailableEngramSourceNamesTheMemorycardTools(t *testing.T) {
+	w := withIdentity(loadedWorkflow("odd", workflow.StatusRunning), "github.com/acme/proj-1")
+	for name, tt := range map[string]struct{ detail, line string }{
+		"with a detail": {"the memorycard program failed: exit status 1", "- Do not call the memorycard tools: memorycard is unavailable in this session (the memorycard program failed: exit status 1), though the plan allows its reads and does not limit its writes."},
+		"no detail":     {"", "- Do not call the memorycard tools: memorycard is unavailable in this session, though the plan allows its reads and does not limit its writes."},
+	} {
+		var asked []memoryscope.Source
+		probe := probeAnswering(&asked,
+			projection.SourceAvailability{Source: memoryscope.SourceEngram, Available: false, Detail: tt.detail},
+			projection.SourceAvailability{Source: memoryscope.SourceLongtermMem, Available: true},
+			projection.SourceAvailability{Source: memoryscope.SourceProceduralSkills, Available: true},
+		)
+		got := lines(blockWith(w, probe))
+		want := []string{
+			"labdrian memory instructions (workflow wf-1, scope project):",
+			projectSourcesLine,
+			tt.line,
+			instructionsMemorycard,
+			`- Engram and memorycard reads (mem_search, mem_context) name project "proj-1"; longterm-mem query and get name project "github.com/acme/proj-1".`,
+			instructionsWrites,
+			instructionsProcedural,
+		}
+		if !reflect.DeepEqual(got, want) {
+			t.Errorf("%s: InstructionsBlock() lines =\n%q\nwant\n%q", name, got, want)
+		}
+		for _, line := range got {
+			if strings.HasPrefix(line, "- Do not read ") || (strings.HasPrefix(line, "- Do not call the ") && !strings.HasPrefix(line, "- Do not call the memorycard tools")) {
+				t.Errorf("%s: the block says not to read a source or names tools other than memorycard's, though only the engram source is down: %q", name, line)
+			}
+		}
+	}
+}
+
+// An engram source with no store yet (memorycard creates it when it first opens it) gets a line that
+// names memorycard and forbids no tool: the write that creates the store is never banned. The mark
+// changes nothing for any other source.
+func TestAnEngramSourceWithNoStoreYetForbidsNoTool(t *testing.T) {
+	w := withIdentity(loadedWorkflow("odd", workflow.StatusRunning), "github.com/acme/proj-1")
+	for name, tt := range map[string]struct{ detail, line string }{
+		"with a detail": {"the memorycard store /h/.memorycard/memory.db does not exist", "- memorycard has no store yet (the memorycard store /h/.memorycard/memory.db does not exist): memorycard creates it when it first opens it, so its reads find nothing until a record is saved."},
+		"no detail":     {"", "- memorycard has no store yet: memorycard creates it when it first opens it, so its reads find nothing until a record is saved."},
+	} {
+		var asked []memoryscope.Source
+		probe := probeAnswering(&asked,
+			projection.SourceAvailability{Source: memoryscope.SourceEngram, Available: false, Uncreated: true, Detail: tt.detail},
+			projection.SourceAvailability{Source: memoryscope.SourceLongtermMem, Available: true},
+			projection.SourceAvailability{Source: memoryscope.SourceProceduralSkills, Available: true},
+		)
+		got := lines(blockWith(w, probe))
+		want := []string{
+			"labdrian memory instructions (workflow wf-1, scope project):",
+			projectSourcesLine,
+			tt.line,
+			instructionsMemorycard,
+			`- Engram and memorycard reads (mem_search, mem_context) name project "proj-1"; longterm-mem query and get name project "github.com/acme/proj-1".`,
+			instructionsWrites,
+			instructionsProcedural,
+		}
+		if !reflect.DeepEqual(got, want) {
+			t.Errorf("%s: InstructionsBlock() lines =\n%q\nwant\n%q", name, got, want)
+		}
+		for _, line := range got {
+			if strings.HasPrefix(line, "- Do not") {
+				t.Errorf("%s: the block with no store yet forbids something: %q", name, line)
+			}
+		}
+		if !slices.Contains(got, instructionsWrites) {
+			t.Errorf("%s: the block lost the line that says writes are not limited", name)
+		}
+	}
+
+	var asked []memoryscope.Source
+	other := probeAnswering(&asked,
+		projection.SourceAvailability{Source: memoryscope.SourceLongtermMem, Available: false, Uncreated: true, Detail: "the longterm-mem binary did not answer"},
+	)
+	if got := lines(blockWith(w, other)); !slices.Contains(got, "- Do not read longterm-mem: it is unavailable in this session (the longterm-mem binary did not answer).") {
+		t.Errorf("an unavailable longterm-mem marked Uncreated lost its generic line: %q", got)
 	}
 }
 
@@ -115,21 +200,27 @@ func TestUnderScopeNoneNothingIsProbed(t *testing.T) {
 // A reason from outside is one line, bounded, with no control characters.
 func TestADegradationReasonIsSanitizedAndBounded(t *testing.T) {
 	w := withIdentity(loadedWorkflow("odd", workflow.StatusRunning), "github.com/acme/proj-1")
-	var asked []memoryscope.Source
-	probe := probeAnswering(&asked, projection.SourceAvailability{
-		Source:    memoryscope.SourceEngram,
-		Available: false,
-		Detail:    "line one\nline two\x1b[31m" + strings.Repeat("x", 4000),
-	})
-	for _, line := range lines(blockWith(w, probe)) {
-		if strings.HasPrefix(line, "- Do not read engram") {
-			if strings.ContainsAny(line, "\x1b\r") || len([]rune(line)) > 600 {
-				t.Errorf("the degradation line is not one bounded line: %q", line)
+	for prefix, uncreated := range map[string]bool{"- Do not call the memorycard tools": false, "- memorycard has no store yet": true} {
+		var asked []memoryscope.Source
+		probe := probeAnswering(&asked, projection.SourceAvailability{
+			Source:    memoryscope.SourceEngram,
+			Available: false,
+			Uncreated: uncreated,
+			Detail:    "line one\nline two\x1b[31m" + strings.Repeat("x", 4000),
+		})
+		found := false
+		for _, line := range lines(blockWith(w, probe)) {
+			if strings.HasPrefix(line, prefix) {
+				found = true
+				if strings.ContainsAny(line, "\x1b\r") || len([]rune(line)) > 600 {
+					t.Errorf("the degradation line is not one bounded line: %q", line)
+				}
 			}
-			return
+		}
+		if !found {
+			t.Errorf("the unavailable source has no line starting %q", prefix)
 		}
 	}
-	t.Error("the unavailable source has no degradation line")
 }
 
 // A probe that panics costs the lines, never the block.

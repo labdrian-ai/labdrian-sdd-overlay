@@ -1,0 +1,45 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "8ffaa62fa554f88bd67fcf6d91aa330609e3c813",
+    "head": "4c4a682a93fc1588abba726b39998439b9b0dfbd",
+    "diff_sha256": "aa67ec3c32c9897e96e059ab47283ee9c16cbc7d8e4dc95c9321c22b0da4134b",
+    "paths": [
+      "odd/tasks/labdrian-orchestrator-opencode.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "8ffaa62fa554f88bd67fcf6d91aa330609e3c813",
+      "head": "4c4a682a93fc1588abba726b39998439b9b0dfbd",
+      "diff_sha256": "aa67ec3c32c9897e96e059ab47283ee9c16cbc7d8e4dc95c9321c22b0da4134b"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/labdrian-orchestrator-opencode.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/labdrian-orchestrator-opencode.md:45",
+        "claim": "The T23 line now carries two commit fields: the old placeholder `commit: -` is still there, directly followed by the new `commit: `98b99970`, ...`. A tool or reader that parses the first `commit:` field will see no commit on a ticked task. The placeholder should have been replaced, not appended to.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/labdrian-orchestrator-opencode.md:45 — `shaped: L46 — commit: - commit: `98b99970`, ...`"
+        ]
+      }
+    ],
+    "evidence": [
+      "The only change is T23's checkbox going from [ ] to [x], with commit hashes appended to the same line.",
+      "The diff cannot show whether the listed commits exist or match the owner's approval, so I made no finding on that."
+    ]
+  }
+}

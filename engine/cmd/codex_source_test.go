@@ -120,6 +120,54 @@ func TestCodexSourceProcesses(t *testing.T) {
 			t.Error("evidence changed workflow log")
 		}
 	})
+	t.Run("OpencodeAdaptsBeforeGate", func(t *testing.T) {
+		w := newPhase7World(t, binary)
+		w.bindRunning("proj-1", "wf-1", "sdd")
+		before := w.stateSnapshot()
+		input := map[string]any{"project": "proj-1", "query": "q", "engram_id": 7}
+		claude := sourceHook(w, "PreToolUse", gateInput(t, w.repo, "session-1", "mcp__longterm-mem__query", input))
+		assertDenied(t, "Claude reference", claude.asHook(), `does not include source "longterm-mem"`)
+		got := sourceHook(w, "PreToolUse", codexSourceInput(t, w.repo, "PreToolUse", "longterm-mem_query", input), "--source", "opencode")
+		if got != claude {
+			t.Errorf("opencode %+v != Claude %+v", got, claude)
+		}
+		// The Code Mode wrapper is not mapped: the policies never see it.
+		assertSilent(t, "execute", sourceHook(w, "PreToolUse", codexSourceInput(t, w.repo, "PreToolUse", "execute", input), "--source", "opencode").asHook())
+		if !reflect.DeepEqual(before, w.stateSnapshot()) {
+			t.Error("gate changed state")
+		}
+	})
+	// Under Code Mode the inner call of a memorycard read reaches the gate as OpenCode names it
+	// (memorycard_<tool>); each gets the answer Claude Code's mcp__memorycard__<tool> gets (T38).
+	t.Run("OpencodeMemorycardReads", func(t *testing.T) {
+		w := newPhase7World(t, binary)
+		w.bindRunning("proj-1", "wf-1", "sdd")
+		before, tree := w.stateSnapshot(), snapshotTree(t, w.state)
+		for _, tt := range []struct {
+			name, claude, opencode string
+			input                  map[string]any
+			denied                 string // a part of the reason, empty when the read goes ahead
+		}{
+			{"search without a project", "mcp__memorycard__mem_search", "memorycard_mem_search", queryArgs(nil), "names no project"},
+			{"search of another project", "mcp__memorycard__mem_search", "memorycard_mem_search", queryArgs("other"), `project "other"`},
+			{"search of the workflow's project", "mcp__memorycard__mem_search", "memorycard_mem_search", queryArgs("proj-1"), ""},
+			{"get by id", "mcp__memorycard__mem_get", "memorycard_mem_get", map[string]any{"id": 7}, ""},
+		} {
+			claude := sourceHook(w, "PreToolUse", gateInput(t, w.repo, "session-1", tt.claude, tt.input))
+			if tt.denied == "" {
+				assertSilent(t, tt.name+": Claude reference", claude.asHook())
+			} else {
+				assertDenied(t, tt.name+": Claude reference", claude.asHook(), tt.denied)
+			}
+			got := sourceHook(w, "PreToolUse", codexSourceInput(t, w.repo, "PreToolUse", tt.opencode, tt.input), "--source", "opencode")
+			if got != claude {
+				t.Errorf("%s: opencode %+v != Claude %+v", tt.name, got, claude)
+			}
+		}
+		if !reflect.DeepEqual(before, w.stateSnapshot()) || !reflect.DeepEqual(tree, snapshotTree(t, w.state)) {
+			t.Error("gate changed state")
+		}
+	})
 	t.Run("ExistingEventsKeepDefaultAndExplicitClaude", func(t *testing.T) {
 		w := newPhase7World(t, binary)
 		w.bindRunning("proj-1", "wf-1", "sdd")
@@ -127,7 +175,7 @@ func TestCodexSourceProcesses(t *testing.T) {
 			"PreToolUse":       gateInput(t, w.repo, "session-1", "mcp__longterm-mem__query", queryArgs("proj-1")),
 			"PostToolUse":      postToolUseInput(t, w.repo, "mcp__engram__mem_search", queryArgs("proj-1"), map[string]any{"text": "response-content-canary"}),
 			"SessionStart":     sessionStartInput(t, w.repo, "startup"),
-			"UserPromptSubmit": hookInput(t, w.repo, "session-1", "p"),
+			"UserPromptSubmit": hookInput(t, w.repo, "", "p"), // no session id: a second run of one session is silent (S19)
 		} {
 			t.Run(event, func(t *testing.T) {
 				before := w.stateSnapshot()
@@ -173,7 +221,7 @@ func TestCodexSourceProcesses(t *testing.T) {
 		for _, event := range []string{"PreToolUse", "PostToolUse", "SessionStart", "UserPromptSubmit"} {
 			for _, source := range []string{"other", "", "Codex"} {
 				r := sourceHook(w, event, codexSourceInput(t, w.repo, event, "mcp__engram__mem_search", queryArgs("proj-1")), "--source", source)
-				want := fmt.Sprintf("error: projection hook: unsupported --source %q (supported: claude, codex)\n", source)
+				want := fmt.Sprintf("error: projection hook: unsupported --source %q (supported: claude, codex, opencode)\n", source)
 				if r.code != 1 || r.stdout != "" || r.stderr != want {
 					t.Errorf("%s %q: %+v; want usage error %q", event, source, r, want)
 				}
@@ -191,9 +239,9 @@ func TestCodexSourceUsageDoesNotReadStdin(t *testing.T) {
 		var out, errBuf bytes.Buffer
 		var codes []int
 		runProjectionCore(testDeps(), append([]string{"hook", "--event", "PostToolUse"}, flags...), t.TempDir(), stdin, &out, &errBuf, func(code int) { codes = append(codes, code) })
-		want := "error: projection hook: unsupported --source \"other\" (supported: claude, codex)\n"
+		want := "error: projection hook: unsupported --source \"other\" (supported: claude, codex, opencode)\n"
 		if len(flags) == 1 {
-			want = "error: projection hook: --source requires a value (supported: claude, codex)\n"
+			want = "error: projection hook: --source requires a value (supported: claude, codex, opencode)\n"
 		}
 		if stdin.read != 0 || out.Len() != 0 || errBuf.String() != want || !reflect.DeepEqual(codes, []int{1}) {
 			t.Errorf("read=%d stdout=%q stderr=%q codes=%v", stdin.read, out.String(), errBuf.String(), codes)
@@ -204,7 +252,7 @@ func TestCodexSourceUsageDoesNotReadStdin(t *testing.T) {
 func TestCodexSourceHelp(t *testing.T) {
 	readme := sourceRead(t, filepath.Join("..", "..", "README.md"))
 	for name, text := range map[string]string{"usage": captureUsage(t), "README": string(readme)} {
-		if !strings.Contains(text, "[--source claude|codex]") || !strings.Contains(text, "default: claude") {
+		if !strings.Contains(text, "[--source claude|codex|opencode]") || !strings.Contains(text, "default: claude") {
 			t.Errorf("%s does not document source flag/default", name)
 		}
 	}

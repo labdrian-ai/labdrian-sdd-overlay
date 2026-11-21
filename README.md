@@ -8,7 +8,8 @@ An end-to-end harness for solo software engineering and product development with
 - **ODD feature documents.** Every substantial goal lives in `odd/tasks/<feature>.md`: Specs that quote the owner's words, Tasks with their commits, and an append-only Log of decisions and evidence (skill `odd-feature-doc`).
 - **Its own review lifecycle.** `labdrian review bind`, `record`, `exempt` and `check` review each commit on its own, store every result under `odd/review-results/`, and a Stop hook asks for the next commit no review covers. A commit's `Risk:` line decides whether a second, blind reviewer and an independent verifier run.
 - **Mechanical guards in hooks.** The builder guard denies a builder launch that cites no shaped task; gate-task injects the minimalism, OO-quality and anti-generic-design contracts into the agents that write code; the approve guard keeps skill approvals a human act.
-- **One deploy to four runtimes.** `labdrian apply` deploys skills, agents and contracts to Claude Code, Codex, opencode (skills and contracts, no agents) and Pi (as a package), with per-target backups, named releases and rollback.
+- **Skills reach the roles on opencode.** The opencode roles cannot load a skill by name, so the adapter writes into the plugin config one `skills/<id>/SKILL.md` entry per role and per skill its body names as `` `<id>` skill`` (the one reading is `roles.SkillsNamed`), and the plugin lists those absolute paths under `## Skills to load before work` on that role's launch; `gadu-generate` refuses a body that names a skill with no `skills/<id>/SKILL.md`.
+- **One deploy to four runtimes.** `labdrian apply` deploys skills, agents and contracts to Claude Code, Codex, opencode (native agents; it reads the skills deployed to Claude Code) and Pi (as a package), with per-target backups, named releases and rollback.
 - **gentle-ai is a vendor source, on its way to optional.** Its skills are consumed through the `upstream`/`main` overlay, so a `gentle-ai sync` never clobbers local changes. The own review lifecycle (`odd/tasks/own-rdd.md`) is replacing its native review, the last part this project still leans on.
 
 ## Quick start — clone, then `labdrian tui` from anywhere
@@ -72,13 +73,13 @@ Every finding is resolved: a warning is fixed before delivery, a suggestion is c
 | Target | Path |
 |--------|------|
 | `claude` | `~/.claude/skills` |
-| `opencode` | `~/.config/opencode/skills` |
+| `opencode` | no skill copy: OpenCode reads `~/.claude/skills`, and a copy in its own directory would shadow it; its native agents go to `~/.config/opencode/agents` |
 | `codex` | `~/.codex/skills` |
 | `pi` | a built package, see [Pi](#pi-via-gentle-pi) |
 
 Use `--target <name>` on `apply`, `status`, `capture`, and `sync-check`. Default for `apply`/`status`/`sync-check` is `all` (the three copy targets, plus `pi` when it is genuinely installed). Default for `capture` is `claude`.
 
-The `agent` route (see [Tracked files](#tracked-files-overlaymanifest)) additionally deploys to `~/.claude/agents` (claude target only), and the `codex-agent` route deploys `codex/agents/<role>.toml` to `~/.codex/agents` (codex target only). `--target opencode` or `--target codex` on an `agent` row, and any other target on a `codex-agent` row, is a no-op — zero applicable targets.
+The `agent` route (see [Tracked files](#tracked-files-overlaymanifest)) additionally deploys to `~/.claude/agents` (claude target only), the `codex-agent` route deploys `codex/agents/<role>.toml` to `~/.codex/agents` (codex target only), and the `opencode-agent` route deploys `opencode/agents/<name>.md` (the eight roles and the foreman, written by `gadu-generate` with the model and `#variant` of the `opencode` column of `skills/role-chain/references/models.md`) to `~/.config/opencode/agents` (opencode target only). Each file's `permissions` list is ordered, and the last rule that matches a tool wins: first a deny on every built-in tool the agent's Claude list has no tool for, then, for each MCP server (`memorycard`, `longterm-mem`, `codegraph`), a deny on `<server>_*` followed by an allow of each `<server>_<tool>` the Claude list names as `mcp__<server>__<tool>`; `execute` is denied exactly when the list names no MCP tool. `--target opencode` or `--target codex` on an `agent` row, and any other target on a `codex-agent` or `opencode-agent` row, is a no-op — zero applicable targets. A `skill` row has no destination for `--target opencode`.
 
 ### Pi (via gentle-pi)
 
@@ -100,7 +101,7 @@ Pi is a **package target**, not a per-file copy target: `--target pi` on `apply`
 **custom**: only on `main`. Never on upstream. Added as a customization with no vendor counterpart.
 **external**: `source.type: external` — records provenance metadata only (`repo` = origin URL, `ref` = vendored commit/ref). The overlay **never fetches, clones, or executes any remote resource**. Vendoring is a human responsibility; `--repo`/`--ref` are inert labels for a file you have already reviewed and committed locally.
 
-**`route` column (optional third column):** each manifest row may end with `skill` or `agent` (default: `skill` when omitted). Bare two-column rows are unchanged. The `agent` route tells the installer to source from `agents/<path>` and deploy to `~/.claude/agents` instead of any skills directory; the `codex-agent` route sources from the path itself (`codex/agents/<role>.toml`) and deploys to `~/.codex/agents`. Non-deployable rows (engine source files, root-level files) are recognized by the installer and skipped silently. The route of every row is decided by the engine, not by the script: `apply`, `status`, `sync-check`, `capture`, `restore` and `bootstrap` ask `gentle-ai-overlay manifest routes` (see the CLI reference) for it, and the script builds the engine binary on first use when it is missing or older than its source (Go is already a prerequisite). A manifest with a `longterm-mem/` row that has no route, or one outside `skill`, `agent`, `opencode-agent`, `codex-agent` and `mcp`, is refused whole before any row is copied, said or restored.
+**`route` column (optional third column):** each manifest row may end with `skill` or `agent` (default: `skill` when omitted). Bare two-column rows are unchanged. The `agent` route tells the installer to source from `agents/<path>` and deploy to `~/.claude/agents` instead of any skills directory; the `codex-agent` route sources from the path itself (`codex/agents/<role>.toml`) and deploys to `~/.codex/agents`. The `output-style` route sources from `output-styles/<path>` and deploys to `~/.claude/output-styles` (claude target only; it is the directory beside `~/.claude/agents`, derived from it), so `output-styles/labdrian.md` is the row `labdrian.md`. Non-deployable rows (engine source files, root-level files) are recognized by the installer and skipped silently. The route of every row is decided by the engine, not by the script: `apply`, `status`, `sync-check`, `capture`, `restore` and `bootstrap` ask `gentle-ai-overlay manifest routes` (see the CLI reference) for it, and the script builds the engine binary on first use when it is missing or older than its source (Go is already a prerequisite). A manifest with a `longterm-mem/` row that has no route, or one outside `skill`, `agent`, `opencode-agent`, `codex-agent` and `mcp`, is refused whole before any row is copied, said or restored.
 
 ## Usage
 
@@ -149,9 +150,9 @@ backups the backend cannot confirm is not offered a restore.
 | `restore --target claude\|opencode\|codex [--list] [--backup TIMESTAMP]` | **modifies** | Roll a single target back to one of its retained backups (up to 3, auto-pruned; default: most recent). Refuses `--target all`. `--list` shows retained backups without changing anything. |
 | `targets` | read-only | Print the target catalog, one target per line as `<name><TAB><kind>` (`copy` or `package`), in the order `--target all` expands to. The TUI reads it instead of keeping its own list. |
 | `version` (also: `--version`) | read-only | Print this clone's current release version and each target's recorded deployed version. |
-| `install-hooks` | **modifies** | Build the Go engine binary + wire `UserPromptSubmit`/`PreToolUse`/`Agent` hooks, including the workflow projection family, the skills approve guard, the review stop-hook on `Stop`, and the builder guard on the `Agent` tool, into `~/.claude/settings.json` (backs up to `.bak` first). Run once to activate scoping; re-run it after an upgrade that adds a hook family, then restart Claude Code to load the hooks. If `$CODEX_HOME` (default `~/.codex`) already exists, also merge three Codex memory hooks (`SessionStart`, `PreToolUse`, `PostToolUse`) into `hooks.json`, with a `.bak` backup. Trust each new handler once in the Codex TUI (`/hooks`, key `t`); upgrading from SessionStart alone needs two more trusts, without changing the existing SessionStart trust. Never edits trust state or `config.toml`. |
-| `uninstall-hooks` | **modifies** | Remove the overlay hook entries (the minimalism and design pairs, the SessionEnd sync-trigger, the review-receipt and shaper guard entries, the workflow projection hooks, the approve guard entries, the review stop-hook, and the builder guard) from `~/.claude/settings.json`, including entries left by contracts retired in earlier versions, and remove our three Codex memory entries from `$CODEX_HOME/hooks.json` (default `~/.codex`). Foreign entries and keys are preserved. |
-| `status-hooks` | read-only | Check engine binary, hooks wired, contracts readable; when Codex's home exists, check all three memory entries and name missing or drifted events with the `install-hooks` remedy. Present never means trusted (`/hooks`, key `t`). No Codex home means no extra line. A missing or drifted review stop-hook or builder guard is a warning until `install-hooks` is re-run. Exit 0 healthy, 1 failed, 2 warnings alone. |
+| `install-hooks` | **modifies** | Build the Go engine binary + wire `UserPromptSubmit`/`PreToolUse`/`Agent` hooks, including the workflow projection family, the skills approve guard, the review stop-hook on `Stop`, the builder guard on the `Agent` tool, the registry refresh on `UserPromptSubmit` (runs `registry refresh` so the skills table of the project's registry is current when a prompt is sent; its exit is forced to 0 and it skips a registry whose lock is taken), and the top-level `"agent": "foreman"` key that runs the main session as the foreman, and the top-level `"outputStyle": "labdrian"` key (the owner's output style; a value of another style is left as it is), into `~/.claude/settings.json` (backs up to `.bak` first; an `agent` key with another value is left as it is, and the install prints a notice saying the foreman main session was not enabled). A `UserPromptSubmit` hook whose command is exactly `codegraph prompt-hook` (written by the codegraph installer) is replaced, in place, by a wrapper that skips task notifications and runs codegraph unchanged for every other prompt (a bare entry beside a wrapper is removed, the other fields of the entry are kept, and the install prints a notice on stderr); a codegraph reinstall writes the bare command back, so re-run `install-hooks`. Run once to activate scoping; re-run it after an upgrade that adds a hook family, then restart Claude Code to load the hooks. If `$CODEX_HOME` (default `~/.codex`) already exists, also merge three Codex memory hooks (`SessionStart`, `PreToolUse`, `PostToolUse`) into `hooks.json`, with a `.bak` backup. Trust each new handler once in the Codex TUI (`/hooks`, key `t`); upgrading from SessionStart alone needs two more trusts, without changing the existing SessionStart trust. Never edits trust state or `config.toml`. |
+| `uninstall-hooks` | **modifies** | Remove the overlay hook entries (the minimalism and design pairs, the SessionEnd sync-trigger, the review-receipt and shaper guard entries, the workflow projection hooks, the approve guard entries, the review stop-hook, the builder guard, and the registry refresh, and the `"agent": "foreman"` key only when it holds exactly `foreman`, which names the agent file the overlay installs, so removing that agent never leaves the key pointing at it and the `"outputStyle"` key only when it holds exactly `labdrian`) from `~/.claude/settings.json`, including entries left by contracts retired in earlier versions, and remove our three Codex memory entries from `$CODEX_HOME/hooks.json` (default `~/.codex`).  The wrapped codegraph prompt hook is written back as the bare `codegraph prompt-hook` command, in place. Foreign entries and keys are preserved. |
+| `status-hooks` | read-only | Check engine binary, hooks wired, contracts readable; when Codex's home exists, check all three memory entries and name missing or drifted events with the `install-hooks` remedy. Present never means trusted (`/hooks`, key `t`). No Codex home means no extra line. A missing or drifted review stop-hook, builder guard or registry refresh, a missing `"agent"` key, or an `"agent"` key that holds another value (a conflict the overlay never overwrites), and the same for the `"outputStyle"` key (missing, or a value other than `labdrian`), is a warning, and so is a codegraph prompt hook that is back to the bare `codegraph prompt-hook` command (wrapped, or no such entry, is ok) until `install-hooks` is re-run or the key is fixed. Exit 0 healthy, 1 failed, 2 warnings alone. |
 | `doctor [--fix]` | read-only | Host-toolchain preflight: go, gentle-ai, discovery tools (bat/rg/fd/sd/eza), engine binary, the skill registry of the project (judged by the engine, with the check `status` makes: absent is fine, empty or unreadable fails, one without a scoped block warns) — plus a per-target version/digest consistency row (WARN only, never fails the exit code). `--fix` best-effort installs missing discovery tools via Homebrew. |
 | `validate-entry-contract --schema PATH --instance PATH` | read-only | Validate a pre-SDD entry candidate against the version-matched schema and deterministic cross-field rules. |
 | `install-alias [name]` | **modifies** | Symlink `labdrian` (or a custom name) into `~/.local/bin`. Run once per machine. |
@@ -379,10 +380,18 @@ overlay install-hooks
     anti-generic-design), a SessionEnd entry that fires a non-blocking longterm-mem
     sync at session close, the review-receipt and shaper clearance guards, the workflow
     projection hooks, the skills approve guard, the review stop-hook on Stop, and the
-    builder guard on the Agent tool (each described below). Backs up settings.json to
+    builder guard on the Agent tool (each described below), and the top-level "agent": "foreman"
+    key that runs the main session as the foreman; an "agent" key with another value is left
+    as it is. It also writes the top-level "outputStyle": "labdrian" key (a value of another style is left
+    as it is, and the install prints a notice on stderr saying the style was not enabled, as it does for "agent"). Backs up settings.json to
     settings.json.bak before modifying. Run once to activate; inert until then.
     Re-run it after an upgrade that adds a hook family, then restart Claude Code, which
     loads hooks only when it starts.
+    A UserPromptSubmit hook whose command is exactly "codegraph prompt-hook" (written by the codegraph
+    installer, not by the overlay) is replaced, in place, by a wrapper that skips task notifications and
+    runs codegraph unchanged for every other prompt; a bare entry beside a wrapper is removed, every other
+    field of the entry is kept, and the install prints a notice on stderr when it replaced one. A codegraph
+    reinstall writes the bare command back: run install-hooks again.
     If CODEX_HOME (default ~/.codex) already exists, also merge three memory hooks into
     hooks.json by ownership: SessionStart for instructions, PreToolUse and PostToolUse for
     memory reads (the tool commands pass --source codex). Foreign values keep their bytes;
@@ -393,11 +402,14 @@ overlay install-hooks
 
 overlay uninstall-hooks
     Remove every overlay hook entry (each family install-hooks wires, projection, approve
-    guard, review stop-hook and builder guard included) from ~/.claude/settings.json, including entries left
+    guard, review stop-hook and builder guard included, and the "agent" key only when it holds
+    exactly "foreman", and the "outputStyle" key only when it holds exactly "labdrian") from
+    ~/.claude/settings.json, including entries left
     by contracts retired in earlier versions, leaving all other keys and hooks intact (on Stop,
     only the review stop-hook entry is removed). Also removes only our Codex
     SessionStart, PreToolUse and PostToolUse entries from CODEX_HOME/hooks.json (default
-    ~/.codex), if that home exists.
+    ~/.codex), if that home exists. The wrapped codegraph prompt hook is written back as the bare
+    "codegraph prompt-hook" command, in place.
 
 overlay status-hooks
     Check overlay installation health: binary present, hooks wired, contracts readable.
@@ -409,6 +421,13 @@ overlay status-hooks
     The review stop-hook is checked like the families added after the first two: a missing or
     drifted entry is a warning, with the install-hooks remedy and a note to restart Claude Code.
     The builder guard is checked the same way, and even installed it is a speed bump.
+    The top-level "agent" key is checked the same way: missing is a warning, and a value other
+    than "foreman" is reported as a conflict (a warning) that install-hooks does not overwrite,
+    and install-hooks says so on stderr when it leaves one.
+    The top-level "outputStyle" key is checked the same way (a warning when missing or when it holds a value other
+    than "labdrian"), and install-hooks says so on stderr when it leaves a foreign one.
+    The codegraph prompt hook is checked too: a warning when the bare "codegraph prompt-hook" command is back
+    (install-hooks wraps it again); wrapped, or no such entry, is ok.
 
 overlay doctor [--fix]
     Read-only host-toolchain preflight: checks go (required), gentle-ai, bat/rg/fd/sd/eza,
@@ -603,6 +622,17 @@ overlay roles <verb>
                                                                                   whose exemption no longer holds)
     match-shaper --root <worktree> --handoff <path>                              report which of a Shaper handoff v3's free-form roles equal a
                                                                                   member of the reusable-role vocabulary, without changing v3 semantics
+    skill-paths --skills-root <dir>                                              not run by a person: the OpenCode runtime-parity plugin calls it on the prompt
+                                                                                  of a `subagent` launch. Reads the prompt on stdin and prints it with each bare
+                                                                                  skill id under the first exact `## Skills to load before work` line (up to the
+                                                                                  next line that starts with `#`) made the absolute path of `<dir>/<id>/SKILL.md`;
+                                                                                  an absolute path to an existing file and a blank line stay. A prompt with no such
+                                                                                  header is printed as it came. Exit 2 with one stderr line
+                                                                                  (`error: roles skill-paths: <what to write>`) and nothing on stdout for a line
+                                                                                  that starts with the header text but is not the header alone, an id with no
+                                                                                  SKILL.md under `<dir>`, an absolute path to no file or any other text. Exit 0
+                                                                                  printed, 2 prompt refused, 1 usage error (`--skills-root` missing, relative or
+                                                                                  not a directory) or any other failure
     builder-guard                                                                not run by a person: the Claude Code PreToolUse hook on the Agent tool that
                                                                                   `install-hooks` wires (the builder guard, described below as
                                                                                   `gentle-ai-overlay roles builder-guard`). It denies launching the builder
@@ -809,6 +839,18 @@ overlay review <verb>
         re-ask the reviewer does not answer leaves the first refusal, with the re-ask's failure said after it. Whether
         the installed Codex enforces `--sandbox read-only` is shown only by a live run. Exit 0 stored,
         2 reply refused, 1 usage error or any other failure.
+    frozen-context [--cwd <repo>]
+        Reads the brief of the parent on stdin and prints the brief followed by the frozen context of its candidate: the
+        bytes `review launch --runtime claude` hands the reviewer after its preamble (a heading `## Frozen context (base
+        <base>, head <head>)`, a line `changed paths: <path>, <path>` and `git diff --no-renames -U3` in one fenced
+        block). The candidate is the one base and head the brief names in the form `review bind` prints them, one `"base"`
+        and one `"head"` member with a full object name; it is bound as `launch` binds it (making or reusing the detached
+        worktree). It starts no reviewer and stores no result. It exists for a runtime whose reviewer cannot run git. Refused as
+        exit 2, with one line on stderr (`error: review frozen-context: <reason>`) and nothing on stdout: an empty brief, a
+        brief that names no pair or more than one, a candidate over the 150000-byte limit of one launch (split it into one
+        launch per commit), a brief that does not name the full base, the full head, the diff_sha256 and the worktree path
+        of the binding, and a brief and context over the reply limit. Exit 0 printed, 2 brief refused, 1 usage error or any
+        other failure.
     proposals [--cwd <repo>]
         Prints, and never runs, what the owner may remove: the worktrees of the repository other than the main one and the
         one of `--cwd`, not locked, that git marks prunable (`git worktree prune`) or whose HEAD is an ancestor of the tip of
@@ -821,6 +863,20 @@ overlay review <verb>
         deleted: the parent relays each proposal to the owner and runs a proposed command only after the owner confirms it.
         Remote branches are not proposed, and a branch merged by squash or rebase is not. Exit 0 listed, 1 usage error,
         refusal or any other failure.
+    ci --landing <rev> --head <rev> [--cwd <repo>]
+        Says whether the repository has no CI for the commit a delivery landed (the closure of a repository with no CI). It
+        exits 0 and prints one line on stdout that starts `CI: none configured` and names the full landing and head ids
+        (`CI: none configured: landing <id> holds head <id>, no remote, no CI marker in its tree`) only when all three
+        hold: the landing holds the head (it is the head or a descendant of it); `git remote` lists no remote; and the tree
+        of the landing commit, never the working tree, holds no CI marker. The markers are the paths from the root of the
+        tree: any file under `.github/workflows/`, `.gitea/workflows/`, `.forgejo/workflows/`, `.buildkite/` or
+        `.woodpecker/`, and the files `.gitlab-ci.yml`, `.circleci/config.yml`, `.travis.yml`, `azure-pipelines.yml`,
+        `Jenkinsfile`, `bitbucket-pipelines.yml`, `.drone.yml`, `.woodpecker.yml`, `appveyor.yml` and `.appveyor.yml`; a
+        file of those names below the root (`sub/.github/workflows/x.yml`) is not one. Every other case is exit 1 with one
+        line on stderr and nothing on stdout, `error: review ci: <what was found>`: the head the landing does not hold, the
+        markers found (comma-separated, in tree order) or the remotes, each ending `the no-CI closure does not apply`. A
+        missing flag, a revision git cannot resolve and a failing git are non-zero too and never print `CI: none
+        configured`. Nothing is stored. Exit 0 no CI configured, 1 refusal, usage error or any other failure.
     findings --feature <name> --stored <result> [--cwd <repo>]
         Lists the findings of the stored result `<head12>-<n>.json` that count as evidence for the learning loop, reading
         the result and the verdict stored beside it as `verify` and `check` read them. stdout is one JSON object
@@ -985,6 +1041,16 @@ overlay workflow <verb>
         stdout is one JSON object {"workflow":"<f>-<t>","chain":"<f>-<t>","goal":"<f>",
         "project":"<P>","status":"running","bound":true}; exit 0 opened, 2 refused, 1 a usage
         error or a failure after a write.
+    goal-base --feature <f> [--project <id>]
+        Read-only: print the fields of the feature's Goal v3 that the engine knows, as one JSON line
+        {"version":3,"project_id":"<P>","goal_id":"<f>","memory_directive":{...}}. The directive is
+        the odd profile's memory default, the ceiling a goal may only narrow. <P> is --project, else the
+        last /-separated part of the project's shared identity, the one workflow create records for the
+        memory gate (the .longterm-mem-project file, the origin remote, the main checkout's directory
+        name). The shaper copies these four fields into odd/goals/<f>.json and writes objective, scope,
+        constraints, non_goals, acceptance_criteria, runtime_scope and delivery_boundary; the foreman
+        runs the verb at its Shape stage. exit 0 printed, 2 refused (not a feature name, a project id
+        outside [A-Za-z0-9._-], an identity that cannot be read), 1 usage error.
     The lifecycle verbs print the resulting classification and state (or, for status, the
     current one) as JSON on stdout and report errors on stderr. Exit 0 on success, 2 on a
     refused or invalid operation (an illegal transition, a failed verify, non-owned on-disk
@@ -1000,7 +1066,7 @@ gentle-ai-overlay manifest routes --overlay-root <dir> --target <name> --skills-
     Engine verb (Phase 9, B1): there is no `overlay manifest` wrapper, so run it on the installed engine binary,
     ~/.claude/bin/gentle-ai-overlay. It decides where each row of overlay.manifest goes, and is what `apply`, `status`,
     `sync-check`, `capture`, `restore` and `bootstrap` ask. Read-only: it prints one line per
-    row, in the order of the manifest, in five columns separated by a tab: the row's path; its route (`skill`, `agent`, `opencode-agent`, `codex-agent`, `mcp`,
+    row, in the order of the manifest, in five columns separated by a tab: the row's path; its route (`skill`, `agent`, `output-style`, `opencode-agent`, `codex-agent`, `mcp`,
     `non-deployable`, or the third column when it is none of these, which takes the skill route under its own name);
     where its file is in the overlay repository (`skills/<path>` for a skill, `agents/<path>`, the path itself for the
     others); the absolute path the overlay copies it from (empty for a row that is never deployed); and the absolute
@@ -1019,24 +1085,35 @@ gentle-ai-overlay manifest routes --overlay-root <dir> --target <name> --skills-
     read it). Exit 0 on success; 1 on a usage error (including an unknown flag) or a refusal, with nothing on stdout,
     so a caller never acts on part of a manifest.
 
-gentle-ai-overlay registry repair-sdd --registry <path> --target <name> --skills-root <dir>
-    Engine verb (Phase 9, B2): there is no `overlay registry` wrapper, so run it on the installed engine binary,
-    ~/.claude/bin/gentle-ai-overlay. It is what `overlay repair-sdd-registry` and `overlay skill-registry refresh` ask, after
-    gentle-ai has regenerated the registry. gentle-ai leaves the sdd-* phase skills out of the skill registry it writes, because
-    they are executor contracts and not skills a person invokes; SDD delegation still needs their paths, so this puts a row back
-    for each one installed in --skills-root (`<dir>/<name>/SKILL.md`; --target only names the target in what it says), with the
-    scope `executor`, above the `## Loading protocol` heading of the registry at --registry, and a note that says why above
-    the `## Skills` heading. The note and the rows of an earlier repair are replaced; every other line stays as it was. A project
-    that has no registry gets one. The description of a row is the text after the first `description:` line of the skill (one
-    double quote off each end, every `|` escaped), or `SDD phase executor: <name>.` when it has none. It takes the lock
-    `propagate` takes (`<registry>.lock`, waiting up to 2 seconds), so a repair and the `propagate` hook that runs on every prompt
-    take turns, and it writes the registry whole through a temporary file and a rename (mode 0644), so a reader never sees half of it.
-    Each executor that is not installed is said on stderr (`WARN: missing <target> SDD executor skill: <path>`), and the run is
-    summed up on stdout: `repair-sdd-registry: registry=<path> target=<name> sdd_executors=<n> missing=<m>`. Two things the script
-    always did and the engine keeps: the rows land after the blank line that precedes the loading protocol heading, and a second
-    repair adds a blank line above the note and one above that heading. Exit 0 on success; 1 on a usage error (including an
-    unknown flag), a registry without the headings `## Skills` and `## Loading protocol` (`ERROR: registry has no '<heading>'
-    section: <path>`), a lock that stays taken, or a file that cannot be read or written, with the registry as it was.
+gentle-ai-overlay registry refresh --cwd <dir> [--force] [--quiet] [--skip-if-busy]
+    Engine verb (labdrian-orchestrator-opencode T30, S17): there is no `overlay registry` wrapper, so run it on the installed
+    engine binary, ~/.claude/bin/gentle-ai-overlay. It writes the table of skills that `gentle-ai skill-registry refresh` used
+    to write into `<dir>/.atl/skill-registry.md`, so that labdrian does not need the gentle-ai binary to keep it current. The
+    skills are listed in this order of sources: the directories of the project (`skills`, `.opencode/skills`, `.claude/skills`,
+    `.gemini/skills`, `.cursor/skills`, `.github/skills`, `.codex/skills`, `.qwen/skills`, `.kiro/skills`, `.openclaw/skills`,
+    `.pi/skills`, `.agent/skills`, `.agents/skills`, `.atl/skills`, `.hermes/skills`), then those of the home that exist (the
+    18 directories gentle-ai 4.2.0 scans, from `~/.pi/agent/skills` to `~/.trae/skills`), and the registry names each source it
+    found under `## Sources scanned`. A skill is keyed by the `name:` of the frontmatter of its `SKILL.md` (its directory when
+    there is none); the first one found wins, the skills named `_shared` or `skill-registry` are left out (an `sdd-*` skill is listed like any other), and the rows
+    are sorted by name in byte order. A description is the value of `description:` with the white space and the quotes at its ends
+    dropped, a `>`, `|`, `>-` or `|-` block folded with single spaces, every `|` escaped, and a dash when there is none. The one
+    difference from gentle-ai, which kept the first line of a value of several lines: a quoted description written over several
+    lines is read whole. The rows were checked against what gentle-ai 4.2.0 wrote in a sandbox. Every line of the registry that
+    is not the generated head (title, the comment that names this command, `Last updated:`, `## Sources scanned`, `## Contract`)
+    or a row stays as it was, byte for byte: a Hermes section, the loading
+    protocol and the blocks `propagate` writes. The executor repair is gone, so a refresh drops what it wrote: every row with the
+    scope executor in the table block (never inside a Hermes section or below a heading) and the note "`sdd-*` phase skills are
+    executor contracts." with the one blank line after it; a second refresh changes nothing. A project with no registry gets one, loading protocol included. It takes the lock
+    `propagate` takes (`<registry>.lock`, waiting up to 2 seconds) and writes the registry whole through a temporary file and a
+    rename (mode 0644). It writes nothing when only the `Last updated:` day (UTC) would change, unless --force, and it never edits
+    `.gitignore`. A directory that holds neither `.git` nor `.atl` is skipped: stdout says `Skill registry refresh skipped
+    (no-project-marker): <dir> is not a project root; run it from a project directory (one containing .git or .atl), or create the
+    project first.` and nothing is written. Otherwise stdout says `Skill registry refreshed (<n> skills): <path>` or `Skill registry
+    up to date (cache-hit): <path>`; --quiet says nothing. Exit 0 on success or when skipped; 1 on a usage error (--cwd is
+    required, an unknown flag), a lock that stays taken, a registry it does not recognise (one with no `## Skills` table) or a file
+    that cannot be read or written (`error: ...` on stderr), with the registry as it was. --skip-if-busy (the `UserPromptSubmit` hook
+    runs with it) tries the lock once: a registry whose lock another process holds is left alone at once, silently, with exit 0,
+    instead of waiting up to 2 seconds and failing. A cache-hit run takes a few milliseconds.
 
 gentle-ai-overlay installed-targets record|release --state-dir <dir> --target <name>
 gentle-ai-overlay installed-targets list --state-dir <dir>
@@ -1104,6 +1181,108 @@ gentle-ai-overlay status [--only registry] [--cwd <dir>]
     degraded report. The callers in this repository are the overlay script's `status-hooks` (no argument) and its `doctor`
     (`--only registry --cwd <dir>`), and a test holds both.
 
+gentle-ai-overlay runtime install|update|uninstall|status --target claude
+    Besides the hooks of ~/.claude/settings.json, the Claude adapter keeps the owner's rules
+    (`instructions/owner-rules.md`) in `<claude root>/CLAUDE.md` (~/.claude/CLAUDE.md), between the lines
+    `<!-- labdrian:owner-rules -->` and `<!-- /labdrian:owner-rules -->`. The rules are read from the overlay checkout
+    in `LABDRIAN_OVERLAY_DIR`, else the nearest one above the working directory. `install` and `update` append the block
+    after one blank line when it is absent (a missing file is created with the block alone) and replace it in place when
+    it is there; every byte outside the two lines stays as it was, the `gentle-ai:` blocks and `user:memorycard-store`
+    included; the file keeps its line ending (CRLF too) and a missing final newline. `uninstall` removes the block and
+    the blank line `install` put before it, so an untouched file is given back byte for byte (a file `install` created
+    is removed); a block that text follows is removed alone. A write is refused when the file changed after it was read,
+    and a symbolic link to a missing file is refused. `status` is partial when the block is missing or stale, and says
+    which verb fixes it. With no overlay checkout the result is the hooks-only one, with a note; with a checkout whose
+    rules cannot be read, or markers that are not one open line followed by one close line (the message names their
+    lines), the action is partial and CLAUDE.md is left as it is. The OpenCode adapter keeps its AGENTS.md block with the same writer (`runtime.MarkedBlock`), described next.
+    It also keeps the top-level `"outputStyle": "labdrian"` key of `settings.json`, the style `output-styles/labdrian.md`
+    deploys to `~/.claude/output-styles` (route `output-style`): `install` and `update` write it when it is absent; any other
+    value (`"Gentleman"`, `null`, a number) belongs to the owner, is kept, and the message carries a notice saying the labdrian
+    style was not enabled; `uninstall` removes the key only while it holds exactly `"labdrian"`; `status` is partial when the
+    key is missing or foreign, after the `"agent"` key and before the rules block.
+
+gentle-ai-overlay runtime install|update|uninstall|status --target codex
+    Besides its manifest (`labdrian-runtime-lifecycle.json` in the Codex root: `$CODEX_HOME`, else ~/.codex, or
+    `--config-root`), the Codex adapter keeps the owner's rules (`instructions/owner-rules.md`, the same text and the same
+    block as Claude's) in three files: `~/AGENTS.md`, `<codex root>/AGENTS.md` and `<codex root>/agents.md`. The
+    writer is `runtime.MarkedBlock`, so each file is handled as CLAUDE.md is: `install` and `update` append the
+    `<!-- labdrian:owner-rules -->` block after one blank line when it is absent (a missing file is created with the
+    block alone) and replace it in place when it is there; every byte outside the two lines stays as it was, the
+    `gentle-ai:` blocks, `user:memorycard-store` and unmarked text included; a second `install` writes nothing;
+    `uninstall` removes only the block (and a file `install` created) and the manifest. Two of the paths that are the
+    same file (`CODEX_HOME` that is the home, a symbolic link, a case-insensitive file system) are one file: written,
+    checked, removed and reported once. The rules are read from the
+    overlay checkout in `LABDRIAN_OVERLAY_DIR`, else the nearest one above the working directory; with no checkout the
+    manifest is written alone and the message says so. A file whose markers are not one open line followed by one close
+    line is left as it is and makes the action partial, naming its lines; the other files are still written. `status`
+    is partial, as it always was for Codex (activation cannot be proven), and its reasons say for each of the three
+    files whether the block is current, stale or missing and which verb fixes it. Which of the three files Codex reads
+    (read from the installed codex 0.167.0 binary and the owner's config.toml, not from a run): `<codex root>/AGENTS.md`
+    is the global instruction file (`AGENTS.override.md` first, else `AGENTS.md`); `~/AGENTS.md` is read as a project
+    document, only in a session whose walk from its working directory up to its project root reaches the home
+    directory; nothing reads `agents.md` in lower case (no fallback filename is configured), so that file is written
+    and the message and status say that no Codex path reads it. `labdrian apply --target codex` (and `--target all`)
+    runs `engine runtime install --target codex` after the copy, with the checkout of the apply as the source of the
+    rules; it does nothing for a checkout that has no `instructions/owner-rules.md`, prints a note and does not fail
+    when the engine binary is not installed yet (`labdrian install-hooks` installs it), and exits non-zero when the
+    install ran and was not successful. `labdrian apply --target opencode` (and `--target all`) runs
+    `engine runtime install --target opencode` the same way, through the same step: right after the copy of the agents
+    and before the longterm-mem step, so the plugins, `opencode.json` (the `foreman` default agent and the MCP servers)
+    and the AGENTS.md block exist when `longterm-mem register --target opencode` reads `opencode.json`; a failed install
+    is shown on stderr, no state row is recorded for the target (status keeps saying it was never deployed, and the
+    next apply runs the install again), the longterm-mem step leaves opencode alone so the failure is shown once, and
+    apply exits non-zero after every target is deployed. For codex the install still runs after the state row; `pi` is unchanged. `labdrian apply --target claude` (and `--target all`) runs
+    `engine runtime install --target claude --component owner-rules` after the state row, through the same step: it writes
+    the owner rules block of `~/.claude/CLAUDE.md` and nothing else of the Claude adapter, so `settings.json` (the hooks,
+    `permissions.deny`, `agent`, `outputStyle`) stays `labdrian install-hooks`' alone; a checkout without
+    `instructions/owner-rules.md` is silent, a missing engine binary prints the note, and a failed install is shown on
+    stderr and makes apply exit non-zero. The `gentle-ai:` blocks leave the live files only through the owner-approved
+    removal of the gentle-ai detach (S17), never through this adapter.
+
+gentle-ai-overlay runtime install|update|uninstall|status --target opencode
+    Besides the runtime-parity plugin (`projection hook`, below), the OpenCode adapter keeps three entries of
+    `<opencode root>/opencode.json` (~/.config/opencode, or --config-root) and one block of AGENTS.md beside it.
+    opencode.json: `"default_agent": "foreman"`, and `mcp.servers.memorycard` and `mcp.servers.codegraph`
+    (`"type": "local"`, `"codemode": true`). Only these members are spliced into the owner's bytes: key order,
+    indentation and every other byte stay, and `uninstall` after `install` gives the file back byte for byte (a
+    container `install` had to create stays, empty; a file `install` created is removed). The command of each server
+    is the absolute path of `memorycard` and `codegraph` found on the PATH of the engine when `install` runs, since
+    OpenCode may start from a launcher whose PATH is not the shell's; a program not found is written by its bare
+    name and the message says which. Our server entry is ours in either form. A key or entry that holds another
+    value (another default agent, a server of another program under that name) is the owner's: it is kept, the
+    message names it, and `status` is partial. The first change leaves `opencode.json.labdrian.bak`, which is kept
+    after `uninstall`. A file that is not one JSON object, has content after it, or writes a key twice in the root,
+    `mcp` or `mcp.servers` is refused and left as it is. The provider is not written: the ChatGPT subscription is the
+    built-in openai provider, logged in with `opencode auth login`.
+    AGENTS.md: between `<!-- labdrian:opencode-instructions -->` and `<!-- /labdrian:opencode-instructions -->`, the
+    owner's rules (`instructions/owner-rules.md`), the body of the labdrian output style (`output-styles/labdrian.md`,
+    its frontmatter dropped) and the memorycard block, read from the overlay checkout as Claude's are; the block is
+    written and removed as CLAUDE.md's is. With no checkout the result is the base one, with a note.
+    memorycard plugin: a second OpenCode v2 plugin, `<opencode root>/plugins/memorycard/index.js` (record
+    `memorycard-opencode.json`, active marker `memorycard-opencode.active.json`), separate from the runtime-parity
+    plugin. On the first model call of a session its `context` hook runs `memorycard context` in the project directory
+    OpenCode reports and pushes the output onto the system prompt, before every model call of that session; its
+    `execute.after` hook pipes the final text of each completed `subagent` call to `memorycard capture` on stdin. No
+    Engram call. The context is asked for once per main session (child sessions are not asked: roles query memorycard
+    themselves) and is the same bytes on every model call, so the cached prefix of the conversation holds; a failed
+    ask is not repeated, so the block is never inserted mid-session. `capture` is started without waiting for it
+    (detached, input capped at 256 KiB, truncation logged) and a failed one pauses the next ones for 60 seconds. A
+    memorycard that is absent, exits non-zero or does not answer within 20 seconds (`LABDRIAN_MEMORYCARD_TIMEOUT_MS`)
+    is logged on stderr and the session goes on. The event shapes (`context`: `{sessionID, system}`; `execute.after`:
+    `{tool, status, result: {output, content}}`) were read from the OpenCode 2.2.7 binary and are not verified with a
+    model until T17; a shape that is not these is logged once per process. The record names the program: the absolute path of `memorycard`
+    found on the PATH of the engine when `install` runs, else its bare name. A file at the plugin path that does not
+    carry the plugin's mark (`labdrian-memorycard-plugin`) was not written by this adapter: `install` leaves it and is
+    partial, `uninstall` leaves it too. `uninstall` removes the plugin it wrote, its record and an empty plugin
+    directory, and names the active marker that stays until OpenCode restarts. `status` is partial when the plugin is
+    missing, foreign, or its record is missing or stale, and a restart is owed until the plugin has written its marker.
+    Skills: none is copied. `labdrian apply` copies no skill for OpenCode, which reads ~/.claude/skills, and a copy in
+    its own directory would shadow it; the adapter writes or removes none either. `install`, `update` and `status`
+    report, on every result, the labdrian skills found in `<opencode root>/skills` or ~/.agents/skills, where OpenCode
+    reads first, so that the owner removes them by hand.
+    The parts do not stop each other: a refused opencode.json still writes AGENTS.md and the report, and the result is
+    partial naming the reason; when both cleanups of `uninstall` fail, its message names both.
+
 gentle-ai-overlay runtime capabilities [--target claude|codex|pi|opencode|all]
     Engine verb (Phase 7): there is no `overlay runtime` wrapper, so run it on the installed engine
     binary, ~/.claude/bin/gentle-ai-overlay. Read-only and declarative: it prints, as JSON, what
@@ -1113,7 +1292,11 @@ gentle-ai-overlay runtime capabilities [--target claude|codex|pi|opencode|all]
     partial, or unsupported. A supported or partial claim names the tests that prove it as
     <directory under engine/>:<TestName>, and a guard test verifies every named test exists; a
     partial or unsupported claim states its limit in "detail". "untested" appears only on a runtime
-    that cannot be exercised on this machine (opencode). The output states what the engine's own
+    whose model sessions no test drives (opencode: its adapter, plugins and engine source are tested
+    at file level, under node and, when the binary exists, in the real opencode; what needs a model
+    session, such as context reaching a session or a captured Key Learnings item, is declared
+    untested until the T17 live run). OpenCode has claims of its own, not the declared-only list
+    Codex and Pi share; each partial one names the tests that back it. The output states what the engine's own
     tests prove, never what a runtime happened to do: a capability no test proves is declared
     unsupported, with the limit written. It reads no configuration, HOME, or file and starts no
     session. Exit 0 on success, 2 on an unknown --target value, 1 on a usage error (including an unknown flag).
@@ -1133,8 +1316,7 @@ gentle-ai-overlay runtime capabilities [--target claude|codex|pi|opencode|all]
     No test observes a runtime loading a skill. Codex reading a project skill at .agents/skills was observed
     once live (2026-09-28, Codex 0.148.0) and is recorded in odd/tasks/phase5-closeout.md, not tested. A live
     OpenCode 1.18.31 session discovered project skills placed under .agents/skills and .claude/skills (2026-09-30;
-    recorded in the Phase 8 ledger, odd/tasks/skill-lifecycle.md, not tested); its global tier was not observed live,
-    because the skill names also exist in several global directories OpenCode reads. A bound Claude Code
+    recorded in the Phase 8 ledger, odd/tasks/skill-lifecycle.md, not tested). OpenCode gets no copy of the global skills: it reads ~/.claude/skills (see `--target opencode` above). A bound Claude Code
     session's projected context lists every capability that is not supported, so it now lists skills=partial
     with the others.
 
@@ -1155,10 +1337,35 @@ gentle-ai-overlay runtime probe [--target claude|codex|pi|all]
     at the default state directory only (~/.labdrian-overlay), not under a custom --state-dir. Exit 0 on success,
     2 on an unknown --target value, 1 on a usage error (including an unknown flag).
 
-gentle-ai-overlay projection hook --event UserPromptSubmit|PreToolUse|SessionStart|PostToolUse [--source claude|codex]
+gentle-ai-overlay projection hook --event UserPromptSubmit|PreToolUse|SessionStart|PostToolUse [--source claude|codex|opencode]
     --source (default: claude) names the runtime that sent the hook; codex maps the tool names Codex sends
     for longterm-mem reads (mcp__longterm_mem__query, mcp__longterm_mem__get) to the ones the gate knows, before
-    the gate or the evidence sees the call. Nothing else changes; another value is a usage error (exit 1).
+    the gate or the evidence sees the call; opencode maps OpenCode v2's names (shell to Bash, patch to Edit, read to Read, skill to Skill,
+    <server>_<tool> to mcp__<server>__<tool>; the Code Mode wrapper execute and every other name pass unchanged).
+    Nothing else changes; another value is a usage error (exit 1).
+    OpenCode runs it through the runtime-parity plugin (`engine runtime install --target opencode`): the plugin
+    asks the engine for PreToolUse before each tool call and throws the engine's denial as a Tool.Error (the call
+    does not run and the model reads the reason), and for PostToolUse after each completed call, adding the line the
+    engine answers to the result the model reads. The plugin runs the engine named by `LABDRIAN_ENGINE_BINARY`, else
+    ~/.claude/bin/gentle-ai-overlay; when it cannot run (missing, too old, prints anything that is not a JSON object
+    or more than 2 MiB, no answer in 30 seconds, `LABDRIAN_ENGINE_TIMEOUT_MS` sets it) the call goes through, as a
+    hook that fails does in Claude Code, and the next result or model call says once that the hooks are not running.
+    Two launches are rewritten. First, every `subagent` launch with a prompt, when `labdrian-runtime-parity.json` names a
+    `skills_root` (the overlay's `skills` directory, written by `engine runtime install --target opencode`; an older install has none and
+    its prompts are left as they are): after the gate, the plugin replaces the prompt with the output of
+    `roles skill-paths --skills-root <skills_root>`, which turns each bare skill id under `## Skills to load before work` into the
+    absolute path of its SKILL.md, and denies the launch, with the verb's stderr line or a sentence saying the skill list could not
+    be checked, when the verb refuses (the colon form, an unknown id), fails, times out or prints nothing. Second, a `subagent` launch
+    of the agent `reviewer`, after that: after the gate, the plugin replaces its prompt with the
+    output of `review frozen-context` (the brief, then the frozen context of its candidate) and denies the launch, with the
+    verb's stderr line or a sentence naming the frozen context, when the verb refuses, fails, times out or prints nothing.
+    After a timeout the plugin does not ask the engine again for twice the timeout, and ends it with SIGTERM, then
+    SIGKILL. The read and skill tools of OpenCode v2 name their argument path and id; the plugin also sends them as
+    file_path and skill, the names the policies read.
+    The session events go the same way: `prompt` asks UserPromptSubmit, `context` (which runs before each model call)
+    asks SessionStart once for each session and pushes its block, and the last prompt's answer, onto the system prompt
+    as text parts, and `experimental.idle` asks `review stop-hook` (projection hook has no Stop) and, when the engine
+    blocks the stop, sends its reason to the session as a synthetic message so that the agent takes another turn.
     Internal hook command (Phase 7): Claude Code is meant to run it before each prompt (UserPromptSubmit),
     before each tool call (PreToolUse), when a session starts (SessionStart) and after a memory read has run (PostToolUse); a person does
     not. There is no `overlay projection` wrapper, so it runs on the installed engine binary,
@@ -1192,20 +1399,38 @@ gentle-ai-overlay projection hook --event UserPromptSubmit|PreToolUse|SessionSta
     SessionStart (C23 M6): when a session starts, resumes, is cleared or is compacted, put the memory
     instructions of the workflow the repository is bound to into its context, once, as
     {"hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":"..."}}: the block
-    `labdrian memory plan --instructions` prints, plus (C23 M8) one line, "Do not read <source>: it is
-    unavailable in this session (<reason>).", for each source of the plan that the hook found it cannot read:
-    it runs `engram stats` and the longterm-mem binary and looks for a longterm-mem MCP entry in any runtime
-    and for the project's procedural skills lock, each with a three-second deadline, all at once. The line
+    `labdrian memory plan --instructions` prints, plus (C23 M8) one line for each source of the plan that
+    the hook found it cannot read, "memorycard has no store yet (<reason>): memorycard creates it when it
+    first opens it, so its reads find nothing until a record is saved." for engram when memorycard's store
+    does not exist or is empty, "Do not call the memorycard tools: memorycard is unavailable in this
+    session (<reason>), though the plan allows its reads and does not limit its writes." for engram
+    otherwise and "Do not read <source>: it is unavailable in this session (<reason>)." for longterm-mem
+    and procedural-skills, without " (<reason>)" when the probe gives no reason: for engram it checks that
+    memorycard's store (`MEMORYCARD_DB`, else `~/.memorycard/memory.db`) is a regular file that is not
+    empty and only then runs `memorycard list`, so it runs nothing on a missing or empty store and never
+    runs `engram` (best-effort: a store removed between the check and the run is created by memorycard);
+    it runs the longterm-mem binary and looks for a longterm-mem MCP entry in any
+    runtime and for the project's procedural skills lock, each with a three-second deadline, all at once. The line
     only informs; the gate is unchanged. Silent when no workflow is bound, and for a binding or
     workflow it cannot follow, a closed one, a store it cannot read, or input it cannot use (the next
-    prompt warns about those); read-only, it never removes a binding. Each UserPromptSubmit keeps its
+    prompt warns about those); it never removes a binding. When the input names a session it also
+    records that the session's context was cut, so the next UserPromptSubmit of the session adds its block
+    again (below); its output does not depend on that. Each UserPromptSubmit that adds a block keeps its
     one-line memory plan, so a workflow bound or narrowed in the middle of a session is still seen.
     UserPromptSubmit: put the workflow the repository is bound to (see `workflow bind`) into the session's
     context, so a new or restarted session is told the same thing as the last one. PreToolUse: gate a tool
     call against that workflow (below).
-    Input: the hook JSON on stdin, at most 1 MiB. Only hook_event_name and cwd are read (cwd only when
-    absolute, else the process's working directory is used). The session id and the prompt are
-    ignored, so the output depends on neither.
+    Input: the hook JSON on stdin, at most 1 MiB. Only hook_event_name, cwd and session_id are read (cwd only when
+    absolute, else the process's working directory is used; session_id only when it is text). The prompt is
+    ignored, so the block depends on it no more than it did. The session id decides only whether the block is
+    added again: UserPromptSubmit adds the block to a session only when its bytes differ from the last block it
+    added to that session (S19), always on the session's first prompt and on the first one after SessionStart
+    (start, resume, clear or compact). The last block is kept as a SHA-256, one line for each change, in
+    `<state home>/labdrian/projection-prompt/<sha256 of the source and the session>/last` (0700 directories, 0600 file, no
+    cleanup), after the block was written to stdout; the same id sent under two `--source` values is two sessions. A prompt with no session id, a store that cannot be read or written, a warning, and the note of a
+    closed workflow (which repeats until the binding is removed) are printed as they always were.
+    OpenCode has no SessionStart on compaction, so after it compacts the block returns only when it changes (to be
+    checked in T17).
     Output: nothing, or exactly one JSON object,
     {"hookSpecificOutput":{"hookEventName":"UserPromptSubmit","additionalContext":"..."},"systemMessage":"..."},
     with either part left out when it is empty. additionalContext (at most 16 KiB, the same bytes for
@@ -1323,7 +1548,15 @@ gentle-ai-overlay review stop-hook
     It asks for what the first commit with unfinished review steps misses, one commit and not the whole branch. In a
     working tree that keeps features (odd/tasks or odd/review-results) with HEAD on a branch other than the default one
     (origin/HEAD, else main, else master), it walks the first-parent line of the branch, from the commit the branch was
-    made on, and blocks the stop for the first commit that misses anything `review check` asks of it. The reason lists
+    made on, and blocks the stop for the first commit that misses anything `review check` asks of it. The commits are
+    those of the branch that the default branch lacks and, when the branch tracks a local branch of another name (its
+    upstream, `branch.<b>.remote` being `.`), the commits of that branch up to the fork point (`git merge-base HEAD
+    <upstream tip>`, never the tip) lack too, so a branch made with `git switch -c <child> --track <parent>` is asked only
+    for its own commits. It is asked as before with no upstream, a remote upstream of any name (`git push -u` included),
+    an upstream of the branch's own name, an upstream tip that already holds HEAD (the parent took the child's commits by
+    fast-forward or merge), a branch that does not exist, or any read that fails. Residual: a parent that merged some of
+    the child's commits, with the child adding more after, leaves the merged ones out, which the parent's own chain then
+    holds. The reason lists
     each thing the commit misses with the command that answers it: the `Risk:` trailer (`git commit --amend --trailer`
     when the commit is HEAD), `labdrian review sweep --feature <feature> --base <base> --head <head>`, `labdrian review
     record --role sweeper` for a sweep that fired, `labdrian review record --role polisher` for a trailer that names an

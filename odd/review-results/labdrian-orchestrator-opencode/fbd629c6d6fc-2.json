@@ -1,0 +1,94 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "d94eb991178ef17812f48543dc5809d85f5d6e5e",
+    "head": "fbd629c6d6fcabc70af3f6ec4ab8e1d10e3db93c",
+    "diff_sha256": "833a2fc0cba675f30bcd7a3175d0da4812a0cb47258e2279f32447d6333ba25f",
+    "paths": [
+      "CHANGELOG.md",
+      "README.md",
+      "bin/lib/hooks.sh",
+      "bin/lib/usage.sh",
+      "engine/cmd/codegraph_prompt_notice_test.go",
+      "engine/cmd/settings_hooks.go",
+      "engine/cmd/status_command_test.go",
+      "engine/cmd/testdata/status-golden/status-binary-states.golden",
+      "engine/cmd/testdata/status-golden/status-contract-states.golden",
+      "engine/cmd/testdata/status-golden/status-families-missing-or-drifted.golden",
+      "engine/cmd/testdata/status-golden/status-in-an-empty-home.golden",
+      "engine/cmd/testdata/status-golden/status-of-a-complete-install.golden",
+      "engine/cmd/testdata/status-golden/status-registry-states.golden",
+      "engine/cmd/testdata/status-golden/status-settings-that-are-not-an-object.golden",
+      "engine/cmd/testdata/status-golden/status-settings-without-the-hooks.golden",
+      "engine/cmd/testdata/status-golden/status-with-no-home.golden",
+      "engine/cmd/usage.go",
+      "engine/settings/codegraph_prompt.go",
+      "engine/settings/codegraph_prompt_test.go",
+      "engine/settings/merge.go",
+      "engine/status/codegraph_prompt_test.go",
+      "engine/status/codex_test.go",
+      "engine/status/status.go",
+      "engine/status/status_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "d94eb991178ef17812f48543dc5809d85f5d6e5e",
+      "head": "fbd629c6d6fcabc70af3f6ec4ab8e1d10e3db93c",
+      "diff_sha256": "833a2fc0cba675f30bcd7a3175d0da4812a0cb47258e2279f32447d6333ba25f"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "README.md",
+        "bin/lib/hooks.sh",
+        "bin/lib/usage.sh",
+        "engine/cmd/codegraph_prompt_notice_test.go",
+        "engine/cmd/settings_hooks.go",
+        "engine/cmd/status_command_test.go",
+        "engine/cmd/testdata/status-golden/status-binary-states.golden",
+        "engine/cmd/testdata/status-golden/status-contract-states.golden",
+        "engine/cmd/testdata/status-golden/status-families-missing-or-drifted.golden",
+        "engine/cmd/testdata/status-golden/status-in-an-empty-home.golden",
+        "engine/cmd/testdata/status-golden/status-of-a-complete-install.golden",
+        "engine/cmd/testdata/status-golden/status-registry-states.golden",
+        "engine/cmd/testdata/status-golden/status-settings-that-are-not-an-object.golden",
+        "engine/cmd/testdata/status-golden/status-settings-without-the-hooks.golden",
+        "engine/cmd/testdata/status-golden/status-with-no-home.golden",
+        "engine/cmd/usage.go",
+        "engine/settings/codegraph_prompt.go",
+        "engine/settings/codegraph_prompt_test.go",
+        "engine/settings/merge.go",
+        "engine/status/codegraph_prompt_test.go",
+        "engine/status/codex_test.go",
+        "engine/status/status.go",
+        "engine/status/status_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "engine/settings/codegraph_prompt.go:47-57",
+        "claim": "The wrapper is matched only by exact string for the current hookCommand. If the engine binary path changes between installs, the old wrapper is neither detected by status (reported as 'no codegraph entry') nor restored by uninstall-hooks, and a later codegraph reinstall's bare entry gets a second wrapper, so the notification skip is configured twice. The old wrapper still falls back to codegraph when its binary is gone, so the harm is limited to a stale entry left behind.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/settings/codegraph_prompt.go:47-57",
+          "engine/settings/codegraph_prompt.go:22-25"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the whole diff. The rewrite logic in rewriteCodegraphPrompt handles in-place replacement, removal of a bare entry beside a wrapper, and removal of an emptied entry correctly.",
+      "In removeHooks, restoreCodegraphPrompt runs before the family removal loop, so a family matching on the engine binary path cannot remove the wrapper first.",
+      "No change-caused regression was found for settings with no codegraph entry."
+    ]
+  }
+}

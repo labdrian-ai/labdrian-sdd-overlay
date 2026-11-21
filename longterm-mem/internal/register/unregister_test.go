@@ -34,8 +34,8 @@ func uninstallCases() []uninstallCase {
 	}, {
 		target:     opencodeTarget,
 		configFile: opencodeConfigFileName,
-		untagged:   `{"mcp":{"other-project-server":{"type":"local"},"longterm-mem":{"type":"local","command":["/someone/elses/binary","mcp"]}}}`,
-		empty:      `{"mcp":{"other-project-server":{"type":"local"}}}`,
+		untagged:   `{"mcp":{"servers":{"other-project-server":{"type":"local"},"longterm-mem":{"type":"local","command":["/someone/elses/binary","mcp"]}}}}`,
+		empty:      `{"mcp":{"servers":{"other-project-server":{"type":"local"}}}}`,
 		install:    fileWriter().RegisterOpencode,
 	}, {
 		target:     codexTarget,

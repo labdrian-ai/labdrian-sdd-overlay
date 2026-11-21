@@ -41,8 +41,8 @@ func HasLabdrianReviewReceiptHook(root map[string]interface{}, key, hookCommand 
 // Labdrian-owned Claude hook families: the minimalism pair, the
 // anti-generic-design pair, the SessionEnd sync-trigger entry, the
 // PreToolUse/Bash review-receipt entry, the shaper clearance guard, the workflow
-// projection family, the skills approve guard, the Stop review stop-hook, and the
-// PreToolUse/Agent builder guard.
+// projection family, the skills approve guard, the Stop review stop-hook, the
+// PreToolUse/Agent builder guard, and the UserPromptSubmit registry refresh.
 func HasSupportedClaudeLifecycleState(root map[string]interface{}, hookCommand string) bool {
 	return HasLabdrianMinimalismHook(root, "UserPromptSubmit", hookCommand) &&
 		HasLabdrianMinimalismHook(root, "PreToolUse", hookCommand) &&
@@ -54,7 +54,8 @@ func HasSupportedClaudeLifecycleState(root map[string]interface{}, hookCommand s
 		HasProjectionHooks(root, hookCommand) &&
 		HasApproveGuard(root, hookCommand) &&
 		HasReviewStopHook(root, hookCommand) &&
-		HasBuilderGuard(root, hookCommand)
+		HasBuilderGuard(root, hookCommand) &&
+		HasRegistryRefreshHook(root, hookCommand)
 }
 
 // HasShaperClearanceGuard reports whether the shaper clearance deny guard is

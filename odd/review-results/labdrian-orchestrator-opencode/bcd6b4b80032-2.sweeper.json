@@ -1,0 +1,25 @@
+{
+  "kind": "sweeper",
+  "base": "3d93b7c5fecfdee0b9c6ff462557fcda3574a825",
+  "head": "bcd6b4b80032c925cc6401ec8de55f680c402e78",
+  "diff_sha256": "af4dccd537f50c0ab85fa6c5cf8256d8e033fc35768022d874af0007bf69cefd",
+  "sweep": "bcd6b4b80032-1.sweep.json",
+  "commit": null,
+  "candidates": [
+    {
+      "candidate": "T3: ?? CLAUDE.md",
+      "disposition": "live",
+      "evidence": "Owner decision L160 (odd/tasks/labdrian-orchestrator-opencode.md line 953, rg 'se quedan los files de wiki'), verbatim: \"se quedan los files de wiki\". It names the untracked CLAUDE.md as kept. No role deletes it, and delivery does not commit it unless the owner says so. Nothing removed, moved or committed."
+    },
+    {
+      "candidate": "T3: ?? docs/wiki/.format",
+      "disposition": "live",
+      "evidence": "Owner decision L160 (line 953), verbatim: \"se quedan los files de wiki\". L160 names the untracked docs/wiki/README.md explicitly; docs/wiki/.format is also a wiki file under docs/wiki and is kept under the same decision. Nothing removed, moved or committed."
+    },
+    {
+      "candidate": "T3: ?? docs/wiki/README.md",
+      "disposition": "live",
+      "evidence": "Owner decision L160 (line 953), verbatim: \"se quedan los files de wiki\". It names the untracked docs/wiki/README.md as kept. No role deletes it, and delivery does not commit it unless the owner says so. Nothing removed, moved or committed."
+    }
+  ]
+}

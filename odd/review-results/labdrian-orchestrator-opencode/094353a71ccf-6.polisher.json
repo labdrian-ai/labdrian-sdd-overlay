@@ -1,0 +1,12 @@
+{
+  "kind": "polisher",
+  "base": "7ca4f581d13e0d87f1bac2d056cef22d914a3010",
+  "head": "094353a71ccf56c1f5d5ef59168a05f4ff43ce31",
+  "diff_sha256": "10e3fb87908241bc36734dc2822fd43ad6a3e7a7a07ed3f1b3522a6a7a602884",
+  "findings": {
+    "findings": [],
+    "evidence": [
+      "Bounded recheck by two blind polisher judges on a detached worktree at 094353a7. Judge A: J1, J2 and J3 fixed (contract lines 124-132, 139-144, 153-161; SKILL.md steps 5-6), no new data-loss or double-count path. Judge B: the lifecycle exception saves the whole transition with Occurrences as stored without contradicting the stop; reads count one id once like a save (candidate_record.go TranslateOccurrence); SKILL.md step 6 shows the one-call form matching legacyNumbers and resolver.go. Neither ran tests."
+    ]
+  }
+}

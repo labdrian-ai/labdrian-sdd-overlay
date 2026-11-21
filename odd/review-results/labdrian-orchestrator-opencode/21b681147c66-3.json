@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "dbbc47c9a0320b422d121261ed971bf0c346adab",
+    "head": "21b681147c669cc525d30073fe4e89c53e17351a",
+    "diff_sha256": "2f1e6cb01d9b04bd25f627505486b405cdc1713a34c1b44d69eb795db39c9549",
+    "paths": [
+      "odd/tasks/labdrian-orchestrator-opencode.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "dbbc47c9a0320b422d121261ed971bf0c346adab",
+      "head": "21b681147c669cc525d30073fe4e89c53e17351a",
+      "diff_sha256": "2f1e6cb01d9b04bd25f627505486b405cdc1713a34c1b44d69eb795db39c9549"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/labdrian-orchestrator-opencode.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/labdrian-orchestrator-opencode.md:49",
+        "claim": "The T6 row now cites L43 as the source of 646bc13d, while the L44 entry says F2 (L43 says ten cases, names eight) was only answered in L44 and L43 itself was not corrected. A reader of L43 still sees the unnamed-cases discrepancy; the fix lives only in a later append-only entry. This is a minor documentation inconsistency, acceptable under the append-only rule.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/labdrian-orchestrator-opencode.md:49",
+          "odd/tasks/labdrian-orchestrator-opencode.md:440"
+        ]
+      }
+    ],
+    "evidence": [
+      "The change touches only a documentation file: it appends 646bc13d to the T6 commit list and adds log entry L44.",
+      "L44 states that the row lists e001d5ac, 08038624, 14bbfc55, 646bc13d, which matches the edited row exactly.",
+      "No code, tests or behavior are changed, so no regression or violated behavior is possible from this diff."
+    ]
+  }
+}

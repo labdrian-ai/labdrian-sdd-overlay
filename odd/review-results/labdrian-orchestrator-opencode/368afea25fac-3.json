@@ -1,0 +1,92 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "b2575e8d450bbb688f6e5ed61a2bdfa0751b76ce",
+    "head": "368afea25facf89a2b6194338d88e48e2d105a0b",
+    "diff_sha256": "00760da9203bfcde5d1364509e9470f3b1bc0b3fee7180bb5ca28bae2f690edc",
+    "paths": [
+      "engine/cmd/inception_chain_entry_test.go",
+      "engine/skills/foreman_restored_duties_test.go",
+      "engine/skills/foreman_skills_test.go",
+      "engine/skills/odd_role_skills_artifact_test.go",
+      "engine/skills/role_chain_artifact_test.go",
+      "overlay.manifest",
+      "skills/inception-pipeline/SKILL.md",
+      "skills/inception-pipeline/references/chain-entry.md",
+      "skills/odd-feature-doc/SKILL.md",
+      "skills/odd-feature-doc/references/format.md",
+      "skills/role-chain/SKILL.md",
+      "skills/role-chain/references/prototyper.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "b2575e8d450bbb688f6e5ed61a2bdfa0751b76ce",
+      "head": "368afea25facf89a2b6194338d88e48e2d105a0b",
+      "diff_sha256": "00760da9203bfcde5d1364509e9470f3b1bc0b3fee7180bb5ca28bae2f690edc"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/cmd/inception_chain_entry_test.go",
+        "engine/skills/foreman_restored_duties_test.go",
+        "engine/skills/foreman_skills_test.go",
+        "engine/skills/odd_role_skills_artifact_test.go",
+        "engine/skills/role_chain_artifact_test.go",
+        "overlay.manifest",
+        "skills/inception-pipeline/SKILL.md",
+        "skills/inception-pipeline/references/chain-entry.md",
+        "skills/odd-feature-doc/SKILL.md",
+        "skills/odd-feature-doc/references/format.md",
+        "skills/role-chain/SKILL.md",
+        "skills/role-chain/references/prototyper.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "skills/odd-feature-doc/SKILL.md:21",
+        "claim": "The task-line format is no longer in the skill body: the body now says only 'One line per task, its commit `-` until the task is committed' and links the reference. The required segments (box, S#, route inline/delegated, description) are only in references/format.md, which a role may not load. The commit restores cut rules yet drops the in-body statement of the task-line shape and the route values. The test was weakened to match (no longer asserts the example or `inline`/`delegated` in the body).",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "skills/odd-feature-doc/SKILL.md:21",
+          "engine/skills/odd_role_skills_artifact_test.go:142"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "engine/cmd/inception_chain_entry_test.go:117-125",
+        "claim": "The helper picks the json block with strings.Index of the first json fence and strings.LastIndex of the last triple backtick; the end offset is only checked as greater than start. A reference with extra fenced blocks after the json would be spliced in whole. It also does not verify the skill's own prose still carries the 'prev_sha256 has 64 zeros' note at the point the record is checked.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/cmd/inception_chain_entry_test.go:117-125"
+        ]
+      },
+      {
+        "id": "F3",
+        "severity": "SUGGESTION",
+        "location": "skills/role-chain/SKILL.md:24",
+        "claim": "The prototyper triggers (the three question-of-shape criteria) moved to a reference, so the body no longer says when the prototyper is used. The body line now says 'examples', but the reference is the only place the three admissible questions are listed, which weakens the 'only for a question of shape' gate when the reference is not loaded.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "skills/role-chain/SKILL.md:24",
+          "skills/role-chain/references/prototyper.md:3-7"
+        ]
+      }
+    ],
+    "evidence": [
+      "Diff inspected in full; no tools available to run tests.",
+      "Restored-duty strings in the SKILL.md files match the assertions in foreman_restored_duties_test.go by reading.",
+      "overlay.manifest registers all three new reference files as custom, matching the test expectation for odd-feature-doc."
+    ]
+  }
+}

@@ -9,9 +9,13 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
+	"fmt"
 	"strings"
 	"testing"
 
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/goal"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/memoryscope"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/overlaytest"
 )
 
@@ -187,6 +191,98 @@ func TestTheShaperRoleFilesTellItToMarkTheTasksItDesigned(t *testing.T) {
 		for _, want := range []string{"shaped: L<n>", "(<date>, shaper)", "never mark a task you did not design"} {
 			if !strings.Contains(text, want) {
 				t.Errorf("%s does not say %q", name, want)
+			}
+		}
+	}
+}
+
+// The shaper writes the goal file the foreman's prompt names (T49, L147), and never rewrites one that exists; the role
+// body and the four generated shaper files carry both fragments.
+func TestTheShaperRoleFilesTellItToWriteTheGoalTheForemanNames(t *testing.T) {
+	for _, name := range []string{"roles/shaper/body.md", "agents/shaper.md", "pi/agents/shaper.md", "codex/agents/shaper.toml", "opencode/agents/shaper.md"} {
+		text := readRepositoryFile(t, name)
+		for _, want := range []string{
+			"When the prompt names `odd/goals/<feature>.json`, write it as a Goal of version 3",
+			"Copy `version`, `project_id`, `goal_id` and `memory_directive` verbatim from the `labdrian workflow goal-base` output the prompt holds",
+			"without that output, write no goal and report it as a blocker",
+			"never add a source or a key",
+			"`constraints`, `non_goals` and `acceptance_criteria` are JSON arrays of strings and `objective`, `scope`, `runtime_scope` and `delivery_boundary` are strings",
+			"never rewrite a goal file that exists: report it",
+		} {
+			if !strings.Contains(text, want) {
+				t.Errorf("%s does not say %q", name, want)
+			}
+		}
+		if strings.Contains(text, "odd/goals/labdrian-orchestrator-opencode.json") {
+			t.Errorf("%s names a goal file of this repository", name)
+		}
+	}
+}
+
+// A Goal written as the shaper's sentence says (its keys in order, version, project_id, goal_id and memory_directive
+// copied verbatim from the output of 'workflow goal-base', L152) is accepted by goal.Parse, so are the two narrowed
+// forms the sentence allows, and a document with any one key missing is refused.
+func TestTheGoalTheShaperIsToldToWriteParses(t *testing.T) {
+	workflowTestStateHome(t)
+	base := runWorkflowTest([]string{"goal-base", "--feature", "sample-feature", "--project", "sample-project"}, t.TempDir())
+	if base.code != 0 {
+		t.Fatalf("goal-base: code=%d stderr=%q", base.code, base.stderr)
+	}
+	var printed map[string]json.RawMessage
+	if err := json.Unmarshal([]byte(base.stdout), &printed); err != nil {
+		t.Fatalf("goal-base printed %q, which is not JSON: %v", base.stdout, err)
+	}
+	var directive memoryscope.Directive
+	if err := json.Unmarshal(printed["memory_directive"], &directive); err != nil || len(directive.Sources) == 0 {
+		t.Fatalf("the printed memory_directive %s is not a directive with sources: %v", printed["memory_directive"], err)
+	}
+	marshal := func(d memoryscope.Directive) string {
+		raw, err := json.Marshal(d)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return string(raw)
+	}
+	firstSourceOnly := directive
+	firstSourceOnly.Scope = "goal"
+	firstSourceOnly.Sources = directive.Sources[:1]
+	none := directive
+	none.Scope = "none"
+	none.Sources = []memoryscope.Source{}
+
+	keys := []string{"version", "project_id", "goal_id", "objective", "scope", "constraints", "non_goals", "acceptance_criteria", "memory_directive", "runtime_scope", "delivery_boundary"}
+	values := map[string]string{
+		"objective":           `"sample objective"`,
+		"scope":               `"sample scope"`,
+		"constraints":         `["sample constraint"]`,
+		"non_goals":           `["sample non-goal"]`,
+		"acceptance_criteria": `["sample criterion"]`,
+		"runtime_scope":       `"sample runtime scope"`,
+		"delivery_boundary":   `"sample delivery boundary"`,
+	}
+	for _, key := range []string{"version", "project_id", "goal_id", "memory_directive"} {
+		values[key] = string(printed[key])
+	}
+	document := func(skip, memoryDirective string) []byte {
+		var parts []string
+		for _, key := range keys {
+			value := values[key]
+			if key == "memory_directive" && memoryDirective != "" {
+				value = memoryDirective
+			}
+			if key != skip {
+				parts = append(parts, fmt.Sprintf("%q: %s", key, value))
+			}
+		}
+		return []byte("{" + strings.Join(parts, ", ") + "}")
+	}
+	for name, memoryDirective := range map[string]string{"printed": "", "first source only, scope goal": marshal(firstSourceOnly), "scope none, no sources": marshal(none)} {
+		if _, err := goal.Parse(document("", memoryDirective)); err != nil {
+			t.Errorf("the goal with the %s directive is refused: %v", name, err)
+		}
+		for _, key := range keys {
+			if _, err := goal.Parse(document(key, memoryDirective)); err == nil {
+				t.Errorf("a goal with the %s directive and without %s is accepted", name, key)
 			}
 		}
 	}

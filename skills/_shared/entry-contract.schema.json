@@ -136,7 +136,7 @@
     "chain_strategy": {
       "type": "string",
       "enum": ["none", "feature-branch-chain", "stacked-to-main"],
-      "description": "Concrete topology when chaining is required; none otherwise. This token domain is shared with the SDD phase skills that consume it: skills/sdd-tasks/SKILL.md records it in the tasks artifact, skills/sdd-apply/SKILL.md branches on it for PR targeting, and skills/_shared/sdd-orchestrator-workflow.md defines it. A token no consumer implements would fall through every branch unguarded, so this enum must name exactly what they branch on."
+      "description": "Concrete topology when chaining is required; none otherwise. This enum names exactly the topologies a consumer branches on: a token no consumer implements would fall through every branch unguarded."
     },
     "review_budget": {
       "type": "object",

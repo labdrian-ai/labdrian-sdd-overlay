@@ -91,7 +91,7 @@ func roleAgentSpecs() []roleAgentSpec {
 			"Implement only the tasks the prompt names", "[x]", "`odd-feature-doc`", "append its evidence to the Log", "`test-first`",
 			"RED -> GREEN -> REFACTOR evidence table", "confirmed ledger ids", "one focused test per fix",
 		}},
-		{"shaper", "opus", shaperTools, 4, []string{
+		{"shaper", "opus", shaperTools, 5, []string{
 			"Specs and Tasks", "`odd-feature-doc`", "Never write code or tests", "risks", "exactly one question",
 			"strongest counter-argument", "recommend one option", "tradeoff", "source",
 		}},
@@ -1112,6 +1112,30 @@ func TestBuilderAndSweeperDeltasCarryTheTrailerAndTheSweepReport(t *testing.T) {
 					t.Errorf("%s must hold one line that starts Commit the sweep as, has %d", path, strings.Count(text, "Commit the sweep as"))
 				}
 			})
+		}
+	}
+}
+
+// With no CI, delivery runs the engine's `review ci` verb at the delivered head and then requires a passing test run
+// there (S3 L144, the owner's L143); the role body and the four files made from it hold the sentence.
+func TestDeliveryRequiresAPassingRunAtTheHeadWhenNoCI(t *testing.T) {
+	root := skillsRepoRoot(t)
+	want := "Before you append the entry, also run `labdrian review ci --landing <delivered head> --head <delivered head>` and put its exact output line in the entry; when it exits 0 (no CI), the test run must be at the delivered head and pass: when it was not run or failed, close nothing and return status blocked naming it. On any other exit put its stderr line in the entry instead; the no-CI closure then does not apply."
+	for _, path := range []string{"roles/delivery/body.md", "agents/delivery.md", "opencode/agents/delivery.md", "codex/agents/delivery.toml", "pi/agents/delivery.md"} {
+		if text := readRepoFile(t, root, path); !strings.Contains(text, want) {
+			t.Errorf("%s does not hold %q", path, want)
+		}
+	}
+}
+
+// Delivery records the local test result at the delivered head, which the no-CI closure reads (S3 L123); the role
+// body and the four files made from it hold the sentence.
+func TestDeliveryRecordsTheLocalTestResultAtTheDeliveredHead(t *testing.T) {
+	root := skillsRepoRoot(t)
+	want := "Run the test runner the feature document's header names at the delivered head and put the command and its exact result in the entry; when the worktree is not at that head, write it not run."
+	for _, path := range []string{"roles/delivery/body.md", "agents/delivery.md", "opencode/agents/delivery.md", "codex/agents/delivery.toml", "pi/agents/delivery.md"} {
+		if text := readRepoFile(t, root, path); !strings.Contains(text, want) {
+			t.Errorf("%s does not hold %q", path, want)
 		}
 	}
 }

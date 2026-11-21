@@ -1,0 +1,66 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "9ef28e097083b2ac1ec6366b629b94b4fa17f7f9",
+    "head": "dec120a460c8fdd408fffb7f5b9d62c7bebf3cb1",
+    "diff_sha256": "afb77c7d3626eef431f03aa75765b3271305c7845436cf8cd8fb7b9d56a9eeda",
+    "paths": [
+      "CHANGELOG.md",
+      "README.md",
+      "bin/lib/apply.sh",
+      "bin/lib/targets.sh",
+      "engine/cmd/manifest_test.go",
+      "engine/installer/agent_deploy_test.go",
+      "engine/installer/manifest_routes_test.go",
+      "engine/installer/testdata/routing_pins.golden",
+      "engine/skills/routes.go",
+      "engine/skills/routes_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "9ef28e097083b2ac1ec6366b629b94b4fa17f7f9",
+      "head": "dec120a460c8fdd408fffb7f5b9d62c7bebf3cb1",
+      "diff_sha256": "afb77c7d3626eef431f03aa75765b3271305c7845436cf8cd8fb7b9d56a9eeda"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "README.md",
+        "bin/lib/apply.sh",
+        "bin/lib/targets.sh",
+        "engine/cmd/manifest_test.go",
+        "engine/installer/agent_deploy_test.go",
+        "engine/installer/manifest_routes_test.go",
+        "engine/installer/testdata/routing_pins.golden",
+        "engine/skills/routes.go",
+        "engine/skills/routes_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "engine/skills/routes.go:282-286",
+        "claim": "The commit's goal is that no OpenCode skill copy shadows the Claude skills. It stops writing copies but never removes the ones earlier applies left in ~/.config/opencode/skills. On an upgraded machine those stale copies keep shadowing the Claude skills, and nothing in apply or status warns about it (the changelog only says the runtime install names them). Those copies are no longer updated, so they go stale. Sync-check and capture for opencode still read that directory whenever it exists, with skill rows now unrouted. That behaviour is not covered by the pinned goldens, which only exercise the absent-directory case.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/skills/routes.go:282-286",
+          "bin/lib/apply.sh:96-99",
+          "CHANGELOG.md:60"
+        ]
+      }
+    ],
+    "evidence": [
+      "Diff only: the routes.go change returns early for OpenCode, so skill rows get no destination.",
+      "apply.sh only skips mkdir for OpenCode; it adds no cleanup or warning for existing skill directories.",
+      "The golden files pin only the case where the OpenCode skills directory is absent."
+    ]
+  }
+}

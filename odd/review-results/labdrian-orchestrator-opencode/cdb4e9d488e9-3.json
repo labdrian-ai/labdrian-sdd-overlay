@@ -1,0 +1,34 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "40bdd4edf0f97d0c678be4b248583a2729585057",
+    "head": "cdb4e9d488e99f07e17a149d5d0a3cd142cba9cb",
+    "diff_sha256": "066883a063a0cfd62f536afd7c74964beaac1c26d346e0f69580312648c03304",
+    "paths": [
+      "odd/tasks/labdrian-orchestrator-opencode.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "40bdd4edf0f97d0c678be4b248583a2729585057",
+      "head": "cdb4e9d488e99f07e17a149d5d0a3cd142cba9cb",
+      "diff_sha256": "066883a063a0cfd62f536afd7c74964beaac1c26d346e0f69580312648c03304"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/labdrian-orchestrator-opencode.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The diff only appends a log entry L64 to odd/tasks/labdrian-orchestrator-opencode.md: it records the owner's verbatim 'apruebo' to L60 risk 1 and notes that L62 exists and T10 is ticked.",
+      "No code, tests, or specs are changed, and no existing line is modified, so no behavior can regress.",
+      "The claims in L64 (L62 exists, L63 references it, T10 ticked) are not contradicted by anything in the visible diff; the diff context does show an L62-related item and L63 following it."
+    ]
+  }
+}

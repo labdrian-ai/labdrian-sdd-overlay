@@ -1,0 +1,22 @@
+{
+  "kind": "polisher",
+  "base": "b38a989854083799e499d73a2e86ef5c1ded86a3",
+  "head": "ac151d719da4c8a375800233b8fe64c1f2284ec2",
+  "diff_sha256": "78ededd66939b71872ed4ae5465da6d4d2014fbe213f2b1002ed16c57d29ab3e",
+  "findings": {
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "overlay.manifest:82-93",
+        "claim": "Reference files of the adopted skills stayed managed (both reviewers). Fixed in cb3b8bca: the five rows are custom and the test checks every manifest row of an adopted skill.",
+        "evidence": [
+          "RED: 5 managed reference rows reported; GREEN after the retag."
+        ]
+      }
+    ],
+    "evidence": [
+      "series review b38a9898..cb3b8bca"
+    ]
+  }
+}

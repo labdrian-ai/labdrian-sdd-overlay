@@ -304,6 +304,9 @@ func (a LongtermMemAdapter) evaluateAll(targets map[string]longtermMemObservatio
 			EntryPresent:     obs.entryPresent,
 			FingerprintMatch: fingerprintMatch,
 		})
+		if obs.legacyOwned && obs.rootResolvable && obs.binaryPresent {
+			status, reason = core.CapabilityPartial, LongtermMemReasonOpenCode1xEntry
+		}
 		message := string(name) + ": " + string(status)
 		if reason != "" {
 			message += " — " + reason

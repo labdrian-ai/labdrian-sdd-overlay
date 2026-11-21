@@ -1,0 +1,64 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "284962adc519179d93c09b81179bca27ff759fe6",
+    "head": "800bbcf89ab1a71c6f2eb937178d47b0c884d84f",
+    "diff_sha256": "59a64c02b469be4edcb0bb9f3e2af749a8ff160865b5be01b10284c57072a070",
+    "paths": [
+      "agents/delivery.md",
+      "agents/foreman.md",
+      "codex/agents/delivery.toml",
+      "engine/agentgen/foreman_test.go",
+      "engine/skills/role_agents_artifact_test.go",
+      "opencode/agents/delivery.md",
+      "opencode/agents/foreman.md",
+      "pi/agents/delivery.md",
+      "roles/delivery/body.md",
+      "roles/foreman/body.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "284962adc519179d93c09b81179bca27ff759fe6",
+      "head": "800bbcf89ab1a71c6f2eb937178d47b0c884d84f",
+      "diff_sha256": "59a64c02b469be4edcb0bb9f3e2af749a8ff160865b5be01b10284c57072a070"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "agents/delivery.md",
+        "agents/foreman.md",
+        "codex/agents/delivery.toml",
+        "engine/agentgen/foreman_test.go",
+        "engine/skills/role_agents_artifact_test.go",
+        "opencode/agents/delivery.md",
+        "opencode/agents/foreman.md",
+        "pi/agents/delivery.md",
+        "roles/delivery/body.md",
+        "roles/foreman/body.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "roles/delivery/body.md:9",
+        "claim": "The new instruction only defines behavior for `labdrian review ci` exiting 0 (no CI). It says nothing about other exit codes, such as a CI-configured result or a command error. A delivery agent that hits an error exit has no rule to follow and may record a failed command as if CI exists, skipping the passing-test requirement. The instruction also depends on `<delivered head>`, which is undefined when the prompt names no head.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "roles/delivery/body.md:9 'when it exits 0 (no CI), the test run must be at the delivered head and pass'"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff changes the delivery instruction in the role body and its four generated copies identically, and changes the foreman Close row in the role body and its two generated copies identically.",
+      "The foreman_test.go and role_agents_artifact_test.go updates match the new sentences verbatim.",
+      "I found no defect that causes an observable regression."
+    ]
+  }
+}

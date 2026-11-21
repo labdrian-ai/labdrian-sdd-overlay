@@ -1,0 +1,37 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "6c97d13a0fd37c74ced2feb94f3b98955c21368d",
+    "head": "e6b29f47fd82c43ae1c66df9c5fe4fe5a1023d66",
+    "diff_sha256": "90212e02fef5352790d2555f2cacd469bd2bb321a526fe06cf038389d49a36a8",
+    "paths": [
+      "engine/cmd/review_ci_test.go",
+      "tui/internal/adapters/overlaycli/capture_backend_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "6c97d13a0fd37c74ced2feb94f3b98955c21368d",
+      "head": "e6b29f47fd82c43ae1c66df9c5fe4fe5a1023d66",
+      "diff_sha256": "90212e02fef5352790d2555f2cacd469bd2bb321a526fe06cf038389d49a36a8"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/cmd/review_ci_test.go",
+        "tui/internal/adapters/overlaycli/capture_backend_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "review_ci_test.go: the first land() result is now discarded and the second is kept in `landing`, which fixes the SA4006 unused assignment without changing what the test does.",
+      "capture_backend_test.go: with ssh.variant=simple, git invokes the shim as `<host> <command>`. The shim's `shift; exec sh -c \"$1\"` therefore runs the remote command locally, and the ssh:// URL keeps the absolute origin path.",
+      "capture_backend_test.go: extraEnv is appended after gitTestEnv, so GIT_ALLOW_PROTOCOL=file:ssh overrides any earlier value for that one run. The origin URL is restored before the test's own fetch.",
+      "The diff does not show origin_is_network_remote or testhome, so I could not check how they treat the ssh:// URL or the allowed protocols. I raised no finding on that."
+    ]
+  }
+}

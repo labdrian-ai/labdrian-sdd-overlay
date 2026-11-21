@@ -1,0 +1,60 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "65894e6fbe5f86493b59f2a6dddb7b26eb3a33f3",
+    "head": "4d34b33684b544382ffe2101849bf9d7888f87fa",
+    "diff_sha256": "846bdf8ed24d382d87f0832dbf1300acb52e6e07af0d2a09c7f63ae6c6dd2be2",
+    "paths": [
+      "odd/tasks/labdrian-orchestrator-opencode.md",
+      "odd/tasks/phase9-store-agnostic-promotion.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "65894e6fbe5f86493b59f2a6dddb7b26eb3a33f3",
+      "head": "4d34b33684b544382ffe2101849bf9d7888f87fa",
+      "diff_sha256": "846bdf8ed24d382d87f0832dbf1300acb52e6e07af0d2a09c7f63ae6c6dd2be2"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/labdrian-orchestrator-opencode.md",
+        "odd/tasks/phase9-store-agnostic-promotion.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "odd/tasks/labdrian-orchestrator-opencode.md:480",
+        "claim": "L57 says the T7 line in the other document is narrowed and 'L91' records the routing, and the T20 line cites 'L91', but this diff adds no L91 entry to phase9-store-agnostic-promotion.md (only the T20 line changes). If L91 does not already exist in that document's Log, the reference dangles. Likewise L57 claims the fix of the T23 dangling 'commit: -' and the T20 text claims 'narrowed by L91' without the diff showing the log entry.",
+        "evidence_class": "inferential",
+        "causal_disposition": "unknown",
+        "proof_refs": [
+          "odd/tasks/phase9-store-agnostic-promotion.md:133 cites L91",
+          "odd/tasks/labdrian-orchestrator-opencode.md:480 cites L91"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/labdrian-orchestrator-opencode.md:480",
+        "claim": "L57 states 'review check 87f26495..HEAD: clear' and a verifier on 9091d9ce, yet the T7 line records the commit list including 15a0ae1a and 65894e6f that the verifier did not cover; the claim of 'clear' is for a head that predates this docs commit, so it cannot be verified from the diff. Also L57 is a very long single paragraph, hurting readability.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/labdrian-orchestrator-opencode.md:480"
+        ]
+      }
+    ],
+    "evidence": [
+      "Diff only touches two odd/tasks markdown documents: ticks T7, adds L57 log entry, fixes T23's duplicated 'commit: -', and annotates T20 as narrowed.",
+      "T20 line retains its original full scope text (adapter, engramexport deletion) after the 'narrowed' prefix, which can mislead but the prefix explicitly states what remains."
+    ]
+  }
+}

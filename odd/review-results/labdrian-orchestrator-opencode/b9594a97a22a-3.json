@@ -1,0 +1,77 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "2bb6d495baab709cc0c8fe4e0264fe0018c8f47e",
+    "head": "b9594a97a22a7baf3a4fd7d622d0476ae65bda00",
+    "diff_sha256": "fd22c5f7caa142c1c7f027645948e2bebfbc6b6597f256225cc34af532302563",
+    "paths": [
+      "CHANGELOG.md",
+      "README.md",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-context-lists-quotes-and-case.golden",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-minimalism-context-metadata-accepted-today.golden",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-phases-quoted-items-accepted-today.golden",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-reads-the-contracts-of-the-overlay.golden",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-without-the-oo-contract.golden",
+      "engine/cmd/testdata/runtime-golden/runtime-opencode-and-pi-with-an-overlay.golden",
+      "engine/runtime/memorycard-opencode-plugin.mjs",
+      "engine/runtime/opencode_memorycard.go",
+      "engine/runtime/opencode_memorycard_plugin_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "2bb6d495baab709cc0c8fe4e0264fe0018c8f47e",
+      "head": "b9594a97a22a7baf3a4fd7d622d0476ae65bda00",
+      "diff_sha256": "fd22c5f7caa142c1c7f027645948e2bebfbc6b6597f256225cc34af532302563"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "README.md",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-context-lists-quotes-and-case.golden",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-minimalism-context-metadata-accepted-today.golden",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-phases-quoted-items-accepted-today.golden",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-reads-the-contracts-of-the-overlay.golden",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-without-the-oo-contract.golden",
+        "engine/cmd/testdata/runtime-golden/runtime-opencode-and-pi-with-an-overlay.golden",
+        "engine/runtime/memorycard-opencode-plugin.mjs",
+        "engine/runtime/opencode_memorycard.go",
+        "engine/runtime/opencode_memorycard_plugin_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "engine/runtime/memorycard-opencode-plugin.mjs:222-231",
+        "claim": "Session eviction is insertion-order (FIFO), not LRU, and child sessions also take a slot, because the context hook fires for them and sessionOf creates an entry before the child check. A long-lived main session is therefore forgotten after 128 newer sessions. Subagent-heavy work can reach that count. Its next model call then asks memorycard again, and the system prompt changes mid-session. That is exactly what the commit's cache-stability goal says must not happen. Even when the text is unchanged, the entry is lost. If memorycard fails on the re-ask, the block disappears mid-session.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/runtime/memorycard-opencode-plugin.mjs:222-231",
+          "engine/runtime/opencode_memorycard_plugin_test.go:462-470"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "engine/runtime/memorycard-opencode-plugin.mjs:139-170",
+        "claim": "The capture timeout sends only SIGTERM, with no SIGKILL escalation (runMemorycard has one). A memorycard that ignores SIGTERM stays running, detached. Captures are also unbounded in concurrency while they are not paused. `ctx.session.get` inside `isChildSession` has no timeout, so a hung call would block every model call of that session.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/runtime/memorycard-opencode-plugin.mjs:139-170"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the diff only; no tools were available.",
+      "Checked capped() boundary logic, the UTF-8 decoding, the one-ask-per-session caching, and the failure-pause path. They look correct."
+    ]
+  }
+}

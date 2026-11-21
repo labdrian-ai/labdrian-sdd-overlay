@@ -1,0 +1,46 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "148ac54824d97a14f653df97cc902c155acdd0ab",
+    "head": "622213470409eca7a9956f5dc339eeeb9c88ac7a",
+    "diff_sha256": "b130764aa38a32d229502be4a4c06ba6aba811fe7990ff9e766f28dbded70b93",
+    "paths": [
+      "odd/tasks/labdrian-orchestrator-opencode.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "148ac54824d97a14f653df97cc902c155acdd0ab",
+      "head": "622213470409eca7a9956f5dc339eeeb9c88ac7a",
+      "diff_sha256": "b130764aa38a32d229502be4a4c06ba6aba811fe7990ff9e766f28dbded70b93"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/labdrian-orchestrator-opencode.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/labdrian-orchestrator-opencode.md:59",
+        "claim": "T13 is ticked with 'commit: -' while L67 records delivery commits (0d30f1b8, 2c4eb2b7, etc.). Sibling ticked tasks (T10, T11) list their commits in the task line; this one leaves the commit field empty, so the task line does not point to its delivery commits. Also T13 task text says 'longterm-mem register/unregister' while L67 says 'register half' of S12, a minor traceability gap.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/labdrian-orchestrator-opencode.md:59"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff only changes one task checkbox and appends log entry L67 in a documentation file; no code or behavior is altered.",
+      "T10 and T11 ticked lines carry commit hashes while the newly ticked T13 line retains 'commit: -', though L67 names the commits.",
+      "Commit message says Risk: none, consistent with a docs-only change."
+    ]
+  }
+}

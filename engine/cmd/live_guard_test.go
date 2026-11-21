@@ -35,6 +35,9 @@ func TestMain(m *testing.M) {
 	os.Setenv("STATE_DIR", filepath.Join(home, ".labdrian-overlay"))
 	os.Unsetenv("OVERLAY_DIR")
 	os.Unsetenv("CODEX_HOME")
+	// The SessionStart probe of source engram asks memorycard; a hook the tests start with this
+	// environment must never see the store of whoever runs them (the path is never created).
+	os.Setenv("MEMORYCARD_DB", filepath.Join(home, "memorycard", "memory.db"))
 	os.Setenv("XDG_STATE_HOME", filepath.Join(home, ".local", "state"))
 	os.Setenv("XDG_CONFIG_HOME", filepath.Join(home, ".config"))
 	os.Unsetenv("GENTLE_PI_AGENTS_CHILD")
@@ -71,6 +74,19 @@ func TestLiveGuard_PiOnThePathIsTheGuard(t *testing.T) {
 func TestLiveGuard_CodexHomeIsNotTheMachines(t *testing.T) {
 	if value, set := os.LookupEnv("CODEX_HOME"); set {
 		t.Fatalf("CODEX_HOME is set to %q in the tests of this package: they would use the machine's Codex configuration", value)
+	}
+}
+
+// TestLiveGuard_MemorycardStoreIsUnderTheTestHome proves the TestMain guard points MEMORYCARD_DB at a
+// path under the temporary home that nothing created: a test that starts the engine's SessionStart
+// hook with the process environment probes that path, never the store of whoever runs the tests.
+func TestLiveGuard_MemorycardStoreIsUnderTheTestHome(t *testing.T) {
+	store := os.Getenv("MEMORYCARD_DB")
+	if store == "" || !strings.HasPrefix(store, os.Getenv("HOME")+string(filepath.Separator)) {
+		t.Fatalf("MEMORYCARD_DB is %q, want a path under the temporary HOME %q", store, os.Getenv("HOME"))
+	}
+	if _, err := os.Stat(store); err == nil {
+		t.Fatalf("the memorycard store %s exists: the guard path must never be created", store)
 	}
 }
 

@@ -1,0 +1,22 @@
+{
+  "kind": "polisher",
+  "base": "0e85d8475ac8407ccafc2ac56beb1ab107affbf4",
+  "head": "2bb6d495baab709cc0c8fe4e0264fe0018c8f47e",
+  "diff_sha256": "b013bf20450d13f98d57fac1cee1a8d755021c9dea7d77133829a0b6d5bef218",
+  "findings": {
+    "findings": [
+      {
+        "id": "V-CACHE",
+        "severity": "WARNING",
+        "location": "engine/runtime/labdrian-runtime-parity-plugin.mjs",
+        "claim": "Per-prompt answers pushed onto event.system invalidated the cache of the whole conversation. Fixed here: the answer joins event.prompt.text; system stays byte-stable. Recheck C1 systemIdentical true; binary 2.2.7 builds the message from the hook result.",
+        "evidence": [
+          "recheck C1."
+        ]
+      }
+    ],
+    "evidence": [
+      "series review of 0e85d847..45212078; recheck C1."
+    ]
+  }
+}

@@ -1,0 +1,67 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "eafc1015cc5b11382f34cd847cae394eb7453bbe",
+    "head": "f8946903361eecda4a27068086da5fa7b1870135",
+    "diff_sha256": "a9a2518d824d35aee1254c387b9ff8d2d2225ddf6b942fc974644ec528035681",
+    "paths": [
+      "CHANGELOG.md",
+      "README.md",
+      "bin/lib/apply.sh",
+      "bin/lib/usage.sh",
+      "engine/shelltest/apply_codex_runtime_test.go",
+      "engine/shelltest/apply_opencode_runtime_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "eafc1015cc5b11382f34cd847cae394eb7453bbe",
+      "head": "f8946903361eecda4a27068086da5fa7b1870135",
+      "diff_sha256": "a9a2518d824d35aee1254c387b9ff8d2d2225ddf6b942fc974644ec528035681"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "README.md",
+        "bin/lib/apply.sh",
+        "bin/lib/usage.sh",
+        "engine/shelltest/apply_codex_runtime_test.go",
+        "engine/shelltest/apply_opencode_runtime_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "engine/shelltest/apply_opencode_runtime_test.go:230",
+        "claim": "The stderr assertion `strings.Contains(res.Stderr, \"  \")` is trivially satisfied by any two spaces, and the `opencode` check matches any line mentioning the target. The test therefore does not prove that the failed install's output was indented and sent to stderr by this step.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/shelltest/apply_opencode_runtime_test.go: TestApplyTargetOpencodeWithAFailingRuntimeInstallDeploysThenExitsNonZero stderr check"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "bin/lib/apply.sh:207",
+        "claim": "If the opencode runtime install fails, the longterm-mem register step still runs afterwards. It can then fail on the same missing or broken opencode.json and add a second, redundant error, with no ordering or skip logic for that case.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "bin/lib/apply.sh:207 runtime_install_and_report \"$t\" || runtime_install_failed=1 (failure only sets a flag; later longterm-mem step is unchanged)"
+        ]
+      }
+    ],
+    "evidence": [
+      "I read only the diff; the body of runtime_install_and_report after the engine call is not visible, so I could not check how it reports success.",
+      "The case dispatch, the source_file guard, the rename of the failure flag and its use in the final return are consistent within the diff."
+    ]
+  }
+}

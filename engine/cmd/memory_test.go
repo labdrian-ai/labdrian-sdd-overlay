@@ -8,6 +8,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/enginetest"
 )
 
 type memoryRun struct {
@@ -42,19 +44,7 @@ func writeMemoryTestFile(t *testing.T, dir, name, content string) string {
 }
 
 func memoryTestGoalJSON(projectID, goalID string) string {
-	return `{
-  "version": 2,
-  "project_id": "` + projectID + `",
-  "goal_id": "` + goalID + `",
-  "objective": "obj",
-  "scope": "scope",
-  "constraints": [],
-  "non_goals": [],
-  "acceptance_criteria": ["done"],
-  "memory_scope": "goal",
-  "runtime_scope": "local",
-  "delivery_boundary": "local"
-}`
+	return enginetest.GoalJSON(projectID, goalID)
 }
 
 func memoryTestDirectiveJSON(scope string, sources ...string) string {

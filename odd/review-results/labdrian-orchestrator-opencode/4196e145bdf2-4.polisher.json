@@ -1,0 +1,22 @@
+{
+  "kind": "polisher",
+  "base": "a10c3d441a9aea56c22947abaefe3b6a5bcdf585",
+  "head": "4196e145bdf2c4d2c3b5ea1ce7c0efff579c48d2",
+  "diff_sha256": "13187455bf33be75e454c79088f48c379c6405fcde75a95583f29adffe23ff5d",
+  "findings": {
+    "findings": [
+      {
+        "id": "S-16",
+        "severity": "WARNING",
+        "location": "bin/lib/common.sh:109-113",
+        "claim": "http(s)://localhost git servers became local. Fixed in 12ed0292.",
+        "evidence": [
+          "series."
+        ]
+      }
+    ],
+    "evidence": [
+      "Independent verifier (Risk 3,5) on 451cd0da..2e22df05: suite 85 ok; seeds a-f held; real OpenCode 2.2.7 loads the plugin and parses the config; claude/codex/pi identical; no change-caused blocker. Bounded recheck R1-R7 on a6e520a0: none reproduced (all reproduced at base)."
+    ]
+  }
+}

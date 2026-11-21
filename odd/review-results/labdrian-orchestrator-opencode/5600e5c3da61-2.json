@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "d8d7bb766e021be91e05b48ba06960b7d011a58d",
+    "head": "5600e5c3da61bd0a2960ff7fab9cb1fbeef69006",
+    "diff_sha256": "e5805ce9c0ad4d6fd4f8963254250fc28ce02b1d43384ebbce75e43240e979b4",
+    "paths": [
+      "odd/tasks/labdrian-orchestrator-opencode.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "d8d7bb766e021be91e05b48ba06960b7d011a58d",
+      "head": "5600e5c3da61bd0a2960ff7fab9cb1fbeef69006",
+      "diff_sha256": "e5805ce9c0ad4d6fd4f8963254250fc28ce02b1d43384ebbce75e43240e979b4"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/labdrian-orchestrator-opencode.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/labdrian-orchestrator-opencode.md:34",
+        "claim": "The S17 acceptance sentence now nests a long parenthetical (the list of matched forms) and then a dangling clause ('which matches the word gentle-ai and not gentle-ai-overlay'). The clause reads as if it modifies the parenthetical or the manual-read rule, not the regex. Splitting the regex, the read-each-match rule and the match/non-match examples into separate sentences would make the check easier to apply.",
+        "evidence_class": "inferential",
+        "causal_disposition": "worsened",
+        "proof_refs": [
+          "odd/tasks/labdrian-orchestrator-opencode.md:34"
+        ]
+      }
+    ],
+    "evidence": [
+      "I checked the new regex `(^|[^\\w.-])gentle-ai([^\\w/-]|$)` against the forms the entry lists. It matches the bare call, `sh -c 'gentle-ai x'`, after `&&`, `timeout` with an absolute path, and after a pipe. It does not match `gentle-ai-overlay`, `~/.gentle-ai/y` or `/opt/gentle-ai/bin/foo`.",
+      "L25 says nine sample commands were run: five matched, three were excluded, and `echo gentle-ai` still matched. That adds up to nine.",
+      "The change touches only the feature document, so I found no code regression."
+    ]
+  }
+}

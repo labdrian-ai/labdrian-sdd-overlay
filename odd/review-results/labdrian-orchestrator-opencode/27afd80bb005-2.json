@@ -1,0 +1,93 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "caa0f5234cc43fb04f060043d1087ee8ff6ccdac",
+    "head": "27afd80bb00557426c97b275e710a907d7f36906",
+    "diff_sha256": "541d9c547a00859cd3557238ab70916410883f276ff9d5ee74414aa5cc2a38c3",
+    "paths": [
+      "CHANGELOG.md",
+      "README.md",
+      "engine/agentgen/agentgen.go",
+      "engine/agentgen/foreman_test.go",
+      "engine/agentgen/messages_pin_test.go",
+      "engine/agentgen/opencode.go",
+      "engine/agentgen/opencode_test.go",
+      "engine/agentgen/roles.go",
+      "opencode/agents/builder.md",
+      "opencode/agents/delivery.md",
+      "opencode/agents/foreman.md",
+      "opencode/agents/polisher.md",
+      "opencode/agents/prototyper.md",
+      "opencode/agents/reviewer.md",
+      "opencode/agents/shaper.md",
+      "opencode/agents/sweeper.md",
+      "opencode/agents/verifier.md",
+      "overlay.manifest"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "caa0f5234cc43fb04f060043d1087ee8ff6ccdac",
+      "head": "27afd80bb00557426c97b275e710a907d7f36906",
+      "diff_sha256": "541d9c547a00859cd3557238ab70916410883f276ff9d5ee74414aa5cc2a38c3"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "README.md",
+        "engine/agentgen/agentgen.go",
+        "engine/agentgen/foreman_test.go",
+        "engine/agentgen/messages_pin_test.go",
+        "engine/agentgen/opencode.go",
+        "engine/agentgen/opencode_test.go",
+        "engine/agentgen/roles.go",
+        "opencode/agents/builder.md",
+        "opencode/agents/delivery.md",
+        "opencode/agents/foreman.md",
+        "opencode/agents/polisher.md",
+        "opencode/agents/prototyper.md",
+        "opencode/agents/reviewer.md",
+        "opencode/agents/shaper.md",
+        "opencode/agents/sweeper.md",
+        "opencode/agents/verifier.md",
+        "overlay.manifest"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "engine/agentgen/messages_pin_test.go:23-24",
+        "claim": "The comment still says the foreman has a Claude file only, but this change gives it an OpenCode file too, and the same function now appends that file. The test name TheForemanHasOnlyAClaudeFileAfterTheFilesOfTheEightRoles in foreman_test.go has the same stale claim, and the test now asserts the foreman is the tenth artifact from the end. That check depends on the count of nine OpenCode files and the magic number 10, so adding an agent will break it for a non-obvious reason.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/agentgen/messages_pin_test.go:23-24",
+          "engine/agentgen/foreman_test.go:53-54"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "engine/agentgen/opencode_test.go:127-129",
+        "claim": "The comment about permissions says 'every role has one from the second group on', which is unclear and wrong. Builder, prototyper, sweeper and delivery have no permissions key, which is why the test only pins the first three keys.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/agentgen/opencode_test.go:127-129",
+          "opencode/agents/builder.md:1-5"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the whole diff: the generator in opencode.go, the build ordering in agentgen.go, the tests, the nine generated files and the manifest rows.",
+      "Found no functional defect: each file's mode, model and denies match the expectations the tests spell out, and the generated YAML is well-formed."
+    ]
+  }
+}

@@ -1,0 +1,56 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "95d4e2549703d328aa8ab40c6a5107c7490c3a1c",
+    "head": "8b179b0e9f216f87f5b5c6fa698952389be7d6ea",
+    "diff_sha256": "ff71baed6f198bfd5d160896c10c1685d503c2346f15c5818590313acec1f602",
+    "paths": [
+      "CHANGELOG.md",
+      "engine/runtime/opencode_agents.go",
+      "engine/runtime/opencode_agents_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line",
+    "recall"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "95d4e2549703d328aa8ab40c6a5107c7490c3a1c",
+      "head": "8b179b0e9f216f87f5b5c6fa698952389be7d6ea",
+      "diff_sha256": "ff71baed6f198bfd5d160896c10c1685d503c2346f15c5818590313acec1f602"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "engine/runtime/opencode_agents.go",
+        "engine/runtime/opencode_agents_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "engine/runtime/opencode_agents.go:40",
+        "severity": "SUGGESTION",
+        "claim": "The new bullet says capture is \"automatic\" because \"the memorycard plugin runs `memorycard capture`\". The AGENTS.md block is written unconditionally (opencode_agents.go:68). The plugin is installed by a separate step, `writeMemorycardPlugin` (opencode.go:136). That step can report a partial result, for example when a foreign file sits at the plugin path (`isMemorycardPluginOurs`). In that case workers are told capture is automatic when nothing runs it. The effect is one misleading instruction line, not data loss. The bullet also keeps the Claude Code form \"→ automatic\", which reads oddly as an instruction.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/runtime/opencode_agents.go:68",
+          "engine/runtime/opencode.go:136",
+          "engine/runtime/opencode_memorycard.go:91-98"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full diff, including the CHANGELOG item, the bullet and the two new tests.",
+      "Read the T61 criteria (line 103). The diff matches the stated files, the single bullet, the comment update, the extended banned list and the two new tests. No golden or other pinned copy of the block exists.",
+      "engine/runtime/memorycard-opencode-plugin.mjs hooks execute.after and pipes each subagent's final text to `memorycard capture`.",
+      "The staleness path is covered by TestOpenCodeStatusReadsABlockWithoutTheKeyLearningsRuleAsStale; the CHANGELOG says an installed block reads stale until `engine runtime update --target opencode`.",
+      "The bullet text in the test constant equals the source constant.",
+      "Ran no commands."
+    ]
+  }
+}

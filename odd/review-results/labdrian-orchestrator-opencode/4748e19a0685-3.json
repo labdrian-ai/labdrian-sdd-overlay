@@ -1,0 +1,63 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "f68b765a121f2e5baf8dd9dd5b488278cd0efed9",
+    "head": "4748e19a0685220f03735056599458041561cfc0",
+    "diff_sha256": "90ff23ff740f2c6d7e1752d12063425bb38e82e1080d8feba135821a280524c0",
+    "paths": [
+      "CHANGELOG.md",
+      "README.md",
+      "bin/lib/skill_registry.sh",
+      "bin/lib/usage.sh",
+      "engine/architecture_test.go",
+      "engine/cmd/registry.go",
+      "engine/cmd/registry_refresh_test.go",
+      "engine/cmd/usage.go",
+      "engine/sddregistry/fsstore/fsstore.go",
+      "engine/sddregistry/fsstore/fsstore_test.go",
+      "engine/skillregistry/app/app_test.go",
+      "engine/skillregistry/compose.go",
+      "engine/skillregistry/compose_test.go",
+      "engine/skillregistry/fsstore/fsstore.go",
+      "engine/skillregistry/fsstore/fsstore_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "f68b765a121f2e5baf8dd9dd5b488278cd0efed9",
+      "head": "4748e19a0685220f03735056599458041561cfc0",
+      "diff_sha256": "90ff23ff740f2c6d7e1752d12063425bb38e82e1080d8feba135821a280524c0"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "README.md",
+        "bin/lib/skill_registry.sh",
+        "bin/lib/usage.sh",
+        "engine/architecture_test.go",
+        "engine/cmd/registry.go",
+        "engine/cmd/registry_refresh_test.go",
+        "engine/cmd/usage.go",
+        "engine/sddregistry/fsstore/fsstore.go",
+        "engine/sddregistry/fsstore/fsstore_test.go",
+        "engine/skillregistry/app/app_test.go",
+        "engine/skillregistry/compose.go",
+        "engine/skillregistry/compose_test.go",
+        "engine/skillregistry/fsstore/fsstore.go",
+        "engine/skillregistry/fsstore/fsstore_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "compose.go: executorScopeRow drops only rows in the table block (the contiguous '| ' lines under the header and the tail lines up to the first heading or comment line), so Hermes sections and rows below a heading stay byte for byte. The tests cover both cases.",
+      "compose.go: withoutExecutorNote runs on the head only and removes the note line and one following blank line. A second compose finds nothing left to drop, so the migration is idempotent, and the new tests assert this.",
+      "fsstore move: the new engine/skillregistry/fsstore files are byte-identical to the deleted engine/sddregistry/fsstore files. The import in cmd/registry.go and the ring entry in architecture_test.go are both updated.",
+      "skill_registry.sh: the --target checks now use $1 directly with the same validation and messages. The dropped 'target' variable has no other use visible in the diff."
+    ]
+  }
+}

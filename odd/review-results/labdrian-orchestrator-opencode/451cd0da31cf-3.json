@@ -1,0 +1,46 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "c17f1a23020e015f1eb447756bdb9d6181cc6827",
+    "head": "451cd0da31cfa9369b9ed25b35f71c1748a46f8b",
+    "diff_sha256": "7d0b8ef133749151210c42215f6228419c2875727e3b5059bc73531f4c87af64",
+    "paths": [
+      "odd/tasks/labdrian-orchestrator-opencode.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "c17f1a23020e015f1eb447756bdb9d6181cc6827",
+      "head": "451cd0da31cfa9369b9ed25b35f71c1748a46f8b",
+      "diff_sha256": "7d0b8ef133749151210c42215f6228419c2875727e3b5059bc73531f4c87af64"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/labdrian-orchestrator-opencode.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/labdrian-orchestrator-opencode.md:63",
+        "claim": "The T27 task line records the third commit as `c17f1a23` and ticks the task as done, but the task text describes two commits (a) and (b). The third is a correction batch, which L81 explains. The task description's 'two commits' wording is not updated, so the task line and its commit list disagree. This matches how T26 was recorded, so the impact is minor.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/labdrian-orchestrator-opencode.md:63"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff only changes a documentation file: it ticks T27, fills in the commit hashes and adds log entry L81.",
+      "No code, tests or behavior are touched, so there is no runtime regression to report.",
+      "The L81 claims cannot be checked from the diff alone because the code commits are not shown."
+    ]
+  }
+}

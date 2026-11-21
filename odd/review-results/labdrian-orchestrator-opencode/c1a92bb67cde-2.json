@@ -1,0 +1,67 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "447ac5cddcdb4d00266937a63119ecda582bf166",
+    "head": "c1a92bb67cde655b0c9985e4a0c015c954f58286",
+    "diff_sha256": "e429d8e45f9e917b958aebbe7aafa1011823da0e12b74c7528ba5b2458a232ab",
+    "paths": [
+      "CHANGELOG.md",
+      "README.md",
+      "bin/lib/usage.sh",
+      "engine/capability/declarations.go",
+      "engine/capability/declarations_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "447ac5cddcdb4d00266937a63119ecda582bf166",
+      "head": "c1a92bb67cde655b0c9985e4a0c015c954f58286",
+      "diff_sha256": "e429d8e45f9e917b958aebbe7aafa1011823da0e12b74c7528ba5b2458a232ab"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "README.md",
+        "bin/lib/usage.sh",
+        "engine/capability/declarations.go",
+        "engine/capability/declarations_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "engine/capability/declarations.go:246",
+        "claim": "The OpenCode skills claim says only \"Install and status\" report shadowing skills, but the README added in the same commit says `install`, `update` and `status` report them. The two statements of the same behavior disagree, and the test that pins the claim text does not catch the difference.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/capability/declarations.go:246",
+          "README.md:1142-1144"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "README.md:1149-1150",
+        "claim": "A stray extra blank line was added before the `runtime capabilities` section, after the new OpenCode section. This is trivial.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "README.md:1149-1150"
+        ]
+      }
+    ],
+    "evidence": [
+      "Reviewed all five changed paths in the diff; no tools were available, so nothing outside the diff was checked.",
+      "The cited test names in declarations.go cannot be checked against the repository from the diff alone. The capability package presumably has a test that validates these references, but that is not visible here.",
+      "The usage.sh text, the README and the changelog agree with each other on the points that matter: no skill copy for OpenCode, the byte splice, and the absolute server paths."
+    ]
+  }
+}

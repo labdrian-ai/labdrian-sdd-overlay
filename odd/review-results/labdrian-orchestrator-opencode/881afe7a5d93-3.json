@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "b88fbec6e350e17624f6d9f713ffede365c57e61",
+    "head": "881afe7a5d930e7fa949f973a4cb543de9e4b607",
+    "diff_sha256": "275ee179db62786aedd285beea56b7f704c38d81c3491cc6c6948a03241d27d9",
+    "paths": [
+      "odd/tasks/labdrian-orchestrator-opencode.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "b88fbec6e350e17624f6d9f713ffede365c57e61",
+      "head": "881afe7a5d930e7fa949f973a4cb543de9e4b607",
+      "diff_sha256": "275ee179db62786aedd285beea56b7f704c38d81c3491cc6c6948a03241d27d9"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/labdrian-orchestrator-opencode.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/labdrian-orchestrator-opencode.md:62",
+        "claim": "The T26 task row cites four commits in its commit field (00043382, f98917e9, 052d4469, b88fbec6), but the task specifies two commits (a) and (b). The row does not say which commit is (a) and which is (b), and b88fbec6 is the review of the correction rather than a delivery commit. The mapping appears only in the L79 log entry. This is a documentation clarity issue only and has no behavioral effect.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/labdrian-orchestrator-opencode.md:62"
+        ]
+      }
+    ],
+    "evidence": [
+      "The change only modifies a markdown task document: it ticks T26 and adds log entry L79. No code or behavior is touched.",
+      "The commit message states Risk: none, which is consistent with a docs-only diff.",
+      "The L79 text is internally consistent with the T26 spec: it names the Claude adapter block, the verifier blockers, and the correction commit, and states the forecast overrun (about 1,130 vs 290-530 lines).",
+      "The L79 entry records the routed gap that `labdrian apply --target claude` does not run `engine runtime install`, so this open item is recorded and not hidden."
+    ]
+  }
+}

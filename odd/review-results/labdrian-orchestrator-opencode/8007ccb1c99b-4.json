@@ -1,0 +1,60 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "775dd532da9677e8df1636855ffa52d75a29978c",
+    "head": "8007ccb1c99b45e40a0ada1b7d229a083113cd93",
+    "diff_sha256": "a42d68a3c6bec0e49efa9b55944ee519386355b3370144a0ae1e7aba138e56a3",
+    "paths": [
+      "CHANGELOG.md",
+      "README.md",
+      "engine/cmd/session_availability_test.go",
+      "engine/cmd/usage.go",
+      "engine/projection/instructions_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line",
+    "recall"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "775dd532da9677e8df1636855ffa52d75a29978c",
+      "head": "8007ccb1c99b45e40a0ada1b7d229a083113cd93",
+      "diff_sha256": "a42d68a3c6bec0e49efa9b55944ee519386355b3370144a0ae1e7aba138e56a3"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "README.md",
+        "engine/cmd/session_availability_test.go",
+        "engine/cmd/usage.go",
+        "engine/projection/instructions_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "engine/cmd/session_availability_test.go:89-97",
+        "severity": "SUGGESTION",
+        "claim": "The new doc-drift test maps both the longterm-mem and the procedural-skills lines to the same generic string, \"Do not read <source>: ...\". If either source's line regressed or disappeared, the other would still satisfy the Contains check. The test does count three '- Do not' lines, so a missing line fails there. The test cannot catch the help or README dropping one of the two sources from the parenthetical source descriptions. It also does not check the reason clauses, such as 'its binary and an MCP entry' or 'the project's lock'.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/cmd/session_availability_test.go:89-97",
+          "engine/cmd/usage.go:442-445"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full diff t58c.diff.",
+      "Read engine/projection/availability.go at head: degradationLines matches the README and usage.go strings.",
+      "Grepped engine/projection for other '- Do not' emitters: availability.go is the only non-test source, so the count of 3 is consistent.",
+      "Confirmed the helpers the new test uses exist.",
+      "render.go:359 emits '- Engram and memorycard reads (mem_search, mem_context) name project ...', matching the instructions_test.go prefix change.",
+      "CHANGELOG, README and usage.go edits are text only; wraps normalised by flat().",
+      "Not run: go test, go vet or any command."
+    ]
+  }
+}

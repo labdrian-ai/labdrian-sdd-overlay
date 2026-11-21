@@ -2,11 +2,15 @@
 // to the runtimes that host it.
 //
 // The role agents of per-role design v3 (roles.go) have one source each, roles/<role>/body.md under
-// the root of the repository, and one table of the frontmatter of each runtime. Each becomes three
+// the root of the repository, and one table of the frontmatter of each runtime. Each becomes four
 // files:
 //   - agents/<role>.md        (Claude Code agent file)
 //   - pi/agents/<role>.md     (Pi native subagent file, read by gentle-pi)
 //   - codex/agents/<role>.toml (Codex agent file)
+//   - opencode/agents/<role>.md (OpenCode agent file, opencode.go)
+//
+// The foreman, the parent of the roles, has one source too, roles/foreman/body.md, and two files,
+// agents/foreman.md and opencode/agents/foreman.md (S2, S5 of odd/tasks/labdrian-orchestrator-opencode.md).
 //
 // None of these files is ever hand-edited. Use Generate to write them; use Check to assert they are
 // not stale.
@@ -19,6 +23,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	vocabulary "github.com/labdrian-ai/labdrian-sdd-overlay/engine/roles"
 )
 
 // Artifact is one file the generator emits: where it goes under the root of the repository, as a
@@ -45,20 +51,82 @@ func (e *sourceError) Unwrap() error { return e.err }
 // cannot be read or projected has no files in the table and is returned as a problem, so that the
 // caller can say all of them.
 func build(repoRoot string) (table []Artifact, problems []*sourceError) {
-	for _, r := range roles {
+	models, modelsErr := ReadModelTable(repoRoot)
+	// source is the text of the source of a role; a role whose source cannot be read is a problem.
+	source := func(r role) (string, bool) {
 		data, err := os.ReadFile(filepath.Join(repoRoot, filepath.FromSlash(r.sourcePath())))
 		if err != nil {
 			problems = append(problems, &sourceError{path: r.sourcePath(), verb: "reading", err: err})
+			return "", false
+		}
+		return string(data), true
+	}
+	// The OpenCode files come last, after the Claude file of the foreman: the eight roles, then the foreman.
+	var openCode []Artifact
+	for _, r := range roles {
+		data, ok := source(r)
+		if !ok || modelsErr != nil {
 			continue
 		}
-		files, err := r.project(string(data))
+		if err := checkSkillsNamed(repoRoot, r, data); err != nil {
+			problems = append(problems, &sourceError{path: r.sourcePath(), verb: "projecting", err: err})
+			continue
+		}
+		files, err := r.project(data, models)
 		if err != nil {
 			problems = append(problems, &sourceError{path: r.sourcePath(), verb: "projecting", err: err})
 			continue
 		}
 		table = append(table, files...)
+		file, err := r.projectOpenCode(data, models)
+		if err != nil {
+			problems = append(problems, &sourceError{path: r.sourcePath(), verb: "projecting", err: err})
+			continue
+		}
+		openCode = append(openCode, file)
+	}
+	// The foreman comes after the eight roles, with its Claude file and its OpenCode file only (S5).
+	if data, ok := source(foreman); ok && modelsErr == nil {
+		file, err := foreman.projectClaude(data, models)
+		if err == nil {
+			err = checkSkillsNamed(repoRoot, foreman, data)
+		}
+		if err != nil {
+			problems = append(problems, &sourceError{path: foreman.sourcePath(), verb: "projecting", err: err})
+		} else {
+			table = append(table, file)
+			if file, err := foreman.projectOpenCode(data, models); err != nil {
+				problems = append(problems, &sourceError{path: foreman.sourcePath(), verb: "projecting", err: err})
+			} else {
+				openCode = append(openCode, file)
+			}
+		}
+	}
+	table = append(table, openCode...)
+	// The table is reported after the sources: without it no role can be projected, so nothing is returned
+	// for the roles whose sources were read.
+	if modelsErr != nil {
+		verb := "reading"
+		var malformed *tableError
+		if errors.As(modelsErr, &malformed) {
+			verb = "parsing"
+		}
+		problems = append(problems, &sourceError{path: modelsPath, verb: verb, err: modelsErr})
 	}
 	return table, problems
+}
+
+// checkSkillsNamed fails when the body of the role names a skill, in the form "`<id>` skill", whose
+// SKILL.md is not in the repository. A role on OpenCode has no skill tool, so the adapter hands it
+// that file by path (roles.SkillsNamed); the body and the file have to agree before any file is written.
+func checkSkillsNamed(repoRoot string, r role, body string) error {
+	for _, id := range vocabulary.SkillsNamed(body) {
+		path := "skills/" + id + "/SKILL.md"
+		if info, err := os.Stat(filepath.Join(repoRoot, filepath.FromSlash(path))); err != nil || !info.Mode().IsRegular() {
+			return fmt.Errorf("%s names the skill `%s` but %s is not in the repository: name a skill that has a directory under skills/, or remove the mention", r.sourcePath(), id, path)
+		}
+	}
+	return nil
 }
 
 // Artifacts is the table of what the generator emits for the repository at repoRoot, in the order
@@ -122,6 +190,10 @@ func Check(repoRoot string) error {
 	}
 	for _, p := range problems {
 		switch {
+		case p.path == modelsPath && errors.Is(p.err, fs.ErrNotExist):
+			errs = append(errs, fmt.Sprintf("%s: missing (the tier table of the models is not in the repository)", p.path))
+		case p.path == modelsPath:
+			errs = append(errs, fmt.Sprintf("%s: cannot use the tier table of the models: %v", p.path, p.err))
 		case errors.Is(p.err, fs.ErrNotExist):
 			errs = append(errs, fmt.Sprintf("%s: missing (the source of the role is not in the repository)", p.path))
 		case p.verb == "reading":

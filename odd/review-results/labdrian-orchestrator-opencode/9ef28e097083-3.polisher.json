@@ -1,0 +1,67 @@
+{
+  "kind": "polisher",
+  "base": "59fe2fb3616080da43d442f7ea59bad0025da04c",
+  "head": "9ef28e097083b2ac1ec6366b629b94b4fa17f7f9",
+  "diff_sha256": "c71040c4336cc893456b74cba3003538fe0d965806784c3acbf3189797c71e98",
+  "findings": {
+    "findings": [
+      {
+        "id": "A-F2",
+        "severity": "WARNING",
+        "location": "engine/runtime/opencode.go:118-128",
+        "claim": "A refused opencode.json stopped AGENTS.md. Fixed in 2dacee5f.",
+        "evidence": [
+          "judges A F2, B F5; recheck R2."
+        ]
+      },
+      {
+        "id": "S-3",
+        "severity": "WARNING",
+        "location": "engine/runtime/opencode.go:73-78",
+        "claim": "Uninstall dropped the AGENTS.md failure. Fixed in 2dacee5f.",
+        "evidence": [
+          "series; recheck R3."
+        ]
+      },
+      {
+        "id": "S-4",
+        "severity": "SUGGESTION",
+        "location": "engine/runtime/opencode_agents.go:84-93",
+        "claim": "styleBody missed empty frontmatter and EOF closer. Fixed in d5ea048f.",
+        "evidence": [
+          "series."
+        ]
+      },
+      {
+        "id": "S-5",
+        "severity": "SUGGESTION",
+        "location": "engine/runtime/opencode.go:161-166",
+        "claim": "Shadowing note only on supported status. Fixed in d5ea048f.",
+        "evidence": [
+          "series."
+        ]
+      },
+      {
+        "id": "B-F2",
+        "severity": "WARNING",
+        "location": "engine/runtime/opencode_agents.go:31-39",
+        "claim": "The memorycard block names Engram. Pending the owner approval of the replacement text (L82); T14 stays open until it lands.",
+        "evidence": [
+          "judge B F2."
+        ]
+      },
+      {
+        "id": "B-F3",
+        "severity": "WARNING",
+        "location": "README.md:1117",
+        "claim": "README did not document T14. Fixed in c1a92bb6.",
+        "evidence": [
+          "judge B F3."
+        ]
+      }
+    ],
+    "evidence": [
+      "Independent verifier (Risk 3,5) on 451cd0da..2e22df05: suite 85 ok; seeds a-f held; real OpenCode 2.2.7 loads the plugin and parses the config; claude/codex/pi identical; no change-caused blocker. Bounded recheck R1-R7 on a6e520a0: none reproduced (all reproduced at base)."
+    ]
+  }
+}

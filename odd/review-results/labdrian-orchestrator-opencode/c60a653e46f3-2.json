@@ -1,0 +1,81 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "6c44a92865a80aeb270261a251c3f5550fb75dcb",
+    "head": "c60a653e46f3245811789023505eac56e0c15c35",
+    "diff_sha256": "f4a48444729aaf3f64f6a57a705db20f1eabc0d428ad46bb76ee89ea6574d639",
+    "paths": [
+      "odd/tasks/labdrian-orchestrator-opencode.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "6c44a92865a80aeb270261a251c3f5550fb75dcb",
+      "head": "c60a653e46f3245811789023505eac56e0c15c35",
+      "diff_sha256": "f4a48444729aaf3f64f6a57a705db20f1eabc0d428ad46bb76ee89ea6574d639"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/labdrian-orchestrator-opencode.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "odd/tasks/labdrian-orchestrator-opencode.md:47",
+        "claim": "T19 is ticked done with 'commit: -' left in place, followed by 'done: dbae346c..f2fdef1f'. The row therefore carries a contradictory empty commit field next to the done range, and the shas are described as 'rebuilt' (L28) so a reader cannot tell which range is authoritative. The same pattern appears on T24, where 'commit: -' is kept beside 'done: answered in L35'.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/labdrian-orchestrator-opencode.md:44",
+          "odd/tasks/labdrian-orchestrator-opencode.md:47"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "WARNING",
+        "location": "odd/tasks/labdrian-orchestrator-opencode.md:46",
+        "claim": "T25 still reads 'NOT SHAPED, no builder launch until the owner decides' and 'parent recommends B' as an open decision, although L35 now records the owner's choice of B and says L19 open risk 1 is closed. The task row was not updated, so the document contradicts itself about whether T25 is blocked on the owner. T25 also still lists 'T24' as a prerequisite, though T24 is now ticked.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/labdrian-orchestrator-opencode.md:46",
+          "odd/tasks/labdrian-orchestrator-opencode.md:388"
+        ]
+      },
+      {
+        "id": "F3",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/labdrian-orchestrator-opencode.md:390",
+        "claim": "L35 says the role-chain approval has sha256 'b11700f1bb3f' (a 12-character prefix) and that the commit is 6c44a928. The base head is 6c44a928, so the log entry cites as the approval commit the very commit this change is built on. This is fine, but the truncated hash cannot be verified against the full digest. It also states the engine suite passed 'at 6c44a928' with no way to reproduce the claim from this commit alone.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/labdrian-orchestrator-opencode.md:390"
+        ]
+      },
+      {
+        "id": "F4",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/labdrian-orchestrator-opencode.md:389",
+        "claim": "L35 records that T25 reads through a new memorycard verb, but T23 and T25 ordering and the 'T8 stays blocked until T25' claim are stated only in the log, not in the T8 row, so a reader of the task list will not see the T8 blocker.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/labdrian-orchestrator-opencode.md:388"
+        ]
+      }
+    ],
+    "evidence": [
+      "Only one file changed, a documentation/log file; diff inspected in full.",
+      "T25 row (unchanged context line) still describes the adapter decision as pending while the added L35 line closes it."
+    ]
+  }
+}

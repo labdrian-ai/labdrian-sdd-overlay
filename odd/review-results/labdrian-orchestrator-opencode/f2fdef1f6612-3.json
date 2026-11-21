@@ -1,0 +1,37 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "8048bc87764d993feecc893cf4b435097b873447",
+    "head": "f2fdef1f6612172cd3e49a5f092d9a76203e85c0",
+    "diff_sha256": "7f4e4308b41f4e8d1f920b8dfe98e2c1c5342a797bcc3781f6981ce31182c943",
+    "paths": [
+      "engine/agentgen/models.go",
+      "engine/agentgen/models_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "8048bc87764d993feecc893cf4b435097b873447",
+      "head": "f2fdef1f6612172cd3e49a5f092d9a76203e85c0",
+      "diff_sha256": "7f4e4308b41f4e8d1f920b8dfe98e2c1c5342a797bcc3781f6981ce31182c943"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/agentgen/models.go",
+        "engine/agentgen/models_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The idShape change adds only `@`, `[` and `]` to the allowed characters, and the first character must still be a letter or digit. A YAML plain scalar in block context can contain these characters after its first one, so `model: opus[1m]` and `model: x/model@2025` parse as strings.",
+      "Space, quote, backtick, `|` and `,` remain disallowed, so no new way appears to start a comment or end a table cell.",
+      "The new test checks that the Claude and Pi artifacts carry the ids verbatim.",
+      "The comment edit on the OpenCode column changes no behavior."
+    ]
+  }
+}

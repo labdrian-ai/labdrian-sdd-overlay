@@ -21,8 +21,12 @@ package main
 // (review_launch.go) binds the candidate, runs the Codex reviewer read-only, or the Claude reviewer with no tool over the
 // frozen context of the candidate, on the brief on stdin and records its reply as 'review record' does. launch is the one
 // verb that starts a reviewer, on Codex read-only and on Claude Code with no tool; no other verb launches an agent or
-// dispatches work: their reply is a file somebody else produced. 'review proposals [--cwd <repo>]' prints the worktrees
+// dispatches work: their reply is a file somebody else produced. 'review frozen-context [--cwd <repo>]'
+// (review_frozen_context.go) prints the brief on stdin followed by the frozen context of its candidate, the bytes
+// launch hands a Claude reviewer, and starts and stores nothing. 'review proposals [--cwd <repo>]' prints the worktrees
 // and branches the owner may remove and the git command for each, and deletes and stores nothing (review_proposals.go).
+// 'review ci --landing <rev> --head <rev> [--cwd <repo>]' says whether the repository has no CI for the landing commit
+// that holds the delivered head, and stores nothing (review_ci.go).
 // 'review findings --feature <name> --stored <result> [--cwd <repo>]' lists the findings of a stored result that count
 // as evidence and the ones left out, with the reason, and stores nothing (review_findings.go).
 // 'review stop-hook' is the odd one out: the
@@ -64,7 +68,7 @@ const reviewGitMaxOutput = 256 << 20
 // in an exit that ends nothing.
 func runReview(p process, d deps, args []string) {
 	if len(args) == 0 {
-		fmt.Fprintln(p.stderr, "error: review requires a verb: bind, record, verify, check, exempt, sweep, anchor, launch, proposals, findings")
+		fmt.Fprintln(p.stderr, "error: review requires a verb: bind, record, verify, check, exempt, sweep, anchor, launch, frozen-context, proposals, ci, findings")
 		p.exit(1)
 		return
 	}
@@ -85,14 +89,18 @@ func runReview(p process, d deps, args []string) {
 		runReviewAnchor(p, d, args[1:])
 	case "launch":
 		runReviewLaunch(p, d, args[1:])
+	case "frozen-context":
+		runReviewFrozenContext(p, d, args[1:])
 	case "proposals":
 		runReviewProposals(p, d, args[1:])
+	case "ci":
+		runReviewCI(p, d, args[1:])
 	case "findings":
 		runReviewFindings(p, d, args[1:])
 	case reviewStopVerb:
 		runReviewStopHook(p, d, args[1:])
 	default:
-		fmt.Fprintf(p.stderr, "error: review: unknown verb %q (expected bind, record, verify, check, exempt, sweep, anchor, launch, proposals or findings)\n", args[0])
+		fmt.Fprintf(p.stderr, "error: review: unknown verb %q (expected bind, record, verify, check, exempt, sweep, anchor, launch, frozen-context, proposals, ci or findings)\n", args[0])
 		p.exit(1)
 	}
 }
@@ -124,7 +132,7 @@ func reviewServiceOver(git reviewapp.Git, results reviewapp.Results) reviewapp.S
 
 // reviewFlags are the parsed flags of the review verbs. A verb takes some of them.
 type reviewFlags struct {
-	base, onto, head, feature, result, stored, verdicts, risk, rows, role, cwd, merge, runtime, model string
+	base, onto, head, landing, feature, result, stored, verdicts, risk, rows, role, cwd, merge, runtime, model string
 	// given says which flags the command line gave, with whatever value, an empty one included. A flag that is
 	// optional and has a default tells an empty value that was given from one that was not.
 	given map[string]bool
@@ -160,6 +168,8 @@ func parseReviewFlags(args []string, takes ...string) (reviewFlags, error) {
 			f.onto = args[i]
 		case "--head":
 			f.head = args[i]
+		case "--landing":
+			f.landing = args[i]
 		case "--feature":
 			f.feature = args[i]
 		case "--result":
@@ -193,7 +203,7 @@ func (f reviewFlags) has(name string) bool { return f.given[name] }
 // require fails with the first of the named flags that has no value. A name it does not know is a mistake of
 // the caller, and says so rather than reading as a flag that was left out.
 func (f reviewFlags) require(names ...string) error {
-	values := map[string]string{"--base": f.base, "--onto": f.onto, "--head": f.head, "--feature": f.feature, "--stored": f.stored, "--risk": f.risk, "--rows": f.rows, "--merge": f.merge, "--runtime": f.runtime, "--model": f.model}
+	values := map[string]string{"--base": f.base, "--onto": f.onto, "--head": f.head, "--feature": f.feature, "--landing": f.landing, "--stored": f.stored, "--risk": f.risk, "--rows": f.rows, "--merge": f.merge, "--runtime": f.runtime, "--model": f.model}
 	for _, name := range names {
 		value, known := values[name]
 		if !known {

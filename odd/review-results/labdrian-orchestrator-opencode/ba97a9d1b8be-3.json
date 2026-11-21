@@ -1,0 +1,67 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "cb3b8bca6b81a0262efd1bff4d3b192bc2ada487",
+    "head": "ba97a9d1b8be77f1f5b3ca641ab051b90daba359",
+    "diff_sha256": "dfcb2e5d9ba9c10c2eb14ae42efdf07dbcf14b3ab286bfba5637f0714fe91f75",
+    "paths": [
+      "bin/labdrian-overlay",
+      "bin/lib/skill_registry.sh",
+      "bin/lib/usage.sh",
+      "engine/cmd/registry_test.go",
+      "engine/installer/registry_engine_absent_test.go",
+      "engine/installer/registry_pins_doctor_test.go",
+      "engine/installer/registry_pins_repair_test.go",
+      "engine/installer/registry_pins_world_test.go",
+      "engine/installer/routing_pins_golden_test.go",
+      "engine/installer/testdata/registry_pins.golden",
+      "engine/shelltest/copies_skills_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "cb3b8bca6b81a0262efd1bff4d3b192bc2ada487",
+      "head": "ba97a9d1b8be77f1f5b3ca641ab051b90daba359",
+      "diff_sha256": "dfcb2e5d9ba9c10c2eb14ae42efdf07dbcf14b3ab286bfba5637f0714fe91f75"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "bin/labdrian-overlay",
+        "bin/lib/skill_registry.sh",
+        "bin/lib/usage.sh",
+        "engine/cmd/registry_test.go",
+        "engine/installer/registry_engine_absent_test.go",
+        "engine/installer/registry_pins_doctor_test.go",
+        "engine/installer/registry_pins_repair_test.go",
+        "engine/installer/registry_pins_world_test.go",
+        "engine/installer/routing_pins_golden_test.go",
+        "engine/installer/testdata/registry_pins.golden",
+        "engine/shelltest/copies_skills_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "bin/lib/skill_registry.sh:14-17",
+        "claim": "The refresh keeps every registry line that is not the generated head or a row, including the executor rows an earlier repair wrote. Nothing now rewrites or removes them. A project registry written before this commit keeps stale sdd-* executor rows with old paths indefinitely. A registry created from scratch gets no sdd-* rows, so any consumer that resolved SDD executor paths from the registry loses them. The diff shows no enumeration of those consumers and no cleanup path.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "bin/lib/skill_registry.sh:14-17",
+          "engine/installer/testdata/registry_pins.golden:152-155"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff removes cmd_repair_sdd_registry, the repair step of cmd_skill_registry and its dispatcher entry, and the golden shows registries refreshed without executor rows.",
+      "--no-repair and --target are still parsed and validated, and do nothing, as the commit states.",
+      "I could not see whether any other script or document still calls the removed `repair-sdd-registry` command or reads sdd-* rows from the registry, so the consumer impact is not verified."
+    ]
+  }
+}

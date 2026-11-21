@@ -1,0 +1,94 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "6ed8ea51028630bc0d897ac9aa85f201e91ce1de",
+    "head": "c2dd90fb0422a1413366c40e0be3d31c05d07b87",
+    "diff_sha256": "51a7f1e020fa9ef159a7a0fed0f17174a942c3cd7546ff01be0ef5e48f75d324",
+    "paths": [
+      "CHANGELOG.md",
+      "README.md",
+      "bin/lib/apply.sh",
+      "bin/lib/usage.sh",
+      "engine/cmd/runtime_golden_test.go",
+      "engine/cmd/runtime_registry.go",
+      "engine/cmd/testdata/runtime-golden/runtime-codex-manifest-states.golden",
+      "engine/cmd/testdata/runtime-golden/runtime-codex-owner-rules.golden",
+      "engine/cmd/testdata/runtime-golden/runtime-lifecycle-of-all-the-targets.golden",
+      "engine/cmd/testdata/runtime-golden/runtime-lifecycle-of-codex.golden",
+      "engine/cmd/testdata/runtime-golden/runtime-opencode-and-pi-with-an-overlay.golden",
+      "engine/cmd/testdata/runtime-golden/runtime-roots-come-from-the-environment.golden",
+      "engine/cmd/testdata/runtime-golden/runtime-status-in-an-empty-home.golden",
+      "engine/runtime/codex.go",
+      "engine/runtime/codex_ownerrules.go",
+      "engine/runtime/codex_ownerrules_test.go",
+      "engine/runtime/codex_register.go",
+      "engine/shelltest/apply_codex_blocks_test.go",
+      "engine/shelltest/apply_codex_runtime_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "6ed8ea51028630bc0d897ac9aa85f201e91ce1de",
+      "head": "c2dd90fb0422a1413366c40e0be3d31c05d07b87",
+      "diff_sha256": "51a7f1e020fa9ef159a7a0fed0f17174a942c3cd7546ff01be0ef5e48f75d324"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "README.md",
+        "bin/lib/apply.sh",
+        "bin/lib/usage.sh",
+        "engine/cmd/runtime_golden_test.go",
+        "engine/cmd/runtime_registry.go",
+        "engine/cmd/testdata/runtime-golden/runtime-codex-manifest-states.golden",
+        "engine/cmd/testdata/runtime-golden/runtime-codex-owner-rules.golden",
+        "engine/cmd/testdata/runtime-golden/runtime-lifecycle-of-all-the-targets.golden",
+        "engine/cmd/testdata/runtime-golden/runtime-lifecycle-of-codex.golden",
+        "engine/cmd/testdata/runtime-golden/runtime-opencode-and-pi-with-an-overlay.golden",
+        "engine/cmd/testdata/runtime-golden/runtime-roots-come-from-the-environment.golden",
+        "engine/cmd/testdata/runtime-golden/runtime-status-in-an-empty-home.golden",
+        "engine/runtime/codex.go",
+        "engine/runtime/codex_ownerrules.go",
+        "engine/runtime/codex_ownerrules_test.go",
+        "engine/runtime/codex_register.go",
+        "engine/shelltest/apply_codex_blocks_test.go",
+        "engine/shelltest/apply_codex_runtime_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "engine/runtime/codex_ownerrules.go:37-49",
+        "claim": "rulesFiles does not de-duplicate paths. If CODEX_HOME resolves to the home directory (or the same directory), ~/AGENTS.md and <root>/AGENTS.md are the same file. The block is then written twice, and the message reports it once as written and again as already current. On uninstall the second removal reports nothing. The output is misleading, though the file ends up correct.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/runtime/codex_ownerrules.go:37-49"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "bin/lib/apply.sh:28-30",
+        "claim": "On a failed install, only the first line of the engine's combined output gets the two-space indent, because the whole multi-line result is echoed as one string. Output lines from a partial install can be mixed with other apply output, which makes the failure report harder to read.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "bin/lib/apply.sh:28-31"
+        ]
+      }
+    ],
+    "evidence": [
+      "Reviewed the full diff only; no tools were available to run the tests or inspect the unchanged tail of Uninstall in codex.go.",
+      "The rules-block logic in codex_ownerrules.go matches the claimed behaviour and the golden outputs: each file is written, updated or removed independently, and a broken-marker file makes the action partial without stopping the others.",
+      "The apply.sh step handles the three claimed cases: silent for a checkout with no rules, a note for a missing engine binary, and a non-zero return when the engine ran and failed."
+    ]
+  }
+}

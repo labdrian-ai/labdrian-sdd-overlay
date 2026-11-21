@@ -92,7 +92,7 @@ func callManifestRoutes(t *testing.T, engine, overlayDir, home, manifestContent,
 
 // fixtureManifest contains rows used by unit tests: a legacy skill row,
 // the GADU skill row, the GADU agent row, and the agent of Codex of a role.
-const fixtureManifest = `sdd-spec/SKILL.md   managed
+const fixtureManifest = `go-testing/SKILL.md   managed
 gadu-operator/SKILL.md   custom
 GADU.md   custom   agent
 opencode/agents/GADU.md   custom   opencode-agent
@@ -117,13 +117,14 @@ const unrecognizedRouteLongtermMemFixture = fixtureManifest + "longterm-mem/inte
 
 // TestManifestRoutes_LegacySkillRow pins the back-compat invariant (D2):
 // a bare two-column skill row resolves to route=skill, skills/ repo source,
-// and exactly the three skills destination paths.
+// and the skills destination paths of Claude and Codex; OpenCode reads
+// ~/.claude/skills, so a skill row has no destination for it (S13).
 func TestManifestRoutes_LegacySkillRow(t *testing.T) {
 	engine := enginetest.Binary(t)
 	overlayDir := t.TempDir()
 	home := t.TempDir()
 
-	got, err := callManifestRoutes(t, engine, overlayDir, home, fixtureManifest, "sdd-spec/SKILL.md")
+	got, err := callManifestRoutes(t, engine, overlayDir, home, fixtureManifest, "go-testing/SKILL.md")
 	if err != nil {
 		t.Fatalf("manifest routes: %v", err)
 	}
@@ -131,27 +132,30 @@ func TestManifestRoutes_LegacySkillRow(t *testing.T) {
 	if got.Route != "skill" {
 		t.Errorf("Route: got %q, want %q", got.Route, "skill")
 	}
-	if !strings.HasSuffix(got.RepoSrc, "skills/sdd-spec/SKILL.md") {
-		t.Errorf("RepoSrc %q: want suffix skills/sdd-spec/SKILL.md", got.RepoSrc)
+	if !strings.HasSuffix(got.RepoSrc, "skills/go-testing/SKILL.md") {
+		t.Errorf("RepoSrc %q: want suffix skills/go-testing/SKILL.md", got.RepoSrc)
 	}
-	// Back-compat: exactly 3 skills targets, no agent targets
-	if len(got.Targets) != 3 {
-		t.Errorf("expected 3 targets, got %d: %v", len(got.Targets), got.Targets)
+	// Exactly 2 skills targets (claude, codex), no agent targets, none for opencode
+	if len(got.Targets) != 2 {
+		t.Errorf("expected 2 targets, got %d: %v", len(got.Targets), got.Targets)
 	}
-	for _, tname := range []string{"claude", "opencode", "codex"} {
+	if dest, ok := got.Targets["opencode"]; ok {
+		t.Errorf("opencode must have no destination for a skill row, got %q", dest)
+	}
+	for _, tname := range []string{"claude", "codex"} {
 		dest, ok := got.Targets[tname]
 		if !ok {
 			t.Errorf("missing target %q", tname)
 			continue
 		}
-		if !strings.HasSuffix(dest, "skills/sdd-spec/SKILL.md") {
-			t.Errorf("target %q dest %q: want suffix skills/sdd-spec/SKILL.md", tname, dest)
+		if !strings.HasSuffix(dest, "skills/go-testing/SKILL.md") {
+			t.Errorf("target %q dest %q: want suffix skills/go-testing/SKILL.md", tname, dest)
 		}
 	}
 }
 
 // TestManifestRoutes_GADUSkillRow verifies that the GADU skill row (no route column)
-// resolves identically to a legacy skill row — 3 skills destinations.
+// resolves identically to a legacy skill row — the claude and codex skills destinations.
 func TestManifestRoutes_GADUSkillRow(t *testing.T) {
 	engine := enginetest.Binary(t)
 	overlayDir := t.TempDir()
@@ -168,10 +172,10 @@ func TestManifestRoutes_GADUSkillRow(t *testing.T) {
 	if !strings.HasSuffix(got.RepoSrc, "skills/gadu-operator/SKILL.md") {
 		t.Errorf("RepoSrc %q: want suffix skills/gadu-operator/SKILL.md", got.RepoSrc)
 	}
-	if len(got.Targets) != 3 {
-		t.Errorf("expected 3 targets, got %d: %v", len(got.Targets), got.Targets)
+	if len(got.Targets) != 2 {
+		t.Errorf("expected 2 targets, got %d: %v", len(got.Targets), got.Targets)
 	}
-	for _, tname := range []string{"claude", "opencode", "codex"} {
+	for _, tname := range []string{"claude", "codex"} {
 		dest, ok := got.Targets[tname]
 		if !ok {
 			t.Errorf("missing target %q", tname)
@@ -299,7 +303,7 @@ func TestManifestRoutes_NonDeployableRows(t *testing.T) {
 	home := t.TempDir()
 
 	// Manifest with infra rows that must be non-deployable plus one real skill row.
-	const infraManifest = `sdd-spec/SKILL.md   managed
+	const infraManifest = `go-testing/SKILL.md   managed
 engine/go.mod   managed
 skills.registry.yaml   custom
 `
@@ -323,10 +327,10 @@ skills.registry.yaml   custom
 		},
 		{
 			// Back-compat: a real skill row must still resolve normally.
-			name:         "sdd_spec_skill_back_compat",
-			manifestPath: "sdd-spec/SKILL.md",
+			name:         "go_testing_skill_back_compat",
+			manifestPath: "go-testing/SKILL.md",
 			wantRoute:    "skill",
-			wantTargets:  3,
+			wantTargets:  2,
 		},
 	}
 
@@ -569,23 +573,18 @@ func TestManifestRoutes_TargetFlag_AgentRowClaude(t *testing.T) {
 }
 
 // TestManifestRoutes_TargetFlag_SkillRowOpencode pins that a skill row + --target opencode
-// yields exactly one opencode skills destination (D2 back-compat).
+// yields no destination: OpenCode reads ~/.claude/skills and a copy would shadow it (S13).
 func TestManifestRoutes_TargetFlag_SkillRowOpencode(t *testing.T) {
 	engine := enginetest.Binary(t)
 	overlayDir := t.TempDir()
 	home := t.TempDir()
 
-	got, err := callManifestRoutes(t, engine, overlayDir, home, fixtureManifest, "sdd-spec/SKILL.md")
+	got, err := callManifestRoutes(t, engine, overlayDir, home, fixtureManifest, "go-testing/SKILL.md")
 	if err != nil {
 		t.Fatalf("manifest routes: %v", err)
 	}
 
-	applicable := intersectTargets(got.Targets, "opencode")
-	if len(applicable) != 1 {
-		t.Errorf("expected 1 applicable target (opencode), got: %v", applicable)
-	}
-	dest := applicable["opencode"]
-	if !strings.Contains(dest, "opencode") || !strings.HasSuffix(dest, "skills/sdd-spec/SKILL.md") {
-		t.Errorf("opencode dest %q: want opencode skills path for sdd-spec/SKILL.md", dest)
+	if applicable := intersectTargets(got.Targets, "opencode"); len(applicable) != 0 {
+		t.Errorf("expected no applicable target for opencode, got: %v", applicable)
 	}
 }

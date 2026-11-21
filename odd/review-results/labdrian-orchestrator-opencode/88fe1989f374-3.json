@@ -1,0 +1,63 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "b3ce2931f12e01ae3256ada57dffd544d8aa585c",
+    "head": "88fe1989f37494e90d584c3bc5d634acd7df9897",
+    "diff_sha256": "7455fed43e22be31861f90d32cf2e67e30b07a7dd6e350cab0a9902e46b3c9fe",
+    "paths": [
+      "engine/cmd/runtime_test.go",
+      "engine/runtime/opencode.go",
+      "engine/runtime/opencode_memorycard.go",
+      "engine/runtime/opencode_memorycard_test.go",
+      "engine/runtime/opencode_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "b3ce2931f12e01ae3256ada57dffd544d8aa585c",
+      "head": "88fe1989f37494e90d584c3bc5d634acd7df9897",
+      "diff_sha256": "7455fed43e22be31861f90d32cf2e67e30b07a7dd6e350cab0a9902e46b3c9fe"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/cmd/runtime_test.go",
+        "engine/runtime/opencode.go",
+        "engine/runtime/opencode_memorycard.go",
+        "engine/runtime/opencode_memorycard_test.go",
+        "engine/runtime/opencode_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "engine/runtime/opencode.go:192-197",
+        "claim": "The memorycard install check runs before the runtime-parity active-marker checks (readActiveMarker, version, hash and config-root mismatch), not after them as the commit message says. When both the memorycard plugin and the parity marker have problems, the memorycard message wins. A missing or foreign memorycard plugin reports partial where the parity restart-required message used to be returned. The restart-only 'artifact changed' case also preempts the parity restart messages. The 'parity messages and their order are unchanged' claim therefore does not hold for statuses that have more than one problem.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/runtime/opencode.go:192-197 sits before the readActiveMarker call"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "engine/runtime/opencode_memorycard.go:210-217",
+        "claim": "The marker-freshness check ignores os.Stat errors. If the marker, plugin or record cannot be stat'ed, the 'marker predates the plugin' check is skipped silently and status can still reach supported.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/runtime/opencode_memorycard.go:210-217 only compares mod times when err == nil"
+        ]
+      }
+    ],
+    "evidence": [
+      "Reviewed the full diff. Helpers such as memorycardPluginState, memorycardConfigPath and memorycardActiveMarkerPath are not in the diff, so I assumed they exist in the base."
+    ]
+  }
+}

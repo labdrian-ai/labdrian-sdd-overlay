@@ -1,0 +1,37 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "b8b6ca8bf08248feb34ed94c5235034016f80b03",
+    "head": "069c0d7309f00fa43dca3426112dc8367a253ed6",
+    "diff_sha256": "12fe1150f3eae1cffc0c07f799490e8e58f4107af848a19d2a575bec457ca1b6",
+    "paths": [
+      "engine/skills/procedural_candidate_memorycard_test.go",
+      "skills/_shared/procedural-candidate-detection.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "b8b6ca8bf08248feb34ed94c5235034016f80b03",
+      "head": "069c0d7309f00fa43dca3426112dc8367a253ed6",
+      "diff_sha256": "12fe1150f3eae1cffc0c07f799490e8e58f4107af848a19d2a575bec457ca1b6"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/skills/procedural_candidate_memorycard_test.go",
+        "skills/_shared/procedural-candidate-detection.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The added doc sentence states that when resolve fails or is unavailable, no legacy id is treated as unknown and the agent stops without counting, appending or saving. This matches the commit claim.",
+      "The new test asserts both fragments of that sentence. The doc wraps them across lines, so the test passes only if requireText normalizes whitespace. The diff does not show requireText, so I could not confirm this. Its use in the neighbouring test, which matches wrapped prose such as 'migrate records in bulk', suggests it does.",
+      "I found no change-caused defect in the diff."
+    ]
+  }
+}

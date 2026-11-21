@@ -7,14 +7,47 @@ import (
 	"strings"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/assets"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/roles"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/runtime/core"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/runtime/opencodeprompt"
 )
 
 // promptConfig derives the prompt config from the contracts of the overlay this adapter is
-// pointed at. The parsing is opencodeprompt's; what this does is read the files.
+// pointed at. The parsing is opencodeprompt's; what this does is read the files. The contract
+// paths it returns are absolute files of that overlay: the plugin injects them into a subagent
+// prompt, and the subagent runs in the target project, where a path relative to the overlay does
+// not exist. The overlay is the configured one, or the one found above the working directory
+// when none was configured; both are absolute.
 func (a OpenCodeAdapter) promptConfig() (opencodeprompt.PromptConfig, error) {
-	return opencodeprompt.Derive(&overlayContracts{overlayDir: a.options.OverlayDir})
+	source := &overlayContracts{overlayDir: a.options.OverlayDir}
+	config, err := opencodeprompt.Derive(source)
+	if err != nil {
+		return opencodeprompt.PromptConfig{}, err
+	}
+	return withAbsoluteContractPaths(config, source.root), nil
+}
+
+// skillsRoot is the skills directory of the overlay this adapter reads its contracts from, absolute as
+// the contract paths are: the root a launch prompt's skill ids are looked up under.
+func (a OpenCodeAdapter) skillsRoot() (string, error) {
+	root, err := locateOverlay(a.options.OverlayDir)
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(root, "skills"), nil
+}
+
+// withAbsoluteContractPaths is config with every contract path joined under root. It copies the
+// contract list, so the config it was given is left as it was.
+func withAbsoluteContractPaths(config opencodeprompt.PromptConfig, root string) opencodeprompt.PromptConfig {
+	config.ContractPath = contractFile(root, config.ContractPath)
+	contracts := make([]opencodeprompt.ContractConfig, len(config.Contracts))
+	for i, entry := range config.Contracts {
+		entry.ContractPath = contractFile(root, entry.ContractPath)
+		contracts[i] = entry
+	}
+	config.Contracts = contracts
+	return config
 }
 
 // overlayContracts is the ContractSource over an overlay checkout on disk, plus the guard the
@@ -78,6 +111,23 @@ func (c *overlayContracts) OOQuality() (string, bool, error) {
 	return string(content), true, nil
 }
 
+// RoleBody is the source of a role in the checkout, roles/<role>/body.md. A role with no file there
+// has no body, which is not an error; any other failure to read it is one.
+func (c *overlayContracts) RoleBody(role roles.Role) (string, bool, error) {
+	root, err := c.resolve()
+	if err != nil {
+		return "", false, err
+	}
+	content, err := os.ReadFile(contractFile(root, roles.BodyPath(role)))
+	if err != nil {
+		if os.IsNotExist(err) {
+			return "", false, nil
+		}
+		return "", false, err
+	}
+	return string(content), true, nil
+}
+
 // locateOverlay is the overlay checkout the contracts are read from: configured when the
 // composition root was given one, which must then be an absolute path; otherwise the nearest
 // directory from the working directory upward that has the minimalism contract.
@@ -102,5 +152,13 @@ func locateOverlay(configured string) (string, error) {
 			break
 		}
 	}
-	return "", fmt.Errorf("could not locate %s; set %s", opencodeprompt.MinimalismContractPath, core.LabdrianOverlayDirVariable)
+	return "", overlayNotFoundError{}
+}
+
+// overlayNotFoundError is the answer of a search that ran and found no checkout above the working
+// directory, told apart from a search that could not run.
+type overlayNotFoundError struct{}
+
+func (overlayNotFoundError) Error() string {
+	return fmt.Sprintf("could not locate %s; set %s", opencodeprompt.MinimalismContractPath, core.LabdrianOverlayDirVariable)
 }

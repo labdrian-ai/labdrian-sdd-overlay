@@ -1,0 +1,25 @@
+{
+  "kind": "sweeper",
+  "base": "a8b3dc60ccb1c9e51b3378c8f844ed659aa5814e",
+  "head": "3531b9546753831c4725b5454502c2a0fc7577ee",
+  "diff_sha256": "a379efc93663172add8bcbe81a94a6391a3eb115988c10fcbe610d72de06d446",
+  "sweep": "3531b9546753-1.sweep.json",
+  "commit": null,
+  "candidates": [
+    {
+      "candidate": "T3: ?? CLAUDE.md",
+      "disposition": "live",
+      "evidence": "Owner verbatim L160: \"se quedan los files de wiki\". Project instruction file pointing agents at docs/wiki/README.md; kept."
+    },
+    {
+      "candidate": "T3: ?? docs/wiki/.format",
+      "disposition": "live",
+      "evidence": "Owner verbatim L160: \"se quedan los files de wiki\". Wiki file; kept."
+    },
+    {
+      "candidate": "T3: ?? docs/wiki/README.md",
+      "disposition": "live",
+      "evidence": "Owner verbatim L160: \"se quedan los files de wiki\". Read: wiki entry point named by CLAUDE.md and the contract; kept."
+    }
+  ]
+}

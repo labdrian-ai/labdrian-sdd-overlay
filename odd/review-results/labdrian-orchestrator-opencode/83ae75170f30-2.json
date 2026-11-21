@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "b50d9da2b31c9b73421bb5c1f0c319c2d58a44ec",
+    "head": "83ae75170f303e34a45cae88b368460a4830e0d6",
+    "diff_sha256": "56947a686007f3a61f3c7c66f77d119f84a97bebf981f4405fd533fa2d5ee040",
+    "paths": [
+      "odd/tasks/labdrian-orchestrator-opencode.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "b50d9da2b31c9b73421bb5c1f0c319c2d58a44ec",
+      "head": "83ae75170f303e34a45cae88b368460a4830e0d6",
+      "diff_sha256": "56947a686007f3a61f3c7c66f77d119f84a97bebf981f4405fd533fa2d5ee040"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/labdrian-orchestrator-opencode.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The diff changes one documentation file: it ticks T14 and appends log entry L83.",
+      "L83 matches the open item in L82 (the memorycard block without Engram, owner approval 'si'), so the tick follows from the record.",
+      "The T14 commit reference and the L82/L83 cross-references are internally consistent. The claims about shipped code and 'review check clear' cannot be checked from this diff, and nothing in it contradicts them."
+    ]
+  }
+}

@@ -1,0 +1,37 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "558d9a721e12faa160b06189b2e3f343930268d9",
+    "head": "a387de4ae039bf5f1f4f7e853dfd92fa52d461ca",
+    "diff_sha256": "2ca1fc592532e44a70cc9c20aec92fdced89eb443b8b5dfc46079a10d8def813",
+    "paths": [
+      "odd/tasks/labdrian-orchestrator-opencode.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "558d9a721e12faa160b06189b2e3f343930268d9",
+      "head": "a387de4ae039bf5f1f4f7e853dfd92fa52d461ca",
+      "diff_sha256": "2ca1fc592532e44a70cc9c20aec92fdced89eb443b8b5dfc46079a10d8def813"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/labdrian-orchestrator-opencode.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "Checked the task ordering across T30, T28, T29 and T22 (after-clauses, the 'before' clause, and the Order paragraph in L62); they agree.",
+      "Checked the arithmetic: T30's four commit ranges (200-340, 200-340, 100-220, 120-240) sum to the stated 620-1,140. T29's (a) 1,500-2,600, (b) 60-160 and (c) about 4,300 sum to roughly the stated 5,900-7,100.",
+      "Checked the 4,700 minus 388 recount (about 4,300) and that the L62 risk numbers cited by T29 and T22 match the two risks listed in L62.",
+      "Checked the T29 (a) removals against the stated carve-outs (fsstore.Registry, registryLockPath, acquireRegistryLock, the registry dispatcher, the Hermes-conditional symbols); they do not contradict T30's dependencies.",
+      "Found no change-caused defect; the commit edits only the feature document."
+    ]
+  }
+}

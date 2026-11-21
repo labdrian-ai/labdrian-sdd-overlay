@@ -460,6 +460,29 @@ func withoutEntriesAddedSinceTheRecording(t *testing.T, label, text string, merg
 	if merged && guards != 1 {
 		t.Errorf("%s: %d builder guard entries, want the one a merge writes", label, guards)
 	}
+	// The UserPromptSubmit entry of the registry refresh (T30) is not in the recording either: a file a merge just wrote holds
+	// it once. It is told from the refresh entry of gentle-ai, which a recording may hold, by its whole command line
+	// (as JSON writes it, with the quotes escaped), not by the words they share.
+	const refreshCommand = settings.LabdrianRegistryRefreshIdentity + ` --cwd \"${CLAUDE_PROJECT_DIR:-$PWD}\" --quiet`
+	text, refreshes := withoutTheEventEntries(t, label, "UserPromptSubmit", refreshCommand, text)
+	if merged && refreshes != 1 {
+		t.Errorf("%s: %d registry refresh entries, want the one a merge writes", label, refreshes)
+	}
+	// The top-level "agent": "foreman" key (S6, T7) is not in the recording either: a file a merge just wrote holds it
+	// once, at the indent of the top level, and the recorded file never had it.
+	const agentLine = "\n  \"agent\": \"" + settings.MainAgentName + "\""
+	if at := strings.Index(text, agentLine); at >= 0 {
+		text = cutWithComma(t, label+": the agent key", text, at, at+len(agentLine))
+	} else if merged {
+		t.Errorf("%s: no \"agent\": \"foreman\" key, want the one a merge writes", label)
+	}
+	// The top-level "outputStyle": "labdrian" key (T27) is not in the recording either, for the same reason.
+	const outputStyleLine = "\n  \"outputStyle\": \"" + settings.OutputStyleName + "\""
+	if at := strings.Index(text, outputStyleLine); at >= 0 {
+		text = cutWithComma(t, label+": the outputStyle key", text, at, at+len(outputStyleLine))
+	} else if merged {
+		t.Errorf("%s: no \"outputStyle\": \"labdrian\" key, want the one a merge writes", label)
+	}
 	return text
 }
 

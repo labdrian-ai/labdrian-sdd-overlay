@@ -1,0 +1,59 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "c60a653e46f3245811789023505eac56e0c15c35",
+    "head": "79bf40d9ed9831d4f6252b4758083adea5d9e556",
+    "diff_sha256": "bbe3b9468fcd5c4c766b1a174c573aa614ccf5e9f2d10584b4a8ee5b0e7b29ef",
+    "paths": [
+      "odd/tasks/labdrian-orchestrator-opencode.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "c60a653e46f3245811789023505eac56e0c15c35",
+      "head": "79bf40d9ed9831d4f6252b4758083adea5d9e556",
+      "diff_sha256": "bbe3b9468fcd5c4c766b1a174c573aa614ccf5e9f2d10584b4a8ee5b0e7b29ef"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/labdrian-orchestrator-opencode.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/labdrian-orchestrator-opencode.md:47",
+        "claim": "The T19 commit range now starts at 6ca43786, while the base row said dbae346c..f2fdef1f (rebuilt shas, L28). The row no longer says these are rebuilt shas or points to L28. L36 says L28 maps the old shas, but the diff does not let a reader check that 6ca43786 is the rebuilt start of the range. The range endpoints cannot be verified from this diff.",
+        "evidence_class": "inferential",
+        "causal_disposition": "unknown",
+        "proof_refs": [
+          "odd/tasks/labdrian-orchestrator-opencode.md:47",
+          "odd/tasks/labdrian-orchestrator-opencode.md:393"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/labdrian-orchestrator-opencode.md:44",
+        "claim": "The T24 row loses its pointer 'answered in L35 (owner chose B)'. The row now says only 'none (prototyper spike, no commit)', so the link from the task to its outcome exists only in the log, with no cross-reference from the row.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/labdrian-orchestrator-opencode.md:44"
+        ]
+      }
+    ],
+    "evidence": [
+      "The only changed path is the feature document odd/tasks/labdrian-orchestrator-opencode.md; the diff covers it completely.",
+      "The full sha256 quoted in L36 is 64 hex characters and begins with the previously truncated b11700f1bb3f.",
+      "The trailing 'done:' notes were removed from the T19 and T24 rows, as L36 states."
+    ]
+  }
+}

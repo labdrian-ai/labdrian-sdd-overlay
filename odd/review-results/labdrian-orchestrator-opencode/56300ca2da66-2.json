@@ -1,0 +1,59 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "54b0cbdd04dc498fd6fb6a07be1ddcbd98a4e309",
+    "head": "56300ca2da6619dc5008006e0943159e54ffb4d4",
+    "diff_sha256": "4a4e144e7b8632985f946a12914bc7b70f890206cba42cdcc568c16cf0670471",
+    "paths": [
+      "odd/tasks/labdrian-orchestrator-opencode.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "54b0cbdd04dc498fd6fb6a07be1ddcbd98a4e309",
+      "head": "56300ca2da6619dc5008006e0943159e54ffb4d4",
+      "diff_sha256": "4a4e144e7b8632985f946a12914bc7b70f890206cba42cdcc568c16cf0670471"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/labdrian-orchestrator-opencode.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "odd/tasks/labdrian-orchestrator-opencode.md:57",
+        "claim": "T11 is ticked [x] but its task text still lists only the original S9 mapping and does not reflect the accepted S9 amendment recorded in L65 (read→Read, skill→Skill mapped). L65 says S9 was amended by review, yet the diff does not update the S9 spec text or the T11 line. A reader of the Specs or T11 sees a stale S9 mapping, which contradicts the delivered behavior and the L10 map the T9 line cites.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/labdrian-orchestrator-opencode.md:57",
+          "odd/tasks/labdrian-orchestrator-opencode.md:615"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/labdrian-orchestrator-opencode.md:615",
+        "claim": "L65 is a single very long paragraph that mixes delivery record, verifier outcome, corrections, spec change, answers and an open routed item. The open item (other PreToolUse guards have no OpenCode bridge; T16 to declare them unsupported) is buried at the end and is not tied to any task line or checkbox, so it is easy to lose. Also uses a stray apostrophe-like backtick in words such as engine`s and bridge`s, which breaks inline code rendering.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/labdrian-orchestrator-opencode.md:615"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff changes only odd/tasks/labdrian-orchestrator-opencode.md: ticks T11, adds five commit hashes, appends log entry L65.",
+      "L65 states S9 was amended (read/skill mapping) and plugin passes path as file_path, but no Specs section edit appears in the diff.",
+      "L65 contains several backticks used as apostrophes (engine`s, Claude Code`s, bridge`s), producing unbalanced inline code spans."
+    ]
+  }
+}

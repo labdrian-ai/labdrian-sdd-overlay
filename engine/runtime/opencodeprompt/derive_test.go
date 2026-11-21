@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/contract"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/roles"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/runtime/opencodeprompt"
 )
 
@@ -51,8 +52,23 @@ type fakeSource struct {
 	ooQuality     string
 	ooPresent     bool
 	ooErr         error
+	// bodies are the role bodies the overlay has; a role with none has no source. bodyErr is the
+	// error every body read answers. bodiesAsked is kept apart from asked, which the contract tests
+	// compare whole.
+	bodies      map[roles.Role]string
+	bodyErr     error
+	bodiesAsked []roles.Role
 
 	asked []string
+}
+
+func (f *fakeSource) RoleBody(role roles.Role) (string, bool, error) {
+	f.bodiesAsked = append(f.bodiesAsked, role)
+	if f.bodyErr != nil {
+		return "", false, f.bodyErr
+	}
+	text, present := f.bodies[role]
+	return text, present, nil
 }
 
 func (f *fakeSource) Minimalism() (string, error) {
@@ -249,5 +265,50 @@ func TestAMalformedRequiredContractIsReportedBeforeTheOptionalOneIsRead(t *testi
 		if asked == "oo-quality" {
 			t.Errorf("the optional contract was read although a required one had already failed: %v", source.asked)
 		}
+	}
+}
+
+// A role on OpenCode cannot load a skill by name, so each skill its body names as "`<id>` skill"
+// is injected as a contract entry of that role: the SKILL.md of the skill, under the launch header,
+// for the launches of that role only.
+func TestDeriveAddsOneEntryPerRoleAndSkillItsBodyNamesAfterTheContracts(t *testing.T) {
+	source := fullSource()
+	source.bodies = map[roles.Role]string{
+		roles.RoleBuilder:  "Follow the `test-first` skill. Read the `odd-feature-doc` skill.",
+		roles.RoleReviewer: "No skills here.",
+		roles.RoleDelivery: "Read the `odd-feature-doc` skill.",
+	}
+	config, err := opencodeprompt.Derive(source)
+	if err != nil {
+		t.Fatalf("Derive: %v", err)
+	}
+	wantPaths := []string{
+		"skills/_shared/minimalism-contract.md",
+		"skills/_shared/anti-generic-design.md",
+		"skills/_shared/oo-quality-contract.md",
+		"skills/test-first/SKILL.md",
+		"skills/odd-feature-doc/SKILL.md",
+		"skills/odd-feature-doc/SKILL.md",
+	}
+	if got := paths(config); !reflect.DeepEqual(got, wantPaths) {
+		t.Fatalf("contracts = %v, want %v: the contracts, then each role's skills in the order of the role vocabulary and of the body", got, wantPaths)
+	}
+	for i, role := range []string{"builder", "builder", "delivery"} {
+		entry := config.Contracts[3+i]
+		if !reflect.DeepEqual(entry.IncludedPhases, []string{role}) || entry.ExcludedPhases == nil || len(entry.ExcludedPhases) != 0 || entry.InjectionPoint != contract.DefaultInjectionPoint {
+			t.Errorf("entry %s = %+v, want included [%s], excluded empty and not nil, injection point %q", entry.ContractPath, entry, role, contract.DefaultInjectionPoint)
+		}
+	}
+	if !reflect.DeepEqual(source.bodiesAsked, roles.Vocabulary) {
+		t.Errorf("bodies asked for %v, want every role of the vocabulary %v", source.bodiesAsked, roles.Vocabulary)
+	}
+}
+
+func TestARoleBodyThatCannotBeReadAbortsDerive(t *testing.T) {
+	boom := errors.New("permission denied")
+	source := fullSource()
+	source.bodyErr = boom
+	if _, err := opencodeprompt.Derive(source); !errors.Is(err, boom) {
+		t.Fatalf("Derive = %v, want the read error", err)
 	}
 }

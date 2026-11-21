@@ -6,7 +6,11 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"io/fs"
+	"os"
+	"path/filepath"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -42,15 +46,40 @@ func (f fakeLock) Load(string) projection.ProceduralSkills { return f.lock }
 
 func succeeds(context.Context, []string) error { return nil }
 
-// probeOf is a probe over runner whose longterm-mem binary is "longterm-mem".
-func probeOf(runner *fakeRunner, registered bool, lock projection.ProceduralSkills) sessionAvailability {
+// probeOf is a probe over runner whose longterm-mem binary is "longterm-mem" and whose memorycard
+// store is the path given ("" when none can be located).
+func probeOf(runner *fakeRunner, store string, registered bool, lock projection.ProceduralSkills) sessionAvailability {
 	return sessionAvailability{
 		runner:          runner,
 		timeout:         200 * time.Millisecond,
+		memorycardStore: store,
+		stat:            os.Stat,
 		longtermBinary:  "longterm-mem",
 		entryRegistered: func() bool { return registered },
 		procedural:      fakeLock{lock},
 	}
+}
+
+// storeFile makes the regular file a memorycard store is to the probe: it is not empty (the 16 bytes
+// a SQLite database starts with), because the probe leaves an empty file alone, which `memorycard
+// list` would initialise.
+func storeFile(t *testing.T) string {
+	t.Helper()
+	path := filepath.Join(t.TempDir(), "memory.db")
+	if err := os.WriteFile(path, []byte("SQLite format 3\x00"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	return path
+}
+
+// emptyStoreFile makes the 0-byte regular file memorycard would initialise on its first open.
+func emptyStoreFile(t *testing.T) string {
+	t.Helper()
+	path := filepath.Join(t.TempDir(), "memory.db")
+	if err := os.WriteFile(path, nil, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	return path
 }
 
 func byName(got []projection.SourceAvailability) map[memoryscope.Source]projection.SourceAvailability {
@@ -65,9 +94,13 @@ var allSources = []memoryscope.Source{memoryscope.SourceEngram, memoryscope.Sour
 
 func TestEverySourceThatAnswersIsAvailable(t *testing.T) {
 	runner := &fakeRunner{known: map[string]func(context.Context, []string) error{
-		"engram": func(_ context.Context, args []string) error {
-			if strings.Join(args, " ") != "stats" {
-				t.Errorf("engram was run with %v, want stats", args)
+		"engram": func(context.Context, []string) error {
+			t.Error("the engram program was run: the probe of source engram asks memorycard")
+			return nil
+		},
+		"memorycard": func(_ context.Context, args []string) error {
+			if want := "list --topic-prefix labdrian/session-probe/ --project labdrian-session-probe"; strings.Join(args, " ") != want {
+				t.Errorf("memorycard was run with %v, want %s", args, want)
 			}
 			return nil
 		},
@@ -78,7 +111,7 @@ func TestEverySourceThatAnswersIsAvailable(t *testing.T) {
 			return nil
 		},
 	}}
-	got := probeOf(runner, true, projection.ProceduralSkills{Locked: true}).Probe("/repo", allSources)
+	got := probeOf(runner, storeFile(t), true, projection.ProceduralSkills{Locked: true}).Probe("/repo", allSources)
 	if len(got) != 3 {
 		t.Fatalf("Probe gave %d answers, want one per source: %+v", len(got), got)
 	}
@@ -90,35 +123,109 @@ func TestEverySourceThatAnswersIsAvailable(t *testing.T) {
 }
 
 func TestASourceThatFailsIsUnavailableWithTheReason(t *testing.T) {
+	failing := func(msg string) map[string]func(context.Context, []string) error {
+		return map[string]func(context.Context, []string) error{
+			"memorycard": func(context.Context, []string) error { return errors.New(msg) },
+		}
+	}
+	dir := func(t *testing.T) string { return t.TempDir() }
+	underAFile := func(t *testing.T) string { return filepath.Join(storeFile(t), "memory.db") }
+	absent := func(t *testing.T) string { return filepath.Join(t.TempDir(), "memory.db") }
 	cases := []struct {
 		name       string
 		runner     map[string]func(context.Context, []string) error
+		store      func(*testing.T) string // nil: no store can be located
+		noMemcard  bool                    // the probe must not run anything for the source
 		registered bool
 		lock       projection.ProceduralSkills
 		source     memoryscope.Source
-		want       string
+		want       string // <store> stands for the path store gives
+		uncreated  bool   // the answer says memorycard has no store yet
 	}{
-		{"engram is not on PATH", nil, true, projection.ProceduralSkills{}, memoryscope.SourceEngram, "the engram program was not found"},
-		{"engram fails", map[string]func(context.Context, []string) error{
-			"engram": func(context.Context, []string) error { return errors.New("exit status 1") },
-		}, true, projection.ProceduralSkills{}, memoryscope.SourceEngram, "the engram program failed: exit status 1"},
-		{"longterm-mem has no binary", nil, true, projection.ProceduralSkills{}, memoryscope.SourceLongtermMem, "the longterm-mem program was not found"},
+		{"no store can be located", map[string]func(context.Context, []string) error{"memorycard": succeeds}, nil, true, true, projection.ProceduralSkills{}, memoryscope.SourceEngram, "the memorycard store cannot be located: MEMORYCARD_DB is unset or empty and no home directory is known", false},
+		{"the store does not exist", map[string]func(context.Context, []string) error{"memorycard": succeeds}, absent, true, true, projection.ProceduralSkills{}, memoryscope.SourceEngram, "the memorycard store <store> does not exist", true},
+		{"the store is empty", map[string]func(context.Context, []string) error{"memorycard": succeeds}, emptyStoreFile, true, true, projection.ProceduralSkills{}, memoryscope.SourceEngram, "the memorycard store <store> is empty", true},
+		{"the store is a directory", map[string]func(context.Context, []string) error{"memorycard": succeeds}, dir, true, true, projection.ProceduralSkills{}, memoryscope.SourceEngram, "the memorycard store <store> is not a regular file", false},
+		{"the store is under a regular file", map[string]func(context.Context, []string) error{"memorycard": succeeds}, underAFile, true, true, projection.ProceduralSkills{}, memoryscope.SourceEngram, "the memorycard store <store> cannot be read: ", false},
+		{"memorycard is not on PATH", nil, storeFile, false, true, projection.ProceduralSkills{}, memoryscope.SourceEngram, "the memorycard program was not found", false},
+		{"memorycard fails", failing("exit status 1"), storeFile, false, true, projection.ProceduralSkills{}, memoryscope.SourceEngram, "the memorycard program failed: exit status 1", false},
+		{"longterm-mem has no binary", nil, nil, false, true, projection.ProceduralSkills{}, memoryscope.SourceLongtermMem, "the longterm-mem program was not found", false},
 		{"longterm-mem fails", map[string]func(context.Context, []string) error{
 			"longterm-mem": func(context.Context, []string) error { return errors.New("exit status 2") },
-		}, true, projection.ProceduralSkills{}, memoryscope.SourceLongtermMem, "the longterm-mem program failed: exit status 2"},
+		}, nil, false, true, projection.ProceduralSkills{}, memoryscope.SourceLongtermMem, "the longterm-mem program failed: exit status 2", false},
 		{"longterm-mem answers but no runtime has its entry", map[string]func(context.Context, []string) error{
 			"longterm-mem": succeeds,
-		}, false, projection.ProceduralSkills{}, memoryscope.SourceLongtermMem, "no longterm-mem MCP entry is registered in Claude Code, OpenCode or Codex"},
-		{"there is no procedural lock", nil, true, projection.ProceduralSkills{}, memoryscope.SourceProceduralSkills, "no procedural skills lock: none installed"},
-		{"the procedural lock is unreadable", nil, true, projection.ProceduralSkills{Unreadable: "unsupported version 2"}, memoryscope.SourceProceduralSkills, "the procedural skills lock cannot be read: unsupported version 2"},
+		}, nil, false, false, projection.ProceduralSkills{}, memoryscope.SourceLongtermMem, "no longterm-mem MCP entry is registered in Claude Code, OpenCode or Codex", false},
+		{"there is no procedural lock", nil, nil, false, true, projection.ProceduralSkills{}, memoryscope.SourceProceduralSkills, "no procedural skills lock: none installed", false},
+		{"the procedural lock is unreadable", nil, nil, false, true, projection.ProceduralSkills{Unreadable: "unsupported version 2"}, memoryscope.SourceProceduralSkills, "the procedural skills lock cannot be read: unsupported version 2", false},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			got := probeOf(&fakeRunner{known: tc.runner}, tc.registered, tc.lock).Probe("/repo", []memoryscope.Source{tc.source})
-			if len(got) != 1 || got[0].Source != tc.source || got[0].Available || got[0].Detail != tc.want {
-				t.Errorf("Probe = %+v, want %s unavailable with %q", got, tc.source, tc.want)
+			store := ""
+			if tc.store != nil {
+				store = tc.store(t)
+			}
+			runner := &fakeRunner{known: tc.runner}
+			got := probeOf(runner, store, tc.registered, tc.lock).Probe("/repo", []memoryscope.Source{tc.source})
+			want := strings.ReplaceAll(tc.want, "<store>", store)
+			if len(got) != 1 || got[0].Source != tc.source || got[0].Available || got[0].Uncreated != tc.uncreated {
+				t.Fatalf("Probe = %+v, want %s unavailable, uncreated %v", got, tc.source, tc.uncreated)
+			}
+			if tc.name == "the store is under a regular file" {
+				// The OS text after the prefix is not pinned.
+				if !strings.HasPrefix(got[0].Detail, want) || len(got[0].Detail) <= len(want) {
+					t.Errorf("detail %q, want it to start %q and say why", got[0].Detail, want)
+				}
+			} else if got[0].Detail != want {
+				t.Errorf("detail %q, want %q", got[0].Detail, want)
+			}
+			if tc.noMemcard && runner.ran.Load() != 0 {
+				t.Errorf("the probe ran %d programs, want none: a store that cannot be used is reported without running memorycard", runner.ran.Load())
+			}
+			if tc.name == "the store is empty" {
+				if info, err := os.Stat(store); err != nil || info.Size() != 0 {
+					t.Errorf("the probe left %s as %v (stat: %v), want it still 0 bytes: it must not open an empty store", store, info, err)
+				}
+			}
+			if tc.name == "the store does not exist" {
+				if _, err := os.Stat(store); !errors.Is(err, fs.ErrNotExist) {
+					t.Errorf("the probe left %s behind (stat: %v): it must never create the store", store, err)
+				}
 			}
 		})
+	}
+}
+
+// The store is where the memorycard program keeps it: the path MEMORYCARD_DB names, else the default
+// under the home; the adapter reads both through the deps, never the process.
+func TestTheMemorycardStoreIsMEMORYCARD_DBElseTheDefault(t *testing.T) {
+	home := func(h string) func() (string, error) { return func() (string, error) { return h, nil } }
+	noHome := func() (string, error) { return "", errors.New("no home") }
+	for _, tc := range []struct {
+		name string
+		env  map[string]string
+		home func() (string, error)
+		want string
+	}{
+		{"MEMORYCARD_DB names it", map[string]string{"MEMORYCARD_DB": "/x/m.db"}, home("/h"), "/x/m.db"},
+		{"empty MEMORYCARD_DB gives the default", map[string]string{"MEMORYCARD_DB": ""}, home("/h"), "/h/.memorycard/memory.db"},
+		{"no home gives none", nil, noHome, ""},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := memorycardStorePath(environmentOf(tc.env), tc.home); got != tc.want {
+				t.Errorf("memorycardStorePath = %q, want %q", got, tc.want)
+			}
+		})
+	}
+	d := testDeps()
+	d.getenv = environmentOf(map[string]string{"MEMORYCARD_DB": "/from/deps.db"})
+	d.userHomeDir = func() (string, error) { return "/deps/home", nil }
+	if got := newSessionAvailability(d).memorycardStore; got != "/from/deps.db" {
+		t.Errorf("newSessionAvailability holds the store %q, want the one the deps' MEMORYCARD_DB names", got)
+	}
+	d.getenv = environmentOf(nil)
+	if got := newSessionAvailability(d).memorycardStore; got != "/deps/home/.memorycard/memory.db" {
+		t.Errorf("newSessionAvailability holds the store %q, want the default under the deps' home", got)
 	}
 }
 
@@ -126,7 +233,7 @@ func TestASourceThatFailsIsUnavailableWithTheReason(t *testing.T) {
 // directory of the session.
 func TestTheLockIsReadForTheDirectoryOfTheSession(t *testing.T) {
 	var asked string
-	p := probeOf(&fakeRunner{}, true, projection.ProceduralSkills{})
+	p := probeOf(&fakeRunner{}, "", true, projection.ProceduralSkills{})
 	p.procedural = lockSpy{asked: &asked}
 	p.Probe("/the/repo", []memoryscope.Source{memoryscope.SourceProceduralSkills})
 	if asked != "/the/repo" {
@@ -156,9 +263,9 @@ func TestASourceThatNeverAnswersIsUnavailableWithinTheDeadline(t *testing.T) {
 		<-ctx.Done()
 		return ctx.Err()
 	}
-	runner := &fakeRunner{known: map[string]func(context.Context, []string) error{"engram": hang, "longterm-mem": hang}}
+	runner := &fakeRunner{known: map[string]func(context.Context, []string) error{"memorycard": hang, "longterm-mem": hang}}
 	start := time.Now()
-	got := byName(probeOf(runner, true, projection.ProceduralSkills{Locked: true}).Probe("/repo", allSources))
+	got := byName(probeOf(runner, storeFile(t), true, projection.ProceduralSkills{Locked: true}).Probe("/repo", allSources))
 	if most.Load() != 2 {
 		t.Errorf("at most %d hung sources were being asked at once, want both (2): the sources must be asked at the same time", most.Load())
 	}
@@ -177,7 +284,7 @@ func TestASourceThatNeverAnswersIsUnavailableWithinTheDeadline(t *testing.T) {
 
 // A source the plan could name that the probe has no check for is unavailable, never silently fine.
 func TestASourceWithNoCheckIsUnavailable(t *testing.T) {
-	got := probeOf(&fakeRunner{}, true, projection.ProceduralSkills{}).Probe("/repo", []memoryscope.Source{"something-else"})
+	got := probeOf(&fakeRunner{}, "", true, projection.ProceduralSkills{}).Probe("/repo", []memoryscope.Source{"something-else"})
 	if len(got) != 1 || got[0].Available || got[0].Detail == "" {
 		t.Errorf("Probe = %+v, want the unknown source unavailable with a reason", got)
 	}
@@ -186,9 +293,9 @@ func TestASourceWithNoCheckIsUnavailable(t *testing.T) {
 // A probe that panics costs its source, never the hook.
 func TestAProbeThatPanicsMakesItsSourceUnavailable(t *testing.T) {
 	runner := &fakeRunner{known: map[string]func(context.Context, []string) error{
-		"engram": func(context.Context, []string) error { panic("boom") },
+		"memorycard": func(context.Context, []string) error { panic("boom") },
 	}}
-	got := probeOf(runner, true, projection.ProceduralSkills{Locked: true}).Probe("/repo", []memoryscope.Source{memoryscope.SourceEngram, memoryscope.SourceProceduralSkills})
+	got := probeOf(runner, storeFile(t), true, projection.ProceduralSkills{Locked: true}).Probe("/repo", []memoryscope.Source{memoryscope.SourceEngram, memoryscope.SourceProceduralSkills})
 	if got[0].Available || !strings.Contains(got[0].Detail, "boom") || !got[1].Available {
 		t.Errorf("Probe = %+v, want engram unavailable with the panic and procedural-skills answered", got)
 	}
@@ -196,13 +303,16 @@ func TestAProbeThatPanicsMakesItsSourceUnavailable(t *testing.T) {
 
 // --- the hook ---------------------------------------------------------------------------------
 
-type fixedProber struct{ unavailable map[memoryscope.Source]string }
+type fixedProber struct {
+	unavailable map[memoryscope.Source]string
+	uncreated   map[memoryscope.Source]bool
+}
 
 func (f fixedProber) Probe(_ string, sources []memoryscope.Source) []projection.SourceAvailability {
 	out := make([]projection.SourceAvailability, len(sources))
 	for i, s := range sources {
 		detail, down := f.unavailable[s]
-		out[i] = projection.SourceAvailability{Source: s, Available: !down, Detail: detail}
+		out[i] = projection.SourceAvailability{Source: s, Available: !down, Detail: detail, Uncreated: f.uncreated[s]}
 	}
 	return out
 }
@@ -218,7 +328,7 @@ func TestSessionStartSaysWhichSourcesOfThePlanCannotBeRead(t *testing.T) {
 	}
 	r := runProjectionArgsWith(d, []string{"hook", "--event", "SessionStart"}, sessionStartInput(t, e.repo, "startup"), e.dir)
 	want := "- Do not read longterm-mem: it is unavailable in this session (down in the test)."
-	if len(r.codes) != 1 || r.codes[0] != 0 || !strings.Contains(r.stdout, want) || strings.Contains(r.stdout, "Do not read engram") {
+	if len(r.codes) != 1 || r.codes[0] != 0 || !strings.Contains(r.stdout, want) || strings.Contains(r.stdout, "Do not call the memorycard tools") {
 		t.Errorf("exits %v, stdout %s, want exit 0 and exactly the line %q", r.codes, r.stdout, want)
 	}
 
@@ -228,5 +338,124 @@ func TestSessionStartSaysWhichSourcesOfThePlanCannotBeRead(t *testing.T) {
 	}
 	if got := boundInstructions(d, e.dir)(e.repo); strings.Contains(got, "Do not read") {
 		t.Errorf("the gate-task and 'memory plan' route probes: %q", got)
+	}
+}
+
+// The help of 'projection hook' and the README describe the degradation lines the hook gives: each
+// line the SessionStart hook gives with every source unavailable is in both texts, each followed by
+// the sources it is for (the source of the generic line stands for longterm-mem and
+// procedural-skills), and the lines the hook gives with no reason are those lines without " (<reason>)",
+// which both texts say.
+func TestUsageAndReadmeGiveTheDegradationLinesTheHookGives(t *testing.T) {
+	// degradationLinesWith renders the SessionStart block with every source unavailable for reason.
+	degradationLinesWith := func(reason string) []string {
+		e := newHookEnv(t)
+		e.running(t, "proj-1", "wf-1", "odd")
+		d := e.deps
+		d.sourceProber = func() app.SourceAvailabilityProber {
+			return fixedProber{unavailable: map[memoryscope.Source]string{
+				memoryscope.SourceEngram:           reason,
+				memoryscope.SourceLongtermMem:      reason,
+				memoryscope.SourceProceduralSkills: reason,
+			}}
+		}
+		r := runProjectionArgsWith(d, []string{"hook", "--event", "SessionStart"}, sessionStartInput(t, e.repo, "startup"), e.dir)
+		var out struct {
+			HookSpecificOutput struct {
+				AdditionalContext string `json:"additionalContext"`
+			} `json:"hookSpecificOutput"`
+		}
+		if err := json.Unmarshal([]byte(r.stdout), &out); err != nil {
+			t.Fatalf("stdout %q is not the hook's JSON: %v", r.stdout, err)
+		}
+		var lines []string
+		for _, line := range strings.Split(out.HookSpecificOutput.AdditionalContext, "\n") {
+			if strings.HasPrefix(line, "- Do not") {
+				lines = append(lines, line)
+			}
+		}
+		if len(lines) != 3 {
+			t.Fatalf("the hook gave %d lines starting %q, want one for each of the three sources: %q", len(lines), "- Do not", lines)
+		}
+		return lines
+	}
+	lines := degradationLinesWith("<reason>")
+	readme, err := os.ReadFile("../../README.md")
+	if err != nil {
+		t.Fatal(err)
+	}
+	flat := func(s string) string { return strings.Join(strings.Fields(strings.ReplaceAll(s, "`", "")), " ") }
+	texts := map[string]string{"usage()": flat(captureUsage(t)), "README": flat(string(readme))}
+	generic := strings.NewReplacer("Do not read longterm-mem", "Do not read <source>", "Do not read procedural-skills", "Do not read <source>")
+	for _, line := range lines {
+		want := generic.Replace(strings.TrimPrefix(line, "- "))
+		forSources := `" for longterm-mem and procedural-skills`
+		if strings.HasPrefix(line, "- Do not call the memorycard tools") {
+			forSources = `" for engram`
+		}
+		for name, text := range texts {
+			if !strings.Contains(text, want+forSources) {
+				t.Errorf("%s does not contain the line the hook gives followed by %q: %q", name, forSources, want)
+			}
+		}
+	}
+	for i, line := range degradationLinesWith("") {
+		if want := strings.Replace(lines[i], " (<reason>)", "", 1); line != want {
+			t.Errorf("the line with no reason is %q, want the first run's line without \" (<reason>)\": %q", line, want)
+		}
+	}
+	for name, text := range texts {
+		if want := `without " (<reason>)" when the probe gives no reason`; !strings.Contains(text, want) {
+			t.Errorf("%s does not say %q", name, want)
+		}
+	}
+
+	// The line for an engram source with no store yet: the block gives it in place of the tool line,
+	// and both texts hold it followed by the case it is for.
+	noStoreBlock := func(reason string) []string {
+		e := newHookEnv(t)
+		e.running(t, "proj-1", "wf-1", "odd")
+		d := e.deps
+		d.sourceProber = func() app.SourceAvailabilityProber {
+			return fixedProber{
+				unavailable: map[memoryscope.Source]string{memoryscope.SourceEngram: reason},
+				uncreated:   map[memoryscope.Source]bool{memoryscope.SourceEngram: true},
+			}
+		}
+		r := runProjectionArgsWith(d, []string{"hook", "--event", "SessionStart"}, sessionStartInput(t, e.repo, "startup"), e.dir)
+		var out struct {
+			HookSpecificOutput struct {
+				AdditionalContext string `json:"additionalContext"`
+			} `json:"hookSpecificOutput"`
+		}
+		if err := json.Unmarshal([]byte(r.stdout), &out); err != nil {
+			t.Fatalf("stdout %q is not the hook's JSON: %v", r.stdout, err)
+		}
+		return strings.Split(out.HookSpecificOutput.AdditionalContext, "\n")
+	}
+	noStoreLine := func(block []string) string {
+		var found []string
+		for _, line := range block {
+			if strings.HasPrefix(line, "- Do not call the memorycard tools") {
+				t.Errorf("the block with no store yet forbids the memorycard tools: %q", line)
+			}
+			if strings.HasPrefix(line, "- memorycard has no store yet") {
+				found = append(found, line)
+			}
+		}
+		if len(found) != 1 {
+			t.Fatalf("the block has %d lines starting %q, want 1: %q", len(found), "- memorycard has no store yet", block)
+		}
+		return found[0]
+	}
+	withReason := noStoreLine(noStoreBlock("<reason>"))
+	withoutReason := noStoreLine(noStoreBlock(""))
+	if want := strings.Replace(withReason, " (<reason>)", "", 1); withoutReason != want {
+		t.Errorf("the no-store line with no reason is %q, want the first run's line without \" (<reason>)\": %q", withoutReason, want)
+	}
+	for name, text := range texts {
+		if want := strings.TrimPrefix(withReason, "- ") + `" for engram when memorycard's store does not exist or is empty`; !strings.Contains(text, want) {
+			t.Errorf("%s does not contain the no-store line followed by its case: %q", name, want)
+		}
 	}
 }

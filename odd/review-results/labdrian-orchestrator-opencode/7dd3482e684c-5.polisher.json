@@ -1,0 +1,49 @@
+{
+  "kind": "polisher",
+  "base": "275328171b959d8dcc8e58530365d2d8f883c12d",
+  "head": "7dd3482e684c66349a4fee47b53234766e2553a2",
+  "diff_sha256": "6b65b51648257fc31438b6ba85d26dd3bcc11bcaefdc0dfeace1072ba996eff2",
+  "findings": {
+    "findings": [
+      {
+        "id": "Q1",
+        "severity": "WARNING",
+        "location": "skills/role-chain/SKILL.md:34-36",
+        "claim": "Send-the-diff line vs the OpenCode no-diff line, and the Codex rule hidden behind a bare pointer. Fixed in 9553cf54: the pointer names both runtime rules.",
+        "evidence": [
+          "skills tests green"
+        ]
+      },
+      {
+        "id": "Q2",
+        "severity": "SUGGESTION",
+        "location": "engine/skills/role_chain_artifact_test.go:509",
+        "claim": "Stale stacked comment. Fixed in 9553cf54.",
+        "evidence": [
+          "git show 9553cf54"
+        ]
+      },
+      {
+        "id": "Q3",
+        "severity": "SUGGESTION",
+        "location": "engine/runtime/labdrian-runtime-parity-plugin.mjs:407-412",
+        "claim": "Refusal told apart by the stderr prefix. Answered: the prefix error: review frozen-context: is pinned by the T40 command tests, and any other text still denies with the fixed sentence, so a launch is never let through.",
+        "evidence": [
+          "TestFrozenContextRefusals"
+        ]
+      },
+      {
+        "id": "Q4",
+        "severity": "SUGGESTION",
+        "location": "engine/runtime/labdrian-runtime-parity-plugin.mjs:412-425",
+        "claim": "A second hook run on the same call would expand again. Answered: OpenCode fires tool.execute.before once per call; a re-expanded brief is refused by the verb (two pairs or over the limit), which denies, never passes. Skipping on a marker would let a parent forge one.",
+        "evidence": [
+          "L102"
+        ]
+      }
+    ],
+    "evidence": [
+      "series reviews 27532817..9553cf54"
+    ]
+  }
+}

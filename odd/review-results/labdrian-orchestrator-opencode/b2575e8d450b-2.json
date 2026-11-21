@@ -1,0 +1,89 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "9dfb5525130409f640e384b8429e547e3c898490",
+    "head": "b2575e8d450bbb688f6e5ed61a2bdfa0751b76ce",
+    "diff_sha256": "fb82add2b3c8c3db9f1dbe6c92e6b9dd05ec3766894c3621b74b3d6a0f21d3fa",
+    "paths": [
+      "engine/skills/foreman_skills_test.go",
+      "engine/skills/odd_role_skills_artifact_test.go",
+      "engine/skills/role_chain_artifact_test.go",
+      "skills/inception-pipeline/SKILL.md",
+      "skills/odd-feature-doc/SKILL.md",
+      "skills/role-chain/SKILL.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "9dfb5525130409f640e384b8429e547e3c898490",
+      "head": "b2575e8d450bbb688f6e5ed61a2bdfa0751b76ce",
+      "diff_sha256": "fb82add2b3c8c3db9f1dbe6c92e6b9dd05ec3766894c3621b74b3d6a0f21d3fa"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/skills/foreman_skills_test.go",
+        "engine/skills/odd_role_skills_artifact_test.go",
+        "engine/skills/role_chain_artifact_test.go",
+        "skills/inception-pipeline/SKILL.md",
+        "skills/odd-feature-doc/SKILL.md",
+        "skills/role-chain/SKILL.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "skills/odd-feature-doc/SKILL.md:14-15",
+        "claim": "The edit to the Activation Contract removed the blank line before `## Hard Rules`, so the heading now follows the paragraph directly. This hurts readability, and some markdown renderers or section parsers may treat the heading differently. The sentence naming who writes, works from and closes the document was also dropped.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "skills/odd-feature-doc/SKILL.md hunk @@ -11,8 +11,7 @@: '-...delivery closes it.' '-' (blank) leaving 'Load when ...`.' directly above '## Hard Rules'"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "WARNING",
+        "location": "skills/odd-feature-doc/SKILL.md:35-36",
+        "claim": "To fit the lint budgets, the builder's duty to record anything found that the task did not ask for was dropped. The delivery row lost its per-task list (tasks [x] and not, each with its commit). Both are behavior requirements that agents followed, and nothing replaces them. Findings outside the task scope and per-task commit status can now go unrecorded at close.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "skills/odd-feature-doc/SKILL.md builder and delivery rows: removed 'anything found that the task did not ask for' and 'the tasks `[x]` and not, each with its commit'"
+        ]
+      },
+      {
+        "id": "F3",
+        "severity": "SUGGESTION",
+        "location": "skills/role-chain/SKILL.md:37",
+        "claim": "Unrelated trimming outside the stated scope: 'the file as ledger' was removed from the rework hop, and 'and trusts' was reworded to a semicolon. The commit message does not mention these changes, and removing the ledger note loses guidance on where rework state lives.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "skills/role-chain/SKILL.md: '(rework), the file as ledger.' became '(rework).'"
+        ]
+      },
+      {
+        "id": "F4",
+        "severity": "SUGGESTION",
+        "location": "skills/inception-pipeline/SKILL.md:40",
+        "claim": "'`progress` and `close-report` are handoff kinds, not files' was shortened to 'are not files', which drops the explanation that they are handoff kinds. The worked example no longer shows the `shaped: L2` form, and the 64-zeros `prev_sha256` note is gone, so the example is less self-explanatory.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "skills/inception-pipeline/SKILL.md: 'Replace example IDs and digest.' (the '`prev_sha256` has 64 zeros' note removed); 'are not files'"
+        ]
+      }
+    ],
+    "evidence": [
+      "Reviewed the full diff of six paths; tests assert the new foreman wording and the foreman row.",
+      "Could not see the other lint tests that may depend on the removed text."
+    ]
+  }
+}

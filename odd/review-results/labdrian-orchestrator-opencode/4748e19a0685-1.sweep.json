@@ -1,0 +1,22 @@
+{
+  "kind": "sweep",
+  "base": "f68b765a121f2e5baf8dd9dd5b488278cd0efed9",
+  "head": "4748e19a0685220f03735056599458041561cfc0",
+  "diff_sha256": "90ff23ff740f2c6d7e1752d12063425bb38e82e1080d8feba135821a280524c0",
+  "outcome": "fired",
+  "t1": {
+    "deleted_or_renamed": [
+      "engine/sddregistry/fsstore/fsstore.go",
+      "engine/sddregistry/fsstore/fsstore_test.go"
+    ],
+    "removed_names": []
+  },
+  "t2": [],
+  "t3": [
+    " M odd/tasks/labdrian-orchestrator-opencode.md"
+  ],
+  "t4": {
+    "leftovers": [],
+    "orphaned_fixtures": []
+  }
+}

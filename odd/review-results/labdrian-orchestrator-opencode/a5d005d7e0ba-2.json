@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "574e917a8b73fb6e78465ef0b5d407ca2b140fcc",
+    "head": "a5d005d7e0ba489ca3b5be877d30fccb4efe54a3",
+    "diff_sha256": "9859e2972d64ba5e8ad989e08f6a845bf99eed824e77d310f391ce2431ee0e15",
+    "paths": [
+      "odd/tasks/labdrian-orchestrator-opencode.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "574e917a8b73fb6e78465ef0b5d407ca2b140fcc",
+      "head": "a5d005d7e0ba489ca3b5be877d30fccb4efe54a3",
+      "diff_sha256": "9859e2972d64ba5e8ad989e08f6a845bf99eed824e77d310f391ce2431ee0e15"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/labdrian-orchestrator-opencode.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The change edits only T22 and adds L69 in the feature document. T22 now removes the theme value and the two theme files, and the 'or replace it, per L60 risk 3' alternative is dropped, which matches the owner's recorded answer in L69.",
+      "The theme files fall under T22's 'back up every live path removed below', so the backup step still covers them.",
+      "I could not see T27's own text or the I13 reference in the diff, so any stale theme wording there is unknown and not attributable to this change."
+    ]
+  }
+}

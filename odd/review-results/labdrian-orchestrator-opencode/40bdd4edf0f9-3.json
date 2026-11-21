@@ -1,0 +1,58 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "a387de4ae039bf5f1f4f7e853dfd92fa52d461ca",
+    "head": "40bdd4edf0f97d0c678be4b248583a2729585057",
+    "diff_sha256": "ec4be5de3f49c5d54a2d241fe2d4727d4e7af80ddca473fdbf5d73581c47a5b6",
+    "paths": [
+      "odd/tasks/labdrian-orchestrator-opencode.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "a387de4ae039bf5f1f4f7e853dfd92fa52d461ca",
+      "head": "40bdd4edf0f97d0c678be4b248583a2729585057",
+      "diff_sha256": "ec4be5de3f49c5d54a2d241fe2d4727d4e7af80ddca473fdbf5d73581c47a5b6"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/labdrian-orchestrator-opencode.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/labdrian-orchestrator-opencode.md:611",
+        "claim": "The new L63 log entry ends with a 'Review of a387de4a (T30 shaping)' answer that mixes a separate task's review reply into the T10 delivery entry, and it refers to 'L62 risk 1', while the risks visible just above in the diff context are labelled as L60 risks 1-6 staying open. The cross-reference cannot be checked from this diff and may point at the wrong log entry. Also the entry says T29 (a)/(c) 'will be committed in slices' without adding or updating any T29 or T30 task text, so the plan lives only in prose. This is a documentation traceability issue, not a behavioral defect.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/labdrian-orchestrator-opencode.md:611"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/labdrian-orchestrator-opencode.md:56",
+        "claim": "T10 is ticked [x] while the entry itself states that S8 live load in OpenCode 2.2.7 was 'not observed (T17)' and that the plugin deviates from S8 by not importing `Tool`. The task text required `@opencode/plugin` imports and the v2 call shape (`call.tool`, `call.input.agent`) is unverified live. The tick records delivery against the task wording even though an acceptance part is deferred; the deferral is recorded in L63, so the risk is only that readers of the checkbox miss it.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/labdrian-orchestrator-opencode.md:56",
+          "odd/tasks/labdrian-orchestrator-opencode.md:611"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff changes only odd/tasks/labdrian-orchestrator-opencode.md: one task checkbox/commit field in T10 and one appended log entry L63.",
+      "No code or behavior is touched, so no functional regression is possible from this commit; findings are documentation traceability only.",
+      "The commit message's 'Risk: none' is consistent with a docs-only change."
+    ]
+  }
+}

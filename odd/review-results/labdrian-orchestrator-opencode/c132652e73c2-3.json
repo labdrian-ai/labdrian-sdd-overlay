@@ -1,0 +1,46 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "b9594a97a22a7baf3a4fd7d622d0476ae65bda00",
+    "head": "c132652e73c2bbe8252593766993f98ee558bfa5",
+    "diff_sha256": "aaa72e0c38d6c7f10411dfe312094946fc493675ae7bea7a356d635b28f4ff85",
+    "paths": [
+      "CHANGELOG.md",
+      "engine/cmd/testdata/runtime-golden/runtime-lifecycle-of-all-the-targets.golden",
+      "engine/cmd/testdata/runtime-golden/runtime-opencode-and-pi-with-an-overlay.golden",
+      "engine/runtime/opencode.go",
+      "engine/runtime/opencode_memorycard.go",
+      "engine/runtime/opencode_memorycard_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "b9594a97a22a7baf3a4fd7d622d0476ae65bda00",
+      "head": "c132652e73c2bbe8252593766993f98ee558bfa5",
+      "diff_sha256": "aaa72e0c38d6c7f10411dfe312094946fc493675ae7bea7a356d635b28f4ff85"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "engine/cmd/testdata/runtime-golden/runtime-lifecycle-of-all-the-targets.golden",
+        "engine/cmd/testdata/runtime-golden/runtime-opencode-and-pi-with-an-overlay.golden",
+        "engine/runtime/opencode.go",
+        "engine/runtime/opencode_memorycard.go",
+        "engine/runtime/opencode_memorycard_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "Reviewed the full diff. The first-line mark check (strings.Cut on the first newline, then Contains) is applied consistently in write, remove and status.",
+      "The uninstall note is built from the (removed, foreignLeft) pair. foreignLeft is exists && !removed, which is correct, and the plugin-directory and record cleanup order is unchanged.",
+      "The already-current path requires both the plugin bytes and the record bytes to match. Any other case falls through to the original write path.",
+      "The status reorder is the requested behavior. The memorycard checks still run, now after the parity marker checks.",
+      "The golden files match the new messages. The removed record fields were not read anywhere else in the diff."
+    ]
+  }
+}

@@ -1,0 +1,105 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "cdb4e9d488e99f07e17a149d5d0a3cd142cba9cb",
+    "head": "2b9943d451cd99da6188ad5e068bb403cadbeb11",
+    "diff_sha256": "7f4616f417df5665dda451f0d854e244771af9951bb967ad9e7ba7a39531fe88",
+    "paths": [
+      "CHANGELOG.md",
+      "README.md",
+      "engine/cmd/opencode_bridge_e2e_test.go",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-context-lists-quotes-and-case.golden",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-minimalism-context-metadata-accepted-today.golden",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-phases-quoted-items-accepted-today.golden",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-reads-the-contracts-of-the-overlay.golden",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-without-the-oo-contract.golden",
+      "engine/cmd/testdata/runtime-golden/runtime-opencode-and-pi-with-an-overlay.golden",
+      "engine/runtime/labdrian-runtime-parity-plugin.mjs",
+      "engine/runtime/opencode_bridge_test.go",
+      "engine/runtime/opencode_plugin.go",
+      "engine/runtime/opencode_plugin_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "cdb4e9d488e99f07e17a149d5d0a3cd142cba9cb",
+      "head": "2b9943d451cd99da6188ad5e068bb403cadbeb11",
+      "diff_sha256": "7f4616f417df5665dda451f0d854e244771af9951bb967ad9e7ba7a39531fe88"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "README.md",
+        "engine/cmd/opencode_bridge_e2e_test.go",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-context-lists-quotes-and-case.golden",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-minimalism-context-metadata-accepted-today.golden",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-phases-quoted-items-accepted-today.golden",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-reads-the-contracts-of-the-overlay.golden",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-without-the-oo-contract.golden",
+        "engine/cmd/testdata/runtime-golden/runtime-opencode-and-pi-with-an-overlay.golden",
+        "engine/runtime/labdrian-runtime-parity-plugin.mjs",
+        "engine/runtime/opencode_bridge_test.go",
+        "engine/runtime/opencode_plugin.go",
+        "engine/runtime/opencode_plugin_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "engine/runtime/labdrian-runtime-parity-plugin.mjs:296-302",
+        "claim": "The 'hooks are not running' notice is lost when the first failing call does not reach a completed result. The gate sets unavailableReported=true and stores the note, but reportToolResult drops the lines for a non-completed (error) call and appendToResult silently drops them for a result with neither a content array nor a string output. The flag is already set, so the notice is never repeated and the session runs unchecked with no notice, contrary to the claim that the first result says so.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/runtime/labdrian-runtime-parity-plugin.mjs:298-299",
+          "engine/runtime/labdrian-runtime-parity-plugin.mjs:335-344"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "WARNING",
+        "location": "engine/runtime/labdrian-runtime-parity-plugin.mjs:226-229",
+        "claim": "A silent engine is retried with a full 30 s timeout on every PreToolUse and every PostToolUse. There is no circuit breaker after the first timeout, so each tool call in a session with a hung engine stalls up to 60 s (sequential calls compound this) while the plugin still fails open.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/runtime/labdrian-runtime-parity-plugin.mjs:192",
+          "engine/runtime/labdrian-runtime-parity-plugin.mjs:226-229"
+        ]
+      },
+      {
+        "id": "F3",
+        "severity": "SUGGESTION",
+        "location": "engine/runtime/labdrian-runtime-parity-plugin.mjs:285",
+        "claim": "The envelope cwd is process.cwd() of the OpenCode host, not the directory of the session or call. If they differ, the engine binds the workflow to the wrong repository and the gate may allow or deny against the wrong project.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/runtime/labdrian-runtime-parity-plugin.mjs:285"
+        ]
+      },
+      {
+        "id": "F4",
+        "severity": "SUGGESTION",
+        "location": "engine/runtime/labdrian-runtime-parity-plugin.mjs:244",
+        "claim": "JSON.stringify(envelope) runs inside the Promise executor after the child is spawned. If call.input cannot be serialized (circular reference, BigInt), the promise rejects, which contradicts the 'never rejects' comment. The child and the 30 s timer are left running, and execute.before throws a raw error that blocks the call rather than failing open.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/runtime/labdrian-runtime-parity-plugin.mjs:206-209",
+          "engine/runtime/labdrian-runtime-parity-plugin.mjs:244"
+        ]
+      }
+    ],
+    "evidence": [
+      "Reviewed the full diff of the plugin hook bridge, its Go tests and the golden version bumps; no files outside the diff were inspected.",
+      "Line numbers in the plugin are counted from the @@ -176,9 +179,184 @@ hunk header and are approximate."
+    ]
+  }
+}

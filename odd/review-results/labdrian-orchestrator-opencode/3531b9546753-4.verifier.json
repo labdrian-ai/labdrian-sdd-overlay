@@ -1,0 +1,11 @@
+{
+  "verdicts": [
+    {
+      "id": "F1",
+      "result": "reproduced",
+      "command": "same as 3531b9546753-5 F1: read skillPathsRefusal and roles_skill_paths.go:57-58; go test ./runtime/ -run '.../a_usage_error' -v",
+      "output": "a not-a-directory skills root exits 1 and the denial names an older engine and its rebuild remedy; the test pins it.",
+      "base_result": "not-reproduced"
+    }
+  ]
+}

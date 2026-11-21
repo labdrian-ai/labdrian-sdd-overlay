@@ -1,0 +1,44 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "e6b29f47fd82c43ae1c66df9c5fe4fe5a1023d66",
+    "head": "87cb2e93333e388ee9441419b21b4b3b4d60dc41",
+    "diff_sha256": "c13cd1de53764ae0fcacc7b5c6f061ab900275b4a8ccf898625011e4ddd276b9",
+    "paths": [
+      "engine/cmd/contract_golden_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "e6b29f47fd82c43ae1c66df9c5fe4fe5a1023d66",
+      "head": "87cb2e93333e388ee9441419b21b4b3b4d60dc41",
+      "diff_sha256": "c13cd1de53764ae0fcacc7b5c6f061ab900275b4a8ccf898625011e4ddd276b9"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/cmd/contract_golden_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "engine/cmd/contract_golden_test.go:231",
+        "claim": "PATH is replaced wholesale with a directory holding only the two stubs. Any other program the code under test resolves through PATH during opencodeInstall, such as git, sh or opencode itself, now fails to resolve. The failure would look like a golden mismatch rather than a cause tied to PATH. Appending the stub directory to the existing PATH would not work either, because it would make the result depend on the host again. A narrow, documented PATH that includes only the tools the case needs would be safer. The diff alone does not show that the install path execs anything else.",
+        "evidence_class": "inferential",
+        "causal_disposition": "unknown",
+        "proof_refs": [
+          "engine/cmd/contract_golden_test.go:231"
+        ]
+      }
+    ],
+    "evidence": [
+      "Only the test file changed; the diff does not show the rest of opencodeInstall or the golden files, so I could not check whether the install path execs other programs or whether the goldens already match the new transcript."
+    ]
+  }
+}

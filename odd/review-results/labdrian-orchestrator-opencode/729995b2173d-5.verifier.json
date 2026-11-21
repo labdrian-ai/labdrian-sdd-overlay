@@ -1,0 +1,18 @@
+{
+  "verdicts": [
+    {
+      "id": "F1",
+      "result": "reproduced",
+      "command": "same as 729995b2173d-4 F1: old engine from git archive 16a719fc with --agent builder, and the head/base plugin driven by runPluginWithEngine with that engine",
+      "output": "old engine: 'unknown flag \"--agent\"', exit 1; head plugin denies the builder launch with that line; base plugin passes. runtime install|update rebuilds no engine; labdrian apply rebuilds a stale default binary first, so the mismatch needs LABDRIAN_ENGINE_BINARY elsewhere, a direct runtime install from a newer build, or a later downgrade.",
+      "base_result": "not-reproduced"
+    },
+    {
+      "id": "F2",
+      "result": "reproduced",
+      "command": "bat -pp -r 80:120 engine/gate/skillpaths_test.go; bat -pp engine/gate/skillpaths_listed_test.go; rg -n RewriteListedSkillPaths <head>/engine; rg for the five prompts in the listed and cmd tests",
+      "output": "skillpaths_test.go:84-116 has 8 refusal cases; the only RewriteListedSkillPaths test (skillpaths_listed_test.go:25,39) feeds 4 of them. Not fed: the (extra) variant, an id with no file, a list marker, a relative path, a comma list. Base has no RewriteListedSkillPaths.",
+      "base_result": "not-reproduced"
+    }
+  ]
+}

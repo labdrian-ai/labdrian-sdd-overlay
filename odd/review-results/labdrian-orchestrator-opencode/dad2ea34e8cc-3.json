@@ -1,0 +1,59 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "ecdd5a183f666f1d2fee00460bb013afc3a356f1",
+    "head": "dad2ea34e8ccfb967161b428bf79e7540d255849",
+    "diff_sha256": "b27d700d26b64699218c31e70911274a55fa040cf97dff5bd6b21b4388c0ecb9",
+    "paths": [
+      "engine/oddtask/oddtask.go",
+      "engine/oddtask/oddtask_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "ecdd5a183f666f1d2fee00460bb013afc3a356f1",
+      "head": "dad2ea34e8ccfb967161b428bf79e7540d255849",
+      "diff_sha256": "b27d700d26b64699218c31e70911274a55fa040cf97dff5bd6b21b4388c0ecb9"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/oddtask/oddtask.go",
+        "engine/oddtask/oddtask_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "engine/oddtask/oddtask.go:147-153",
+        "claim": "fenceRun accepts a line as a fence under rules looser than CommonMark. It allows any indent, so a 4+ space indented code line holding ``` counts as a fence. It also lets a backtick fence open with backticks in the info string, so inline code such as \"```x``` text\" opens a fence. A spurious unclosed fence hides every later \"## \" heading, including \"## Log\" and \"## Tasks\". The document then parses with missing sections where it parsed correctly before, so the shaper-entry guard can wrongly block or allow a task. The commit message says \"any indent\" and the test asserts a 4-space fence, so this is deliberate, but it is a new false-positive path.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/oddtask/oddtask.go:147-153",
+          "engine/oddtask/oddtask.go:122-126"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "engine/oddtask/oddtask.go:117-126",
+        "claim": "Fence state is tracked across the whole document, not just the Log. An unclosed fence anywhere earlier, such as in Specs, silently swallows the ## Tasks and ## Log headings, with no diagnostic. Before this change such a document parsed fine.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/oddtask/oddtask.go:117-126"
+        ]
+      }
+    ],
+    "evidence": [
+      "Reviewed the diff only: fenceRun's fence-detection rules and the fence state machine in ParseDocument.",
+      "The new tests cover close-with-info-string and longer-closing-fence cases, but not inline triple backticks, 4+ space indent as code, or an unclosed fence."
+    ]
+  }
+}

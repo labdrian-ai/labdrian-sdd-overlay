@@ -1,0 +1,40 @@
+{
+  "kind": "polisher",
+  "base": "18b989fb097cb5453e57c9d9079b62ef12d3b044",
+  "head": "f68b765a121f2e5baf8dd9dd5b488278cd0efed9",
+  "diff_sha256": "f75376e4f9b82da41cc465982cc51ccaed5567c3edd4c0579ed2c7ffcda79100",
+  "findings": {
+    "findings": [
+      {
+        "id": "c3-W1",
+        "severity": "WARNING",
+        "location": "overlay.manifest:91-94",
+        "claim": "Deleted _shared files held overlay persistence/resolver rules live skills may need. Answered: rg at the head finds no reader outside docs/architecture history, CHANGELOG and gentle_detach_test (a banned-string list); memorycard replaced the engram conventions and the ODD document rules live in the odd-feature-doc skill.",
+        "evidence": [
+          "rg at 4748e19a"
+        ]
+      },
+      {
+        "id": "c3-W2",
+        "severity": "WARNING",
+        "location": "overlay.manifest:93-94",
+        "claim": "Pins test may read sdd-orchestrator-workflow.md. Answered: that pins test was deleted in bc881e69 before this file.",
+        "evidence": [
+          "bc881e69"
+        ]
+      },
+      {
+        "id": "c3-F2",
+        "severity": "SUGGESTION",
+        "location": "overlay.manifest:93-94",
+        "claim": "adhd-output always-on rule lived in skill-resolver. Answered: adhd-output is its own skill with its trigger; adhd_output_test stopped reading skill-resolver in bc881e69.",
+        "evidence": [
+          "bc881e69"
+        ]
+      }
+    ],
+    "evidence": [
+      "series review"
+    ]
+  }
+}

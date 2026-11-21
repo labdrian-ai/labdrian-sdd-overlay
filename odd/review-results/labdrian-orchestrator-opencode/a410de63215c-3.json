@@ -1,0 +1,46 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "1d0aabf772101c18bc45330574a0420340671db4",
+    "head": "a410de63215c76d5b9e4250551b4cac509a332d3",
+    "diff_sha256": "b5d51e8b73663fbde526fe8032769f4866632552fe3818becbae3537c855a2c9",
+    "paths": [
+      "engine/cmd/agentgen_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "1d0aabf772101c18bc45330574a0420340671db4",
+      "head": "a410de63215c76d5b9e4250551b4cac509a332d3",
+      "diff_sha256": "b5d51e8b73663fbde526fe8032769f4866632552fe3818becbae3537c855a2c9"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/cmd/agentgen_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "engine/cmd/agentgen_test.go:64-69",
+        "claim": "The fixture copies each named skill's SKILL.md and fatals on a missing source. If the generator tolerates some named ids (for example ones that are not skills, or ones resolved elsewhere), the fixture is stricter than the generator and would fail on a body that is valid. Also, repeated ids across bodies are re-copied and MkdirAll runs for each, which is harmless but redundant. Cannot be confirmed from the diff alone.",
+        "evidence_class": "inferential",
+        "causal_disposition": "unknown",
+        "proof_refs": [
+          "engine/cmd/agentgen_test.go:60-69"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff only changes a test helper; seedRoleSources reads the copied role bodies, calls roles.SkillsNamed, and copies skills/<id>/SKILL.md into the fixture root.",
+      "The fixture reads the role bodies from the root copy, so it sees the same text the generator will see. That keeps the fixture consistent with the generator's check.",
+      "No production code is touched, so no regression on previously valid input is introduced."
+    ]
+  }
+}

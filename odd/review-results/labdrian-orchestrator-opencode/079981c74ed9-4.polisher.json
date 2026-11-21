@@ -1,0 +1,22 @@
+{
+  "kind": "polisher",
+  "base": "4748e19a0685220f03735056599458041561cfc0",
+  "head": "079981c74ed9a40e9345f6065ce71e3d976e64a0",
+  "diff_sha256": "c4fa415829cbf20f03df39f17adaa68f5dfa21a726c2e2998f32aee3460d6de1",
+  "findings": {
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "engine/review/analyzers/analyzers.go holdsGoFile",
+        "claim": "Glob over an unescaped path (both reviewers). Fixed in ebdac5b1: os.ReadDir; test covers a package named a[1].",
+        "evidence": [
+          "RED with Glob, GREEN with ReadDir"
+        ]
+      }
+    ],
+    "evidence": [
+      "series review 4748e19a..079981c7"
+    ]
+  }
+}

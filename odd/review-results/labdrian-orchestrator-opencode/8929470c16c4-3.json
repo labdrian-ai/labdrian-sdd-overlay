@@ -1,0 +1,51 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "d5ea048f075856b4956ba17d0d0701650e9fdd7b",
+    "head": "8929470c16c4f37af5f814922b8b1da647025640",
+    "diff_sha256": "df61aa7bbd49b795249b9a575bea85825170a5ed7b6ccdb38da560bef80bf75e",
+    "paths": [
+      "bin/lib/skill_registry.sh",
+      "engine/installer/registry_pins_repair_test.go",
+      "engine/installer/testdata/registry_pins.golden"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "d5ea048f075856b4956ba17d0d0701650e9fdd7b",
+      "head": "8929470c16c4f37af5f814922b8b1da647025640",
+      "diff_sha256": "df61aa7bbd49b795249b9a575bea85825170a5ed7b6ccdb38da560bef80bf75e"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "bin/lib/skill_registry.sh",
+        "engine/installer/registry_pins_repair_test.go",
+        "engine/installer/testdata/registry_pins.golden"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "bin/lib/skill_registry.sh:27-29",
+        "claim": "The fix calls copies_skills and reads TARGET_PATHS[claude] inside repair_sdd_registry_file, but the diff does not show that copies_skills is defined or that TARGET_PATHS has a 'claude' key in every context that sources this library. If either is missing there, the repair fails or passes an empty skills root. This cannot be proven from the diff, and the new test exercises the path only for opencode.",
+        "evidence_class": "inferential",
+        "causal_disposition": "unknown",
+        "proof_refs": [
+          "bin/lib/skill_registry.sh:27-29"
+        ]
+      }
+    ],
+    "evidence": [
+      "The change is small: for a target where copies_skills is false, the skills root becomes TARGET_PATHS[claude]. The new Go test and the golden update match that behavior (rows name $HOME/.claude/skills).",
+      "The test asserts that a stray sdd-verify copy in the OpenCode directory is ignored and that sdd-apply from the Claude directory is used, which matches the commit claim.",
+      "The golden WARN lines name the Claude path, consistent with the new skills root.",
+      "I found no regression for targets that copy skills, since their skills_root is unchanged."
+    ]
+  }
+}

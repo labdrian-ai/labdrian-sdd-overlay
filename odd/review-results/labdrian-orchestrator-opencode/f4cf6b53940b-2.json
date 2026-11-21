@@ -1,0 +1,37 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "79bf40d9ed9831d4f6252b4758083adea5d9e556",
+    "head": "f4cf6b53940bf9f8d37b5d33663e6e09dd746e44",
+    "diff_sha256": "bf22ff033fde920d512ce2a5f7c015228157b2bb430974bb7bbd055c0203d9b9",
+    "paths": [
+      "odd/tasks/labdrian-orchestrator-opencode.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "79bf40d9ed9831d4f6252b4758083adea5d9e556",
+      "head": "f4cf6b53940bf9f8d37b5d33663e6e09dd746e44",
+      "diff_sha256": "bf22ff033fde920d512ce2a5f7c015228157b2bb430974bb7bbd055c0203d9b9"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/labdrian-orchestrator-opencode.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "Only the feature document changed. I checked the line-count arithmetic: 200+235=435 and 330+250=580 match the T25b forecast of 435-580.",
+      "The T8 dependencies (T25a, T25b, L37) and the S3 cross-references (L35, L37) are consistent with the new rows.",
+      "The T19 and T24 pointer fixes match the L38 claims.",
+      "The split-memory refusal in T25b keys on the `/part-<n>` suffix. Part 1 has no such suffix, but any split memory also lists part 2 or later, so the refusal still triggers.",
+      "I found no defect this commit introduces."
+    ]
+  }
+}

@@ -1,0 +1,34 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "5d4537478b4485233c5641a43ca0af852943148e",
+    "head": "148ac54824d97a14f653df97cc902c155acdd0ab",
+    "diff_sha256": "caea09626d3f1ca79b30dca3bd9c245603a919ed9d0494c1fbf9f6be55a4527a",
+    "paths": [
+      "longterm-mem/cmd/longterm-mem/cmd_register.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "5d4537478b4485233c5641a43ca0af852943148e",
+      "head": "148ac54824d97a14f653df97cc902c155acdd0ab",
+      "diff_sha256": "caea09626d3f1ca79b30dca3bd9c245603a919ed9d0494c1fbf9f6be55a4527a"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/cmd/longterm-mem/cmd_register.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The diff adds machineWriter() returning register.Writer{State: register.FileInstallState{}}, the same value machineRuntimes previously built inline for Registrar.",
+      "cmdRegister now passes machineWriter() to migrationNoting.Writer, replacing rt.Registrar.(register.Writer). Both the old and new expressions yield a register.Writer with FileInstallState, so behavior is unchanged and the unchecked type assertion is removed.",
+      "rt.Registrar is still overwritten with noting afterward, so the wiring is unchanged. No new error paths, state, or caller-visible behavior were introduced."
+    ]
+  }
+}

@@ -1,0 +1,79 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "e001d5accdb5e3b60c93ff021dffd8bebc079891",
+    "head": "08038624e08c52c0161b3a55374be12f1641cdb9",
+    "diff_sha256": "cbe297b0a1960affeee225c0a091baf9941bb940b7fd9b81b1e826cb03a6a834",
+    "paths": [
+      "agents/foreman.md",
+      "engine/agentgen/foreman_internal_test.go",
+      "engine/agentgen/foreman_test.go",
+      "engine/agentgen/roles.go",
+      "engine/cmd/agentgen_test.go",
+      "roles/foreman/body.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "e001d5accdb5e3b60c93ff021dffd8bebc079891",
+      "head": "08038624e08c52c0161b3a55374be12f1641cdb9",
+      "diff_sha256": "cbe297b0a1960affeee225c0a091baf9941bb940b7fd9b81b1e826cb03a6a834"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "agents/foreman.md",
+        "engine/agentgen/foreman_internal_test.go",
+        "engine/agentgen/foreman_test.go",
+        "engine/agentgen/roles.go",
+        "engine/cmd/agentgen_test.go",
+        "roles/foreman/body.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "engine/cmd/agentgen_test.go:121-153",
+        "claim": "The skill test now treats any backticked span equal to a skills/ directory name as a skill, but the old `success` exemption is gone. If a skill directory is ever named like a plain word in the body (for example `success`), it would be counted as named. This is a benign over-count, but it makes the 'named' set loose: the required-skill check can be satisfied by a bare backticked span with no 'skill' wording, so the 'next to the word skill' rule is not enforced for the three required skills. For example the `role-chain` skill reference could be satisfied by a table cell mention alone.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/cmd/agentgen_test.go:143-147"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "engine/cmd/agentgen_test.go:71-77",
+        "claim": "The new prefix check runs only on spans whose first word is a known group and whose second word is a verb-shaped word, and reports via t.Errorf inside a helper shared by several tests. A single unprefixed span therefore fails every test calling foremanBodyCommands, producing duplicate failures for one defect. Spans such as `review record` placed inside a longer span (e.g. with arguments after) are still caught only if the first field is a group, so a span starting with 'labdrian' is not checked for its own prefix correctness beyond HasPrefix.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/cmd/agentgen_test.go:74-76"
+        ]
+      },
+      {
+        "id": "F3",
+        "severity": "SUGGESTION",
+        "location": "engine/agentgen/foreman_test.go:78-84",
+        "claim": "The no-effort check scans the whole generated Claude file for the substring `effort:` or `thinking:`, which also matches prose in the body (for example a sentence containing 'thinking:' or 'effort:'). It tests the body text as well as the frontmatter, so a harmless body phrase would fail the test with a misleading message that the file holds an effort field.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/agentgen/foreman_test.go:79-83"
+        ]
+      }
+    ],
+    "evidence": [
+      "Diff covers all six changed paths; body.md and agents/foreman.md edits are identical and consistent with the skill and prefix tests.",
+      "Removing effort from the foreman row is guarded by the new internal test; the Claude file has no effort field so generated output is unchanged.",
+      "The banned-word list now lowercases the body, so 'Engram' and 'engram' collapse correctly; 'consent' and 'rule 4 fires' were dropped from the ban, which narrows the check to what S2 forbids per the commit message."
+    ]
+  }
+}

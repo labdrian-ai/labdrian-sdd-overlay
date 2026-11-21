@@ -1,0 +1,37 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "7dd3482e684c66349a4fee47b53234766e2553a2",
+    "head": "9553cf544e386b2f125614e37f2dad1983ad4426",
+    "diff_sha256": "1a356a1d0ac1417737aacd7d83c36f13d0e4ef5511ce01935f20f162f897b0a5",
+    "paths": [
+      "engine/skills/role_chain_artifact_test.go",
+      "skills/role-chain/SKILL.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "7dd3482e684c66349a4fee47b53234766e2553a2",
+      "head": "9553cf544e386b2f125614e37f2dad1983ad4426",
+      "diff_sha256": "1a356a1d0ac1417737aacd7d83c36f13d0e4ef5511ce01935f20f162f897b0a5"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/skills/role_chain_artifact_test.go",
+        "skills/role-chain/SKILL.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The roleChainLaunchPointer constant in the test matches the new SKILL.md Binding pointer line character for character, so the exact-line check still holds.",
+      "The Codex rule wording in the pointer ('review launch', never a native reviewer sub-agent) agrees with the Codex line the test asserts from references/launch.md.",
+      "The test comment for own-rdd S9 (d) moved onto TestRoleChainSkillTellsCodexToLaunchTheReviewerThroughTheEngine, and the diff shows no behavior change there.",
+      "The longer pointer line adds body bytes. I could not check any body-size budget from the diff alone, so I raise no finding on it."
+    ]
+  }
+}

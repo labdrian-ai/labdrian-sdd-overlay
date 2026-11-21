@@ -1,0 +1,34 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "1d0aabf772101c18bc45330574a0420340671db4",
+    "head": "a410de63215c76d5b9e4250551b4cac509a332d3",
+    "diff_sha256": "b5d51e8b73663fbde526fe8032769f4866632552fe3818becbae3537c855a2c9",
+    "paths": [
+      "engine/cmd/agentgen_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "1d0aabf772101c18bc45330574a0420340671db4",
+      "head": "a410de63215c76d5b9e4250551b4cac509a332d3",
+      "diff_sha256": "b5d51e8b73663fbde526fe8032769f4866632552fe3818becbae3537c855a2c9"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/cmd/agentgen_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The change only touches test fixture seeding. For each seeded role body it reads the body, extracts skill ids with roles.SkillsNamed, creates the skills/<id> directory, and copies that SKILL.md from the repo. Repeated ids are harmless because MkdirAll and the copy are idempotent. Any I/O failure calls t.Fatalf, so a failure cannot be swallowed.",
+      "The new `bodies, err :=` declares a new variable, so it compiles whether or not err was already declared earlier in the function. The new engine/roles import is not shown to create a cycle."
+    ]
+  }
+}

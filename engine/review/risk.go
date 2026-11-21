@@ -90,12 +90,40 @@ func DeclaredRisk(commit, message string, trailers []Trailer) ([]int, error) {
 	case !oneLine(message, found[0]):
 		return nil, fmt.Errorf("%w: commit %s: its %q trailer wraps onto more than one line", ErrRiskTrailer, commit, riskKey+":")
 	}
-	items, err := ParseRisk(found[0].Value)
+	items, err := ParseRisk(riskWithoutReason(found[0].Value))
 	if err != nil {
 		return nil, fmt.Errorf("%w: commit %s: its %q trailer %q is not %q or a list of the numbers 1 to %d separated by commas with no space (for example %q): %w",
 			ErrRiskTrailer, commit, riskKey+":", found[0].Value, NoRisk, len(highRiskItems), "2,4", err)
 	}
 	return items, nil
+}
+
+// riskWithoutReason is the value of a trailer without the reason a commit may give after it: one space, then a text in
+// parentheses that is not blank and ends the value ("3 (a renderer two hooks share)" reads as "3"). The parenthesis
+// that opens the reason closes only at the last byte of the value, so a reason cannot hide a second value
+// ("none (x) 3 (y)"). The value is still held to ParseRisk, so only the numbers or NoRisk are read; a value with no
+// reason, or with anything else around the parentheses, is returned unchanged and refused there (T52, L142).
+func riskWithoutReason(value string) string {
+	head, rest, found := strings.Cut(value, " (")
+	if !found || strings.TrimSpace(strings.TrimSuffix(rest, ")")) == "" {
+		return value
+	}
+	depth := 1
+	for i := 0; i < len(rest); i++ {
+		switch rest[i] {
+		case '(':
+			depth++
+		case ')':
+			depth--
+			if depth == 0 && i != len(rest)-1 {
+				return value
+			}
+		}
+	}
+	if depth != 0 {
+		return value
+	}
+	return head
 }
 
 // oneLine says whether the trailer is one line of the raw message, which it is not when git unfolded it from several:

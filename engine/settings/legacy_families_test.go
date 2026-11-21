@@ -9,15 +9,16 @@ import (
 // same rules. TestNamedFamiliesAreTheInstalledOnes keeps it complete.
 func namedFamilies() map[string]hookFamily {
 	return map[string]hookFamily{
-		"minimalism":   minimalismFamily,
-		"design":       designFamily,
-		"sync":         syncTriggerFamily,
-		"receipt":      reviewReceiptFamily,
-		"shaper":       shaperGuardFamily,
-		"projection":   projectionFamily,
-		"approve":      approveGuardFamily,
-		"reviewstop":   reviewStopFamily,
-		"builderguard": builderGuardFamily,
+		"minimalism":      minimalismFamily,
+		"design":          designFamily,
+		"sync":            syncTriggerFamily,
+		"receipt":         reviewReceiptFamily,
+		"shaper":          shaperGuardFamily,
+		"projection":      projectionFamily,
+		"approve":         approveGuardFamily,
+		"reviewstop":      reviewStopFamily,
+		"builderguard":    builderGuardFamily,
+		"registryrefresh": registryRefreshFamily,
 	}
 }
 

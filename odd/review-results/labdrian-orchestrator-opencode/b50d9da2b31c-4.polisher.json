@@ -1,0 +1,31 @@
+{
+  "kind": "polisher",
+  "base": "720b2f9ccf6b86a8a684362ab7e6c03ba4da0aec",
+  "head": "b50d9da2b31c9b73421bb5c1f0c319c2d58a44ec",
+  "diff_sha256": "382eb239cf29b86c0b38a824902cbf7fb7096d1c45ba93705f60e056ccf6c51e",
+  "findings": {
+    "findings": [
+      {
+        "id": "S-19",
+        "severity": "SUGGESTION",
+        "location": "engine/runtime/opencode_agents_test.go:138",
+        "claim": "The Engram ban covers only the memorycard part of the block. Answered: the other two parts are pinned Engram-free by their own text tests (ownerrules_text_test.go and outputstyle_text_test.go forbid the name in instructions/owner-rules.md and output-styles/labdrian.md).",
+        "evidence": [
+          "series review of b50d9da2."
+        ]
+      },
+      {
+        "id": "S-20",
+        "severity": "SUGGESTION",
+        "location": "engine/runtime/opencode_agents.go:28-30",
+        "claim": "Dropping the id-space warning leaves no guard against Engram ids. Answered: the owner approved the text without Engram (L83); the OpenCode config labdrian writes holds no Engram server (only memorycard and codegraph), and T22 removes the gentle wiring.",
+        "evidence": [
+          "series review; owner L83."
+        ]
+      }
+    ],
+    "evidence": [
+      "RED observed (the block named Engram and lacked the approved sentence), then GREEN; go test ./runtime ./cmd ok; vet and gofmt clean."
+    ]
+  }
+}

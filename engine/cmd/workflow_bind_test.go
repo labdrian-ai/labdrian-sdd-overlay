@@ -142,10 +142,10 @@ func driftWorkflowLog(t *testing.T, path string) {
 // --- command line ----------------------------------------------------------
 
 func TestWorkflowVerbErrorsNameTheBindingVerbs(t *testing.T) {
-	if r := runWorkflowTest(nil, ""); r.code != 1 || !strings.Contains(r.stderr, "status, bind, unbind, binding, open") {
+	if r := runWorkflowTest(nil, ""); r.code != 1 || !strings.Contains(r.stderr, "status, bind, unbind, binding, open, goal-base") {
 		t.Errorf("no verb: code=%d stderr=%q, want exit 1 listing bind, unbind, and binding", r.code, r.stderr)
 	}
-	if r := runWorkflowTest([]string{"astronaut"}, ""); r.code != 1 || !strings.Contains(r.stderr, "status, bind, unbind, binding, or open") {
+	if r := runWorkflowTest([]string{"astronaut"}, ""); r.code != 1 || !strings.Contains(r.stderr, "status, bind, unbind, binding, open, or goal-base") {
 		t.Errorf("unknown verb: code=%d stderr=%q, want exit 1 listing bind, unbind, and binding", r.code, r.stderr)
 	}
 }

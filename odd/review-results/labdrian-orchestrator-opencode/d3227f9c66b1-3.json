@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "08aa3b4f938dac9b8ccfe953b3ecb66f848b177f",
+    "head": "d3227f9c66b1db58c5621bd2c8ffcef369e86dcd",
+    "diff_sha256": "7f227b5ac05f2f3f6799314c6c94ef4b2e13e1879ec79978ebec30c9ad4db2f6",
+    "paths": [
+      "odd/tasks/labdrian-orchestrator-opencode.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "08aa3b4f938dac9b8ccfe953b3ecb66f848b177f",
+      "head": "d3227f9c66b1db58c5621bd2c8ffcef369e86dcd",
+      "diff_sha256": "7f227b5ac05f2f3f6799314c6c94ef4b2e13e1879ec79978ebec30c9ad4db2f6"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/labdrian-orchestrator-opencode.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The diff changes one line in a documentation file: the T23 entry's trailing marker goes from 'shaped: L46, L52' to 'shaped: L46'.",
+      "The body text of the T23 entry still cites L52 for the rewrite on save and for the verifier rule, so the substance is preserved and only the shaped mark changes.",
+      "No code, tests or runtime behavior are touched, so no regression or violated requested behavior is possible from this change.",
+      "The commit message says 'keep T23's shaped mark on its shaper entry'. The edit matches that: the mark now cites only L46, the shaper entry, and L52 stays in the body as a reference. I cannot see L46 or L52 in the diff, so I cannot confirm that L52 is not a shaper entry; that does not rise to a finding."
+    ]
+  }
+}

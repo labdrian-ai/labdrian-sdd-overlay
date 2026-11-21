@@ -1,0 +1,40 @@
+{
+  "kind": "polisher",
+  "base": "8f485b3d54b2cf2740433b20215f5e89ff4a77e2",
+  "head": "febe2457f509a47df424cbfae2e1e4fd0ce9d366",
+  "diff_sha256": "0fef079e78d2e9f987178a3700e029ff76d2e9fbc834853458fb0281933836fb",
+  "findings": {
+    "findings": [
+      {
+        "id": "D-W1",
+        "severity": "WARNING",
+        "location": "engine/settings/status.go:54-58",
+        "claim": "An install without the new family turns unsupported. Answered: the only reader is ClaudeAdapter.status (runtime status, sync-check), which reports partial naming install-hooks; install, update, apply and uninstall never call it, so nothing is refused.",
+        "evidence": [
+          "34028c8e; TestAnInstallWithoutTheRegistryRefreshHookIsPartialAndUpdateRepairsIt."
+        ]
+      },
+      {
+        "id": "D-S2",
+        "severity": "SUGGESTION",
+        "location": "engine/settings/registry_refresh.go:41-47",
+        "claim": "Synchronous refresh on every prompt with no bound. Measured: cache-hit median 6.1 ms (20 runs); a held lock waited 2 s. Fixed in 34028c8e: the hook passes --skip-if-busy, which exits 0 at once when the lock is held; comment says what is bounded.",
+        "evidence": [
+          "RED/GREEN TestRegistryRefreshWithSkipIfBusyLeavesATakenRegistryAloneAtOnce."
+        ]
+      },
+      {
+        "id": "V-A2",
+        "severity": "SUGGESTION",
+        "location": "bin/lib/hooks.sh, README",
+        "claim": "install-hooks summary and README did not name the new hook. Fixed in 34028c8e.",
+        "evidence": [
+          "verifier advisory A2."
+        ]
+      }
+    ],
+    "evidence": [
+      "verifier probes 1-8 pass, no blockers: rows equal gentle-ai 4.2.0 but the requested multi-line quoted descriptions, preserved content byte-identical, lock honoured under 60 concurrent processes, hook exits 0 silently."
+    ]
+  }
+}

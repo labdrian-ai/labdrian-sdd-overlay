@@ -1,0 +1,31 @@
+{
+  "kind": "polisher",
+  "base": "cd1e23274c3ed77433c31b34b767c728e1ae44f2",
+  "head": "72a8ccabda19d8d1d7166fd5c21354db04f0a620",
+  "diff_sha256": "1314265a8a9c3734e97ba123417d9670b13cf51a4cbd4c8edd32dbbcd31eff88",
+  "findings": {
+    "findings": [
+      {
+        "id": "B-F1",
+        "severity": "WARNING",
+        "location": "engine/runtime/labdrian-runtime-parity-plugin.mjs:144-151",
+        "claim": "The v2 execute.before call shape (call.tool, call.input.agent) is not measured by L10. Answered: taken from a real v2 plugin and the installed 2.2.7 binary; the live check belongs to T17 (S8 live load and injection).",
+        "evidence": [
+          "judge B; verifier: S8 live load not observed."
+        ]
+      },
+      {
+        "id": "B-F4",
+        "severity": "SUGGESTION",
+        "location": "engine/runtime/labdrian-runtime-parity-plugin.mjs",
+        "claim": "Mixed tabs and spaces. Answered: pre-existing (48 tab-indented lines at 16825fd3, 30 now).",
+        "evidence": [
+          "judge B."
+        ]
+      }
+    ],
+    "evidence": [
+      "Node test pins absent and non-string agent left alone (2358cf21); the verifier drove the installed plugin under node with a stub: injection on subagent only."
+    ]
+  }
+}

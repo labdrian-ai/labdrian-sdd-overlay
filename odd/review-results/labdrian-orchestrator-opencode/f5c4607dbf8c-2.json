@@ -1,0 +1,69 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "a2f43dceed86379b8637082ae7071755f4090469",
+    "head": "f5c4607dbf8c0427dd6956310d860dc5fe52005c",
+    "diff_sha256": "46153b898c3b74d7368c3c6a32be973b4c3603b991f9a9225b163f1e10689669",
+    "paths": [
+      "engine/runtime/memorycard-opencode-plugin.mjs",
+      "engine/runtime/opencode_memorycard_plugin_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "a2f43dceed86379b8637082ae7071755f4090469",
+      "head": "f5c4607dbf8c0427dd6956310d860dc5fe52005c",
+      "diff_sha256": "46153b898c3b74d7368c3c6a32be973b4c3603b991f9a9225b163f1e10689669"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/runtime/memorycard-opencode-plugin.mjs",
+        "engine/runtime/opencode_memorycard_plugin_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "engine/runtime/memorycard-opencode-plugin.mjs:75-77",
+        "claim": "stdout is accumulated with `stdout += chunk` on Buffer chunks without setEncoding('utf8'). A multi-byte UTF-8 character split across two pipe chunks is corrupted into replacement characters in the context pushed onto the system prompt. Output past OUTPUT_LIMIT is also dropped silently, and the run still reports ok, so a truncated context is injected with no log line.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/runtime/memorycard-opencode-plugin.mjs:75-77"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "engine/runtime/opencode_memorycard_plugin_test.go:56-72",
+        "claim": "The fake memorycard script has a `capture` branch, and the fixture carries a `stdin` file and the FAKE_STDIN env var. The plugin never calls `capture`, because the capture of subagent output is not part of this commit. This is dead test scaffolding that suggests behavior which is not implemented or tested.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/runtime/opencode_memorycard_plugin_test.go:56-72"
+        ]
+      },
+      {
+        "id": "F3",
+        "severity": "SUGGESTION",
+        "location": "engine/runtime/memorycard-opencode-plugin.mjs:155-167",
+        "claim": "recordActive returns without writing when the record has no installed_version, so a stale active marker from a previous install is left in place and keeps reporting an old version as active. `ctx.session.hook` in setup is also not guarded, so a failure to register the hook fails plugin setup.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/runtime/memorycard-opencode-plugin.mjs:155-167"
+        ]
+      }
+    ],
+    "evidence": [
+      "Reviewed both changed files from the diff alone; no tools were available."
+    ]
+  }
+}

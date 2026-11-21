@@ -14,7 +14,7 @@ import (
 
 // baselineSkillID is a real member of the lint baseline: the list of the ids whose legacy lint
 // findings are told as warnings and not refused is fixed data. It exempts nothing from approval.
-const baselineSkillID = "sdd-apply"
+const baselineSkillID = "go-testing"
 
 // approveWorld is a skills tree that holds one skill that passes the hard lint and has no record.
 type approveWorld struct{ root string }

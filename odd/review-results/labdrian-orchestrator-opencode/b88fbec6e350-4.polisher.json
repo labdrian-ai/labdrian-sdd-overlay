@@ -1,0 +1,31 @@
+{
+  "kind": "polisher",
+  "base": "052d446962ff288ead60e8e4357035d3ed0b42f3",
+  "head": "b88fbec6e350e17624f6d9f713ffede365c57e61",
+  "diff_sha256": "7bdc4c4eb38fecd1d64644b84c326ae9b06ffa12a3ed30e6072d056bb206aeae",
+  "findings": {
+    "findings": [
+      {
+        "id": "S-5",
+        "severity": "WARNING",
+        "location": "engine/runtime/ownerrules.go:41",
+        "claim": "A configured but wrong OverlayDir could reach the not-found return and be reported as benign. Refuted: locateOverlay returns early for any non-empty configured value (absolute: the root; relative: an error), so overlayNotFoundError only comes from the upward search with nothing configured (opencode_contracts.go:85-90).",
+        "evidence": [
+          "series review of b88fbec6 (two judges); read of locateOverlay."
+        ]
+      },
+      {
+        "id": "S-6",
+        "severity": "SUGGESTION",
+        "location": "claude.go:216-238",
+        "claim": "ownerRulesStatus returns (result, ok, note) with ok=false for current and no-checkout. Answered: the one caller only appends the note to the supported message; the two cases need no other handling.",
+        "evidence": [
+          "series review of b88fbec6."
+        ]
+      }
+    ],
+    "evidence": [
+      "RED observed for the failed-search rule; suite 85 ok; vet and gofmt clean."
+    ]
+  }
+}

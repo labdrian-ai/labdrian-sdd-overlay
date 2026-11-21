@@ -1,0 +1,33 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "1e6d6cdbe93247d5ad8ee6ca56cdace3de9efdd9",
+    "head": "15a0ae1a0fd16b9e9c421c3015b1318eb991a0fa",
+    "diff_sha256": "09bebc589de82de58495a6c0d1a0a0f61f67229d5ddbe7d1fe1f080e4e5ff96e",
+    "paths": [
+      "engine/cmd/main_agent_files_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "1e6d6cdbe93247d5ad8ee6ca56cdace3de9efdd9",
+      "head": "15a0ae1a0fd16b9e9c421c3015b1318eb991a0fa",
+      "diff_sha256": "09bebc589de82de58495a6c0d1a0a0f61f67229d5ddbe7d1fe1f080e4e5ff96e"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/cmd/main_agent_files_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "strings.Replace with a pattern absent from the string returns the string unchanged, so removing the strings.Contains guard preserves behavior exactly; the change is a pure test simplification with no defect."
+    ]
+  }
+}

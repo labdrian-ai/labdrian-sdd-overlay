@@ -1,0 +1,34 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "f40192c21348e4574fe0ba4529b56282b9b5ddb2",
+    "head": "a556acff09f4fa4ec4804f136d4e67d424b46034",
+    "diff_sha256": "514bc0c4540580a76693d4340713e992d84583cc65eceb6bddab16817408b9a9",
+    "paths": [
+      "odd/tasks/labdrian-orchestrator-opencode.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "f40192c21348e4574fe0ba4529b56282b9b5ddb2",
+      "head": "a556acff09f4fa4ec4804f136d4e67d424b46034",
+      "diff_sha256": "514bc0c4540580a76693d4340713e992d84583cc65eceb6bddab16817408b9a9"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/labdrian-orchestrator-opencode.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The change is documentation only, in the feature document. I compared the T14, T22, T28, T29, T31, T32 and T33 task dependencies and orderings with each other and found no contradiction.",
+      "S17, T22 and T29 agree on how the three held-back skills are treated. branch-pr and issue-creation are rewritten (T32, T33), and systemic-issue-triage is left untouched.",
+      "The `~/.codex/agents.md` lines 1-54, which carry no marker, are acknowledged as an open owner question in L76 risk 1, so they are not an undisclosed defect."
+    ]
+  }
+}

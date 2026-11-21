@@ -1,0 +1,17 @@
+{
+  "kind": "polisher",
+  "base": "775dd532da9677e8df1636855ffa52d75a29978c",
+  "head": "8007ccb1c99b45e40a0ada1b7d229a083113cd93",
+  "diff_sha256": "a42d68a3c6bec0e49efa9b55944ee519386355b3370144a0ae1e7aba138e56a3",
+  "findings": {
+    "findings": [],
+    "evidence": [
+      "Read the full diff t58c.diff (CHANGELOG.md, README.md, usage.go, session_availability_test.go, instructions_test.go).",
+      "Checked usage.go:442-443 against availability.go:48-50: both give the engram line as 'Do not call the Engram tools: Engram is unavailable in this session (<reason>); this does not apply to memorycard.' and the generic line as 'Do not read <source>: it is unavailable in this session (<reason>).'",
+      "Checked render.go:359: the project line matches the new CHANGELOG quote and the tightened negative checks at instructions_test.go:151 and :157.",
+      "The new test builds its expected lines from the hook's own output, maps longterm-mem and procedural-skills to '<source>', and checks them against usage() and README with backticks and whitespace flattened; ../../README.md is correct from engine/cmd.",
+      "Not run: no tests or commands. Did not confirm that sanitizeLine leaves '<reason>' unchanged.",
+      "The diff changes no block, hook or gate output."
+    ]
+  }
+}

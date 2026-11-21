@@ -1,0 +1,21 @@
+{
+  "kind": "sweep",
+  "base": "95d4e2549703d328aa8ab40c6a5107c7490c3a1c",
+  "head": "8b179b0e9f216f87f5b5c6fa698952389be7d6ea",
+  "diff_sha256": "ff71baed6f198bfd5d160896c10c1685d503c2346f15c5818590313acec1f602",
+  "outcome": "fired",
+  "t1": {
+    "deleted_or_renamed": [],
+    "removed_names": []
+  },
+  "t2": [],
+  "t3": [
+    "?? CLAUDE.md",
+    "?? docs/wiki/.format",
+    "?? docs/wiki/README.md"
+  ],
+  "t4": {
+    "leftovers": [],
+    "orphaned_fixtures": []
+  }
+}

@@ -35,7 +35,7 @@ func newCapturedProcess() *capturedProcess {
 // its environment is the one TestMain pinned under a temporary directory.
 func testDeps() deps {
 	d := productionDeps()
-	// The program's session-time probe runs 'engram stats' and 'longterm-mem status' on the machine
+	// The program's session-time probe runs 'memorycard list' and 'longterm-mem status' on the machine
 	// (C23 M8); a test must not reach the machine's memory, so it probes nothing unless it installs
 	// a probe of its own.
 	d.sourceProber = nil

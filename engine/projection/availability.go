@@ -13,6 +13,9 @@ type SourceAvailability struct {
 	Source    memoryscope.Source
 	Available bool
 	Detail    string
+	// Uncreated says the source has no store yet: its store does not exist or is empty, and its first
+	// open creates it. It is read only when Available is false.
+	Uncreated bool
 }
 
 // SourceProber probes the sources it is given and answers for each. The domain asks only about the
@@ -26,6 +29,14 @@ type SourceProber func(sources []memoryscope.Source) []SourceAvailability
 // found unavailable, in the order of the plan: one line per source, saying not to read it and why.
 // They are information only: they change neither the plan nor what the gate allows. With no probe
 // or no source there are none, and a probe that panics costs these lines and never the block.
+//
+// The line for engram names memorycard, not the source: the probe of source engram asks memorycard
+// (engine/cmd/session_availability.go), whose reads are of source engram. The gate reads no probe, so
+// the plan still allows those reads, and the block says writes are not limited. The three forms are the
+// generic line of every other source; for engram the tool line, for a store that cannot be used (the
+// plan allows its reads and does not limit its writes); and, when the answer is Uncreated, the
+// no-store line, which forbids no tool, because a write is what creates the store and a ban on it
+// would repeat every session. Uncreated changes nothing for any other source.
 func degradationLines(sources []memoryscope.Source, probe SourceProber) (lines []string) {
 	if probe == nil || len(sources) == 0 {
 		return nil
@@ -41,11 +52,18 @@ func degradationLines(sources []memoryscope.Source, probe SourceProber) (lines [
 		if i < 0 || answers[i].Available {
 			continue
 		}
-		line := "- Do not read " + sanitizeLine(string(source)) + ": it is unavailable in this session"
+		line, tail := "- Do not read "+sanitizeLine(string(source))+": it is unavailable in this session", "."
+		if source == memoryscope.SourceEngram {
+			if answers[i].Uncreated {
+				line, tail = "- memorycard has no store yet", ": memorycard creates it when it first opens it, so its reads find nothing until a record is saved."
+			} else {
+				line, tail = "- Do not call the memorycard tools: memorycard is unavailable in this session", ", though the plan allows its reads and does not limit its writes."
+			}
+		}
 		if detail := clip(sanitizeLine(answers[i].Detail), maxDetailRunes); detail != "" {
 			line += " (" + detail + ")"
 		}
-		lines = append(lines, line+".")
+		lines = append(lines, line+tail)
 	}
 	return lines
 }

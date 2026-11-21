@@ -1,0 +1,40 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "069c0d7309f00fa43dca3426112dc8367a253ed6",
+    "head": "afb10297085cc474b423c30bb3fa18ccaecfbb84",
+    "diff_sha256": "80e3b1a7d306769f2b2af3d33588804ef09a4dd7f7bc22e8638d28e852ffb5dd",
+    "paths": [
+      "engine/skills/procedural_candidate_memorycard_test.go",
+      "skills/_shared/procedural-candidate-detection.md",
+      "skills/procedural-candidates/SKILL.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "069c0d7309f00fa43dca3426112dc8367a253ed6",
+      "head": "afb10297085cc474b423c30bb3fa18ccaecfbb84",
+      "diff_sha256": "80e3b1a7d306769f2b2af3d33588804ef09a4dd7f7bc22e8638d28e852ffb5dd"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/skills/procedural_candidate_memorycard_test.go",
+        "skills/_shared/procedural-candidate-detection.md",
+        "skills/procedural-candidates/SKILL.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "Each new test assertion string has a matching sentence in the shared contract or SKILL.md. The multi-line wrapped ones match only if requireText normalizes whitespace, which pre-existing wrapped assertions already depend on.",
+      "The removed assertion on the single-key answer shape is superseded by the full-envelope assertion in the new resolve-envelope test.",
+      "The merge rule, the fail-closed scope and the Status-latch rule do not contradict each other. A lifecycle History save leaves Occurrences as stored, so it does not trigger the on-save rewrite.",
+      "Acceptance item 3 now says the count is re-derived, and the forbidText check for the old wording is consistent with the text change."
+    ]
+  }
+}

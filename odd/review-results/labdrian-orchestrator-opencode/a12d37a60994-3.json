@@ -1,0 +1,80 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "fc84aacc5e90fe780834d53acf05a3186f25b1f0",
+    "head": "a12d37a609942e7a76a0ff3074c89aaf89b7db64",
+    "diff_sha256": "276f7211429ec642839ef46ac44b8f290372a75d40e691f4b7702acd8a990beb",
+    "paths": [
+      "engine/skills/foreman_restored_duties_test.go",
+      "engine/skills/foreman_skills_test.go",
+      "engine/skills/odd_role_skills_artifact_test.go",
+      "skills/odd-feature-doc/SKILL.md",
+      "skills/odd-feature-doc/references/format.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "fc84aacc5e90fe780834d53acf05a3186f25b1f0",
+      "head": "a12d37a609942e7a76a0ff3074c89aaf89b7db64",
+      "diff_sha256": "276f7211429ec642839ef46ac44b8f290372a75d40e691f4b7702acd8a990beb"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/skills/foreman_restored_duties_test.go",
+        "engine/skills/foreman_skills_test.go",
+        "engine/skills/odd_role_skills_artifact_test.go",
+        "skills/odd-feature-doc/SKILL.md",
+        "skills/odd-feature-doc/references/format.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "skills/odd-feature-doc/SKILL.md:20",
+        "claim": "The Hard Rule for the header no longer says what the header contains (objective, branch, delivery strategy, test runner). That content now lives only in references/format.md, and the only pointer to it ('header contents') is attached to the task-line rule, not the header rule. A shaper that follows the body without opening the reference can write a header with the wrong contents. The change moves a duty out of the body, which the earlier test comment warned against.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "skills/odd-feature-doc/SKILL.md:20",
+          "skills/odd-feature-doc/SKILL.md:22",
+          "skills/odd-feature-doc/references/format.md:7-9"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "WARNING",
+        "location": "skills/odd-feature-doc/SKILL.md:37",
+        "claim": "The foreman row now lets the foreman write the header and `L1`, which the shaper row already assigns to the shaper ('the header ... and `L1`'). It also lets the foreman write `[x]` and `commit:`, which the builder row assigns to the builder. Nothing says who wins or that the foreman only does this when the shaper or builder has not, so the writer of `L1` and the header is ambiguous. The foreman's `L1` also differs from the shaper's wording ('the owner's request verbatim' versus 'exactly as the prompt quotes it').",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "skills/odd-feature-doc/SKILL.md:34",
+          "skills/odd-feature-doc/SKILL.md:37"
+        ]
+      },
+      {
+        "id": "F3",
+        "severity": "SUGGESTION",
+        "location": "engine/skills/foreman_restored_duties_test.go:104-107",
+        "claim": "The body-budget test limit is loosened from 690 to 700, which is the lint budget itself. This removes the headroom the previous review required, so any further body edit lands directly on the lint limit. The foreman fragment assertion was also shortened to drop the `- **L<n>**` prefix, so the test no longer pins the full entry format.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/skills/foreman_restored_duties_test.go:77",
+          "engine/skills/foreman_restored_duties_test.go:106-107"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff changes the SKILL.md header rule, the task-line rule and the foreman row, and adds a `## The header` section to references/format.md.",
+      "The shaper row (SKILL.md:34) and the foreman row (SKILL.md:37) both claim the header and `L1`; the builder row claims `[x]` and the commit.",
+      "The test fragments added for the foreman row match the new SKILL.md text, so I found no test mismatch."
+    ]
+  }
+}

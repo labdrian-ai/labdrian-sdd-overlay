@@ -1,0 +1,25 @@
+{
+  "kind": "sweeper",
+  "base": "508889816fbde6dd774ec4d5f4fbd9b459ea1cc4",
+  "head": "25543f98eba0648c82a0a7831998128f2f24a426",
+  "diff_sha256": "85ca17c3d05e9fb3f2ff2626fa70b85a1338b2a1bfbd4ff35e28d67fc18116e9",
+  "sweep": "25543f98eba0-1.sweep.json",
+  "commit": null,
+  "candidates": [
+    {
+      "candidate": "T3: ?? CLAUDE.md",
+      "disposition": "live",
+      "evidence": "Owner, verbatim, odd/tasks/labdrian-orchestrator-opencode.md L160: \"se quedan los files de wiki\"; kept, not committed, not deleted. It is the project instruction file that sends every agent to docs/wiki/README.md first."
+    },
+    {
+      "candidate": "T3: ?? docs/wiki/.format",
+      "disposition": "live",
+      "evidence": "Owner kept the wiki files (L160); it is the format file of docs/wiki/, which CLAUDE.md and the agent contract name as the reading entry point; not deleted."
+    },
+    {
+      "candidate": "T3: ?? docs/wiki/README.md",
+      "disposition": "live",
+      "evidence": "Owner kept it (L160); CLAUDE.md and the agent contract name docs/wiki/README.md as the first file to read; not deleted."
+    }
+  ]
+}

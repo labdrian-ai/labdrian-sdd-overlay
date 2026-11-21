@@ -1,0 +1,31 @@
+{
+  "kind": "polisher",
+  "base": "aff03c90d71bbf88c977f5f8a8960f87f4fd0cfb",
+  "head": "4ff6d38b943f4845c843398f846b02d8a51c1ed5",
+  "diff_sha256": "515015c504d511010bb7189c88fa23a6c0956a6e1dbbc9bbe424dfc05e8fe295",
+  "findings": {
+    "findings": [
+      {
+        "location": "bin/lib/usage.sh:396-408",
+        "severity": "WARNING",
+        "claim": "The wrapper help of `labdrian` (bin/lib/usage.sh) documents `review` verbs `frozen-context`, `proposals` and `findings` but has no entry for `ci`. The dispatcher, the engine help, the README and the usage-error texts all list `ci`. A person who reads `labdrian --help` cannot find the `review ci` verb that the delivery and foreman roles tell agents to run.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "pre-existing",
+        "evidence": [
+          "Grep for 'landing|no CI|CI: none' and for 'review ci|ci --landing' in bin/ found nothing, so the wrapper never documents `ci`.",
+          "The first-parent diff (t69.diff) changes bin/lib/usage.sh only for `findings`. The merge neither created nor widened the gap.",
+          "The wrapper goes straight from `proposals` (line 396) to `findings` (line 408), and `ci` is absent.",
+          "roles/foreman/body.md:29 and roles/delivery/body.md reference `labdrian review ci`.",
+          "No test pins wrapper parity for `ci`. The existing parity tests, such as TestReviewNamesExemptAmongItsVerbs, check other verbs."
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the combined merge diff t69-cc.diff in full. Every hand-resolved hunk (review.go usage errors and the `ci`, `frozen-context` and `findings` dispatch cases; the dispatch_routes, review_exempt and review_test expectations; the README entries; the CHANGELOG) lists all 12 verbs: bind, record, verify, check, exempt, sweep, anchor, launch, frozen-context, proposals, ci, findings.",
+      "The dispatcher in engine/cmd/review.go routes frozen-context, proposals, ci, findings and the stop-hook verb once each. None is routed twice or left out.",
+      "engine/cmd/usage.go has help entries for review ci (line 233), frozen-context (295), proposals (302) and findings (309). The README documents frozen-context, proposals, ci and findings. bin/lib/usage.sh documents frozen-context, proposals and findings.",
+      "skills/role-chain/references/launch.md, skills/sweeper/SKILL.md and roles/foreman and delivery bodies name only verbs that exist in the dispatcher.",
+      "Not run: go build or go test. This was a static read only."
+    ]
+  }
+}

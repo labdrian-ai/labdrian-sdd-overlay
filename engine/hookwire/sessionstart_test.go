@@ -20,20 +20,21 @@ func TestTheSessionStartEventIsTheNameClaudeCodeSends(t *testing.T) {
 
 // SessionStart reads the envelope the two other events read: the event and an absolute cwd, the
 // source (startup, resume, clear, compact) and the rest ignored.
-func TestSessionStartKeepsOnlyTheEventAndTheAbsoluteWorkingDirectory(t *testing.T) {
+func TestSessionStartKeepsTheEventTheAbsoluteWorkingDirectoryAndTheSession(t *testing.T) {
 	for name, tc := range map[string]struct {
 		data    string
 		want    hookwire.SessionStart
 		wantErr bool
 	}{
 		"the shape Claude Code sends": {data: `{"session_id":"s","transcript_path":"/t.jsonl","cwd":"/home/u/repo/./sub","hook_event_name":"SessionStart","source":"compact","model":7}`,
-			want: hookwire.SessionStart{Event: "SessionStart", Cwd: "/home/u/repo/sub"}},
-		"a relative cwd is missing":  {data: `{"cwd":"repo"}`, want: hookwire.SessionStart{}},
-		"no field":                   {data: `{}`, want: hookwire.SessionStart{}},
-		"a cwd of the wrong type":    {data: `{"cwd":7}`, wantErr: true},
-		"not an object":              {data: `[]`, wantErr: true},
-		"an event of the wrong type": {data: `{"hook_event_name":7}`, wantErr: true},
-		"two objects":                {data: `{}{}`, wantErr: true},
+			want: hookwire.SessionStart{Event: "SessionStart", Cwd: "/home/u/repo/sub", SessionID: "s"}},
+		"a session that is not text is missing": {data: `{"session_id":7,"hook_event_name":"SessionStart"}`, want: hookwire.SessionStart{Event: "SessionStart"}},
+		"a relative cwd is missing":             {data: `{"cwd":"repo"}`, want: hookwire.SessionStart{}},
+		"no field":                              {data: `{}`, want: hookwire.SessionStart{}},
+		"a cwd of the wrong type":               {data: `{"cwd":7}`, wantErr: true},
+		"not an object":                         {data: `[]`, wantErr: true},
+		"an event of the wrong type":            {data: `{"hook_event_name":7}`, wantErr: true},
+		"two objects":                           {data: `{}{}`, wantErr: true},
 	} {
 		t.Run(name, func(t *testing.T) {
 			got, err := hookwire.DecodeSessionStart([]byte(tc.data))

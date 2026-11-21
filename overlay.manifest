@@ -49,9 +49,6 @@ engine/runtime/labdrian-runtime-parity-plugin.mjs managed
 engine/assets/assets.go managed
 engine/assets/assets_test.go managed
 engine/assets/anti-generic-design.md managed
-sdd-spec/SKILL.md managed
-sdd-tasks/SKILL.md managed
-sdd-verify/SKILL.md managed
 requirements-from-transcripts/SKILL.md custom
 clarify-request/SKILL.md custom
 adhd-output/SKILL.md custom
@@ -69,50 +66,33 @@ memory-plan/SKILL.md custom
 procedural-candidates/SKILL.md custom
 role-chain/SKILL.md custom
 role-chain/references/worktrees.md custom
+role-chain/references/launch.md custom
 role-chain/references/models.md custom
+role-chain/references/prototyper.md custom
+role-chain/references/review-record.md custom
 sweeper/SKILL.md custom
 odd-feature-doc/SKILL.md custom
+odd-feature-doc/references/format.md custom
 test-first/SKILL.md custom
-sdd-verify/references/report-format.md managed
-sdd-verify/strict-tdd-verify.md managed
-branch-pr/SKILL.md managed
-chained-pr/SKILL.md managed
-chained-pr/references/chaining-details.md managed
-comment-writer/SKILL.md managed
-issue-creation/SKILL.md managed
+branch-pr/SKILL.md custom
+chained-pr/SKILL.md custom
+chained-pr/references/chaining-details.md custom
+comment-writer/SKILL.md custom
+issue-creation/SKILL.md custom
+issue-creation/references/procedure.md custom
 systemic-issue-triage/SKILL.md managed
-work-unit-commits/SKILL.md managed
-cognitive-doc-design/SKILL.md managed
-gentle-ai-bench/SKILL.md managed
-go-testing/SKILL.md managed
-go-testing/references/examples.md managed
-judgment-day/SKILL.md managed
-judgment-day/references/prompts-and-formats.md managed
-rdd-defect-workflow/SKILL.md managed
-sdd-apply/SKILL.md managed
-sdd-apply/strict-tdd.md managed
-sdd-archive/SKILL.md managed
-sdd-design/SKILL.md managed
-sdd-design/references/threat-matrix.md managed
-sdd-explore/SKILL.md managed
-sdd-init/SKILL.md managed
-sdd-init/references/init-details.md managed
-sdd-onboard/SKILL.md managed
-sdd-propose/SKILL.md managed
-skill-creator/SKILL.md managed
-skill-creator/references/skill-style-guide.md managed
-skill-improver/SKILL.md managed
-skill-improver/references/skill-style-guide.md managed
-skill-registry/SKILL.md managed
-_shared/SKILL.md managed
-_shared/engram-convention.md managed
-_shared/openspec-convention.md managed
-_shared/persistence-contract.md managed
-_shared/review-ledger-contract.md managed
-_shared/sdd-orchestrator-workflow.md managed
-_shared/sdd-phase-common.md managed
-_shared/sdd-status-contract.md managed
-_shared/skill-resolver.md managed
+work-unit-commits/SKILL.md custom
+cognitive-doc-design/SKILL.md custom
+go-testing/SKILL.md custom
+go-testing/references/examples.md custom
+judgment-day/SKILL.md custom
+judgment-day/references/prompts-and-formats.md custom
+skill-creator/SKILL.md custom
+skill-creator/references/skill-style-guide.md custom
+skill-improver/SKILL.md custom
+skill-improver/references/skill-style-guide.md custom
+skill-registry/SKILL.md custom
+_shared/SKILL.md custom
 roadmap-maker/assets/roadmap-template.md custom
 anti-generic-design/references/critique-template.md custom
 anti-generic-design/references/example-output.md custom
@@ -131,6 +111,7 @@ project-architect/references/architecture-template.md custom
 project-architect/references/blocked-response.md custom
 requirements-from-transcripts/references/output-template.md custom
 requirements-from-transcripts/references/patterns-catalog.md custom
+inception-pipeline/references/chain-entry.md custom
 inception-pipeline/references/closure-feedback.md custom
 inception-pipeline/references/tier-selection.md custom
 skills.registry.yaml custom
@@ -142,6 +123,8 @@ sweeper.md               custom   agent
 delivery.md              custom   agent
 reviewer.md              custom   agent
 verifier.md              custom   agent
+foreman.md               custom   agent
+labdrian.md              custom   output-style
 codex/agents/builder.toml    custom   codex-agent
 codex/agents/shaper.toml     custom   codex-agent
 codex/agents/polisher.toml   custom   codex-agent
@@ -150,6 +133,15 @@ codex/agents/sweeper.toml    custom   codex-agent
 codex/agents/delivery.toml   custom   codex-agent
 codex/agents/reviewer.toml   custom   codex-agent
 codex/agents/verifier.toml   custom   codex-agent
+opencode/agents/builder.md    custom   opencode-agent
+opencode/agents/shaper.md     custom   opencode-agent
+opencode/agents/polisher.md   custom   opencode-agent
+opencode/agents/prototyper.md custom   opencode-agent
+opencode/agents/sweeper.md    custom   opencode-agent
+opencode/agents/delivery.md   custom   opencode-agent
+opencode/agents/reviewer.md   custom   opencode-agent
+opencode/agents/verifier.md   custom   opencode-agent
+opencode/agents/foreman.md    custom   opencode-agent
 longterm-mem/go.mod custom mcp
 security-audit/SKILL.md custom
 security-audit/AI-AND-LLM.md custom

@@ -1,0 +1,70 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "4be8648416ce364eb15e13324a169ff9d477b7bb",
+    "head": "34e0c09f4c5f166ed89281013f3031c9e77bfea0",
+    "diff_sha256": "ae86f8e235621f1c7fcd4830383ffa36cf5d8cd9a7dc049c971c702a618e078a",
+    "paths": [
+      "CHANGELOG.md",
+      "engine/skills/branch_pr_artifact_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "4be8648416ce364eb15e13324a169ff9d477b7bb",
+      "head": "34e0c09f4c5f166ed89281013f3031c9e77bfea0",
+      "diff_sha256": "ae86f8e235621f1c7fcd4830383ffa36cf5d8cd9a7dc049c971c702a618e078a"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "engine/skills/branch_pr_artifact_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "engine/skills/branch_pr_artifact_test.go:104-107",
+        "claim": "The merge-rule test matches a literal line with embedded newlines on both sides. It fails if the Hard Rule is the first or last line of the body, uses CRLF endings, or is reworded or wrapped. The check is brittle, and the failure message does not say that the exact line was not found.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/skills/branch_pr_artifact_test.go:104"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "engine/skills/branch_pr_artifact_test.go:111-113",
+        "claim": "The new closing-entry test pins a long prose clause verbatim, so any rewording of the skill text breaks it even when the rule is unchanged. It also does not check that the clause sits in the PR rule, though its failure message says 'the PR rule'.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/skills/branch_pr_artifact_test.go:112"
+        ]
+      },
+      {
+        "id": "F3",
+        "severity": "SUGGESTION",
+        "location": "CHANGELOG.md:12",
+        "claim": "The changelog cites 'L75' with no explanation of what it refers to, so a reader of the changelog alone cannot resolve it. The paragraph is also very long.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "CHANGELOG.md:12"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff changes only the merge-rule test, adds one closing-entry test, and extends one changelog sentence. No production code is touched.",
+      "I could not read the SKILL.md body, so I cannot confirm the pinned strings match it. The review assumes the commit's own tests pass."
+    ]
+  }
+}

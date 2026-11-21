@@ -1,0 +1,48 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "34028c8ed56251e8d6c5b5bee6cc42a21b4bb4ab",
+    "head": "b38a989854083799e499d73a2e86ef5c1ded86a3",
+    "diff_sha256": "91aeea445ea4c3aecacce4f2360f5d943b83d1bbd2f81a93d9424a39dbd5d30f",
+    "paths": [
+      "engine/skillregistry/frontmatter.go",
+      "engine/skillregistry/skill_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "34028c8ed56251e8d6c5b5bee6cc42a21b4bb4ab",
+      "head": "b38a989854083799e499d73a2e86ef5c1ded86a3",
+      "diff_sha256": "91aeea445ea4c3aecacce4f2360f5d943b83d1bbd2f81a93d9424a39dbd5d30f"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/skillregistry/frontmatter.go",
+        "engine/skillregistry/skill_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "engine/skillregistry/frontmatter.go:11",
+        "claim": "The narrowed mappingKey no longer matches `key: value` lines. An unclosed quote followed by an unindented top-level key with a value (e.g. `license: x`) used to stop the scan through this regex. If the continuation loop has no separate indentation or column-0 check, the quote now swallows following frontmatter keys. The existing test 'a quote that never closes keeps its first line' relies on `license: x` ending the value. The loop body is outside the diff, so I cannot confirm this.",
+        "evidence_class": "inferential",
+        "causal_disposition": "unknown",
+        "proof_refs": [
+          "engine/skillregistry/frontmatter.go:11",
+          "engine/skillregistry/skill_test.go:90"
+        ]
+      }
+    ],
+    "evidence": [
+      "Only the regex and one new test case changed; the continuation loop that consumes mappingKey is not shown in the diff.",
+      "The new test covers `note: see the docs` as an indented continuation and the metadata: case is still matched. Neither exercises an unindented top-level key with a value after an unclosed quote beyond the one existing test."
+    ]
+  }
+}

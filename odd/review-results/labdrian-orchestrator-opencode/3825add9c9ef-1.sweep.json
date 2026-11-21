@@ -1,0 +1,28 @@
+{
+  "kind": "sweep",
+  "base": "068db6faac1a8e33bbf862dcb7286408ddb0df6b",
+  "head": "3825add9c9ef31d98da884383fbc57509a9bd302",
+  "diff_sha256": "36a0bd72a77fd2c4ff927b051c260cc96b22702bd40a8a8adda9787c704ae23d",
+  "outcome": "fired",
+  "t1": {
+    "deleted_or_renamed": [],
+    "removed_names": [
+      {
+        "name": "TestOpenCodeBridgeNamesAnEngineOlderThanThePluginWithItsRemedy",
+        "hits": [
+          "odd/tasks/labdrian-orchestrator-opencode.md"
+        ]
+      }
+    ]
+  },
+  "t2": [],
+  "t3": [
+    "?? CLAUDE.md",
+    "?? docs/wiki/.format",
+    "?? docs/wiki/README.md"
+  ],
+  "t4": {
+    "leftovers": [],
+    "orphaned_fixtures": []
+  }
+}

@@ -1,0 +1,68 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "ad9e5e4e00f757c3ed2e8c5cb5de492eec3ea0c3",
+    "head": "32f1f7cc6a000820fe5506b7d9757e0373e67948",
+    "diff_sha256": "59cf11a1fb411020264d59b2a5ccb9b0526e3ca4c25dc39178a5f70bd0c3fb27",
+    "paths": [
+      "CHANGELOG.md",
+      "README.md",
+      "agents/foreman.md",
+      "agents/shaper.md",
+      "codex/agents/shaper.toml",
+      "engine/agentgen/foreman_test.go",
+      "engine/cmd/roles_builder_guard_docs_test.go",
+      "engine/cmd/usage.go",
+      "engine/cmd/workflow.go",
+      "engine/cmd/workflow_bind_test.go",
+      "engine/cmd/workflow_goal_base.go",
+      "engine/cmd/workflow_goal_base_test.go",
+      "opencode/agents/foreman.md",
+      "opencode/agents/shaper.md",
+      "pi/agents/shaper.md",
+      "roles/foreman/body.md",
+      "roles/shaper/body.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "ad9e5e4e00f757c3ed2e8c5cb5de492eec3ea0c3",
+      "head": "32f1f7cc6a000820fe5506b7d9757e0373e67948",
+      "diff_sha256": "59cf11a1fb411020264d59b2a5ccb9b0526e3ca4c25dc39178a5f70bd0c3fb27"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "README.md",
+        "agents/foreman.md",
+        "agents/shaper.md",
+        "codex/agents/shaper.toml",
+        "engine/agentgen/foreman_test.go",
+        "engine/cmd/roles_builder_guard_docs_test.go",
+        "engine/cmd/usage.go",
+        "engine/cmd/workflow.go",
+        "engine/cmd/workflow_bind_test.go",
+        "engine/cmd/workflow_goal_base.go",
+        "engine/cmd/workflow_goal_base_test.go",
+        "opencode/agents/foreman.md",
+        "opencode/agents/shaper.md",
+        "pi/agents/shaper.md",
+        "roles/foreman/body.md",
+        "roles/shaper/body.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "I read the whole diff. The new verb parses its flags, validates the feature name and the project id, and prints one JSON line. All of its refusal paths exit 2 with a message, and usage errors exit 1.",
+      "The verb is wired into workflow.go and the two verb-list error messages. The updated test strings in workflow_bind_test.go match the new messages.",
+      "The role body, the generated agent files, the foreman Shape row and the tests are updated consistently. Every shaper copy carries the same sentence, and the docs test checks it.",
+      "I found no defect this change introduces, activates or worsens."
+    ]
+  }
+}

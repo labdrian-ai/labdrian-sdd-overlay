@@ -120,14 +120,21 @@ func denyMessage(stdout io.Writer, message string) {
 // which verifies the chain as it loads it. It decides nothing and reads no file itself.
 type boundWorkflows struct{}
 
-func (boundWorkflows) Of(cwd string) (oddtask.WorkflowView, error) {
+// describeBinding says what the repository that holds cwd is bound to: the one reading of the binding that the
+// builder guard and the role-chain verbs share. Its error is the binding store's or the repository's, as
+// projapp.BindWorkflow.Describe reports it.
+func describeBinding(cwd string) (projapp.BindingView, error) {
 	bindings, err := newBindingStore()
 	if err != nil {
-		return oddtask.WorkflowView{}, err
+		return projapp.BindingView{}, err
 	}
-	described, err := projapp.BindWorkflow{
+	return projapp.BindWorkflow{
 		Repositories: newRepoLocator(), Bindings: bindings, Workflows: workflowReader{}, Clock: wallClock{},
 	}.Describe(cwd)
+}
+
+func (boundWorkflows) Of(cwd string) (oddtask.WorkflowView, error) {
+	described, err := describeBinding(cwd)
 	if err != nil {
 		return oddtask.WorkflowView{}, errors.New(bindingRefusal(err))
 	}

@@ -1,0 +1,68 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "e42c41c54de97dfdcc6fe1681e4157f0cebfad77",
+    "head": "4eb00fb93259d9dac9d8340ecd024ef8358f587f",
+    "diff_sha256": "c13bbebfe832a7f4100a5731f4cc2c1382ea0e8b4850a2124f20e9bbdbe2c449",
+    "paths": [
+      "agents/foreman.md",
+      "agents/shaper.md",
+      "codex/agents/shaper.toml",
+      "engine/agentgen/foreman_test.go",
+      "engine/cmd/roles_builder_guard_docs_test.go",
+      "engine/skills/role_agents_artifact_test.go",
+      "opencode/agents/foreman.md",
+      "opencode/agents/shaper.md",
+      "pi/agents/shaper.md",
+      "roles/foreman/body.md",
+      "roles/shaper/body.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "e42c41c54de97dfdcc6fe1681e4157f0cebfad77",
+      "head": "4eb00fb93259d9dac9d8340ecd024ef8358f587f",
+      "diff_sha256": "c13bbebfe832a7f4100a5731f4cc2c1382ea0e8b4850a2124f20e9bbdbe2c449"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "agents/foreman.md",
+        "agents/shaper.md",
+        "codex/agents/shaper.toml",
+        "engine/agentgen/foreman_test.go",
+        "engine/cmd/roles_builder_guard_docs_test.go",
+        "engine/skills/role_agents_artifact_test.go",
+        "opencode/agents/foreman.md",
+        "opencode/agents/shaper.md",
+        "pi/agents/shaper.md",
+        "roles/foreman/body.md",
+        "roles/shaper/body.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "roles/shaper/body.md:9",
+        "claim": "The shaper is told to copy memory_directive verbatim from odd/goals/labdrian-orchestrator-opencode.json. That path is a file in this repository only. The role body is generated into agents shipped to other projects, where the file does not exist, so the shaper has no source for the directive and must invent or omit it. goal.Parse requires the key, so the written Goal could be wrong or refused. The wording 'unless the request narrows it' also gives no rule for what to do when the request narrows it.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "roles/shaper/body.md:9",
+          "agents/shaper.md:16"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff adds an identical sentence to the role body and to four generated shaper files, and it hardcodes this repository's goal file path.",
+      "The new test reads that path from the overlay repository's own checkout, so it passes there and does not show that the sentence works in an installed project.",
+      "The foreman Shape row now requires odd/goals/<f>.json to exist before Open, so a shaper that cannot source memory_directive blocks the pipeline."
+    ]
+  }
+}

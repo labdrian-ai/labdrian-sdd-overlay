@@ -1,0 +1,72 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "bbf8c6eb7bd727737c3d0d2afff4997790991f71",
+    "head": "2358cf21a7d89e27d00bfb68a8995f2bf0cfdcb9",
+    "diff_sha256": "093df8ff4415d85ace68c2b275a159a55860760ad58bc571b90e72c0e21c3c2d",
+    "paths": [
+      "CHANGELOG.md",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-context-lists-quotes-and-case.golden",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-minimalism-context-metadata-accepted-today.golden",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-phases-quoted-items-accepted-today.golden",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-reads-the-contracts-of-the-overlay.golden",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-without-the-oo-contract.golden",
+      "engine/cmd/testdata/runtime-golden/runtime-opencode-and-pi-with-an-overlay.golden",
+      "engine/runtime/labdrian-runtime-parity-plugin.mjs",
+      "engine/runtime/opencode.go",
+      "engine/runtime/opencode_legacy_test.go",
+      "engine/runtime/opencode_plugin.go",
+      "engine/runtime/opencode_plugin_test.go",
+      "engine/runtime/opencode_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "bbf8c6eb7bd727737c3d0d2afff4997790991f71",
+      "head": "2358cf21a7d89e27d00bfb68a8995f2bf0cfdcb9",
+      "diff_sha256": "093df8ff4415d85ace68c2b275a159a55860760ad58bc571b90e72c0e21c3c2d"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-context-lists-quotes-and-case.golden",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-minimalism-context-metadata-accepted-today.golden",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-phases-quoted-items-accepted-today.golden",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-reads-the-contracts-of-the-overlay.golden",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-without-the-oo-contract.golden",
+        "engine/cmd/testdata/runtime-golden/runtime-opencode-and-pi-with-an-overlay.golden",
+        "engine/runtime/labdrian-runtime-parity-plugin.mjs",
+        "engine/runtime/opencode.go",
+        "engine/runtime/opencode_legacy_test.go",
+        "engine/runtime/opencode_plugin.go",
+        "engine/runtime/opencode_plugin_test.go",
+        "engine/runtime/opencode_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "engine/runtime/opencode.go:101-103",
+        "claim": "In install, a failure to read or remove the legacy file (for example a directory or an unreadable file at the legacy path) returns CapabilityPartial after the v2 plugin was already written. The restart_required signal and the version message are lost even though OpenCode must be restarted to load the new plugin. A cleanup problem therefore masks a successful install.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/runtime/opencode.go:101-103",
+          "engine/runtime/opencode.go:176-185"
+        ]
+      }
+    ],
+    "evidence": [
+      "The legacy-ownership marker is the string 'export default async function labdrianRuntimeParityPlugin('. The diff does not show the 1.x plugin source, so it cannot confirm that real 1.x files contain this exact text; the test fixture was written in the same commit.",
+      "Uninstall now always attempts to remove the plugin directory, and os.Remove refuses a non-empty directory, so foreign content is preserved.",
+      "Dropping the Tool import and the matching test assertion are consistent with each other."
+    ]
+  }
+}

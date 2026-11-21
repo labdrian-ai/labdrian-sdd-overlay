@@ -1,0 +1,104 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "ed82b5381b06dce4ef1f9f63ae6c3bc28edf04cf",
+    "head": "2e22df056080bb4d90ae83fe7454cb139c7d71d6",
+    "diff_sha256": "507de05783e89566ec7b31a095d3a590e3ec8907ae1e2f518969a9514e20fcf8",
+    "paths": [
+      "CHANGELOG.md",
+      "engine/cmd/opencode_bridge_e2e_test.go",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-context-lists-quotes-and-case.golden",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-minimalism-context-metadata-accepted-today.golden",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-phases-quoted-items-accepted-today.golden",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-reads-the-contracts-of-the-overlay.golden",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-without-the-oo-contract.golden",
+      "engine/cmd/testdata/runtime-golden/runtime-opencode-and-pi-with-an-overlay.golden",
+      "engine/runtime/labdrian-runtime-parity-plugin.mjs",
+      "engine/runtime/opencode_plugin.go",
+      "engine/runtime/opencode_plugin_live_test.go",
+      "engine/runtime/opencode_plugin_test.go",
+      "engine/runtime/opencode_stub_guard_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "ed82b5381b06dce4ef1f9f63ae6c3bc28edf04cf",
+      "head": "2e22df056080bb4d90ae83fe7454cb139c7d71d6",
+      "diff_sha256": "507de05783e89566ec7b31a095d3a590e3ec8907ae1e2f518969a9514e20fcf8"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "engine/cmd/opencode_bridge_e2e_test.go",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-context-lists-quotes-and-case.golden",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-minimalism-context-metadata-accepted-today.golden",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-phases-quoted-items-accepted-today.golden",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-reads-the-contracts-of-the-overlay.golden",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-without-the-oo-contract.golden",
+        "engine/cmd/testdata/runtime-golden/runtime-opencode-and-pi-with-an-overlay.golden",
+        "engine/runtime/labdrian-runtime-parity-plugin.mjs",
+        "engine/runtime/opencode_plugin.go",
+        "engine/runtime/opencode_plugin_live_test.go",
+        "engine/runtime/opencode_plugin_test.go",
+        "engine/runtime/opencode_stub_guard_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "engine/runtime/opencode_stub_guard_test.go:11-20",
+        "claim": "The guard test's comment hardcodes a developer-local absolute path (/home/labdrian/.cache/t15-oc-T9SG/probe-exports.json) as the evidence for the real module's exports. The file is not in the repository and cannot be reproduced by other contributors or CI, so the claim that the real module exports exactly CallID and Error is unverifiable from the repo and may rot.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/runtime/opencode_stub_guard_test.go:11-20"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "WARNING",
+        "location": "engine/runtime/opencode_stub_guard_test.go:22-24",
+        "claim": "The guard only matches stubs written as a `\"tool.js\": `...`` raw-string map entry, and only detects `export class|const|let|var|function` declarations. A stub using `export { X }`, `export default`, `export { A as B }`, or a different quoting would be missed, or yield an empty/incorrect export list. The `stubs < 2` check partially catches vanishing stubs but not a stub whose export form evades the name regex while the entry still matches (it would then report a mismatch, not a silent pass), and a stub in a non-matching form would be silently skipped while the count stays at two.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/runtime/opencode_stub_guard_test.go:22-24"
+        ]
+      },
+      {
+        "id": "F3",
+        "severity": "WARNING",
+        "location": "engine/runtime/opencode_plugin_live_test.go:23-60",
+        "claim": "The live test runs a real OpenCode with the process environment (os.Environ) plus overridden HOME/XDG dirs, but PATH-found `opencode` may need network or auth/model providers and can hang up to 2 minutes or fail with Fatalf on unrelated startup errors (e.g. first-run migration or network), turning an unrelated environment problem into a test failure when opencode is merely installed. The flags used (`--standalone`, `--print-logs`, `debug agents`) are also tied to one version with no skip when unsupported.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/runtime/opencode_plugin_live_test.go:23-60"
+        ]
+      },
+      {
+        "id": "F4",
+        "severity": "SUGGESTION",
+        "location": "engine/runtime/opencode_plugin_live_test.go:50-55",
+        "claim": "The 'failed to load plugin' check requires the line to also contain 'labdrian-runtime-parity'. If OpenCode's log line names the plugin by a different form (e.g. a file URL without that substring or a truncated path), a load failure would pass the check; only the marker stat then catches it, and that marker may be stale-free only because of the fresh sandbox.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/runtime/opencode_plugin_live_test.go:50-55"
+        ]
+      }
+    ],
+    "evidence": [
+      "The plugin change `import * as Tool` keeps `new Tool.Error(...)` valid against a module exporting Error, matching the stated fix.",
+      "Both test stubs now export class Error and CallID; the guard regex extracts exactly these names, so the stubs satisfy it.",
+      "All goldens and the version constant were updated consistently to 2026-11-17-runtime-parity-13."
+    ]
+  }
+}

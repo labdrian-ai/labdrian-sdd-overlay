@@ -23,9 +23,9 @@ type CandidateListResult struct {
 	Anomalies  []skills.Anomaly
 }
 
-// ListCandidates reads Engram through the CandidateSource port, parses records without
+// ListCandidates reads memorycard through the CandidateSource port, parses records without
 // repair, reconciles all loaded records, and applies display filters to candidates.
-func ListCandidates(source skills.CandidateSource, in CandidateListInput) (CandidateListResult, error) {
+func ListCandidates(source skills.CandidateSource, resolver skills.LegacyOccurrenceResolver, in CandidateListInput) (CandidateListResult, error) {
 	if source == nil {
 		return CandidateListResult{}, fmt.Errorf("skills candidates: candidate source is required")
 	}
@@ -37,8 +37,22 @@ func ListCandidates(source skills.CandidateSource, in CandidateListInput) (Candi
 	candidates := make([]skills.CandidateRecord, 0, len(raw.Candidates))
 	drafts := make([]skills.DraftRecord, 0, len(raw.Drafts))
 	anomalies := make([]skills.Anomaly, 0)
+	// Legacy `engram:<n>` ids count as the `memorycard:<m>` they were imported as: the records are
+	// read once to learn which numbers to ask about, and read again with the answer. A listing with
+	// no legacy id never asks and is read once, as it always was.
+	numbers := legacyNumbers(raw.Candidates)
+	var mapped map[string]int
+	if len(numbers) > 0 {
+		if resolver == nil {
+			return CandidateListResult{}, fmt.Errorf("skills candidates: a candidate lists legacy engram ids and no legacy occurrence resolver is wired")
+		}
+		var err error
+		if mapped, err = resolver.ResolveLegacyOccurrences(numbers); err != nil {
+			return CandidateListResult{}, fmt.Errorf("skills candidates: resolve legacy occurrences: %w", err)
+		}
+	}
 	for _, observation := range raw.Candidates {
-		record, found := skills.ParseCandidateRecord(observation.TopicKey, observation.Content)
+		record, found := skills.ParseCandidateRecordTranslated(observation.TopicKey, observation.Content, mapped)
 		candidates = append(candidates, record)
 		anomalies = append(anomalies, found...)
 	}
@@ -72,6 +86,24 @@ func ListCandidates(source skills.CandidateSource, in CandidateListInput) (Candi
 		result.Drafts = drafts
 	}
 	return result, nil
+}
+
+// legacyNumbers returns the distinct numbers of the legacy `engram:<n>` ids the candidates list, sorted
+// as text so the resolver is asked the same question for the same listing.
+func legacyNumbers(candidates []skills.CandidateObservation) []string {
+	seen := map[string]bool{}
+	var numbers []string
+	for _, observation := range candidates {
+		record, _ := skills.ParseCandidateRecord(observation.TopicKey, observation.Content)
+		for _, id := range record.Occurrences {
+			if number, ok := skills.LegacyOccurrenceNumber(id); ok && !seen[number] {
+				seen[number] = true
+				numbers = append(numbers, number)
+			}
+		}
+	}
+	sort.Strings(numbers)
+	return numbers
 }
 
 func matchesCandidateStatus(status skills.CandidateStatus, statuses []skills.CandidateStatus) bool {

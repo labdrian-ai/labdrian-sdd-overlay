@@ -1,0 +1,76 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "dd99e6e57ccee870faca20715f6d2a11691daaaf",
+    "head": "4e96003dbffc56ee2042b62e2b5065a935c4907d",
+    "diff_sha256": "5cc6994014775e7b6185fa69201f831921ca85a3d5623018b325a5978470bcc2",
+    "paths": [
+      "CHANGELOG.md",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-context-lists-quotes-and-case.golden",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-minimalism-context-metadata-accepted-today.golden",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-phases-quoted-items-accepted-today.golden",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-reads-the-contracts-of-the-overlay.golden",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-without-the-oo-contract.golden",
+      "engine/cmd/testdata/runtime-golden/runtime-opencode-and-pi-with-an-overlay.golden",
+      "engine/runtime/labdrian-runtime-parity-plugin.mjs",
+      "engine/runtime/opencode_bridge_failure_test.go",
+      "engine/runtime/opencode_plugin.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "dd99e6e57ccee870faca20715f6d2a11691daaaf",
+      "head": "4e96003dbffc56ee2042b62e2b5065a935c4907d",
+      "diff_sha256": "5cc6994014775e7b6185fa69201f831921ca85a3d5623018b325a5978470bcc2"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-context-lists-quotes-and-case.golden",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-minimalism-context-metadata-accepted-today.golden",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-phases-quoted-items-accepted-today.golden",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-reads-the-contracts-of-the-overlay.golden",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-without-the-oo-contract.golden",
+        "engine/cmd/testdata/runtime-golden/runtime-opencode-and-pi-with-an-overlay.golden",
+        "engine/runtime/labdrian-runtime-parity-plugin.mjs",
+        "engine/runtime/opencode_bridge_failure_test.go",
+        "engine/runtime/opencode_plugin.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "engine/runtime/labdrian-runtime-parity-plugin.mjs:316",
+        "claim": "The pause reason is now the literal text \"-e seconds\" instead of the computed number of seconds. The template interpolation `${(ENGINE_PAUSE_FACTOR * timeoutMs) / 1000}` was replaced by `-e`. The note the model reads says \"the bridge stops asking it for -e seconds except to check tool calls\", so the pause length is unreadable. The updated test checks only for the substring \"stops asking\", so it does not catch this.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/runtime/labdrian-runtime-parity-plugin.mjs:316"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "engine/runtime/labdrian-runtime-parity-plugin.mjs:310",
+        "claim": "The gate now bypasses the pause entirely. While the engine hangs, every tool call waits a full engine timeout (30s by default) before it proceeds. The cost is real and the note does not warn about it.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/runtime/labdrian-runtime-parity-plugin.mjs:310"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff replaces the interpolated seconds in the pausedReason template with the literal `-e`.",
+      "The updated test asserts only \"stops asking\" in the note, so the garbled value passes.",
+      "The gate calls askEngine with gate=true, which skips the pausedUntil check, so each gate call reruns the engine and waits its full timeout when it hangs."
+    ]
+  }
+}

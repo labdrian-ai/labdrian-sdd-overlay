@@ -1,0 +1,49 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "368afea25facf89a2b6194338d88e48e2d105a0b",
+    "head": "5fb02384f8dde106079115f2f8e5e96f06287016",
+    "diff_sha256": "4747361aecf488704dd651cf24ef7df690359905b64c5b8e024b5202bc534824",
+    "paths": [
+      "odd/tasks/labdrian-orchestrator-opencode.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "368afea25facf89a2b6194338d88e48e2d105a0b",
+      "head": "5fb02384f8dde106079115f2f8e5e96f06287016",
+      "diff_sha256": "4747361aecf488704dd651cf24ef7df690359905b64c5b8e024b5202bc534824"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/labdrian-orchestrator-opencode.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/labdrian-orchestrator-opencode.md:48",
+        "claim": "The T25c commit field reads `memorycard 259cb77..PR #29 head`. The range end is a placeholder, not a sha, and neither this line nor L47 records PR #29's merge sha. T25a's entry gives concrete shas (`b3cb5ce..ec00719`, merged `0f273c8`), so the T25c entry cannot be resolved to a commit later, and the per-commit review chain for T25c has no stable anchor.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/labdrian-orchestrator-opencode.md:48 `commit: memorycard 259cb77..PR #29 head, merged as PR #29 (L47)`",
+          "odd/tasks/labdrian-orchestrator-opencode.md:467 L47 lists 259cb77, 4f8b1a0 and d57c2be but no merge sha for PR #29"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff changes one documentation file: it ticks T25a and T25c and appends L47.",
+      "T25a's commit range and merge sha are concrete and consistent between its task line and L47.",
+      "T25c's task line gives a non-sha range end, and L47 gives no merge sha for PR #29.",
+      "The facts L47 states about branch base and the following tasks (T23, T25b, T25d) match the task text visible in the diff."
+    ]
+  }
+}

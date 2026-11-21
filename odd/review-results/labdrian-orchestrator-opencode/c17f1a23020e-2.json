@@ -1,0 +1,121 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "c8d6f48d1fb309b904016d0c011ebcaa07ccff93",
+    "head": "c17f1a23020e015f1eb447756bdb9d6181cc6827",
+    "diff_sha256": "8e7d558abc16cfb04e2b2efd656a366a5dd14db7acf019b1845342804cd26da6",
+    "paths": [
+      "CHANGELOG.md",
+      "README.md",
+      "engine/capability/declarations.go",
+      "engine/cmd/output_style_files_test.go",
+      "engine/cmd/settings_hooks.go",
+      "engine/cmd/status_command_test.go",
+      "engine/cmd/testdata/status-golden/status-binary-states.golden",
+      "engine/cmd/testdata/status-golden/status-contract-states.golden",
+      "engine/cmd/testdata/status-golden/status-families-missing-or-drifted.golden",
+      "engine/cmd/testdata/status-golden/status-in-an-empty-home.golden",
+      "engine/cmd/testdata/status-golden/status-of-a-complete-install.golden",
+      "engine/cmd/testdata/status-golden/status-registry-states.golden",
+      "engine/cmd/testdata/status-golden/status-settings-that-are-not-an-object.golden",
+      "engine/cmd/testdata/status-golden/status-settings-without-the-hooks.golden",
+      "engine/cmd/testdata/status-golden/status-with-no-home.golden",
+      "engine/cmd/usage.go",
+      "engine/runtime/outputstyle_text_test.go",
+      "engine/skills/ondisk.go",
+      "engine/skills/ondisk_test.go",
+      "engine/skills/routes.go",
+      "engine/skills/routes_output_style_test.go",
+      "engine/skills/routes_test.go",
+      "engine/status/codex_test.go",
+      "engine/status/output_style_test.go",
+      "engine/status/status.go",
+      "engine/status/status_test.go",
+      "output-styles/labdrian.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "c8d6f48d1fb309b904016d0c011ebcaa07ccff93",
+      "head": "c17f1a23020e015f1eb447756bdb9d6181cc6827",
+      "diff_sha256": "8e7d558abc16cfb04e2b2efd656a366a5dd14db7acf019b1845342804cd26da6"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "README.md",
+        "engine/capability/declarations.go",
+        "engine/cmd/output_style_files_test.go",
+        "engine/cmd/settings_hooks.go",
+        "engine/cmd/status_command_test.go",
+        "engine/cmd/testdata/status-golden/status-binary-states.golden",
+        "engine/cmd/testdata/status-golden/status-contract-states.golden",
+        "engine/cmd/testdata/status-golden/status-families-missing-or-drifted.golden",
+        "engine/cmd/testdata/status-golden/status-in-an-empty-home.golden",
+        "engine/cmd/testdata/status-golden/status-of-a-complete-install.golden",
+        "engine/cmd/testdata/status-golden/status-registry-states.golden",
+        "engine/cmd/testdata/status-golden/status-settings-that-are-not-an-object.golden",
+        "engine/cmd/testdata/status-golden/status-settings-without-the-hooks.golden",
+        "engine/cmd/testdata/status-golden/status-with-no-home.golden",
+        "engine/cmd/usage.go",
+        "engine/runtime/outputstyle_text_test.go",
+        "engine/skills/ondisk.go",
+        "engine/skills/ondisk_test.go",
+        "engine/skills/routes.go",
+        "engine/skills/routes_output_style_test.go",
+        "engine/skills/routes_test.go",
+        "engine/status/codex_test.go",
+        "engine/status/output_style_test.go",
+        "engine/status/status.go",
+        "engine/status/status_test.go",
+        "output-styles/labdrian.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "engine/skills/routes.go:304-308",
+        "claim": "A relative agents root with a parent (e.g. \"x/agents\") passes the new check, while a bare \"agents\" is refused. A root such as \"./agents\" cleans to \"agents\" and is refused, whereas before the change it placed the style at \"output-styles/...\" in the working directory. A previously accepted relative root is now an error; this is intended, but the refusal message prints the uncleaned root only, so \"./agents\" shows no hint of why it has no parent.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/skills/routes.go:304-308"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "engine/skills/routes_test.go:52-56",
+        "claim": "The assertion len(nonSkillRoutes)-1 != len(validLongtermMemRoutes)-1 simplifies to a size comparison that hard-codes output-style as the single extra member; the arithmetic is hard to read and obscures intent (compare len(nonSkillRoutes) with len(validLongtermMemRoutes) directly).",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/skills/routes_test.go:52-56"
+        ]
+      },
+      {
+        "id": "F3",
+        "severity": "SUGGESTION",
+        "location": "engine/cmd/settings_hooks.go:69-77",
+        "claim": "noticeForeignOutputStyle re-reads and re-parses the settings file a second time after noticeForeignMainAgent already did, duplicating the read logic; a read error is silently swallowed so a failure to read produces no notice and no signal.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/cmd/settings_hooks.go:51-77"
+        ]
+      }
+    ],
+    "evidence": [
+      "Reviewed the full diff; the new outputStyle key, status check, notice, route cleaning and tests are consistent with each other.",
+      "Golden files add the outputStyle check line in the same position as the status.go ordering (after agent, before contract).",
+      "The nonSkillRoutes comment and tests acknowledge output-style is outside the longterm-mem route domain, so adding it to the map is intentional."
+    ]
+  }
+}

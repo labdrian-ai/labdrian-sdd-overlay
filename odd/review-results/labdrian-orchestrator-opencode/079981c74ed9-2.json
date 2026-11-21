@@ -1,0 +1,48 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "4748e19a0685220f03735056599458041561cfc0",
+    "head": "079981c74ed9a40e9345f6065ce71e3d976e64a0",
+    "diff_sha256": "c4fa415829cbf20f03df39f17adaa68f5dfa21a726c2e2998f32aee3460d6de1",
+    "paths": [
+      "engine/review/analyzers/analyzers.go",
+      "engine/review/analyzers/analyzers_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "4748e19a0685220f03735056599458041561cfc0",
+      "head": "079981c74ed9a40e9345f6065ce71e3d976e64a0",
+      "diff_sha256": "c4fa415829cbf20f03df39f17adaa68f5dfa21a726c2e2998f32aee3460d6de1"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/review/analyzers/analyzers.go",
+        "engine/review/analyzers/analyzers_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "engine/review/analyzers/analyzers.go:286-290",
+        "claim": "holdsGoFile passes the directory path to filepath.Glob, which reads glob metacharacters (*, ?, [, \\) in the path itself, not only in the \"*.go\" suffix. If the copy root or module path contains such a character (e.g. a checkout under a directory named with brackets), Glob returns no match or ErrBadPattern, and the error is swallowed as false. Every package is then silently dropped and the sweep reports no staticcheck/nilerr findings without failing. The old os.Stat check was immune to this. A safer approach is os.ReadDir and a suffix check.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/review/analyzers/analyzers.go:286-290"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff replaces isDir (os.Stat) with holdsGoFile (filepath.Glob over the joined directory path), and presentPackages now relies on it.",
+      "The new test only covers ordinary paths with no metacharacters, so the escaping gap is untested."
+    ]
+  }
+}

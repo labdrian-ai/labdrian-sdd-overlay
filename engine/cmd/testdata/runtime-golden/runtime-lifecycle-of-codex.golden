@@ -2,42 +2,42 @@
 $ runtime status --target codex
 exit: 1
 --- stdout ---
-[codex] status: partial — Codex lifecycle manifest not found at <WORLD>/home/.codex/labdrian-runtime-lifecycle.json
+[codex] status: partial — Codex lifecycle manifest not found at <WORLD>/home/.codex/labdrian-runtime-lifecycle.json — reasons: owner rules not checked: no overlay checkout found; set LABDRIAN_OVERLAY_DIR
 --- stderr ---
 
 # install codex
 $ runtime install --target codex
 exit: 0
 --- stdout ---
-[codex] install: restart_required — Codex lifecycle manifest installed; restart long-running Codex processes to pick up updates
+[codex] install: restart_required — Codex lifecycle manifest installed; restart long-running Codex processes to pick up updates; owner rules not installed: no overlay checkout found; set LABDRIAN_OVERLAY_DIR
 --- stderr ---
 
 # status codex
 $ runtime status --target codex
 exit: 1
 --- stdout ---
-[codex] status: partial — Codex lifecycle manifest is present and managed, but activation/reload state is unverified — reasons: activation/reload proof unavailable until Codex session lifecycle integration is implemented
+[codex] status: partial — Codex lifecycle manifest is present and managed, but activation/reload state is unverified — reasons: activation/reload proof unavailable until Codex session lifecycle integration is implemented; owner rules not checked: no overlay checkout found; set LABDRIAN_OVERLAY_DIR
 --- stderr ---
 
 # install codex
 $ runtime install --target codex
 exit: 0
 --- stdout ---
-[codex] install: restart_required — Codex lifecycle manifest installed; restart long-running Codex processes to pick up updates
+[codex] install: restart_required — Codex lifecycle manifest installed; restart long-running Codex processes to pick up updates; owner rules not installed: no overlay checkout found; set LABDRIAN_OVERLAY_DIR
 --- stderr ---
 
 # update codex
 $ runtime update --target codex
 exit: 0
 --- stdout ---
-[codex] update: restart_required — Codex lifecycle manifest updated; restart long-running Codex processes to pick up updates
+[codex] update: restart_required — Codex lifecycle manifest updated; restart long-running Codex processes to pick up updates; owner rules not installed: no overlay checkout found; set LABDRIAN_OVERLAY_DIR
 --- stderr ---
 
 # status codex
 $ runtime status --target codex
 exit: 1
 --- stdout ---
-[codex] status: partial — Codex lifecycle manifest is present and managed, but activation/reload state is unverified — reasons: activation/reload proof unavailable until Codex session lifecycle integration is implemented
+[codex] status: partial — Codex lifecycle manifest is present and managed, but activation/reload state is unverified — reasons: activation/reload proof unavailable until Codex session lifecycle integration is implemented; owner rules not checked: no overlay checkout found; set LABDRIAN_OVERLAY_DIR
 --- stderr ---
 
 # uninstall codex
@@ -51,7 +51,7 @@ exit: 0
 $ runtime status --target codex
 exit: 1
 --- stdout ---
-[codex] status: partial — Codex lifecycle manifest not found at <WORLD>/home/.codex/labdrian-runtime-lifecycle.json
+[codex] status: partial — Codex lifecycle manifest not found at <WORLD>/home/.codex/labdrian-runtime-lifecycle.json — reasons: owner rules not checked: no overlay checkout found; set LABDRIAN_OVERLAY_DIR
 --- stderr ---
 
 # uninstall codex

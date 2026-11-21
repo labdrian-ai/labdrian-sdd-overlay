@@ -1,0 +1,59 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "83a671b837fea952a05718111dafe77ebbce92a2",
+    "head": "b4f5adec4e7c1aa909fd49b13347b4215e12aa3a",
+    "diff_sha256": "584618c79703606762715e5df488f51eb8e23e137d6fdfb3e0492e43c9985c46",
+    "paths": [
+      "engine/cmd/skills_candidates_cli.go",
+      "engine/cmd/skills_candidates_verb_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "83a671b837fea952a05718111dafe77ebbce92a2",
+      "head": "b4f5adec4e7c1aa909fd49b13347b4215e12aa3a",
+      "diff_sha256": "584618c79703606762715e5df488f51eb8e23e137d6fdfb3e0492e43c9985c46"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/cmd/skills_candidates_cli.go",
+        "engine/cmd/skills_candidates_verb_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "engine/cmd/skills_candidates_verb_test.go:28",
+        "claim": "The success test accepts any exit code <= 0 and treats the initial -1 as success; the exit callback is never required to have been called. A regression that never invokes exit passes, though the real path may rely on it. The assertion is weaker than the stated 'want success'.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/cmd/skills_candidates_verb_test.go:24-31"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "engine/cmd/skills_candidates_verb_test.go:34",
+        "claim": "The refusal test relies on helpers (candidateSourceFunc, recordedIdentity, verbFromArgs, runSkillsCoreWith, parseAfterVerb) not visible in the diff, and Deps in the refusal test omits Identity and Cwd; if the dispatcher dereferences them before parsing, the test would panic instead of showing a refusal. Cannot be verified from the diff.",
+        "evidence_class": "inferential",
+        "causal_disposition": "unknown",
+        "proof_refs": [
+          "engine/cmd/skills_candidates_verb_test.go:34-48"
+        ]
+      }
+    ],
+    "evidence": [
+      "The one-line production change swaps parse for parseAfterVerb, matching the stated behavior of add, remove and sync; no regression is visible from the diff.",
+      "The tests cover both the verb-first success path and the refusal of an extra positional word after the verb."
+    ]
+  }
+}

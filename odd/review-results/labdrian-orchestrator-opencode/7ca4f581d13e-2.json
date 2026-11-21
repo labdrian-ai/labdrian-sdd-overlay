@@ -1,0 +1,63 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "ddced25ef0dde1a6c1a57429c80084de462b8281",
+    "head": "7ca4f581d13e0d87f1bac2d056cef22d914a3010",
+    "diff_sha256": "1aef3a0abaac0e634512334eb1e14c81283c233d1c217b8cbadbc60f6898db33",
+    "paths": [
+      "engine/skills/procedural_candidate_memorycard_test.go",
+      "skills/_shared/procedural-candidate-detection.md",
+      "skills/procedural-candidates/SKILL.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "ddced25ef0dde1a6c1a57429c80084de462b8281",
+      "head": "7ca4f581d13e0d87f1bac2d056cef22d914a3010",
+      "diff_sha256": "1aef3a0abaac0e634512334eb1e14c81283c233d1c217b8cbadbc60f6898db33"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/skills/procedural_candidate_memorycard_test.go",
+        "skills/_shared/procedural-candidate-detection.md",
+        "skills/procedural-candidates/SKILL.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "skills/_shared/procedural-candidate-detection.md:114-118",
+        "claim": "Item 2 still states the resolve call twice: first the command line, then 'Ask `resolve` in one call, with each distinct legacy number once'. The commit claims to state it once, but the sentences overlap. The 'one call' wording is also ambiguous next to the `[--key <n2> ...]` syntax. Readability only.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "skills/_shared/procedural-candidate-detection.md:114-118"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "engine/skills/procedural_candidate_memorycard_test.go:140",
+        "claim": "The new forbidText check only forbids the phrase 'once for all of them'. It does not guard against other duplicated resolve instructions. The SKILL.md assertion on the failure clause is not matched by a negative check either. Test coverage of the 'state once' claim is thin.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/skills/procedural_candidate_memorycard_test.go:140"
+        ]
+      }
+    ],
+    "evidence": [
+      "Reviewed the full diff of the three changed paths.",
+      "The item 6 failure clause moved ahead of the merge rules, and the wording stays consistent with the test assertions.",
+      "SKILL.md now says 'sorted as strings', matching the shared contract.",
+      "I found no behavioral regression."
+    ]
+  }
+}

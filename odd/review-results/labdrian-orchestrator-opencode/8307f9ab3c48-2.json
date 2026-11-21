@@ -1,0 +1,79 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "f5600a8d93b2c27933215ef412c339fe8de543e3",
+    "head": "8307f9ab3c48e7cd0bdb4803e1923675ae20363e",
+    "diff_sha256": "69063a39a7b3e113370b3f0d78a497e1b851cf27433e52cd737a8ddc1a39e25b",
+    "paths": [
+      "engine/cmd/skills_candidates_cli.go",
+      "engine/cmd/skills_candidates_legacy_test.go",
+      "engine/cmd/skills_deps.go",
+      "engine/skills/app/list_candidates.go",
+      "engine/skills/app/list_candidates_legacy_test.go",
+      "engine/skills/app/list_candidates_test.go",
+      "engine/skills/candidate_legacy_test.go",
+      "engine/skills/candidate_record.go",
+      "engine/skills/candidate_source.go",
+      "engine/skills/deps.go",
+      "engine/skills/memorycardcli/resolver.go",
+      "engine/skills/memorycardcli/resolver_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "f5600a8d93b2c27933215ef412c339fe8de543e3",
+      "head": "8307f9ab3c48e7cd0bdb4803e1923675ae20363e",
+      "diff_sha256": "69063a39a7b3e113370b3f0d78a497e1b851cf27433e52cd737a8ddc1a39e25b"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/cmd/skills_candidates_cli.go",
+        "engine/cmd/skills_candidates_legacy_test.go",
+        "engine/cmd/skills_deps.go",
+        "engine/skills/app/list_candidates.go",
+        "engine/skills/app/list_candidates_legacy_test.go",
+        "engine/skills/app/list_candidates_test.go",
+        "engine/skills/candidate_legacy_test.go",
+        "engine/skills/candidate_record.go",
+        "engine/skills/candidate_source.go",
+        "engine/skills/deps.go",
+        "engine/skills/memorycardcli/resolver.go",
+        "engine/skills/memorycardcli/resolver_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "engine/skills/candidate_record.go:162-203",
+        "claim": "Three layers now exist for one parse: the exported ParseCandidateRecord calls ParseCandidateRecordTranslated with nil, which only forwards to the private parseCandidateRecord. The middle wrapper adds nothing and makes the call chain harder to follow; the exported translated function could hold the body directly.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/skills/candidate_record.go:ParseCandidateRecordTranslated returns parseCandidateRecord(topicKey, content, mapped)"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "engine/skills/app/list_candidates.go:40-55",
+        "claim": "The comment says records are 'read once to learn which numbers to ask about, and read again with the answer'. legacyNumbers re-parses every candidate with ParseCandidateRecord, discarding anomalies, and the loop parses them again. The double parse is only implied, and the inner `var err error` shadows the function-level err, which is easy to misread.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/skills/app/list_candidates.go:legacyNumbers calls ParseCandidateRecord per observation, then the loop calls ParseCandidateRecordTranslated"
+        ]
+      }
+    ],
+    "evidence": [
+      "Reviewed the full diff for the recall and readability lenses. The resolver path, the nil-resolver guard, the sorted distinct numbers and the strict decode of the resolve answer are consistent with the commit's claims.",
+      "No change-caused behavioral defect was found. Other verbs that parse candidate records through ParseCandidateRecord (not visible in this diff) still count ids untranslated, which matches the commit's scope of `skills candidates` only."
+    ]
+  }
+}

@@ -1,0 +1,59 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "646bc13d0de2998c45953d1cff8cb7d34a3ff2f4",
+    "head": "dbbc47c9a0320b422d121261ed971bf0c346adab",
+    "diff_sha256": "f8abb73c087afae252022d3f807ee4e25284baa71ec00ffb2bdb258ce53df731",
+    "paths": [
+      "odd/tasks/labdrian-orchestrator-opencode.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "646bc13d0de2998c45953d1cff8cb7d34a3ff2f4",
+      "head": "dbbc47c9a0320b422d121261ed971bf0c346adab",
+      "diff_sha256": "f8abb73c087afae252022d3f807ee4e25284baa71ec00ffb2bdb258ce53df731"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/labdrian-orchestrator-opencode.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/labdrian-orchestrator-opencode.md:49",
+        "claim": "The T6 row still lists its commits as e001d5ac, 08038624, 14bbfc55 (L42). L43, added in this commit, says the review of T6's last test was fixed in 646bc13d, a T6 fix commit. The row was not updated, so the task row and the log disagree on which commits T6 covers.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/labdrian-orchestrator-opencode.md:49",
+          "odd/tasks/labdrian-orchestrator-opencode.md:438"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/labdrian-orchestrator-opencode.md:438",
+        "claim": "L43 says TestTheEffortCheckReadsTheFrontmatterOnly pins \"ten cases\" but names only eight (body prose, last-line fence, CRLF, indented, quoted, spaced, no opening fence, no closing fence). The count and the list do not match, so a reader cannot tell which two cases are missing.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/labdrian-orchestrator-opencode.md:438"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff changes only the T25b row and appends L43 to the feature document.",
+      "The T25b forecast arithmetic holds: 220+235=455 and 360+250=610.",
+      "L43 cites 646bc13d, which is the base commit of this review; the T6 row's commit list omits it."
+    ]
+  }
+}

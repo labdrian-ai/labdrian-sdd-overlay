@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "5600e5c3da61bd0a2960ff7fab9cb1fbeef69006",
+    "head": "ff7fd1d1813af8bc82d39643ecd9f1755b863dec",
+    "diff_sha256": "a30f7a45a71d4c9e83bb5f2a931e8191c6724741069aa7cbf856cad0daec09be",
+    "paths": [
+      "odd/tasks/labdrian-orchestrator-opencode.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "5600e5c3da61bd0a2960ff7fab9cb1fbeef69006",
+      "head": "ff7fd1d1813af8bc82d39643ecd9f1755b863dec",
+      "diff_sha256": "a30f7a45a71d4c9e83bb5f2a931e8191c6724741069aa7cbf856cad0daec09be"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/labdrian-orchestrator-opencode.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "odd/tasks/labdrian-orchestrator-opencode.md:34",
+        "claim": "The check now runs `rg` over the raw text of settings.json instead of over decoded command values. In raw JSON, a command that spans several lines or contains a control character is stored with escapes such as `\\n`, `\\t` or `\\u0026`. In `...\\ngentle-ai x` the character before `gentle-ai` is `n`, a word character, and the pattern's `(^|[^\\w.-])` prefix does not match it. The same happens with `\\u0026gentle-ai`, where the preceding character is `6`. A real invocation on a later line of a multi-line hook command would therefore be missed, yet the acceptance text says 'nothing in either file runs the gentle-ai binary' and claims the pattern covers every wrapped form. The previous wording searched each command value, which was decoded. The check should either decode JSON first (for example `jq` over the string values) or add the escape sequences to the prefix class.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/labdrian-orchestrator-opencode.md:34 (new Check: run rg over the whole of each file)"
+        ]
+      }
+    ],
+    "evidence": [
+      "Single changed file, a documentation edit to S17's acceptance sentence plus a new L26 log entry.",
+      "The pattern's prefix class `[^\\w.-]` rejects a word-character predecessor, so the `n` of a raw JSON `\\n` escape defeats the match on text like `\\ngentle-ai`.",
+      "The regex does correctly exclude `gentle-ai-overlay`, `~/.gentle-ai/y` and `/opt/gentle-ai/bin`, and it matches `\"gentle-ai x\"` in an args array."
+    ]
+  }
+}

@@ -1,0 +1,109 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "37d8726ab95fa57b7bb1fd9e18bb35173cac7546",
+    "head": "ced4dcfea11d9eb65fa85db58ef2821ed9a3f9eb",
+    "diff_sha256": "75aab2509aa3c7de79a6593ab525b2c55d7bd2112abd34e897026dcf7362c4d4",
+    "paths": [
+      "CHANGELOG.md",
+      "docs/architecture/adr-c23-m6-plan-instructions.md",
+      "engine/cmd/codex_hooks_test.go",
+      "engine/cmd/memory_acceptance_test.go",
+      "engine/cmd/plan_instructions_test.go",
+      "engine/cmd/session_availability_test.go",
+      "engine/projection/availability.go",
+      "engine/projection/availability_test.go",
+      "engine/projection/instructions_test.go",
+      "engine/projection/render.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability",
+    "hunt"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "37d8726ab95fa57b7bb1fd9e18bb35173cac7546",
+      "head": "ced4dcfea11d9eb65fa85db58ef2821ed9a3f9eb",
+      "diff_sha256": "75aab2509aa3c7de79a6593ab525b2c55d7bd2112abd34e897026dcf7362c4d4"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "docs/architecture/adr-c23-m6-plan-instructions.md",
+        "engine/cmd/codex_hooks_test.go",
+        "engine/cmd/memory_acceptance_test.go",
+        "engine/cmd/plan_instructions_test.go",
+        "engine/cmd/session_availability_test.go",
+        "engine/projection/availability.go",
+        "engine/projection/availability_test.go",
+        "engine/projection/instructions_test.go",
+        "engine/projection/render.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "engine/cmd/usage.go:441-443",
+        "severity": "WARNING",
+        "claim": "The user-facing help for the projection hook still says SessionStart adds the line \"Do not read <source>: it is unavailable in this session (<reason>).\" for each source that cannot be read, and gives 'engram stats' as the engram probe. After this change the engram line reads \"- Do not call the Engram tools: Engram is unavailable in this session (<reason>); this does not apply to memorycard.\" (availability.go:48-55). The help text is now wrong for the one source this correction rewords. The shaper's Grep (L180) looked for the literal 'Do not read engram' and missed this generic template. No test pins the help text against degradationLines.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/projection/availability.go:48-55",
+          "engine/cmd/usage.go:441-443"
+        ]
+      },
+      {
+        "id": "F2",
+        "location": "README.md:1389-1390",
+        "severity": "WARNING",
+        "claim": "The README's description of the SessionStart hook (C23 M8) still says the hook adds one line, \"Do not read <source>: it is unavailable in this session (<reason>).\", for each source of the plan it cannot read. For engram the block now gives the 'Do not call the Engram tools ... this does not apply to memorycard.' line, so the README describes output the engine no longer produces for that source. The change touched neither this text nor a check on it.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/projection/availability.go:49-51",
+          "README.md:1389-1390"
+        ]
+      },
+      {
+        "id": "F3",
+        "location": "CHANGELOG.md:17",
+        "severity": "SUGGESTION",
+        "claim": "The T58 item still says 'and no other line changes', then appends 'When the engram program is unavailable ... and the project line names memorycard reads.' The item now contradicts itself: the project line changes for every plan with engram and an identity. The appended sentence also puts the unconditional project-line change under the 'When the engram program is unavailable' clause, so a reader can take it as conditional.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/projection/render.go:359-361"
+        ]
+      },
+      {
+        "id": "F4",
+        "location": "skills/memory-plan/SKILL.md:43-44",
+        "severity": "SUGGESTION",
+        "claim": "The memory-plan skill, which the M6 ADR says must say the same thing as the block, still writes 'Engram reads name the Engram project the block gives'. The block's project line now reads 'Engram and memorycard reads (mem_search, mem_context) name project ...', and the gate checks memorycard mem_search and mem_context with checkEngramProject (gate.go:319). Changing the skill needs the owner's re-approval, so this is a carry and not a defect of the commit.",
+        "evidence_class": "inferential",
+        "causal_disposition": "unknown",
+        "proof_refs": [
+          "engine/projection/render.go:359-361",
+          "engine/projection/gate.go:319"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the whole diff t58b.diff",
+      "Read T58 (line 100) and L180-L181",
+      "Read engine/projection/availability.go whole at head",
+      "Read docs/architecture/adr-c23-m6-plan-instructions.md:40-74 at head",
+      "Grep gate.go: :281-282 and :317-320 confirm memorycard mem_search/mem_context project-checked, mem_get source-only",
+      "Grep outside odd/ for 'Do not read|unavailable in this session|Engram reads': stale templates at engine/cmd/usage.go:441 and README.md:1389",
+      "Read engine/projection/app/session_start_test.go:30-84",
+      "Read skills/memory-plan/SKILL.md:38-47",
+      "Negative checks at instructions_test.go use 'memorycard reads (' and are not vacuous",
+      "Nothing run"
+    ]
+  }
+}

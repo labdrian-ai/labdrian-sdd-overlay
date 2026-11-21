@@ -33,6 +33,8 @@ const (
 	labelProj       = "hooks: projection (SessionStart + UserPromptSubmit + PreToolUse gates + PostToolUse read evidence)"
 	labelApprove    = "guard: skills approve (PreToolUse Bash + file tools)"
 	labelStop       = "hook: Stop (review stop-hook)"
+	labelRefresh    = "hook: UserPromptSubmit (registry refresh)"
+	wantRefreshCost = "the table of skills of the project's registry is not refreshed when a prompt is sent"
 	wantStopAdvice  = "the agent is not asked to review its commits when it stops"
 	labelBuilder    = `hook: PreToolUse matcher="Agent" (builder guard)`
 	wantBuilderCost = "a builder launch is not checked for a task the shaper designed"
@@ -239,7 +241,7 @@ func commandsOf(entry interface{}) string {
 
 func TestACompleteInstallIsHealthyAndReportsEveryCheckInOrder(t *testing.T) {
 	report := complete(t).check()
-	want := []string{labelBinary, labelPrompt, labelAgent, labelSession, labelReceipt, labelShaper, labelProj, labelApprove, labelStop, labelBuilder, labelContract, labelRegistry}
+	want := []string{labelBinary, labelPrompt, labelAgent, labelSession, labelReceipt, labelShaper, labelProj, labelApprove, labelStop, labelBuilder, labelRefresh, labelMainAgent, labelOutputStyle, labelCodegraphPrompt, labelContract, labelRegistry}
 	if got := report.labels(); strings.Join(got, "\n") != strings.Join(want, "\n") {
 		t.Fatalf("checks\n got: %q\nwant: %q", got, want)
 	}
@@ -253,6 +255,7 @@ func TestACompleteInstallIsHealthyAndReportsEveryCheckInOrder(t *testing.T) {
 	wantCheck(t, report.named(t, labelApprove), OK, "installed; "+wantSpeedBump+"; "+restart+" if this session started earlier")
 	wantCheck(t, report.named(t, labelStop), OK, "installed; "+restart+" if this session started earlier")
 	wantCheck(t, report.named(t, labelBuilder), OK, "installed; "+wantSpeedBump+"; "+restart+" if this session started earlier")
+	wantCheck(t, report.named(t, labelRefresh), OK, "installed; "+restart+" if this session started earlier")
 	wantCheck(t, report.named(t, labelRegistry), OK, "not present (project may not use the overlay)")
 	if report.Outcome() != Healthy {
 		t.Errorf("Outcome = %v, want Healthy", report.Outcome())
@@ -368,7 +371,7 @@ func TestSettingsThatCannotBeReadFailEveryCheckThatLooksAtThem(t *testing.T) {
 	w.settings.errs[settingsPath] = errors.New("invalid JSON: boom")
 	report := w.check()
 	note := "cannot read " + settingsPath + ": invalid JSON: boom"
-	for _, label := range []string{labelPrompt, labelAgent, labelSession, labelReceipt, labelShaper, labelProj, labelApprove, labelStop, labelBuilder} {
+	for _, label := range []string{labelPrompt, labelAgent, labelSession, labelReceipt, labelShaper, labelProj, labelApprove, labelStop, labelBuilder, labelRefresh} {
 		wantCheck(t, report.named(t, label), Fail, note)
 	}
 	wantCheck(t, report.named(t, labelBinary), OK, "")
@@ -391,6 +394,7 @@ func TestSettingsWithNothingInThemFailTheTwoBaseHooksAndWarnOfTheOthers(t *testi
 	wantCheck(t, report.named(t, labelApprove), Warn, absent+"; the agent can run skills approve unguarded ("+wantSpeedBump+"); "+wantRemediation+"; "+restart)
 	wantCheck(t, report.named(t, labelStop), Warn, absent+"; "+wantStopAdvice+"; "+wantRemediation+"; "+restart)
 	wantCheck(t, report.named(t, labelBuilder), Warn, absent+"; "+wantBuilderCost+" ("+wantSpeedBump+"); "+wantRemediation+"; "+restart)
+	wantCheck(t, report.named(t, labelRefresh), Warn, absent+"; "+wantRefreshCost+"; "+wantRemediation+"; "+restart)
 	if report.Outcome() != Failed {
 		t.Errorf("Outcome = %v, want Failed", report.Outcome())
 	}
@@ -657,6 +661,51 @@ func TestTheReviewStopHookNamesWhatIsMissingOrDriftedAndAsksForARestart(t *testi
 			}
 			wantCheck(t, w.check().named(t, labelStop), Warn,
 				"missing or drifted: "+strings.Join(parts, ", ")+"; "+wantStopAdvice+"; "+wantRemediation+"; "+restart)
+		})
+	}
+}
+
+func TestTheRegistryRefreshHookNamesWhatIsMissingOrDriftedAndAsksForARestart(t *testing.T) {
+	refreshEntries := func(root map[string]interface{}) []interface{} {
+		var out []interface{}
+		for _, e := range root["hooks"].(map[string]interface{})["UserPromptSubmit"].([]interface{}) {
+			if strings.Contains(commandsOf(e), settings.LabdrianRegistryRefreshIdentity) {
+				out = append(out, e)
+			}
+		}
+		return out
+	}
+	for name, strip := range map[string]func(root map[string]interface{}){
+		"missing": func(root map[string]interface{}) {
+			hooks := root["hooks"].(map[string]interface{})
+			var kept []interface{}
+			for _, e := range hooks["UserPromptSubmit"].([]interface{}) {
+				if !strings.Contains(commandsOf(e), settings.LabdrianRegistryRefreshIdentity) {
+					kept = append(kept, e)
+				}
+			}
+			hooks["UserPromptSubmit"] = kept
+		},
+		"drifted: the command was edited": func(root map[string]interface{}) {
+			for _, e := range refreshEntries(root) {
+				e.(map[string]interface{})["hooks"].([]interface{})[0].(map[string]interface{})["command"] = commandsOf(e) + " # edited"
+			}
+		},
+		"the refresh of gentle-ai is not ours": func(root map[string]interface{}) {
+			for _, e := range refreshEntries(root) {
+				e.(map[string]interface{})["hooks"].([]interface{})[0].(map[string]interface{})["command"] = "gentle-ai skill-" + settings.LabdrianRegistryRefreshIdentity + " --cwd . || true"
+			}
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			w := complete(t)
+			w.editSettings(t, strip)
+			parts := settings.MissingRegistryRefreshHookParts(w.settings.docs[settingsPath].Root(), binaryPath)
+			if len(parts) == 0 {
+				t.Fatal("the settings are missing nothing; the case proves nothing")
+			}
+			wantCheck(t, w.check().named(t, labelRefresh), Warn,
+				"missing or drifted: "+strings.Join(parts, ", ")+"; "+wantRefreshCost+"; "+wantRemediation+"; "+restart)
 		})
 	}
 }

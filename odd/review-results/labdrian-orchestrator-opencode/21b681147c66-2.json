@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "dbbc47c9a0320b422d121261ed971bf0c346adab",
+    "head": "21b681147c669cc525d30073fe4e89c53e17351a",
+    "diff_sha256": "2f1e6cb01d9b04bd25f627505486b405cdc1713a34c1b44d69eb795db39c9549",
+    "paths": [
+      "odd/tasks/labdrian-orchestrator-opencode.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "dbbc47c9a0320b422d121261ed971bf0c346adab",
+      "head": "21b681147c669cc525d30073fe4e89c53e17351a",
+      "diff_sha256": "2f1e6cb01d9b04bd25f627505486b405cdc1713a34c1b44d69eb795db39c9549"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/labdrian-orchestrator-opencode.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/labdrian-orchestrator-opencode.md:439-441",
+        "claim": "L44 says the row lists the four commits and that 646bc13d fixes 14bbfc55's findings, but its answer to F2 asserts that the two unnamed cases are 'none' and 'crlf field' without any way to check them from this diff; the claim is unverifiable here. Also, L44 is not self-referential-safe: it says 'fixed in this entry's commit' without naming a sha, unlike L43 which names commits, so a later reader cannot map the entry to a commit.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/labdrian-orchestrator-opencode.md:439-441"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff only edits the T6 row commit list (adds 646bc13d, L43 reference) and appends log entry L44; no code changed.",
+      "The row edit matches the L44 text, so the stated fix is consistent with the change.",
+      "The 'none' and 'crlf field' case names cannot be verified from the diff."
+    ]
+  }
+}

@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "4d142c012aed3590a46b9cb636cf7b0365302ad4",
+    "head": "bf421c581e83c4b3a491cb3f7e3704022d66b2e9",
+    "diff_sha256": "41d9c13baa65b94703b7ee7010eb31ebe88e001ffd16b8ecd34f2404c3b38690",
+    "paths": [
+      "odd/tasks/labdrian-orchestrator-opencode.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "4d142c012aed3590a46b9cb636cf7b0365302ad4",
+      "head": "bf421c581e83c4b3a491cb3f7e3704022d66b2e9",
+      "diff_sha256": "41d9c13baa65b94703b7ee7010eb31ebe88e001ffd16b8ecd34f2404c3b38690"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/labdrian-orchestrator-opencode.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/labdrian-orchestrator-opencode.md:627",
+        "claim": "The L71 entry records the owner's removal as a decision but states the removal as already done only implicitly. The commit message says the owner removed the blocks, while the entry says they 'leave' and that a shaper re-entry will add the task, so the log reads as a future plan and not a record of a completed removal. A reader cannot tell from L71 whether the blocks are already gone. The entry also references 'T26' and 'T22' and a new unnumbered task without updating the Tasks section, so the log and the Tasks list disagree until the re-entry happens.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/labdrian-orchestrator-opencode.md:627"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff adds a single log line, L71, to the feature document and changes nothing else.",
+      "The commit subject says it records the owner's removal, while the L71 text describes the removal as a future task pending a shaper re-entry.",
+      "No Tasks or Specs section is updated, so the new task L71 promises does not yet exist in the document."
+    ]
+  }
+}

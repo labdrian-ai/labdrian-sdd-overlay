@@ -1,0 +1,69 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "4d34b33684b544382ffe2101849bf9d7888f87fa",
+    "head": "bd6a9526b4ae0004272207bbce467e1d2022431b",
+    "diff_sha256": "3bb75e47d73196a0b2d4d0b535bf10dc62a078e12d9b33f4e2af4d1b03e4bdc7",
+    "paths": [
+      "CHANGELOG.md",
+      "README.md",
+      "engine/cmd/codex_source_test.go",
+      "engine/cmd/projection_hook.go",
+      "engine/cmd/usage.go",
+      "engine/hookwire/source.go",
+      "engine/hookwire/source_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "4d34b33684b544382ffe2101849bf9d7888f87fa",
+      "head": "bd6a9526b4ae0004272207bbce467e1d2022431b",
+      "diff_sha256": "3bb75e47d73196a0b2d4d0b535bf10dc62a078e12d9b33f4e2af4d1b03e4bdc7"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "README.md",
+        "engine/cmd/codex_source_test.go",
+        "engine/cmd/projection_hook.go",
+        "engine/cmd/usage.go",
+        "engine/hookwire/source.go",
+        "engine/hookwire/source_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "engine/hookwire/source.go:50-58",
+        "claim": "The opencode mapper rewrites any name containing an underscore into mcp__<server>__<tool>, with only one built-in excluded by name. Built-in OpenCode tools with underscores other than experimental_image_generate (e.g. a future todo_write, web_fetch style name) would be remapped to a fake MCP name such as mcp__todo__write. A policy keyed on mcp__ prefixes could then misfire on a built-in, or the gate could treat it as an unknown MCP server. Likewise a server whose name contains an underscore is split at the wrong place (memory_card_search becomes mcp__memory__card_search), so policies for that server silently never match, which is a fail-open for a deny gate. The behavior is documented but not enforced or diagnosed.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/hookwire/source.go:50-58"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "engine/hookwire/source_test.go:50-62",
+        "claim": "Tests do not cover a server name with an underscore or other underscore-containing built-ins, so the first-underscore split limitation and the single-exclusion list are untested and the misclassification risk in F1 is not pinned.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/hookwire/source_test.go:50-62"
+        ]
+      }
+    ],
+    "evidence": [
+      "Reviewed hookwire/source.go adaptOpencode: shell->Bash, patch->Edit, mcp__ passthrough, first-underscore split for all other names with a single hard-coded built-in exclusion.",
+      "claude and codex branches are unchanged and their tests confirm opencode names stay opaque to them.",
+      "Usage, README, help-text and error-message changes are consistent with the tests updated in codex_source_test.go."
+    ]
+  }
+}

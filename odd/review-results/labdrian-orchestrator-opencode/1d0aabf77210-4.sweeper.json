@@ -1,0 +1,15 @@
+{
+  "kind": "sweeper",
+  "base": "b35a55b868da5d3efcc422386433f52ec6c0c29e",
+  "head": "1d0aabf772101c18bc45330574a0420340671db4",
+  "diff_sha256": "d276cef4df0b99adf408b8cb3b6aae791e1408a54a5d9aac8d0770d7d569538f",
+  "sweep": "1d0aabf77210-1.sweep.json",
+  "commit": null,
+  "candidates": [
+    {
+      "candidate": "T3:  M odd/tasks/labdrian-orchestrator-opencode.md",
+      "disposition": "live",
+      "evidence": "Parent logbook, committed with the review records at delivery."
+    }
+  ]
+}

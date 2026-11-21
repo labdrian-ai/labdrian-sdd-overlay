@@ -1,0 +1,92 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "a8b3dc60ccb1c9e51b3378c8f844ed659aa5814e",
+    "head": "3531b9546753831c4725b5454502c2a0fc7577ee",
+    "diff_sha256": "a379efc93663172add8bcbe81a94a6391a3eb115988c10fcbe610d72de06d446",
+    "paths": [
+      "CHANGELOG.md",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-context-lists-quotes-and-case.golden",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-minimalism-context-metadata-accepted-today.golden",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-phases-quoted-items-accepted-today.golden",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-reads-the-contracts-of-the-overlay.golden",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-without-the-oo-contract.golden",
+      "engine/cmd/testdata/runtime-golden/runtime-opencode-and-pi-with-an-overlay.golden",
+      "engine/gate/skillpaths_listed_test.go",
+      "engine/gate/skillpaths_test.go",
+      "engine/runtime/labdrian-runtime-parity-plugin.mjs",
+      "engine/runtime/opencode_bridge_skills_test.go",
+      "engine/runtime/opencode_plugin.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability",
+    "hunt"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "a8b3dc60ccb1c9e51b3378c8f844ed659aa5814e",
+      "head": "3531b9546753831c4725b5454502c2a0fc7577ee",
+      "diff_sha256": "a379efc93663172add8bcbe81a94a6391a3eb115988c10fcbe610d72de06d446"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-context-lists-quotes-and-case.golden",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-minimalism-context-metadata-accepted-today.golden",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-phases-quoted-items-accepted-today.golden",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-reads-the-contracts-of-the-overlay.golden",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-without-the-oo-contract.golden",
+        "engine/cmd/testdata/runtime-golden/runtime-opencode-and-pi-with-an-overlay.golden",
+        "engine/gate/skillpaths_listed_test.go",
+        "engine/gate/skillpaths_test.go",
+        "engine/runtime/labdrian-runtime-parity-plugin.mjs",
+        "engine/runtime/opencode_bridge_skills_test.go",
+        "engine/runtime/opencode_plugin.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "engine/runtime/labdrian-runtime-parity-plugin.mjs:431-433",
+        "severity": "WARNING",
+        "claim": "Every exit 1 gets the stale-engine diagnosis, including failures that have nothing to do with engine age. roles_skill_paths.go:56-57, :75-78 and :89-91 also exit 1 when the config's skills_root no longer exists or is not a directory, when stdin cannot be read and when stdout cannot be written. In each of those cases the denial says that the engine \"does not accept this plugin's call, as an engine older than the plugin does\" and tells the user to rebuild the engine, which does not fix a moved or deleted skills directory or an I/O error. The new test pins this wrong attribution for the skills-root case (opencode_bridge_skills_test.go:162 requires olderEngineRemedy for `--skills-root <dir> is not a directory`). L175 chose exit-code classification on purpose so that it also catches --skills-root usage errors, so the classification itself follows the design. What fails is the wording: the cause it names is not the one the engine reported. Fix the sentence so it does not claim an older engine, for example \"the engine refused this plugin's call (a usage error); if the engine is older than the plugin ...\".",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/runtime/labdrian-runtime-parity-plugin.mjs:431-433",
+          "engine/cmd/roles_skill_paths.go:56-57",
+          "engine/cmd/roles_skill_paths.go:75-78",
+          "engine/cmd/roles_skill_paths.go:89-91",
+          "engine/runtime/opencode_bridge_skills_test.go:160-182"
+        ]
+      },
+      {
+        "id": "F2",
+        "location": "engine/runtime/opencode_bridge_skills_test.go:137-148",
+        "severity": "SUGGESTION",
+        "claim": "No test checks that the remedy is absent from a denial that has no exit code. The missing-engine, timeout and empty-answer cases check only the message prefix. If the condition at plugin :431 were changed to `reply.code !== SKILL_PATHS_REFUSED_EXIT`, those three failures (code undefined) would wrongly carry the stale-engine remedy and every test would still pass. Only the exit-2 test (:191-199) checks an exact message. Add an exact-message or must-not-contain assertion for the code-less failures, and a case for another numeric exit (for example 3) or a signal.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/runtime/opencode_bridge_skills_test.go:137-148",
+          "engine/runtime/labdrian-runtime-parity-plugin.mjs:427-435"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the whole diff t60c.diff",
+      "Read L175 and L176 of the feature document",
+      "Read plugin :190-460 at head: runEngine returns code only for a numeric exit; skillPathsRefusal passes the line through only on exit 2 with the verb's prefix and adds the remedy on exit 1; --agent always handed with no retry, matching L175",
+      "Read engine/cmd/roles_skill_paths.go whole: exit 2 only for a refused rewrite; exit 1 for usage errors, a skills-root that is not a directory, and stdin and stdout I/O failures",
+      "Dispatcher unknown-verb exits are 1 (memory.go:56-57, review.go:97-98, main_test.go:1120-1131)",
+      "Read engine/gate/skillpaths_listed_test.go whole and skillpaths_test.go:80-135: shared refusalCases table holds all eight cases",
+      "Read engine/runtime/opencode_bridge_skills_test.go:90-200",
+      "Grep: no runtime-parity-18 remains outside odd/; askEngine reads only failure and hung; the remedy wording matches README.md:1215 and routing_pins.golden:317",
+      "Nothing was run"
+    ]
+  }
+}

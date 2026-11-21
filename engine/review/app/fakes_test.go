@@ -59,6 +59,7 @@ type fakeGit struct {
 	commitOf      map[string]string              // the commit Commit answers for a revision that is a key, before its own table
 	worktrees     []review.Worktree              // what Worktrees answers
 	merged        []string                       // what MergedBranches answers
+	remotes       []string                       // what Remotes answers
 	ancestors     map[string]bool                // whether IsAncestor says a head is an ancestor; false for a head that is not a key
 	worktree      app.WorktreeState
 	worktreeLater []worktreeAnswer
@@ -320,6 +321,14 @@ func (g *fakeGit) IsAncestor(repo app.Repository, a, b string) (bool, error) {
 		return false, err
 	}
 	return g.ancestors[a], nil
+}
+
+func (g *fakeGit) Remotes(repo app.Repository) ([]string, error) {
+	g.record("Remotes")
+	if err := g.fail["Remotes"]; err != nil {
+		return nil, err
+	}
+	return g.remotes, nil
 }
 
 func (g *fakeGit) Status(repo app.Repository) ([]string, error) {

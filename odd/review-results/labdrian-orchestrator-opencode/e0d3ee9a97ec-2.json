@@ -1,0 +1,57 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "f0b0eb115e31b921dd2fa71dd019660441c086b1",
+    "head": "e0d3ee9a97ec16809b2864f6b943e130d5a51514",
+    "diff_sha256": "daae053ae473ed05958758f38827a1209ede302c3e5cebcffd34f2e3956399db",
+    "paths": [
+      "odd/tasks/labdrian-orchestrator-opencode.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "f0b0eb115e31b921dd2fa71dd019660441c086b1",
+      "head": "e0d3ee9a97ec16809b2864f6b943e130d5a51514",
+      "diff_sha256": "daae053ae473ed05958758f38827a1209ede302c3e5cebcffd34f2e3956399db"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/labdrian-orchestrator-opencode.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "odd/tasks/labdrian-orchestrator-opencode.md:34",
+        "claim": "The S17 check now emits object keys, and the text says enabledPlugins keys such as `engram@Gentleman-Programming/engram` are searched. The rg pattern only matches the word `gentle-ai`. That key contains `Gentleman-Programming`, not `gentle-ai`, so the key never matches. Adding keys to the jq output does not make the check catch the plugin source it names. Only an actual `gentle-ai` key would match. Detecting the plugin source needs a separate pattern, for example `Gentleman-Programming/engram`. The sentence implies a coverage the check does not give.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/labdrian-orchestrator-opencode.md:34"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/labdrian-orchestrator-opencode.md:375",
+        "claim": "L31 says the fix was verified because jq 'printed both the key and the decoded command'. That only shows jq output. It does not show that the rg pattern flags the `Gentleman-Programming/engram` key. The verification does not test the end-to-end check, and the claim is misleading for the key case.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/labdrian-orchestrator-opencode.md:375"
+        ]
+      }
+    ],
+    "evidence": [
+      "The S17 pattern `(^|[^\\w.-])gentle-ai([^\\w/-]|$)` requires the literal text `gentle-ai`; `Gentleman-Programming` does not contain it.",
+      "The S2 rewording and the L31 entry are documentation-only edits with no other defects found."
+    ]
+  }
+}

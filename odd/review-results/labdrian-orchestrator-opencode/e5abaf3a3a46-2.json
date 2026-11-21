@@ -1,0 +1,33 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "ca99713030c505f9382db75a0291d9447955a826",
+    "head": "e5abaf3a3a469e607504a72ddaaddec7b7b797fd",
+    "diff_sha256": "5b41e9e87d0ac95d15504a39d6b1a574f397e0d7c31b045b25b818846fb183e1",
+    "paths": [
+      "engine/cmd/agentgen_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "ca99713030c505f9382db75a0291d9447955a826",
+      "head": "e5abaf3a3a469e607504a72ddaaddec7b7b797fd",
+      "diff_sha256": "5b41e9e87d0ac95d15504a39d6b1a574f397e0d7c31b045b25b818846fb183e1"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/cmd/agentgen_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The diff only adds a test helper step copying skills/role-chain/references/models.md into the temp root; paths are relative to the test package directory (engine/cmd -> ../../), consistent with the existing role-source copy. Errors are handled with t.Fatalf. No defect found that this change introduces."
+    ]
+  }
+}

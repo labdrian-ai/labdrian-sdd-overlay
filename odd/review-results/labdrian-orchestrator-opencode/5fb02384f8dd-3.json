@@ -1,0 +1,46 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "368afea25facf89a2b6194338d88e48e2d105a0b",
+    "head": "5fb02384f8dde106079115f2f8e5e96f06287016",
+    "diff_sha256": "4747361aecf488704dd651cf24ef7df690359905b64c5b8e024b5202bc534824",
+    "paths": [
+      "odd/tasks/labdrian-orchestrator-opencode.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "368afea25facf89a2b6194338d88e48e2d105a0b",
+      "head": "5fb02384f8dde106079115f2f8e5e96f06287016",
+      "diff_sha256": "4747361aecf488704dd651cf24ef7df690359905b64c5b8e024b5202bc534824"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/labdrian-orchestrator-opencode.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/labdrian-orchestrator-opencode.md:48",
+        "claim": "The T25c commit field records the range as `259cb77..PR #29 head` and never names the head sha. The record is not reproducible from the document. L47 does list the individual commits (259cb77, 4f8b1a0, d57c2be), so the range could be written with the real end sha. T25a's field, by contrast, gives a concrete range (b3cb5ce..ec00719).",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/labdrian-orchestrator-opencode.md:48"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff changes only a docs/task-tracking file: it ticks T25a and T25c and appends log entry L47.",
+      "L47 is consistent with the tick lines on PR numbers and the merge commit 0f273c8.",
+      "The only imprecision found is the unresolved range endpoint in T25c's commit field."
+    ]
+  }
+}

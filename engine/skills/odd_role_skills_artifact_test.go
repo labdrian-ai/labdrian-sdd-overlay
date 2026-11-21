@@ -8,6 +8,7 @@ package skills
 // role_agents_artifact_test.go.
 
 import (
+	"fmt"
 	"reflect"
 	"strings"
 	"testing"
@@ -88,8 +89,34 @@ func TestOddRoleSkillsAreNamedForTheirDirectoryAndOpenTheirDescriptionWithTheTri
 	}
 }
 
-// Both skills are within the lint budget (the hard and the recommended bounds of the body): no hard
-// error and no warning, so that a role agent loads a short file.
+// oddFeatureDocBodyBound is the body bound of odd-feature-doc alone, in estimated tokens. The body is
+// all duties and formats: every reword that saved bytes lost a rule (L49/L50 rounds of odd/tasks/
+// labdrian-orchestrator-opencode.md), so it cannot stay at the 700 the linter recommends. 700 is the
+// linter's recommended warning (`body-recommended`) and 1000 its hard error (engine/skills/lint.go:42-44);
+// this skill takes 750, still under the hard error. The warning alone blocks nothing outside the tests
+// (skills/app/lint.go:23-31: warnings are advisory), so `skills lint` still exits 0 above 700.
+const oddFeatureDocBodyBound = 750
+
+// oddRoleSkillBodyBound is the body bound of an odd role skill: the linter's recommended 700, except
+// odd-feature-doc's.
+func oddRoleSkillBodyBound(name string) int {
+	if name == "odd-feature-doc" {
+		return oddFeatureDocBodyBound
+	}
+	return BodyRecommendedTokens
+}
+
+// isRecommendedTokenWarning reports whether w is the `body-recommended` finding about the token count
+// of the body, and no other finding of that rule.
+func isRecommendedTokenWarning(w Warning) bool {
+	return w.Rule == "body-recommended" &&
+		strings.HasPrefix(w.Msg, "body is an estimated ") &&
+		strings.HasSuffix(w.Msg, fmt.Sprintf(" tokens, exceeds the recommended budget of %d", BodyRecommendedTokens))
+}
+
+// Each skill is within its lint budget: no hard error, no warning other than the body-recommended one
+// of the skill whose bound is raised, and a body within oddRoleSkillBodyBound, so that a role agent
+// loads a short file.
 func TestOddRoleSkillsAreWithinTheLintBudget(t *testing.T) {
 	for _, name := range oddRoleSkills {
 		t.Run(name, func(t *testing.T) {
@@ -99,10 +126,13 @@ func TestOddRoleSkillsAreWithinTheLintBudget(t *testing.T) {
 				t.Errorf("hard lint error: %v", err)
 			}
 			for _, w := range warnings {
+				if isRecommendedTokenWarning(w) && oddRoleSkillBodyBound(name) > BodyRecommendedTokens {
+					continue
+				}
 				t.Errorf("lint warning [%s]: %s", w.Rule, w.Msg)
 			}
-			if tokens := EstimateBodyTokens(body); tokens > BodyRecommendedTokens {
-				t.Errorf("the body is an estimated %d tokens, want at most %d", tokens, BodyRecommendedTokens)
+			if tokens, bound := EstimateBodyTokens(body), oddRoleSkillBodyBound(name); tokens > bound {
+				t.Errorf("the body is an estimated %d tokens, want at most %d", tokens, bound)
 			}
 		})
 	}
@@ -137,10 +167,10 @@ func TestOddFeatureDocSkillGivesTheFormatOfTheDocument(t *testing.T) {
 	assertRules(t, "odd-feature-doc", "Hard Rules", under["Hard Rules"], []oddRule{
 		{"reads the document up to the Log before acting", []string{"Read the document up to `## Log` before acting", "report which `S#` you covered"}},
 		{"has four parts in order and no other", []string{"Four parts, in this order and no other: a header, `## Specs`, `## Tasks`, `## Log`."}},
-		{"has a header of the objective, the branch, the strategy and the runner", []string{"Header, two or three lines: the objective, the branch, the delivery strategy, the test runner."}},
+		{"has a header of the objective, the branch, the strategy and the runner", []string{"Header, two or three lines (contents: `references/format.md`)."}},
 		{"quotes the user in each spec", []string{"quoted verbatim, in the user's language", "Never summarize a quote", "never add a requirement the user did not ask for", "mark an assumption as an assumption"}},
-		{"has one line per task with its S#, route and commit", []string{"`- [ ] T1 — S1-S2 — inline — what it delivers — commit: -`", "The box is the status", "`inline` or `delegated`", "`-` until the task is committed"}},
-		{"marks a task the shaper designed with one segment before the commit (own-rdd S14)", []string{"`shaped: L<n>`", "just before `commit:`", "`- **L<n>** (<date>, shaper)`", "only the shaper writes it", "a task nobody designed has none"}},
+		{"has one line per task with its S#, route and commit", []string{"One line per task", "commit `-` until the task is committed", "`references/format.md`"}},
+		{"marks a task the shaper designed with one segment before the commit (own-rdd S14)", []string{"`shaped: L<n>`", "only while the Log has exactly one such entry", "only the shaper writes it", "a task nobody designed has none"}},
 		{"removes the mark when a task is reopened (own-rdd S14, D4)", []string{"Reopening a task removes its `shaped: L<n>` segment", "only the shaper puts it back"}},
 		{"keeps the Log append-only with L1 the request", []string{"The Log is append-only", "`L1` is the user's request, verbatim", "`- **L<n>** (<date>, <who>): ...`", "Never edit, reorder or delete an entry"}},
 		{"treats a requirement change as a new entry, one spec and one task", []string{"A requirement change: append the user's words to the Log, rewrite only the affected `S#`, reopen only its task."}},
@@ -171,7 +201,7 @@ func TestOddFeatureDocSkillGivesEachRoleItsPart(t *testing.T) {
 		roles = append(roles, row[0])
 		byRole[row[0]] = row
 	}
-	if want := []string{"shaper", "builder", "delivery"}; !reflect.DeepEqual(roles, want) {
+	if want := []string{"shaper", "builder", "delivery", "foreman"}; !reflect.DeepEqual(roles, want) {
 		t.Fatalf("the roles of the table = %v, want %v", roles, want)
 	}
 	for _, part := range []struct {
@@ -179,10 +209,10 @@ func TestOddFeatureDocSkillGivesEachRoleItsPart(t *testing.T) {
 		writes, never []string
 	}{
 		{"shaper",
-			[]string{"the header", "`## Specs`", "`## Tasks` with every box open", "`L1`, the request exactly as the prompt quotes it", "`shaped: L<n>` on each task it designed", "the Log entry `(<date>, shaper)` that holds that design"},
+			[]string{"the header", "`## Specs`", "`## Tasks` with every box open", "`L1`, the request exactly as the prompt quotes it", "`shaped: L<n>` on each task it designed", "the Log entry `(<date>, shaper)` holding its design"},
 			[]string{"check a box", "write code", "mark a task it did not design"}},
 		{"builder",
-			[]string{"`[x]` and the commit on each finished task", "one Log entry", "the `S#` covered", "the commands run with their exact results", "the `test-first` table"},
+			[]string{"unless its brief keeps it off the document", "`[x]` and the commit on each finished task", "one Log entry", "the `S#` covered", "the commands run with their exact results", "the `test-first` table"},
 			[]string{"edit a spec", "an earlier entry", "write or change a `shaped:` segment"}},
 		{"delivery",
 			[]string{"one final Log entry with the state at close", "unfinished tasks and missing artifacts named as unfinished"},
@@ -276,7 +306,12 @@ func TestOddRoleSkillsAreDeployedByTheSkillRoutesToClaudeCodexAndPi(t *testing.T
 				found = append(found, row)
 			}
 		}
-		if want := []ManifestRow{{Path: path, Tag: "custom"}}; !reflect.DeepEqual(found, want) {
+		want := []ManifestRow{{Path: path, Tag: "custom"}}
+		if name == "odd-feature-doc" {
+			// the worked examples moved out of the body live in references/format.md (T18, review of b2575e8d)
+			want = append(want, ManifestRow{Path: name + "/references/format.md", Tag: "custom"})
+		}
+		if !reflect.DeepEqual(found, want) {
 			t.Errorf("rows of %s/ = %+v, want exactly %+v", name, found, want)
 			continue
 		}

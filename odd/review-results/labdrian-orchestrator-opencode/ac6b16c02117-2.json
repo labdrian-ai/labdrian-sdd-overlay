@@ -1,0 +1,88 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "64b46bbed6d841eb26c8bd4aaee3ffad9f5161ea",
+    "head": "ac6b16c021171b78c9c699c7f4818723a97f7d1f",
+    "diff_sha256": "4a194d5a143985915111f7d1ac1ccc1811e994ce34b6cb518ab014d158a66059",
+    "paths": [
+      "CHANGELOG.md",
+      "README.md",
+      "engine/agentgen/opencode.go",
+      "engine/agentgen/opencode_server_rules_test.go",
+      "engine/agentgen/opencode_test.go",
+      "engine/runtime/opencode_server_rules_test.go",
+      "opencode/agents/builder.md",
+      "opencode/agents/delivery.md",
+      "opencode/agents/foreman.md",
+      "opencode/agents/polisher.md",
+      "opencode/agents/prototyper.md",
+      "opencode/agents/reviewer.md",
+      "opencode/agents/shaper.md",
+      "opencode/agents/sweeper.md",
+      "opencode/agents/verifier.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "64b46bbed6d841eb26c8bd4aaee3ffad9f5161ea",
+      "head": "ac6b16c021171b78c9c699c7f4818723a97f7d1f",
+      "diff_sha256": "4a194d5a143985915111f7d1ac1ccc1811e994ce34b6cb518ab014d158a66059"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "README.md",
+        "engine/agentgen/opencode.go",
+        "engine/agentgen/opencode_server_rules_test.go",
+        "engine/agentgen/opencode_test.go",
+        "engine/runtime/opencode_server_rules_test.go",
+        "opencode/agents/builder.md",
+        "opencode/agents/delivery.md",
+        "opencode/agents/foreman.md",
+        "opencode/agents/polisher.md",
+        "opencode/agents/prototyper.md",
+        "opencode/agents/reviewer.md",
+        "opencode/agents/shaper.md",
+        "opencode/agents/sweeper.md",
+        "opencode/agents/verifier.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "engine/agentgen/opencode.go:80-89",
+        "claim": "The server rules are written as '<server>_*' deny plus '<server>_<tool>' allows, but the diff gives no evidence that this pattern also refuses calls made through `execute` (kept by the verifier and every MCP-holding role). It also gives none that 'longterm-mem_*' matches a server whose name has a hyphen. The commit says both are deferred to T17. If either fails, the permissions guard that the commit's risk reason names as 'the only guard' does nothing for those cases. The tests check only the generated text, not OpenCode's behaviour.",
+        "evidence_class": "inferential",
+        "causal_disposition": "unknown",
+        "proof_refs": [
+          "engine/agentgen/opencode.go:80-89",
+          "CHANGELOG.md:22"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "engine/agentgen/opencode_server_rules_test.go:14-14",
+        "claim": "The test file redefines openCodeServerNames, a copy of the production openCodeMCPServers list. The two lists can drift apart, and the table and order tests would still pass against the stale copy. Only the runtime test ties the production list to opencode.json.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/agentgen/opencode_server_rules_test.go:14",
+          "engine/agentgen/opencode.go:48"
+        ]
+      }
+    ],
+    "evidence": [
+      "Rule generation in opencode.go: the built-in denies come first, then for each server a deny on <server>_* followed by the allows from CutPrefix on the Claude tool list. The order matches the generated files and the table test rows.",
+      "The generated agent files match what the generator would emit for each role's list: the verifier gets mem_get only, the reviewer gets no allows, and the prototyper gets no codegraph allow.",
+      "The denied() helper change keeps the old built-in deny assertions by skipping deny rules whose action ends in '_*'."
+    ]
+  }
+}

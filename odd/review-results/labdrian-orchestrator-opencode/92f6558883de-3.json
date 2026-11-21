@@ -1,0 +1,101 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "9091d9ce8978010a5f7120ee8b2b88b6dfb8a50c",
+    "head": "92f6558883de0159c7ec7cb9dab3431c5ef34584",
+    "diff_sha256": "e67291cc5071f582543bc2a12a21eb794144b5055a3d1cf60407d385350ad3ec",
+    "paths": [
+      "CHANGELOG.md",
+      "engine/capability/declarations.go",
+      "engine/cmd/main_agent_files_test.go",
+      "engine/cmd/settings_hooks.go",
+      "engine/runtime/claude.go",
+      "engine/runtime/claude_main_agent_test.go",
+      "engine/runtime/claude_ports.go",
+      "engine/settings/main_agent.go",
+      "engine/settings/settingsfile/installer.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "9091d9ce8978010a5f7120ee8b2b88b6dfb8a50c",
+      "head": "92f6558883de0159c7ec7cb9dab3431c5ef34584",
+      "diff_sha256": "e67291cc5071f582543bc2a12a21eb794144b5055a3d1cf60407d385350ad3ec"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "engine/capability/declarations.go",
+        "engine/cmd/main_agent_files_test.go",
+        "engine/cmd/settings_hooks.go",
+        "engine/runtime/claude.go",
+        "engine/runtime/claude_main_agent_test.go",
+        "engine/runtime/claude_ports.go",
+        "engine/settings/main_agent.go",
+        "engine/settings/settingsfile/installer.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "engine/runtime/claude.go:109-127",
+        "claim": "Status now returns partial whenever the \"agent\" key is missing. A user who installed hooks before this change (hooks owned, no agent key) or whose install failed to write the key now sees status partial; the 'sync check' (SyncCheck calls Status) also turns partial for previously healthy installs. The message tells them to run install-hooks, so this is the intended behavior, but SyncCheck consumers that treat non-supported as failure regress on previously valid installs.",
+        "evidence_class": "inferential",
+        "causal_disposition": "behavior-activated",
+        "proof_refs": [
+          "engine/runtime/claude.go:101-103",
+          "engine/runtime/claude.go:109-127",
+          "engine/runtime/claude.go:37"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "WARNING",
+        "location": "engine/runtime/claude.go:112-120",
+        "claim": "In mainAgentStatus, an error from InspectMainAgent is reported as CapabilityUnsupported, while the hooks Inspect error path for the same unreadable/malformed file is reported differently (the existing test pins malformed settings as a failure of status). Inconsistent status class for the same cause; also InspectMainAgent re-reads and re-parses the file a second time, so a file changed between the two reads yields a mixed verdict.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/runtime/claude.go:112-120",
+          "engine/settings/settingsfile/installer.go:63-72"
+        ]
+      },
+      {
+        "id": "F3",
+        "severity": "SUGGESTION",
+        "location": "engine/runtime/claude.go:134-143",
+        "claim": "foreignAgentNotice is built by re-inspecting the file after Install/Update; an inspect error is silently swallowed and the notice dropped, so install reports restart_required without the notice if the re-read fails. The optional-interface type assertion also means a wrapped or different installer silently skips the key check with no signal, making status say 'supported' while the foreman is not enabled.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/runtime/claude.go:134-143",
+          "engine/runtime/claude_ports.go:27-34"
+        ]
+      },
+      {
+        "id": "F4",
+        "severity": "SUGGESTION",
+        "location": "engine/settings/main_agent.go:48-54",
+        "claim": "ForeignMainAgentNotice formats the key with a hand-written \"%s\" quote and the value with %q, mixing quoting styles; the notice for the key name is not escaped the same way as the value, and the runtime status messages duplicate the wording by string concatenation rather than a shared builder, so the three texts can drift.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/settings/main_agent.go:48-54",
+          "engine/runtime/claude.go:112-127"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full diff; the runtime adapter now consults an optional MainAgentInspector for Status, Install and Update.",
+      "Status path: hooks owned check first, then mainAgentStatus returns partial for missing or conflicting key; previously the same state returned supported.",
+      "The capability declaration lists three new tests that exist in claude_main_agent_test.go."
+    ]
+  }
+}

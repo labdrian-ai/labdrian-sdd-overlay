@@ -1,0 +1,75 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "8df8f69a8b11dea3ea9fa254c10a01c283444981",
+    "head": "4ee2cccbec59217fa63581813568192e62737c01",
+    "diff_sha256": "972c836bd4d325fd50c6088483eb7f3e331dfb403ba651f77966d84558c87ea8",
+    "paths": [
+      "CHANGELOG.md",
+      "README.md",
+      "engine/cmd/codex_source_test.go",
+      "engine/cmd/phase7_acceptance_test.go",
+      "engine/cmd/projection_hook.go",
+      "engine/cmd/projection_hook_test.go",
+      "engine/cmd/projection_prompt_once_test.go",
+      "engine/cmd/prompt_store_test.go",
+      "engine/cmd/state_stores.go",
+      "engine/cmd/usage.go",
+      "engine/hookwire/decode.go",
+      "engine/hookwire/decode_test.go",
+      "engine/hookwire/sessionstart_test.go",
+      "engine/statestore/lastline.go",
+      "engine/statestore/lastline_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "8df8f69a8b11dea3ea9fa254c10a01c283444981",
+      "head": "4ee2cccbec59217fa63581813568192e62737c01",
+      "diff_sha256": "972c836bd4d325fd50c6088483eb7f3e331dfb403ba651f77966d84558c87ea8"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "README.md",
+        "engine/cmd/codex_source_test.go",
+        "engine/cmd/phase7_acceptance_test.go",
+        "engine/cmd/projection_hook.go",
+        "engine/cmd/projection_hook_test.go",
+        "engine/cmd/projection_prompt_once_test.go",
+        "engine/cmd/prompt_store_test.go",
+        "engine/cmd/state_stores.go",
+        "engine/cmd/usage.go",
+        "engine/hookwire/decode.go",
+        "engine/hookwire/decode_test.go",
+        "engine/hookwire/sessionstart_test.go",
+        "engine/statestore/lastline.go",
+        "engine/statestore/lastline_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "engine/cmd/projection_hook.go:245-246",
+        "claim": "The addOncePerChange doc comment says the hook \"never says less than it would without the store\". On a repeated block the function deliberately prints nothing, which is exactly saying less, so the comment contradicts the function and misleads readers about when output is suppressed. It should say that on a store failure the hook falls back to the old output.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/cmd/projection_hook.go:243-259 (comment, and `if last == hash { return nil }`)"
+        ]
+      }
+    ],
+    "evidence": [
+      "Reviewed the whole diff. The store logic (last, record, reset), the LastLine window handling, the decoder changes (session_id read as text only) and the call sites show no behavioural defect.",
+      "Warnings and the closed-workflow note bypass the store, and a store error falls back to printing the block. The tests cover these paths.",
+      "The only finding is the misleading comment."
+    ]
+  }
+}

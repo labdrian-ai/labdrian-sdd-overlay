@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "f82925ffbc4ac9ce858fc0fca93411d100937352",
+    "head": "513c8f51a49a61032cbb0ad8e4be9bc1ced0f511",
+    "diff_sha256": "364b6846756f8a2992a789b7f3ea5296b8070a716a6da36590e2f56225b41ee5",
+    "paths": [
+      "CHANGELOG.md",
+      "engine/cmd/projection_hook.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "f82925ffbc4ac9ce858fc0fca93411d100937352",
+      "head": "513c8f51a49a61032cbb0ad8e4be9bc1ced0f511",
+      "diff_sha256": "364b6846756f8a2992a789b7f3ea5296b8070a716a6da36590e2f56225b41ee5"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "engine/cmd/projection_hook.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "projection_hook.go: the case-local variable `out` was renamed to `reply`. The old `out, err :=` inside the case clause shadowed the named return `out`. Both return statements still return the same value, and addOncePerChange receives the same argument, so behavior is unchanged.",
+      "CHANGELOG.md: only the store path note (hash of the source and session) and an added qualifier that the history claim is unverified until T17 were changed. Documentation only, no code effect."
+    ]
+  }
+}

@@ -62,7 +62,7 @@ func (f longtermMemFixture) writeClaudeEntry(t *testing.T) {
 
 func (f longtermMemFixture) writeOpenCodeEntry(t *testing.T) {
 	t.Helper()
-	content := `{"mcp":{"longterm-mem":{"type":"local","command":["` + f.binaryPath + `","mcp"],"enabled":true}}}`
+	content := `{"mcp":{"servers":{"longterm-mem":{"type":"local","command":["` + f.binaryPath + `","mcp"],"codemode":true}}}}`
 	if err := os.WriteFile(f.openCodePath, []byte(content), 0o644); err != nil {
 		t.Fatalf("write opencode config: %v", err)
 	}
@@ -95,7 +95,7 @@ func (f longtermMemFixture) writeClaudeConfigWithoutEntry(t *testing.T) {
 
 func (f longtermMemFixture) writeOpenCodeConfigWithoutEntry(t *testing.T) {
 	t.Helper()
-	writeFile(t, f.openCodePath, `{"mcp":{"other-tool":{"type":"local","command":["/other"]}}}`)
+	writeFile(t, f.openCodePath, `{"mcp":{"servers":{"other-tool":{"type":"local","command":["/other"]}}}}`)
 }
 
 func (f longtermMemFixture) writeCodexConfigWithoutEntry(t *testing.T) {
@@ -116,7 +116,7 @@ func (f longtermMemFixture) writeForeignClaudeEntry(t *testing.T) {
 
 func (f longtermMemFixture) writeForeignOpenCodeEntry(t *testing.T) {
 	t.Helper()
-	writeFile(t, f.openCodePath, `{"mcp":{"longterm-mem":{"type":"local","command":["`+foreignBinary+`","mcp"],"enabled":true}}}`)
+	writeFile(t, f.openCodePath, `{"mcp":{"servers":{"longterm-mem":{"type":"local","command":["`+foreignBinary+`","mcp"],"codemode":true}}}}`)
 }
 
 func (f longtermMemFixture) writeForeignCodexEntry(t *testing.T) {
@@ -406,6 +406,50 @@ func TestLongtermMemAdapter_UninstallReportsItsOwnVerdict(t *testing.T) {
 			}
 		}
 	})
+}
+
+// What Install() then Status() say of opencode for each shape its config can hold: the v2 entry is healthy, the
+// 1.x entry this overlay wrote is partial and says to run register (it is not registered the way opencode v2 reads
+// it), a foreign 1.x entry is the unmanaged entry it always was, and no entry is not registered.
+func TestLongtermMemAdapter_OpenCodeStatusForEachEntryShape(t *testing.T) {
+	cases := []struct {
+		name       string
+		config     func(f longtermMemFixture) string
+		wantStatus core.CapabilityStatus
+		wantReason string
+		recorded   bool
+	}{
+		{"v2 entry", func(f longtermMemFixture) string {
+			return `{"mcp":{"servers":{"longterm-mem":{"type":"local","command":["` + f.binaryPath + `","mcp"],"codemode":true}}}}`
+		}, core.CapabilitySupported, "", true},
+		{"owned 1.x entry", func(f longtermMemFixture) string {
+			return `{"mcp":{"longterm-mem":{"type":"local","command":["` + f.binaryPath + `","mcp"],"enabled":true}}}`
+		}, core.CapabilityPartial, engineRuntime.LongtermMemReasonOpenCode1xEntry, false},
+		{"foreign 1.x entry", func(f longtermMemFixture) string {
+			return `{"mcp":{"longterm-mem":{"type":"local","command":["/someone/elses","mcp"],"enabled":true}}}`
+		}, core.CapabilityPartial, engineRuntime.LongtermMemReasonEntryWithoutRecord, false},
+		{"no entry", func(f longtermMemFixture) string {
+			return `{"mcp":{"servers":{"other":{"type":"local","command":["/other"]}}}}`
+		}, core.CapabilitySupported, engineRuntime.LongtermMemReasonNotRegistered, false},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			f := newLongtermMemFixture(t)
+			f.writeExecutableBinary(t)
+			writeFile(t, f.openCodePath, tc.config(f))
+			a := f.adapter()
+			a.Install()
+			for label, result := range map[string]core.LifecycleResult{"Install": a.Install(), "Status": a.Status()} {
+				line := reasonFor(t, result.Reasons, "opencode")
+				if !strings.Contains(line, string(tc.wantStatus)) || (tc.wantReason != "" && !strings.Contains(line, tc.wantReason)) {
+					t.Fatalf("%s() line for opencode = %q, want status %q reason %q", label, line, tc.wantStatus, tc.wantReason)
+				}
+			}
+			if got := registrationTargets(t, f.stateDir)["opencode"]; got != tc.recorded {
+				t.Fatalf("opencode recorded = %v, want %v", got, tc.recorded)
+			}
+		})
+	}
 }
 
 // TestLongtermMemAdapter_InstallRecordsRegistrationAndReportsStatus is

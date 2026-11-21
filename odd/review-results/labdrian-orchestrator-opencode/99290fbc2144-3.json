@@ -1,0 +1,95 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "fe79c5bc98ab121beb00c8ba92101d1f4b03cedd",
+    "head": "99290fbc2144bec46d2351da401840ea87230b2f",
+    "diff_sha256": "f63cf6305ec14e06391c28310fa2b4c075955ae282bcff532fd9d4a29ef4e99b",
+    "paths": [
+      "skills/branch-pr/.approval.json",
+      "skills/chained-pr/.approval.json",
+      "skills/cognitive-doc-design/.approval.json",
+      "skills/comment-writer/.approval.json",
+      "skills/go-testing/.approval.json",
+      "skills/inception-pipeline/.approval.json",
+      "skills/issue-creation/.approval.json",
+      "skills/judgment-day/.approval.json",
+      "skills/project-architect/.approval.json",
+      "skills/project-inception/.approval.json",
+      "skills/project-manifest/.approval.json",
+      "skills/requirements-from-transcripts/.approval.json",
+      "skills/roadmap-maker/.approval.json",
+      "skills/role-chain/.approval.json",
+      "skills/skill-creator/.approval.json",
+      "skills/skill-improver/.approval.json",
+      "skills/skill-registry/.approval.json",
+      "skills/work-unit-commits/.approval.json"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "fe79c5bc98ab121beb00c8ba92101d1f4b03cedd",
+      "head": "99290fbc2144bec46d2351da401840ea87230b2f",
+      "diff_sha256": "f63cf6305ec14e06391c28310fa2b4c075955ae282bcff532fd9d4a29ef4e99b"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "skills/branch-pr/.approval.json",
+        "skills/chained-pr/.approval.json",
+        "skills/cognitive-doc-design/.approval.json",
+        "skills/comment-writer/.approval.json",
+        "skills/go-testing/.approval.json",
+        "skills/inception-pipeline/.approval.json",
+        "skills/issue-creation/.approval.json",
+        "skills/judgment-day/.approval.json",
+        "skills/project-architect/.approval.json",
+        "skills/project-inception/.approval.json",
+        "skills/project-manifest/.approval.json",
+        "skills/requirements-from-transcripts/.approval.json",
+        "skills/roadmap-maker/.approval.json",
+        "skills/role-chain/.approval.json",
+        "skills/skill-creator/.approval.json",
+        "skills/skill-improver/.approval.json",
+        "skills/skill-registry/.approval.json",
+        "skills/work-unit-commits/.approval.json"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "skills/branch-pr/.approval.json:6",
+        "claim": "The commit says the owner approved these skills, but every one of the 18 records changes the approver from \"labdrian\" to \"labdrian-ai\". The approval is therefore attributed to an AI identity, not the owner. The approval lock exists to record human consent, so a lock written under an AI identity weakens its provenance. Either the message or the field is inaccurate. All 18 records were stamped within a 3-second window (16:40:12 to 16:40:13), which looks like a scripted bulk approval and not a per-skill review. The diff does not show who or what ran the approval.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "skills/branch-pr/.approval.json:6",
+          "skills/go-testing/.approval.json:6",
+          "skills/work-unit-commits/.approval.json:6"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "skills/inception-pipeline/.approval.json:4",
+        "claim": "The 18 sha256 values replace the previous ones, and the diff does not include the SKILL.md files they cover. The reviewer cannot confirm that each hash matches the current tree, or that no skill was changed after approval. Several approvals (inception-pipeline, role-chain) replace records dated 2026-11-16, so skill content changed since the last approval. The diff gives no evidence of what changed in each skill.",
+        "evidence_class": "inferential",
+        "causal_disposition": "unknown",
+        "proof_refs": [
+          "skills/inception-pipeline/.approval.json:4",
+          "skills/role-chain/.approval.json:4"
+        ]
+      }
+    ],
+    "evidence": [
+      "All 18 changed files are .approval.json records with the same shape: new sha256, a new approved_at on 2026-11-19 between 16:40:12 and 16:40:13, and approver changed from labdrian to labdrian-ai.",
+      "The commit message claims owner approval, which conflicts with the approver value written in every record.",
+      "The SKILL.md files are not in the diff, so the hashes cannot be verified."
+    ]
+  }
+}

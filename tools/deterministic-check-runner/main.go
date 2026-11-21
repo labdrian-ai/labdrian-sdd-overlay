@@ -101,7 +101,7 @@ func runCheckMode(modules []string, args []string, root string, stdout, stderr i
 //     the only thing an operator can actually change to fix it. Reporting
 //     that as a usage error would point at a flag that was never passed.
 //
-// skills/sdd-verify/SKILL.md maps runner exit 2 and 3 to the same
+// the sdd-verify skill (since removed) mapped runner exit 2 and 3 to the same
 // procedural_tooling_failed outcome, so this split costs the caller nothing
 // and buys the operator a diagnosis.
 //
@@ -155,7 +155,7 @@ func resolveOutDir(root, outDirFlag string, stderr io.Writer) (string, int, bool
 // module gofmt -w could not parse (gofmt writes a parse error to stderr and
 // exits non-zero, rewriting nothing) was indistinguishable from one that
 // converged. normalize runs strictly pre-freeze
-// (skills/sdd-verify/SKILL.md:69), so a silent failure here is strictly
+// (the sdd-verify skill, since removed), so a silent failure here is strictly
 // worse than a loud one: the cost lands on post-freeze check instead, where
 // it can no longer be fixed without burning the single correction attempt
 // (the obs #2668 dead end this change exists to avoid). A fixer that could
@@ -167,7 +167,7 @@ func resolveOutDir(root, outDirFlag string, stderr io.Writer) (string, int, bool
 // Zero discovered modules is deliberately NOT given C1's runCheckMode
 // treatment here: an operator who runs normalize against the wrong cwd
 // still runs check next per the documented ordering
-// (skills/sdd-verify/SKILL.md:69), and check's own C1 guard already fails
+// (the sdd-verify skill, since removed), and check's own C1 guard already fails
 // that run closed before freeze — duplicating the guard here would not
 // close any additional gap, only add surface.
 //
@@ -456,8 +456,8 @@ func runCheck(c check, modules []string, outDir string) result {
 // writeLog writes findings to path, creating its parent directory first, and
 // overwrites any existing file (D6: the default out-dir path is stable and
 // "overwritten"). It reports whether the write succeeded. The row that names
-// this path is the evidence capture-evidence receives (skills/sdd-verify/
-// SKILL.md:70), so a failed write must not be silently ignored — but it also
+// this path is the evidence capture-evidence receives (the sdd-verify skill, since
+// removed), so a failed write must not be silently ignored — but it also
 // must never become a verification failure or a procedural error (runCheck
 // clears result.logPath on false, so renderSummary omits the full: clause
 // instead of pointing at a file that does not exist).
@@ -584,7 +584,7 @@ func renderRowBlock(results []result, topN int) []byte {
 //     module). Without this, a row like "staticcheck | 1 | count=2; ..."
 //     cannot tell a reader that one of four modules was never analysed —
 //     partial coverage was indistinguishable from full coverage
-//     (skills/sdd-verify/SKILL.md:70 treats these row bytes as the evidence
+//     (the sdd-verify skill, since removed, treated these row bytes as the evidence
 //     itself).
 //
 // Both notes can apply to the same row (a check unavailable across every
@@ -879,7 +879,7 @@ type result struct {
 // attempted module was excluded" without teaching this function about the
 // per-module coverage B1 introduced: a blocking check that could not analyze
 // SOME modules and found nothing in the ones it could analyze reached gate 4
-// and exited 0, which skills/sdd-verify/SKILL.md maps to `passed`. That is
+// and exited 0, which the sdd-verify skill (since removed) mapped to `passed`. That is
 // the live tui/go.mod (go 1.26.1) vs staticcheck@v0.7.0 case — one module
 // never statically analyzed, gate still recording a clean verification.
 // Before B1 that same condition exited 3, so the correction had converted a

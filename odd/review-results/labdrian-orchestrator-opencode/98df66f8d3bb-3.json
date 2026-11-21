@@ -1,0 +1,33 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "36142037879ada9c334715fb9d276a400130e67a",
+    "head": "98df66f8d3bbe9f8acf8626b654d4554b001e687",
+    "diff_sha256": "dcb6b99363d9e07e94b26924c176d06768e99da2172f1149a4fb12486f3153a2",
+    "paths": [
+      "odd/tasks/labdrian-orchestrator-opencode.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "36142037879ada9c334715fb9d276a400130e67a",
+      "head": "98df66f8d3bbe9f8acf8626b654d4554b001e687",
+      "diff_sha256": "dcb6b99363d9e07e94b26924c176d06768e99da2172f1149a4fb12486f3153a2"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/labdrian-orchestrator-opencode.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The diff adds only one documentation log entry (L74) to odd/tasks/labdrian-orchestrator-opencode.md; no code, schema or behavior changes.",
+      "The entry follows the format of L71-L73 and the 'Risk: none' claim matches a docs-only change."
+    ]
+  }
+}

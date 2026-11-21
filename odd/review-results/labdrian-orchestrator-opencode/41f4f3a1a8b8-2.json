@@ -1,0 +1,76 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "1fd4e01adb4cd8c0f09204655a5c0c0795c82bcc",
+    "head": "41f4f3a1a8b88793e250f4c2a0724e26c1502ca8",
+    "diff_sha256": "a4ec522caddbb7528e72efbcdf82773be81c0576db6811e5cdfacc41b6d9973b",
+    "paths": [
+      "CHANGELOG.md",
+      "README.md",
+      "engine/cmd/dispatch_routes_test.go",
+      "engine/cmd/dispatch_test.go",
+      "engine/cmd/roles.go",
+      "engine/cmd/roles_builder_guard_test.go",
+      "engine/cmd/roles_skill_paths.go",
+      "engine/cmd/roles_skill_paths_test.go",
+      "engine/gate/skillpaths.go",
+      "engine/gate/skillpaths_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "1fd4e01adb4cd8c0f09204655a5c0c0795c82bcc",
+      "head": "41f4f3a1a8b88793e250f4c2a0724e26c1502ca8",
+      "diff_sha256": "a4ec522caddbb7528e72efbcdf82773be81c0576db6811e5cdfacc41b6d9973b"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "README.md",
+        "engine/cmd/dispatch_routes_test.go",
+        "engine/cmd/dispatch_test.go",
+        "engine/cmd/roles.go",
+        "engine/cmd/roles_builder_guard_test.go",
+        "engine/cmd/roles_skill_paths.go",
+        "engine/cmd/roles_skill_paths_test.go",
+        "engine/gate/skillpaths.go",
+        "engine/gate/skillpaths_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "engine/gate/skillpaths.go:15-16",
+        "claim": "skillIDForm only accepts lowercase letters, digits and hyphens. A real skill directory named with an underscore, a dot or an uppercase letter is refused as 'neither a skill id nor an absolute path', even though its SKILL.md exists under the root. The message does not state the id form, so the writer is told nothing useful. The restriction is only claimed to match the names of the directories of skills/, and the diff does not show those names.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/gate/skillpaths.go:15-16",
+          "engine/gate/skillpaths.go:61-62"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "engine/gate/skillpaths.go:54-60",
+        "claim": "A rewritten line is replaced by the bare path, so a trailing '\\r' in a CRLF prompt is dropped on that line only. Neighbouring lines keep their endings, so the line endings of the output become inconsistent, which contradicts the 'printed as it came' spirit for the lines the verb touches. The loss also happens to indented entries.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/gate/skillpaths.go:55",
+          "engine/gate/skillpaths.go:60"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff does not show hasExactHeader. The rewrite assumes it agrees with the TrimSpace header match used to find the start of the section. If it were stricter, the loop would still find the header. If it were looser, start would stay -1 and lines[-1] would panic. I cannot confirm either case from the diff."
+    ]
+  }
+}

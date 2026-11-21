@@ -12,9 +12,9 @@ import (
 )
 
 // skillsCandidates is the read-only `skills candidates` adapter. A failure to resolve or read
-// Engram is exit 2; it is never represented as a successful empty list.
+// memorycard is exit 2; it is never represented as a successful empty list.
 func skillsCandidates(deps skills.Deps, args []string, stdout, stderr io.Writer, exit func(int)) {
-	parsed, err := skillsCandidatesSpec.parse(args)
+	parsed, err := skillsCandidatesSpec.parseAfterVerb(args)
 	if err != nil {
 		refuseSkillsUsage(err, stderr, exit)
 		return
@@ -61,7 +61,7 @@ func skillsCandidates(deps skills.Deps, args []string, stdout, stderr io.Writer,
 		exit(2)
 		return
 	}
-	result, err := app.ListCandidates(deps.Candidates, app.CandidateListInput{
+	result, err := app.ListCandidates(deps.Candidates, deps.LegacyOccurrences, app.CandidateListInput{
 		Project: string(project), Statuses: statuses, Kind: parsed.value(flagCandidateKind, ""),
 		IncludeDrafts: parsed.switches[flagCandidateDrafts],
 	})

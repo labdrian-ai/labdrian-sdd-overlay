@@ -1,0 +1,60 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "1bca84239795537ec1ab3e44aa4767402f38c798",
+    "head": "8048bc87764d993feecc893cf4b435097b873447",
+    "diff_sha256": "40deec96005e57d052678181ad7c9b8b66a03a6e8e09e560aaedc6ede54c997d",
+    "paths": [
+      "odd/tasks/labdrian-orchestrator-opencode.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "1bca84239795537ec1ab3e44aa4767402f38c798",
+      "head": "8048bc87764d993feecc893cf4b435097b873447",
+      "diff_sha256": "40deec96005e57d052678181ad7c9b8b66a03a6e8e09e560aaedc6ede54c997d"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/labdrian-orchestrator-opencode.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "odd/tasks/labdrian-orchestrator-opencode.md:34",
+        "claim": "The new S17 check decodes only string values (`jq -r '.. | strings'`). Object keys are not searched. S17 says the check covers 'every other value' and 'nothing in either file runs the gentle-ai binary', so a settings.json whose key (for example an enabledPlugins-style key) contains the binary name would pass unnoticed. Escapes in keys are also left undecoded. The check is stronger than the raw rg but still has a gap that its prose does not state.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/labdrian-orchestrator-opencode.md:34"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/labdrian-orchestrator-opencode.md:9",
+        "claim": "The S2 acceptance sentence nests a parenthetical clause inside the L9-draft clause and then a second parenthetical for the size ('...with the one cell L29 rewords (the Tier row's stop condition names ...) (about 45 lines, ...)'). It is hard to read, and the size note now looks as if it qualifies the reworded cell. The same problem appears in S8, where '(auto-loaded, no build step; L29)' follows a long parenthetical about the 1.x name.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/labdrian-orchestrator-opencode.md:9",
+          "odd/tasks/labdrian-orchestrator-opencode.md:15"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff changes only the feature document: S2, S8 and S17 text, the Tasks order and the new L29 entry.",
+      "The L29 bullet count of 38 findings matches the 38 answers listed.",
+      "The reordered Tasks list satisfies the 'after' clauses: T19 before T6 and T12, T9 and T10 before T11, T20 and T21 before T14.",
+      "The '\\u0026' example (code of `&` ending in 6) is correct."
+    ]
+  }
+}

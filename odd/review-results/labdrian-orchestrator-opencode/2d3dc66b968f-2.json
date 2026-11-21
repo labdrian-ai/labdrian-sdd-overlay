@@ -1,0 +1,75 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "a12d37a609942e7a76a0ff3074c89aaf89b7db64",
+    "head": "2d3dc66b968fdd782e5ed006a3f76bba9d432bc8",
+    "diff_sha256": "1bad4551ce0e75d94ead19dfdf146fa79b121ba8c9ffc49f286726518e8b2233",
+    "paths": [
+      "engine/skills/foreman_restored_duties_test.go",
+      "engine/skills/foreman_skills_test.go",
+      "engine/skills/odd_role_skills_artifact_test.go",
+      "skills/odd-feature-doc/SKILL.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "a12d37a609942e7a76a0ff3074c89aaf89b7db64",
+      "head": "2d3dc66b968fdd782e5ed006a3f76bba9d432bc8",
+      "diff_sha256": "1bad4551ce0e75d94ead19dfdf146fa79b121ba8c9ffc49f286726518e8b2233"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/skills/foreman_restored_duties_test.go",
+        "engine/skills/foreman_skills_test.go",
+        "engine/skills/odd_role_skills_artifact_test.go",
+        "skills/odd-feature-doc/SKILL.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "engine/skills/odd_role_skills_artifact_test.go:117-123",
+        "claim": "The lint-budget test now skips every body-recommended warning for odd-feature-doc, while the separate token check only enforces the 750 bound. The bound is enforced, but the skip also hides a body-recommended warning that fires for a different reason than the token count (for example, if the linter's estimate or rule changes). The comment says only the token-count case is intended.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/skills/odd_role_skills_artifact_test.go:120-122"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "engine/skills/foreman_skills_test.go:30-40",
+        "claim": "The negative check uses substring matches on 'header' and '`L1`' in the foreman row's write column. It is brittle: any future wording that legitimately mentions 'header' (for example, 'Log header') fails it, and it does not check that the foreman no longer writes the header or L1 in other columns. The check also rests on the SKILL.md row, which is not covered if it is reworded.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/skills/foreman_skills_test.go:36-40"
+        ]
+      },
+      {
+        "id": "F3",
+        "severity": "WARNING",
+        "location": "skills/odd-feature-doc/SKILL.md:37",
+        "claim": "The foreman row now says it writes `[x]` with `commit:` only for a task whose builder did not edit the document. The builder row still says the builder writes `[x]` and the commit on each finished task, so the document gives no rule for a builder that finished but did not edit the document, and the foreman 'never' column still forbids changing a task line. The foreman's ticking of a box thus conflicts with its own 'never: a task line' and with the builder's ownership, with nothing to resolve it.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "skills/odd-feature-doc/SKILL.md:37"
+        ]
+      }
+    ],
+    "evidence": [
+      "Diff reviewed in full; four changed paths, all covered.",
+      "The 750-token bound for odd-feature-doc is enforced by the token check and by TestOddFeatureDocBodyStaysWithinItsLintBound, but the warning-skip in TestOddRoleSkillsAreWithinTheLintBudget is wider than the bound.",
+      "The foreman row removes header and L1 writing, but the shaper row keeps them, which matches the commit message."
+    ]
+  }
+}

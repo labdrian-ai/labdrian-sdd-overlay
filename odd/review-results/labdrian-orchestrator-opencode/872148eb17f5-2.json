@@ -1,0 +1,55 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "2e22df056080bb4d90ae83fe7454cb139c7d71d6",
+    "head": "872148eb17f5ba44df3b455c1d8d37e14813fb36",
+    "diff_sha256": "18ba0914fbde334fa03c11410767aa1e21c8e840738d85cda7e5a4a28a0a4b9f",
+    "paths": [
+      "engine/runtime/opencode_json.go",
+      "engine/runtime/opencode_json_bytes_test.go",
+      "engine/runtime/opencode_json_write.go",
+      "engine/runtime/opencode_splice.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "2e22df056080bb4d90ae83fe7454cb139c7d71d6",
+      "head": "872148eb17f5ba44df3b455c1d8d37e14813fb36",
+      "diff_sha256": "18ba0914fbde334fa03c11410767aa1e21c8e840738d85cda7e5a4a28a0a4b9f"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/runtime/opencode_json.go",
+        "engine/runtime/opencode_json_bytes_test.go",
+        "engine/runtime/opencode_json_write.go",
+        "engine/runtime/opencode_splice.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "engine/runtime/opencode_json.go:84-86",
+        "claim": "The trailing-content check uses strings.TrimSpace, which treats Unicode and non-JSON whitespace (\\v, \\f, U+00A0, U+0085) as empty. A file such as `{}\\u00a0` is therefore accepted although it has content after the JSON object. The splice side (bytes.TrimSpace in rootObject) shares the same looseness, so the two agree, but neither matches the 'any content after the object is refused' claim for these bytes.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/runtime/opencode_json.go:84",
+          "engine/runtime/opencode_splice.go:112"
+        ]
+      }
+    ],
+    "evidence": [
+      "Traced scanObject offset arithmetic (keyStart, valueStart, valueEnd, close) for inline and multi-line objects; it is consistent.",
+      "Traced insertMember and removeOpenCodeMember round trips for multi-line, inline and fresh-file cases; the bytes are restored except for a container the install had to create.",
+      "Duplicate-key and trailing-content refusals run through checkOpenCodeKeys and rootObject before any write or backup, so a refused file is left untouched.",
+      "Could not see the start of parseOpenCodeJSON, so I assume it returns early on empty content before checkOpenCodeKeys runs; otherwise an empty file would fail with 'it is empty'."
+    ]
+  }
+}

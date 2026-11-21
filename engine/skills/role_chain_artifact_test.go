@@ -143,7 +143,7 @@ func TestRoleChainAppendsNameWorkflowOpenBeforeTheBuilder(t *testing.T) {
 // because the body is at the recommended token budget (v3 D15).
 func TestRoleChainSkillNamesTheParentModelAndPointsAtTheTiers(t *testing.T) {
 	_, _, body := roleChainSkill(t)
-	const line = "Parent: frontier, medium effort. Tiers: `references/models.md`."
+	const line = "Parent: the `foreman`, frontier, medium effort. Tiers: `references/models.md`."
 	if _, under := roleChainSections(body); !strings.Contains(under[""], line+"\n") {
 		t.Errorf("the text before the first heading must name the parent model, exactly:\n%s", line)
 	}
@@ -203,7 +203,7 @@ func roleChainDuties() []roleChainDuty {
 			"`partial` or `blocked`", "`interrupted`", "`resume_reason`",
 		}},
 		{"Triggers", []string{
-			"does installed tool X behave as premise P says", "what is number N", "can X be done within the appetite",
+			"`references/prototyper.md`",
 			"back to the asker", "lookup/spike box",
 			"load the `sweeper` skill",
 			"readability row", "docs, public API, messages or help", "second blind launch", "another `model`", "Risk line",
@@ -214,7 +214,7 @@ func roleChainDuties() []roleChainDuty {
 			"150 KB", "one launch per commit", "never truncated", "S# criteria",
 			"copied verbatim from `roles/reviewer/rows.json`", "`recall` always",
 			"`labdrian review record --feature F --base B --head H`", "Exit 2",
-			"`candidate`", "`inspection.status`", "`completed`", "`paths`", "any other rule of the reviewer's contract",
+			"`paths`", "the reviewer's contract breaks", "`references/review-record.md`",
 			"`resume_reason: review not run: <reason>`", "retry once with another `model`",
 			"`odd/review-results/<feature>/<head12>-<n>.json`", "`review-diff`", "`review-result`", "`verifier-report`",
 			"recomputes `diff_sha256`", "only on equality",
@@ -506,11 +506,30 @@ func TestVerifierDeltaObjectIsTheOneTheEngineParses(t *testing.T) {
 	}
 }
 
-// own-rdd S9 (d): on Codex the parent pipes the brief to review launch, never to a native reviewer sub-agent. The line follows
-// the review record line of Binding, exactly.
+// The per-runtime launch lines left the body for skills/role-chain/references/launch.md
+// (labdrian-orchestrator-opencode T41: the OpenCode line did not fit the body budget, as in L123); the
+// Binding section keeps one pointer line right after the review record line, and that line still names how
+// each runtime differs, so a parent that skips the reference keeps the rule.
+const roleChainLaunchPointer = "- On Codex (`review launch`, never a native reviewer sub-agent) or OpenCode (the brief without the diff), read `references/launch.md` before launching the reviewer."
+
+// roleChainLaunch reads that reference file.
+func roleChainLaunch(t *testing.T) string {
+	t.Helper()
+	return readRepoFile(t, skillsRepoRoot(t), "skills/role-chain/references/launch.md")
+}
+
+// own-rdd S9 (d): on Codex the parent pipes the brief to review launch, never to a native reviewer sub-agent.
 func TestRoleChainSkillTellsCodexToLaunchTheReviewerThroughTheEngine(t *testing.T) {
+	const codex = "- On Codex: pipe that brief to `labdrian review launch --runtime codex --feature F --base B --head H --rows R --model M`; it binds, runs the reviewer read-only and records it as `review record` does; never a native reviewer sub-agent."
+	reference := roleChainLaunch(t)
+	if !strings.HasPrefix(reference, "# Launch\n") {
+		t.Errorf("the reference file must start with its own heading, got %q", reference)
+	}
+	if !strings.Contains(reference, "\n"+codex+"\n") {
+		t.Errorf("the launch reference lacks the line, verbatim: %s", codex)
+	}
 	_, _, body := roleChainSkill(t)
-	const line = "- On Codex: pipe that brief to `labdrian review launch --runtime codex --feature F --base B --head H --rows R --model M`; it binds, runs the reviewer read-only and records it as `review record` does; never a native reviewer sub-agent."
+	const line = roleChainLaunchPointer
 	_, under := roleChainSections(body)
 	binding := under["Binding"]
 	record := strings.Index(binding, "\n- `labdrian review record --feature F")
@@ -521,5 +540,21 @@ func TestRoleChainSkillTellsCodexToLaunchTheReviewerThroughTheEngine(t *testing.
 	rest := binding[record+1+next:]
 	if !strings.HasPrefix(rest, "\n"+line+"\n") {
 		t.Errorf("the line after the review record line of Binding is not %q", line)
+	}
+}
+
+// labdrian-orchestrator-opencode T41 (S8, B4): on OpenCode the reviewer has no shell, so the parent sends the brief
+// without the diff and the parity plugin appends the frozen context. The line follows the Codex line of the launch
+// reference.
+func TestRoleChainSkillTellsOpenCodeToSendTheBriefWithoutTheDiff(t *testing.T) {
+	const codex = "- On Codex: pipe that brief to `labdrian review launch --runtime codex --feature F --base B --head H --rows R --model M`; it binds, runs the reviewer read-only and records it as `review record` does; never a native reviewer sub-agent."
+	const line = "- On OpenCode: send the brief without the diff; the plugin appends the frozen context (`labdrian review frozen-context`) and refuses a launch it cannot give one."
+	reference := roleChainLaunch(t)
+	at := strings.Index(reference, codex)
+	if at < 0 {
+		t.Fatal("the launch reference lacks the Codex line")
+	}
+	if rest := reference[at+len(codex):]; !strings.HasPrefix(rest, "\n"+line+"\n") {
+		t.Errorf("the line after the Codex line of the launch reference is not %q", line)
 	}
 }

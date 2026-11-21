@@ -20,13 +20,19 @@ func allPaths() []string {
 	for _, r := range wantRoles {
 		paths = append(paths, "agents/"+r.name+".md", "pi/agents/"+r.name+".md", "codex/agents/"+r.name+".toml")
 	}
-	return paths
+	// The foreman is the parent, not a role of the chain: it has a Claude file after the roles and no Pi or Codex file (S5), and the
+	// nine OpenCode files come last: the eight roles, then the foreman.
+	paths = append(paths, "agents/foreman.md")
+	for _, r := range wantRoles {
+		paths = append(paths, "opencode/agents/"+r.name+".md")
+	}
+	return append(paths, "opencode/agents/foreman.md")
 }
 
 const regenerate = "run: gentle-ai-overlay gadu-generate"
 
 // A root with nothing in it has no artifact and no source of a role: Check names the source of each
-// role, in the order of the table, and nothing else. A role whose source is missing has no files
+// role, in the order of the table, then the tier table of the models, and nothing else. A role whose source is missing has no files
 // named: they cannot be compared with a body that is not there.
 func TestCheckNamesEveryArtifactThatIsMissingInTheOrderOfTheTable(t *testing.T) {
 	err := agentgen.Check(t.TempDir())
@@ -35,6 +41,8 @@ func TestCheckNamesEveryArtifactThatIsMissingInTheOrderOfTheTable(t *testing.T) 
 	for _, r := range wantRoles {
 		want += "\n  roles/" + r.name + "/body.md: missing (the source of the role is not in the repository)"
 	}
+	want += "\n  roles/foreman/body.md: missing (the source of the role is not in the repository)"
+	want += "\n  skills/role-chain/references/models.md: missing (the tier table of the models is not in the repository)"
 	if err == nil || err.Error() != want {
 		t.Errorf("Check error = %v\nwant\n%s", err, want)
 	}

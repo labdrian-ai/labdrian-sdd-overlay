@@ -1,0 +1,64 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "2358cf21a7d89e27d00bfb68a8995f2bf0cfdcb9",
+    "head": "558d9a721e12faa160b06189b2e3f343930268d9",
+    "diff_sha256": "f6d250d74bf711f496b3cf6ee5860612c80a4073d4c1b024c9139feb705d26e3",
+    "paths": [
+      "CHANGELOG.md",
+      "engine/runtime/opencode.go",
+      "engine/runtime/opencode_legacy_test.go",
+      "engine/runtime/opencode_plugin.go",
+      "engine/runtime/testdata/legacy-runtime-parity-plugin-1x.mjs"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "2358cf21a7d89e27d00bfb68a8995f2bf0cfdcb9",
+      "head": "558d9a721e12faa160b06189b2e3f343930268d9",
+      "diff_sha256": "f6d250d74bf711f496b3cf6ee5860612c80a4073d4c1b024c9139feb705d26e3"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "engine/runtime/opencode.go",
+        "engine/runtime/opencode_legacy_test.go",
+        "engine/runtime/opencode_plugin.go",
+        "engine/runtime/testdata/legacy-runtime-parity-plugin-1x.mjs"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "engine/runtime/opencode.go:124-127",
+        "claim": "The legacy-path Lstat check returns partial before readConfig and the version, hash and marker checks. A leftover 1.x file therefore hides the more specific states that follow, such as a stale version needing a restart or a prompt-config mismatch. The user sees only the legacy message until the file is removed. Lstat errors other than not-exist, such as permission denied, are silently ignored.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/runtime/opencode.go:124-127"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "engine/runtime/opencode.go:184-186",
+        "claim": "Ownership now requires the active-marker file name in addition to the 1.x export. A 1.x plugin written before the marker existed would not match, and would be left in place and reported as partial instead of removed. The tests pin only the bytes at 16825fd3, so earlier 1.x versions are unverified.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/runtime/opencode.go:184-186"
+        ]
+      }
+    ],
+    "evidence": [
+      "Reviewed the install, status and removeLegacyPlugin changes; the install restart_required path with the cleanup error appended is consistent with the claimed behavior and with the new test.",
+      "The testdata file contains both the 1.x export and the active marker name, so the ownership check matches it."
+    ]
+  }
+}

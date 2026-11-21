@@ -46,18 +46,23 @@ package main
 //     (a real error, not an absent binding), and so is a recovered panic (the
 //     warning is sanitized and short; the full text goes to stderr).
 //
-// The PreToolUse gate is strictly read-only. UserPromptSubmit only reads, with one
-// exception: when the bound workflow is closed it removes the binding, best effort, only if it is still the binding it read. The
+// The PreToolUse gate is strictly read-only. UserPromptSubmit only reads, with two
+// exceptions: when the bound workflow is closed it removes the binding, best effort, only if it is still the binding it read;
+// and for a prompt that names a session it keeps the hash of the last block it added to it (S19, state_stores.go),
+// so the same block is not added again, and SessionStart records that the session was cut, so it is added again after one. The
 // note it prints says what the removal did: removed, failed (and that
 // 'labdrian workflow unbind' finishes it), or left alone. It runs no subprocess and makes no network call:
 // the repository is found by walking the filesystem, as the binding verbs do
 // (engine/gitfs).
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"strings"
 
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/capability"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/hookwire"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/projection"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/projection/app"
@@ -88,7 +93,7 @@ func runProjectionCore(d deps, args []string, processCwd string, stdin io.Reader
 	}
 }
 
-// runProjectionHook implements 'projection hook --event <event> [--source claude|codex]'. From the
+// runProjectionHook implements 'projection hook --event <event> [--source claude|codex|opencode]'. From the
 // moment the command line has been understood, nothing it does can change the
 // exit code from 0: a hook that fails must not fail the prompt or the tool call
 // it serves.
@@ -114,18 +119,23 @@ func runProjectionHook(d deps, args []string, processCwd string, stdin io.Reader
 		}
 	}()
 	var out []byte
+	var written func() // what to do once out was written, or nil
 	switch event {
 	case hookwire.EventPreToolUse:
 		out = preToolUse(d, stdin, processCwd, source)
 	case hookwire.EventSessionStart:
-		out = sessionStart(d, stdin, processCwd)
+		out = sessionStart(d, stdin, processCwd, source)
 	case hookwire.EventPostToolUse:
 		out = postToolUse(d, stdin, processCwd, source)
 	default:
-		out = userPromptSubmit(d, stdin, processCwd)
+		out, written = userPromptSubmit(d, stdin, processCwd, source)
 	}
 	if len(out) > 0 {
-		_, _ = stdout.Write(out) // nothing to do if the write fails: the prompt or the call goes through.
+		// Nothing to do if the write fails: the prompt or the call goes through, and a block that was not
+		// written is not recorded, so the next prompt adds it.
+		if _, err := stdout.Write(out); err == nil && written != nil {
+			written()
+		}
 	}
 	exit(0)
 }
@@ -146,7 +156,7 @@ func parseHookArgs(args []string) (event, source string, err error) {
 			event = args[i]
 		case a == "--source":
 			if i+1 >= len(args) {
-				return "", "", fmt.Errorf("--source requires a value (supported: claude, codex)")
+				return "", "", fmt.Errorf("--source requires a value (supported: claude, codex, opencode)")
 			}
 			i++
 			source = args[i]
@@ -201,34 +211,95 @@ func warningOutput(event, warning string) []byte {
 // in silence: there is nothing to be loyal to. A store that cannot be opened or
 // read is different, because the repository may well be bound, so it gets one
 // warning.
-func userPromptSubmit(d deps, stdin io.Reader, processCwd string) []byte {
+func userPromptSubmit(d deps, stdin io.Reader, processCwd, source string) (out []byte, written func()) {
 	// One byte past the cap is enough for the decoder to see the input is over
 	// it, and no more of an endless input is ever read.
 	data, err := io.ReadAll(io.LimitReader(stdin, hookwire.MaxEnvelopeBytes+1))
 	if err != nil {
-		return nil
+		return nil, nil
 	}
 	in, err := hookwire.DecodeUserPromptSubmit(data)
 	if err != nil {
-		return nil
+		return nil, nil
 	}
 	// The event flag decides the shape of the answer; input that names another
 	// event was not meant for this command.
 	if in.Event != "" && in.Event != hookwire.EventUserPromptSubmit {
-		return nil
+		return nil, nil
 	}
-	outcome := d.promptHook().OnPrompt(app.PromptRequest{InputDir: in.Cwd, ProcessDir: processCwd})
+	outcome := d.promptHook().OnPrompt(app.PromptRequest{InputDir: in.Cwd, ProcessDir: processCwd, Runtime: projectionRuntime(source)})
 	switch outcome.Kind {
 	case app.PromptWarning:
-		return warningOutput(hookwire.EventUserPromptSubmit, outcome.Warning)
+		return warningOutput(hookwire.EventUserPromptSubmit, outcome.Warning), nil
 	case app.PromptProjection:
-		out, err := promptReply(outcome.Result).Encode()
+		reply, err := promptReply(outcome.Result).Encode()
 		if err != nil {
-			return nil
+			return nil, nil
 		}
-		return out
+		if outcome.Result.Warning != "" || outcome.Result.Unbind {
+			// A warning is always said, and so is the note of a closed workflow, which says it repeats on every
+			// prompt until the binding is removed. Neither is recorded as the last block.
+			return reply, nil
+		}
+		return addOncePerChange(sessionKey(source, in.SessionID), reply)
 	}
-	return nil
+	return nil, nil
+}
+
+// projectionRuntime is the capability target whose limits a prompt's projection names for the hook source:
+// OpenCode's own for opencode, and Claude Code's ("") for claude and codex, as before (S10, L117).
+func projectionRuntime(source string) string {
+	if source == "opencode" {
+		return capability.TargetOpenCode
+	}
+	return ""
+}
+
+// sessionKey names a session for the store: the source that sent it and its id together, because two runtimes
+// may send the same id and are two sessions. "" when the input names no session.
+func sessionKey(source, session string) string {
+	if session == "" {
+		return ""
+	}
+	return source + "\x00" + session
+}
+
+// addOncePerChange decides what a session's prompt prints of its block, and what to do once it was written (S19).
+// A block equal to the last one added to the session is omitted on purpose: it is already in the session's
+// context. Any other block is printed, and recorded as the last only after it was written, so a block that
+// never reached stdout is added by the next prompt. When there is no session key, or the store cannot be read,
+// the hook prints the block as it did before the store existed, and never fails the prompt for it.
+func addOncePerChange(key string, block []byte) (out []byte, written func()) {
+	if key == "" || len(block) == 0 {
+		return block, nil
+	}
+	store, err := newPromptStore()
+	if err != nil {
+		return block, nil
+	}
+	sum := sha256.Sum256(block)
+	hash := hex.EncodeToString(sum[:])
+	last, err := store.last(key)
+	if err != nil {
+		return block, nil
+	}
+	if last == hash {
+		return nil, nil
+	}
+	// Best effort: a block that was not recorded is printed again, never lost.
+	return block, func() { _ = store.record(key, hash) }
+}
+
+// forgetLastBlock records that the session's context was cut (SessionStart fires on start, resume, clear and
+// compact), so its next prompt adds the block again. Best effort and silent: SessionStart's output does not
+// depend on it.
+func forgetLastBlock(key string) {
+	if key == "" {
+		return
+	}
+	if store, err := newPromptStore(); err == nil {
+		_ = store.reset(key)
+	}
 }
 
 // sessionStart does the SessionStart hook's work (C23 M6) and returns what it prints on stdout:
@@ -236,9 +307,10 @@ func userPromptSubmit(d deps, stdin io.Reader, processCwd string) []byte {
 // additionalContext, or nothing. Every case with no block to give is silent: unusable input,
 // another event's input, a directory outside every repository, nothing bound, and a binding,
 // workflow or store that cannot be followed or read, which the prompt hook warns about on the
-// session's first prompt. It reads and never writes: the binding of a closed workflow is left for
+// session's first prompt. Its one write, for an input that names a session, is the reset of that
+// session's last block (S19), which its output does not depend on: the binding of a closed workflow is left for
 // the prompt hook to remove.
-func sessionStart(d deps, stdin io.Reader, processCwd string) []byte {
+func sessionStart(d deps, stdin io.Reader, processCwd, source string) []byte {
 	data, err := io.ReadAll(io.LimitReader(stdin, hookwire.MaxEnvelopeBytes+1))
 	if err != nil {
 		return nil
@@ -250,6 +322,7 @@ func sessionStart(d deps, stdin io.Reader, processCwd string) []byte {
 	if in.Event != "" && in.Event != hookwire.EventSessionStart {
 		return nil
 	}
+	forgetLastBlock(sessionKey(source, in.SessionID))
 	block := sessionInstructions(d, processCwd)(in.Cwd)
 	out, err := hookwire.SessionStartReply{Context: block}.Encode()
 	if err != nil {

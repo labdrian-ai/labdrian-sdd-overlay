@@ -1,0 +1,100 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "ba97a9d1b8be77f1f5b3ca641ab051b90daba359",
+    "head": "0c82ec6750d5f4f72ee43cc0cd6c8a55ce56dd73",
+    "diff_sha256": "63641df3b2a59129bf2fdab828b1866c45ff6bc0eec4a36aad766c4034986ef6",
+    "paths": [
+      "CHANGELOG.md",
+      "README.md",
+      "engine/architecture_test.go",
+      "engine/cmd/dispatch_routes_test.go",
+      "engine/cmd/doc.go",
+      "engine/cmd/registry.go",
+      "engine/cmd/registry_refresh_parity_test.go",
+      "engine/cmd/registry_refresh_test.go",
+      "engine/cmd/registry_test.go",
+      "engine/cmd/status_run_test.go",
+      "engine/cmd/usage.go",
+      "engine/installer/testdata/registry_pins.golden",
+      "engine/sddregistry/app/app.go",
+      "engine/sddregistry/app/app_test.go",
+      "engine/sddregistry/fsstore/fsstore.go",
+      "engine/sddregistry/fsstore/fsstore_test.go",
+      "engine/sddregistry/sddregistry.go",
+      "engine/sddregistry/sddregistry_test.go",
+      "engine/skillregistry/compose.go",
+      "engine/skillregistry/compose_test.go",
+      "engine/skillregistry/rows_test.go",
+      "engine/skillregistry/skillregistry.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "ba97a9d1b8be77f1f5b3ca641ab051b90daba359",
+      "head": "0c82ec6750d5f4f72ee43cc0cd6c8a55ce56dd73",
+      "diff_sha256": "63641df3b2a59129bf2fdab828b1866c45ff6bc0eec4a36aad766c4034986ef6"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "README.md",
+        "engine/architecture_test.go",
+        "engine/cmd/dispatch_routes_test.go",
+        "engine/cmd/doc.go",
+        "engine/cmd/registry.go",
+        "engine/cmd/registry_refresh_parity_test.go",
+        "engine/cmd/registry_refresh_test.go",
+        "engine/cmd/registry_test.go",
+        "engine/cmd/status_run_test.go",
+        "engine/cmd/usage.go",
+        "engine/installer/testdata/registry_pins.golden",
+        "engine/sddregistry/app/app.go",
+        "engine/sddregistry/app/app_test.go",
+        "engine/sddregistry/fsstore/fsstore.go",
+        "engine/sddregistry/fsstore/fsstore_test.go",
+        "engine/sddregistry/sddregistry.go",
+        "engine/sddregistry/sddregistry_test.go",
+        "engine/skillregistry/compose.go",
+        "engine/skillregistry/compose_test.go",
+        "engine/skillregistry/rows_test.go",
+        "engine/skillregistry/skillregistry.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "engine/sddregistry/fsstore/fsstore.go:1-2",
+        "claim": "The package path engine/sddregistry/fsstore now names a domain that no longer exists. It is only the adapter for skillregistry/app's RegistryStore, and the architecture comment and rings still carry the old name. A reader looking for the registry adapter will not look under sddregistry. The adapter belongs under skillregistry (for example skillregistry/fsstore).",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/sddregistry/fsstore/fsstore.go:1-2",
+          "engine/architecture_test.go: ring entry \"sddregistry/fsstore\" kept with no sddregistry domain"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "engine/skillregistry/compose.go:121-134",
+        "claim": "The block that decides where the migration stops is detected inline with an implicit rule: the first line starting with '#' or '<!--' ends it. A foreign non-table line that starts with one of those prefixes inside a table block would silently shorten the migration reach. The rule is undocumented as a named predicate, which makes it hard to reason about and to keep in step with other section markers.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/skillregistry/compose.go:121-134"
+        ]
+      }
+    ],
+    "evidence": [
+      "Reviewed the full diff. The removal of repair-sdd, the new usage errors, and the Rows and skipped changes are consistent with the tests and docs in the same diff.",
+      "The Compose migration logic (listed map, supersededExecutorRow, table-block-only drop) matches its new tests, so no behavioral defect was found."
+    ]
+  }
+}

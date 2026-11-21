@@ -1,0 +1,46 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "4f7d93d949a7ff1786622903c5f5f7c8716d206d",
+    "head": "5097b163de294c48b5b542347d031df056a8d33a",
+    "diff_sha256": "9ebc3140e2a0af095f4c04a0133770ab1139561d91a4742483076ab955470bf8",
+    "paths": [
+      "engine/cmd/inception_chain_entry_test.go",
+      "engine/skills/foreman_restored_duties_test.go",
+      "engine/skills/foreman_skills_test.go",
+      "engine/skills/odd_role_skills_artifact_test.go",
+      "skills/odd-feature-doc/SKILL.md",
+      "skills/odd-feature-doc/references/format.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "4f7d93d949a7ff1786622903c5f5f7c8716d206d",
+      "head": "5097b163de294c48b5b542347d031df056a8d33a",
+      "diff_sha256": "9ebc3140e2a0af095f4c04a0133770ab1139561d91a4742483076ab955470bf8"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/cmd/inception_chain_entry_test.go",
+        "engine/skills/foreman_restored_duties_test.go",
+        "engine/skills/foreman_skills_test.go",
+        "engine/skills/odd_role_skills_artifact_test.go",
+        "skills/odd-feature-doc/SKILL.md",
+        "skills/odd-feature-doc/references/format.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The new SKILL.md wording matches the fragments the updated tests assert: `L<n>` is its shaper Log entry, commit `-` until the task is committed, and memorycard mirror `odd/<feature>/tasks`.",
+      "The overview sentence moved verbatim into references/format.md, and the new test checks for it there.",
+      "The JSON-block parser now accepts only an exact ``` line as the closer and errors when another fence opens first. The new test cases (indented block, indented second block, unclosed block followed by a ```text fence) are consistent with that logic.",
+      "I found no defect the diff introduces."
+    ]
+  }
+}

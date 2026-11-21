@@ -1,0 +1,48 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "12ed029296bb54975f29c88daa0c95b464e9f5eb",
+    "head": "d12ce674a16895508d379436465b6c848f768193",
+    "diff_sha256": "b221ba98a874869e2381fb8be8fcc360ae54ffe17cd019a92e05fc60466ff14c",
+    "paths": [
+      "bin/lib/common.sh",
+      "engine/shelltest/apply_push_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "12ed029296bb54975f29c88daa0c95b464e9f5eb",
+      "head": "d12ce674a16895508d379436465b6c848f768193",
+      "diff_sha256": "b221ba98a874869e2381fb8be8fcc360ae54ffe17cd019a92e05fc60466ff14c"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "bin/lib/common.sh",
+        "engine/shelltest/apply_push_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "bin/lib/common.sh:109-112",
+        "claim": "Host extraction for the new compound schemes reuses the ssh:// logic, which strips userinfo and path but, as far as the visible diff shows, may not handle a port suffix (e.g. git+ssh://localhost:2222/x) or bracketed IPv6 ([::1]). The remaining lines of the branch are not in the diff, so whether such hosts are classified as local is unknown. The change widens exposure to this existing behavior to two more schemes; it adds no new defect itself.",
+        "evidence_class": "inferential",
+        "causal_disposition": "unknown",
+        "proof_refs": [
+          "bin/lib/common.sh:109-112"
+        ]
+      }
+    ],
+    "evidence": [
+      "The change only adds two case patterns (git+ssh://*, ssh+git://*) to the existing ssh://* branch, so those URLs follow the same host parsing and local-host check as ssh://.",
+      "The new tests cover localhost and 127.0.0.1 for the new schemes, and both are expected to be treated as local.",
+      "No regression for previously valid input: before the change these schemes fell through to the default branch, which treated them as network remotes. The commit message states that is the intended behavior to fix."
+    ]
+  }
+}

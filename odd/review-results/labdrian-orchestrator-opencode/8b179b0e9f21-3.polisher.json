@@ -1,0 +1,17 @@
+{
+  "kind": "polisher",
+  "base": "95d4e2549703d328aa8ab40c6a5107c7490c3a1c",
+  "head": "8b179b0e9f216f87f5b5c6fa698952389be7d6ea",
+  "diff_sha256": "ff71baed6f198bfd5d160896c10c1685d503c2346f15c5818590313acec1f602",
+  "findings": {
+    "findings": [],
+    "evidence": [
+      "Read the full diff t61.diff (CHANGELOG, opencode_agents.go, opencode_agents_test.go).",
+      "The added bullet in engine/runtime/opencode_agents.go:40 matches, character for character, the bullet pinned in the feature document at L20 and L971: the arrow is a literal U+2192 and the backticks use the block's raw-string pattern; it is the last line of the block and no other line changed.",
+      "The bullet names no subagent-stop hook and no orchestrator; the banned list in the existing test now includes both words.",
+      "The plugin does capture: engine/runtime/memorycard-opencode-plugin.mjs:4 and :128 start `memorycard capture` with the subagent's final text on stdin, so the bullet's claim is true.",
+      "The two new tests assert the bullet appears exactly once, as the last line, with both verbatim Claude sentences, and that a block without it reads stale (partial status naming `engine runtime update --target opencode`) and Update replaces it in place. Read, not run.",
+      "The diff touches only the Go file, its test and CHANGELOG.md, so Claude Code, Codex and Pi bytes are unchanged. Differential and suite not run."
+    ]
+  }
+}

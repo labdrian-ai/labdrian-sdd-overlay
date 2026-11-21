@@ -1,0 +1,95 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "2b9943d451cd99da6188ad5e068bb403cadbeb11",
+    "head": "6b2a2043a2984a734f86cc4a096884eb995d8e1e",
+    "diff_sha256": "d4ad0fcaf23f41ad65264d96f63da187ab916c5d2f8ade91b0b965e60427d279",
+    "paths": [
+      "CHANGELOG.md",
+      "README.md",
+      "engine/cmd/opencode_bridge_e2e_test.go",
+      "engine/cmd/opencode_bridge_session_e2e_test.go",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-context-lists-quotes-and-case.golden",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-minimalism-context-metadata-accepted-today.golden",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-phases-quoted-items-accepted-today.golden",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-reads-the-contracts-of-the-overlay.golden",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-without-the-oo-contract.golden",
+      "engine/cmd/testdata/runtime-golden/runtime-opencode-and-pi-with-an-overlay.golden",
+      "engine/runtime/labdrian-runtime-parity-plugin.mjs",
+      "engine/runtime/opencode_bridge_session_test.go",
+      "engine/runtime/opencode_plugin.go",
+      "engine/runtime/opencode_plugin_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "2b9943d451cd99da6188ad5e068bb403cadbeb11",
+      "head": "6b2a2043a2984a734f86cc4a096884eb995d8e1e",
+      "diff_sha256": "d4ad0fcaf23f41ad65264d96f63da187ab916c5d2f8ade91b0b965e60427d279"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "README.md",
+        "engine/cmd/opencode_bridge_e2e_test.go",
+        "engine/cmd/opencode_bridge_session_e2e_test.go",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-context-lists-quotes-and-case.golden",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-minimalism-context-metadata-accepted-today.golden",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-phases-quoted-items-accepted-today.golden",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-reads-the-contracts-of-the-overlay.golden",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-without-the-oo-contract.golden",
+        "engine/cmd/testdata/runtime-golden/runtime-opencode-and-pi-with-an-overlay.golden",
+        "engine/runtime/labdrian-runtime-parity-plugin.mjs",
+        "engine/runtime/opencode_bridge_session_test.go",
+        "engine/runtime/opencode_plugin.go",
+        "engine/runtime/opencode_plugin_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "engine/runtime/labdrian-runtime-parity-plugin.mjs:404-410",
+        "claim": "The 'hooks are not running' note is meant to be told once, but it is stored in session.start (SessionStart failure) or session.promptLines (prompt failure). contextRequested replays both on every model call, so the note is pushed repeatedly. A SessionStart failure is also cached for the whole session and never retried, so the memory block stays lost even after the engine recovers.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/runtime/labdrian-runtime-parity-plugin.mjs:393-400",
+          "engine/runtime/labdrian-runtime-parity-plugin.mjs:407-409"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "engine/runtime/labdrian-runtime-parity-plugin.mjs:407",
+        "claim": "session.start stores the promise of askSessionStart. If it ever rejects, the guarded wrapper swallows the error, but the rejected promise stays cached. Every later context call then throws at the await before the loop, so the prompt lines are dropped as well for the rest of the session.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/runtime/labdrian-runtime-parity-plugin.mjs:407-409"
+        ]
+      },
+      {
+        "id": "F3",
+        "severity": "SUGGESTION",
+        "location": "engine/runtime/opencode_bridge_session_test.go:23-25",
+        "claim": "The comment 'systemTexts is what the context hook pushed...' sits on the systemPart type, so it names a symbol that does not exist and describes the wrong thing.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/runtime/opencode_bridge_session_test.go:23-25"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the plugin diff: askSessionStart and linesOf return the claimUnavailableNote result, which is stored and re-pushed by contextRequested on each call.",
+      "The test for an engine failure runs a single model call, so it does not catch repeated notes."
+    ]
+  }
+}

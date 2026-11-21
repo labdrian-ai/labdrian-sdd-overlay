@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "9553cf544e386b2f125614e37f2dad1983ad4426",
+    "head": "b35a55b868da5d3efcc422386433f52ec6c0c29e",
+    "diff_sha256": "d99e4232fd6739cba3381494742afe92c7dbd0fd2108f041012b585a78fe2fee",
+    "paths": [
+      "engine/cmd/testdata/contract-golden/runtime-opencode-context-lists-quotes-and-case.golden",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-minimalism-context-metadata-accepted-today.golden",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-phases-quoted-items-accepted-today.golden",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-reads-the-contracts-of-the-overlay.golden",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-without-the-oo-contract.golden",
+      "engine/cmd/testdata/runtime-golden/runtime-opencode-and-pi-with-an-overlay.golden",
+      "engine/runtime/opencode_plugin.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "9553cf544e386b2f125614e37f2dad1983ad4426",
+      "head": "b35a55b868da5d3efcc422386433f52ec6c0c29e",
+      "diff_sha256": "d99e4232fd6739cba3381494742afe92c7dbd0fd2108f041012b585a78fe2fee"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/cmd/testdata/contract-golden/runtime-opencode-context-lists-quotes-and-case.golden",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-minimalism-context-metadata-accepted-today.golden",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-phases-quoted-items-accepted-today.golden",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-reads-the-contracts-of-the-overlay.golden",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-without-the-oo-contract.golden",
+        "engine/cmd/testdata/runtime-golden/runtime-opencode-and-pi-with-an-overlay.golden",
+        "engine/runtime/opencode_plugin.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The only source change is the OpenCodePluginVersion constant, bumped from 2026-11-17-runtime-parity-15 to 2026-11-18-runtime-parity-16 in engine/runtime/opencode_plugin.go.",
+      "Every golden file change is a mechanical replacement of the old version string with the new one in install, update and status output; each occurrence in the diff was replaced and no other line changed.",
+      "The new string keeps the existing date-slug-number format, and the memorycard plugin version (2026-11-17-memorycard-2) is untouched.",
+      "The diff does not show the plugin .mjs source or any other consumer of the version, so I cannot check whether any other file hardcodes the old string. Nothing in the visible diff points to a defect this commit causes."
+    ]
+  }
+}

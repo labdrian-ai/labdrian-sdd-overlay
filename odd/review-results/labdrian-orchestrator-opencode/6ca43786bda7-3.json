@@ -1,0 +1,59 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "2bf126211283fadb29bb4d34a89231125a0a2a96",
+    "head": "6ca43786bda767a89de266e982b9c1a31937c9b9",
+    "diff_sha256": "5971a91fe6698e963766a3a7e7b04ae4b46935b28dd360c2da25f623eb538242",
+    "paths": [
+      "engine/agentgen/agentgen.go",
+      "engine/agentgen/messages_pin_test.go",
+      "engine/agentgen/models.go",
+      "engine/agentgen/models_test.go",
+      "engine/agentgen/roles.go",
+      "engine/agentgen/roles_test.go",
+      "skills/role-chain/references/models.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "2bf126211283fadb29bb4d34a89231125a0a2a96",
+      "head": "6ca43786bda767a89de266e982b9c1a31937c9b9",
+      "diff_sha256": "5971a91fe6698e963766a3a7e7b04ae4b46935b28dd360c2da25f623eb538242"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/agentgen/agentgen.go",
+        "engine/agentgen/messages_pin_test.go",
+        "engine/agentgen/models.go",
+        "engine/agentgen/models_test.go",
+        "engine/agentgen/roles.go",
+        "engine/agentgen/roles_test.go",
+        "skills/role-chain/references/models.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "engine/agentgen/models.go:82-85",
+        "claim": "The parser accepts a table with a repeated tier row or a repeated runtime column without complaint. A second row for the same tier replaces the whole first row (`ids[cells[0]] = map...`). A repeated runtime column lets a later, possibly empty, cell overwrite an earlier id. The required-id checks then either pass on the last occurrence or report an empty id, so an editing mistake changes generated model ids silently instead of being refused. This weakens the stated guarantee that a malformed table is refused.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/agentgen/models.go:82-85"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the whole diff. The Claude and Pi projection now takes its ids from the table. The old constants map to the table values that the test pins.",
+      "build and Check order the problems consistently: sources first, then the models problem. The pinned message test matches that order.",
+      "The refusal paths (missing file, missing tier, missing runtime, empty id) are covered by tests, and generation is skipped when the table is refused.",
+      "No change-caused regression found on previously valid input."
+    ]
+  }
+}

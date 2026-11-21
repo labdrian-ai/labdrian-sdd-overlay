@@ -1,0 +1,103 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "747e3231c9a7e21c89fc213c37b72a2ae40d9d1c",
+    "head": "f3c774ecd4b1d88f869be66b4cf4ee615c757b5d",
+    "diff_sha256": "cf3a55c99657c3c93d12e598c19b6490b7aff26d27cc8dc4f51950b06b5f17dd",
+    "paths": [
+      "CHANGELOG.md",
+      "engine/cmd/roles.go",
+      "engine/cmd/roles_bound.go",
+      "engine/cmd/roles_bound_test.go",
+      "engine/cmd/roles_feature_entry_test.go",
+      "engine/cmd/usage.go",
+      "engine/roles/bound.go",
+      "engine/roles/bound_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability",
+    "hunt"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "747e3231c9a7e21c89fc213c37b72a2ae40d9d1c",
+      "head": "f3c774ecd4b1d88f869be66b4cf4ee615c757b5d",
+      "diff_sha256": "cf3a55c99657c3c93d12e598c19b6490b7aff26d27cc8dc4f51950b06b5f17dd"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "engine/cmd/roles.go",
+        "engine/cmd/roles_bound.go",
+        "engine/cmd/roles_bound_test.go",
+        "engine/cmd/roles_feature_entry_test.go",
+        "engine/cmd/usage.go",
+        "engine/roles/bound.go",
+        "engine/roles/bound_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "engine/cmd/roles_bound.go:62-76",
+        "severity": "WARNING",
+        "claim": "hasFeatureDocument turns every refusal from fsdoc.Reader.Read into 'no document' (err == nil only). The rule can then fail open. If odd/tasks/<goal>.md exists but cannot be opened (for example mode 000 for a non-root user), is larger than oddtask.MaxDocumentBytes, or is a symbolic link, Read refuses it with CauseLink, CauseNotRegular, CauseTooLarge or an open error. hasFeatureDocument then answers false, and 'roles append' stores the seq 1 record that T57 says must go through 'labdrian workflow open'. The criterion is 'has odd/tasks/<G>.md at the worktree root', but the code checks 'is a regular, readable file under the size bound'. The trigger is uncommon (a symlinked or oversized task document), so this is a WARNING. A cheaper check that keeps the rule closed would be: refuse whenever Lstat finds the path, or treat only CauseNotFound/CauseNoRepository as absent.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/cmd/roles_bound.go:74-75 `_, err = fsdoc.Reader{Root: worktreeRoot}.Read(...); return err == nil`",
+          "engine/oddtask/fsdoc/fsdoc.go:53-80 (Lstat/refusalOf/Open/size refusals)"
+        ]
+      },
+      {
+        "id": "F2",
+        "location": "engine/cmd/roles.go:327-331",
+        "severity": "WARNING",
+        "claim": "The new check is not limited to 'after T56's check found no open bound workflow', as the T57 line says. It runs whenever BoundAppendRefusal returns \"\", and that includes a checkout bound to an open workflow whose role chain the record names. In that case 'workflow open' has already written seq 1. A repeated or mistaken seq 1 append for that chain (goal f, chain f-t1) now gets the message 'its role chain starts with labdrian workflow open ... run it'. Before, the chain store refused the duplicate. Running 'workflow open' again is wrong advice here, because the workflow is already open. No test covers seq 1 under an open bound workflow.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/cmd/roles.go:317-331 (feature check runs after any BoundAppendRefusal == \"\", with no bound-workflow condition)"
+        ]
+      },
+      {
+        "id": "F3",
+        "location": "engine/cmd/roles_feature_entry_test.go:47-52",
+        "severity": "SUGGESTION",
+        "claim": "TestWorkflowOpenStillWritesTheFirstTwoRecordsOfAFeatureChain only counts files under the role-chains store (== 2). T57 asks for a test showing that 'workflow open' on a repository holding the document 'still writes seq 1 and 2 and binds'. The test checks neither the seq values nor that the binding exists (for example via describeBinding). The bgRepo helper only checks that 'workflow open' exits 0, so a regression that writes two wrong records or skips the bind would still pass.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/cmd/roles_feature_entry_test.go:221-226 in diff",
+          "engine/cmd/roles_builder_guard_test.go:56-63"
+        ]
+      },
+      {
+        "id": "F4",
+        "location": "engine/cmd/roles_feature_entry_test.go:1-53",
+        "severity": "SUGGESTION",
+        "claim": "No command test covers the 'directory outside a repository answers as before' branch, or a cwd in a subdirectory of the worktree. Both depend on worktreeRoot resolution inside hasFeatureDocument. The CHANGELOG and usage text both state the outside-repository behavior, but no test pins it. A regression that resolved odd/tasks against cwd instead of the worktree root would pass the current tests, because bgBareRepo's root is also the cwd.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/cmd/roles_feature_entry_test.go (tests run from root only)"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the whole diff t57.diff",
+      "Read T57 criteria at line 99 of the tasks file",
+      "Read engine/cmd/roles.go:255-344 (runRolesAppend order: flag match, bound refusal, feature refusal, evidence, store)",
+      "Read engine/oddtask/fsdoc/fsdoc.go (Read refusal semantics)",
+      "Grep: worktreeRoot at engine/cmd/workflow_open.go:67; the only runRolesAppend caller is roles.go:57; the removed 'unreadable' helper has no remaining caller in roles tests",
+      "Read bgBareRepo/bgRepo (engine/cmd/roles_builder_guard_test.go:32-63)",
+      "Checked the refusal sentence in roles/bound.go and in both tests against the T57 exact text: they match",
+      "Symlink tests pin detail strings with no t.Skip on their path; failure with the branches removed not verified",
+      "No tests or commands were run"
+    ]
+  }
+}

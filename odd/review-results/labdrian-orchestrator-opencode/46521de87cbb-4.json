@@ -1,0 +1,108 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "62828131b67423edb6488248dbab0cd495876c10",
+    "head": "46521de87cbb5fc474a9db55318ed01572b13cd1",
+    "diff_sha256": "5604805a015fa44d2090f9ae91607cc19a862604922561b9c0acb852f35b99c6",
+    "paths": [
+      "CHANGELOG.md",
+      "engine/cmd/roles_skill_paths_test.go",
+      "engine/cmd/usage.go",
+      "engine/gate/skillpaths.go",
+      "engine/gate/skillpaths_prose_test.go",
+      "engine/gate/skillpaths_test.go",
+      "engine/runtime/opencode_bridge_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line",
+    "recall"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "62828131b67423edb6488248dbab0cd495876c10",
+      "head": "46521de87cbb5fc474a9db55318ed01572b13cd1",
+      "diff_sha256": "5604805a015fa44d2090f9ae91607cc19a862604922561b9c0acb852f35b99c6"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "engine/cmd/roles_skill_paths_test.go",
+        "engine/cmd/usage.go",
+        "engine/gate/skillpaths.go",
+        "engine/gate/skillpaths_prose_test.go",
+        "engine/gate/skillpaths_test.go",
+        "engine/runtime/opencode_bridge_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "engine/runtime/opencode_bridge_test.go:584-586",
+        "severity": "WARNING",
+        "claim": "The bridge test pins the plugin file's sha256 as a constant (pluginSHA256, 'as T60 found it'). It is a snapshot of one moment. Any later legitimate plugin change fails TestOpenCodeBridgeLaunchesABuilderWithTheSkillItsProseNames, a test about skill prose, and the only way to fix it is to edit the constant. The constant also can't be checked against the base: the pre-T60 plugin hash isn't recorded in the diff. I did not run the test, so I can't say whether the hash value matches the file at head.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "t60.diff:326-328",
+          "t60.diff:364-366"
+        ]
+      },
+      {
+        "id": "F2",
+        "location": "engine/gate/skillpaths.go:95-105",
+        "severity": "SUGGESTION",
+        "claim": "addProseMentions calls isFile (a stat via the port) once per hyphenated lowercase word occurrence. Only positive hits are memoised in 'listed'. A repeated word with no SKILL.md is stat'ed every time it appears. The plugin runs this on every subagent launch prompt, so a very large prompt full of hyphenated words (logs, diffs) causes one stat syscall per occurrence, and the cost is unbounded by prompt size. Caching negative results per word would cap it at one stat per distinct word. No realistic prompt is shown to reach a harmful size.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "t60.diff:125-135"
+        ]
+      },
+      {
+        "id": "F3",
+        "location": "engine/gate/skillpaths.go:141-142",
+        "severity": "SUGGESTION",
+        "claim": "When a prompt has no header and uses CRLF line endings, the appended section is written with bare LF ('\\n\\n## Skills...\\n path\\n'). The body's trailing '\\r' is also kept ahead of the LF, so the prompt ends up with mixed endings. The header-present path preserves '\\r' per line (the 'eol' logic), so the two paths behave differently. A header line that ends in '\\r' no longer equals the exact header if a consumer compares untrimmed, though the engine's own parser trims. The test 'a crlf prompt keeps its carriage returns' covers only the header-present case.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "t60.diff:140-143",
+          "t60.diff:150-153",
+          "t60.diff:267-270"
+        ]
+      },
+      {
+        "id": "F4",
+        "location": "engine/gate/skillpaths.go:88-91",
+        "severity": "SUGGESTION",
+        "claim": "Fence detection counts only lines that start at column 0 with three backticks. An indented fence ('  ```') and a tilde fence ('~~~') are not recognised, and neither is a longer fence whose inner lines start with three backticks. Hyphenated skill ids inside such code blocks are then treated as prose mentions and their paths are added. This differs from CommonMark but matches the task's literal rule, and the failure is only an extra skill path being listed.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "t60.diff:116-124"
+        ]
+      },
+      {
+        "id": "F5",
+        "location": "engine/runtime/opencode_bridge_test.go:346",
+        "severity": "SUGGESTION",
+        "claim": "The wrapper shell script interpolates the built engine path unquoted ('exec ' + built + ' \"$@\"'). If TMPDIR contains a space or shell metacharacter, the wrapper fails with a confusing error. The test also needs 'go' on PATH and runs a full 'go build' with no skip when the toolchain is missing, unlike requireNode.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "t60.diff:339-346"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the whole diff, T60's criteria text in odd/tasks/labdrian-orchestrator-opencode.md line 102, and engine/gate/skillpaths.go at head in the worktree.",
+      "Grep confirmed the helpers the new tests use exist at head.",
+      "Traced RewriteSkillPaths and addProseMentions by hand for the no-header, empty-section, CRLF, fenced and already-listed cases, and found them consistent with the T60 rule. The word form [a-z0-9-] excludes '/', '.' and '..', so a mention cannot escape skillsRoot.",
+      "The refusal paths in the header section loop are unchanged, and a prompt with no mention returns strings.Join(lines) as before.",
+      "Not run: no tests, no build, no hash computation (the role forbids running anything)."
+    ]
+  }
+}

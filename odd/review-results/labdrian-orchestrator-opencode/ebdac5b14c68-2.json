@@ -1,0 +1,39 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "079981c74ed9a40e9345f6065ce71e3d976e64a0",
+    "head": "ebdac5b14c68c2ac61f72619f8eaac032d485e67",
+    "diff_sha256": "a6395b19c8758f7becb4bf4f56d82cf3853aa44bfbbc561bad106852359909fe",
+    "paths": [
+      "engine/review/analyzers/analyzers.go",
+      "engine/review/analyzers/analyzers_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "079981c74ed9a40e9345f6065ce71e3d976e64a0",
+      "head": "ebdac5b14c68c2ac61f72619f8eaac032d485e67",
+      "diff_sha256": "a6395b19c8758f7becb4bf4f56d82cf3853aa44bfbbc561bad106852359909fe"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/review/analyzers/analyzers.go",
+        "engine/review/analyzers/analyzers_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "holdsGoFile now lists the directory with os.ReadDir, so a path containing [, *, ? or a backslash is no longer interpreted as a glob pattern.",
+      "The loop skips directory entries, so a subdirectory named x.go no longer counts as a Go file. The old Glob would have matched it, so this tightens the check rather than regressing it.",
+      "A symlink to a directory reports IsDir() false and a symlink named *.go counts as a file. Glob treated both the same way, so there is no behavior change.",
+      "The test adds a package named a[1] and expects it to be passed to staticcheck, which covers the metacharacter case.",
+      "I could not see the import block of analyzers.go in the diff, so I assumed os and strings are already imported there. A missing import would be a compile error, which CI would catch."
+    ]
+  }
+}

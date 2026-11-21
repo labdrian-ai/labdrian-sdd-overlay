@@ -8,6 +8,58 @@
 # Sourced by bin/labdrian-overlay in the order it lists, never run: it defines functions and
 # variables and does nothing else.
 
+# indent_lines copies stdin with two spaces before every line, the way apply shows a step.
+indent_lines() {
+  local line
+  while IFS= read -r line; do
+    printf '  %s\n' "$line"
+  done
+}
+
+# runtime_install_and_report TARGET runs `engine runtime install --target TARGET` over this checkout, the
+# step `apply --target pi` has in pipkg_apply_and_report, for the three copy targets whose runtime adapter
+# writes more than a copy of the manifest rows reaches. claude: only the owner rules block of
+# ~/.claude/CLAUDE.md (the call carries --component owner-rules); settings.json stays install-hooks'
+# alone. codex: the adapter keeps the owner rules
+# (instructions/owner-rules.md) in one marked block of ~/AGENTS.md, $CODEX_HOME/AGENTS.md and
+# $CODEX_HOME/agents.md (CODEX_HOME defaults to ~/.codex). opencode: it writes the plugins, opencode.json
+# (the default agent and the MCP servers) and the AGENTS.md block, which longterm-mem register then
+# reads (opencode.json must exist). Two cases have nothing to run and do not fail the deploy: a
+# checkout without the source its adapter reads (instructions/owner-rules.md for claude and codex,
+# skills/_shared/minimalism-contract.md for opencode: an older main; silent, so its output is what it
+# was), and an engine binary that is not installed yet (the note names the recovery). `apply` never
+# reaches that note: manifest_routes_load calls ensure_engine_binary, which builds or rebuilds the binary
+# before this step; the note guards a direct call of this function.
+# Non-zero when the engine ran and did not report an install that took effect.
+runtime_install_and_report() {
+  local target="$1" what="runtime" source_file
+  local -a component_args=()
+  case "$target" in
+    claude)
+      source_file="instructions/owner-rules.md"
+      what="owner rules"
+      component_args=(--component owner-rules)
+      ;;
+    codex)
+      source_file="instructions/owner-rules.md"
+      what="owner rules"
+      ;;
+    opencode) source_file="skills/_shared/minimalism-contract.md" ;;
+    *) return 1 ;;
+  esac
+  [[ -f "$OVERLAY_DIR/$source_file" ]] || return 0
+  if [[ ! -x "$ENGINE_BINARY" ]]; then
+    echo "  $target: engine binary not found at $ENGINE_BINARY; $what not installed (run 'labdrian install-hooks', then 'labdrian apply --target $target')"
+    return 0
+  fi
+  local result
+  if ! result="$(LABDRIAN_OVERLAY_DIR="$OVERLAY_DIR" "$ENGINE_BINARY" runtime install --target "$target" ${component_args[@]+"${component_args[@]}"} 2>&1)"; then
+    indent_lines <<<"$result" >&2
+    return 1
+  fi
+  indent_lines <<<"$result"
+}
+
 cmd_apply() {
   # shellcheck disable=SC2164  # errexit is on (set -e in bin/labdrian-overlay): a failed cd ends the run
   cd "$OVERLAY_DIR"
@@ -77,6 +129,12 @@ cmd_apply() {
   # explicit --target pi and for pi riding along inside --target all.
   local pi_stub_included=""
 
+  # Set when `engine runtime install --target claude|codex|opencode` ran and failed: apply still deploys every
+  # target, then exits non-zero, so a block that was not written never reads as a clean apply.
+  local runtime_install_failed=""
+  # Targets the longterm-mem step leaves alone because their runtime install failed (see the deploy loop).
+  LONGTERM_MEM_SKIP_TARGETS=""
+
   for t in $(resolve_targets "$target_arg"); do
     echo ""
     echo "=== Deploying to: $t ==="
@@ -93,7 +151,7 @@ cmd_apply() {
 
     local tpath="${TARGET_PATHS[$t]}"
 
-    if [[ ! -d "$tpath" ]]; then
+    if copies_skills "$t" && [[ ! -d "$tpath" ]]; then
       mkdir -p "$tpath"
       echo "  (created target directory: $tpath)"
     fi
@@ -147,9 +205,35 @@ cmd_apply() {
     # overlay-release-state R-001: persist this target's deployed version
     # and content digest so a target with no entry can be reported honestly
     # as "never deployed" rather than staying silently unversioned forever.
+    # What the OpenCode runtime adapter writes (the plugins, opencode.json and the AGENTS.md block) is not
+    # a manifest row either, and without it the target is not deployed: it runs before the state row and
+    # before the once-per-apply longterm-mem step below, which reads opencode.json. A failure is shown
+    # once, leaves no state row (status keeps saying the target was never deployed; the step runs again
+    # on every apply), keeps longterm-mem from registering into the file the install could not write, and
+    # fails apply's own exit below.
+    if [[ "$t" == "opencode" ]] && ! runtime_install_and_report opencode; then
+      runtime_install_failed=1
+      LONGTERM_MEM_SKIP_TARGETS+=" opencode"
+      echo "  opencode: runtime install failed; target state not recorded (re-run apply once the cause is fixed)" >&2
+      # An entry an earlier apply recorded would still claim the old deploy.
+      state_forget_target opencode || warn "could not drop the opencode state row; status may still read the earlier deploy"
+      continue
+    fi
+
     local target_digest
     target_digest="$(compute_target_digest "$t" live)"
     state_write_target "$t" "$release_version" "$target_digest"
+
+    # The owner rules block of ~/.claude/CLAUDE.md and of the three Codex AGENTS files is not a manifest row:
+    # the runtime adapter writes it, after the state row (claude: the owner-rules component alone, never
+    # settings.json). A failure is reported like pi's and fails apply's own exit
+    # below.
+    if [[ "$t" == "claude" ]]; then
+      runtime_install_and_report claude || runtime_install_failed=1
+    fi
+    if [[ "$t" == "codex" ]]; then
+      runtime_install_and_report codex || runtime_install_failed=1
+    fi
   done
 
   # D13: run the longterm-mem install path exactly once for this whole
@@ -184,14 +268,30 @@ cmd_apply() {
   trap - EXIT
   info "Returned to branch: $current_branch"
 
-  # main is pushed immediately after the merge — same reasoning as capture's
-  # push of 'upstream': an apply that only lands locally is exactly what lets
-  # main silently diverge from origin the moment anything else lands there
-  # (a PR merge, another machine's apply) before this one gets pushed.
-  # A repo with no 'origin' remote (tests, detached mirrors) has nowhere to
-  # push: skip loudly instead of failing the apply that already merged.
+  push_main_to_origin
+
+  # Deploy itself succeeded, but a failed mcp install must not exit 0
+  # (R4-silent-package-skip): neither may a run that included pi and only
+  # printed its stub, with nothing actually deployed for it.
+  [[ -n "$mcp_install_failed" || -n "$pi_stub_included" || -n "$runtime_install_failed" ]] && return 1
+  return 0
+}
+
+# main is pushed immediately after the merge — same reasoning as capture's
+# push of 'upstream': an apply that only lands locally is exactly what lets
+# main silently diverge from origin the moment anything else lands there
+# (a PR merge, another machine's apply) before this one gets pushed.
+# A repo with no 'origin' remote (tests, detached mirrors) has nowhere to
+# push: skip loudly instead of failing the apply that already merged.
+#
+# Only a network remote is pushed to. An origin that is a path on this machine (a scratch clone made
+# from the real checkout, a mirror) is not where main is published: pushing there landed unmerged
+# commits in the real repository's local main. It is skipped loudly too.
+push_main_to_origin() {
   if ! git remote get-url origin >/dev/null 2>&1; then
     info "No 'origin' remote — skipping main push"
+  elif ! origin_is_network_remote; then
+    info "The 'origin' remote is on this machine (origin is not a network remote) — skipping main push"
   else
     local ahead
     ahead="$(git rev-list --count origin/main..main 2>/dev/null || echo 0)"
@@ -200,10 +300,4 @@ cmd_apply() {
       info "Pushed main to origin"
     fi
   fi
-
-  # Deploy itself succeeded, but a failed mcp install must not exit 0
-  # (R4-silent-package-skip): neither may a run that included pi and only
-  # printed its stub, with nothing actually deployed for it.
-  [[ -n "$mcp_install_failed" || -n "$pi_stub_included" ]] && return 1
-  return 0
 }

@@ -1,0 +1,48 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "4196e145bdf2c4d2c3b5ea1ce7c0efff579c48d2",
+    "head": "12ed029296bb54975f29c88daa0c95b464e9f5eb",
+    "diff_sha256": "f04001fa864dba10722e5344832540dfb46f9e48d9d98f475d5a49c923a25f10",
+    "paths": [
+      "bin/lib/common.sh",
+      "engine/shelltest/apply_push_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "4196e145bdf2c4d2c3b5ea1ce7c0efff579c48d2",
+      "head": "12ed029296bb54975f29c88daa0c95b464e9f5eb",
+      "diff_sha256": "f04001fa864dba10722e5344832540dfb46f9e48d9d98f475d5a49c923a25f10"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "bin/lib/common.sh",
+        "engine/shelltest/apply_push_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "bin/lib/common.sh:115",
+        "claim": "The new catch-all `*://*) return 0` also classifies compound-scheme ssh URLs such as git+ssh://localhost/... or ssh+git://localhost/... as network remotes. Before this change those went through the host check and were local when the host was localhost. The commit message says only ssh:// and scp forms are local, so this is probably intended, but no test covers these schemes.",
+        "evidence_class": "inferential",
+        "causal_disposition": "behavior-activated",
+        "proof_refs": [
+          "bin/lib/common.sh:110-115"
+        ]
+      }
+    ],
+    "evidence": [
+      "Reviewed the full diff. The ssh:// branch keeps the old host extraction, and the other schemes now return 0 early.",
+      "The new tests cover http on localhost, https on 127.0.0.1, and an upper-case SSH://LOCALHOST. The input is lowercased before the case match, so that last case still matches ssh://*.",
+      "The part of the function after the shown hunk (the host comparison) is not in the diff, so I could not check it beyond what the diff shows."
+    ]
+  }
+}

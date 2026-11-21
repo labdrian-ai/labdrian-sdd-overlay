@@ -1,0 +1,57 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "b50d9da2b31c9b73421bb5c1f0c319c2d58a44ec",
+    "head": "83ae75170f303e34a45cae88b368460a4830e0d6",
+    "diff_sha256": "56947a686007f3a61f3c7c66f77d119f84a97bebf981f4405fd533fa2d5ee040",
+    "paths": [
+      "odd/tasks/labdrian-orchestrator-opencode.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "b50d9da2b31c9b73421bb5c1f0c319c2d58a44ec",
+      "head": "83ae75170f303e34a45cae88b368460a4830e0d6",
+      "diff_sha256": "56947a686007f3a61f3c7c66f77d119f84a97bebf981f4405fd533fa2d5ee040"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/labdrian-orchestrator-opencode.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/labdrian-orchestrator-opencode.md:64",
+        "claim": "The T14 commit range `59fe2fb3`..`b50d9da2` is recorded as a range, but L82 lists many commits (e.g. 9ef28e09, dec120a4, 2e22df05) and the L83 commit b50d9da2 is the endpoint; the range notation may include unrelated commits or omit the chain structure, unlike sibling tasks which list each commit hash explicitly. Minor traceability weakness for the review-chain check.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/labdrian-orchestrator-opencode.md:64"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/labdrian-orchestrator-opencode.md:708",
+        "claim": "L83 states `review check` clear and series review suggestions 'answered in the record' without naming where; the claim is unverifiable from the document and the owner's approval is quoted as a bare 'si' for a text the log only summarises, so the approved block is not reproduced in the record.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/labdrian-orchestrator-opencode.md:708"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff changes only a documentation file: one task checkbox ticked, commit range filled, and one Log entry L83 added.",
+      "L82 said T14 would be ticked after the Engram-free memorycard block lands; L83 records that landing (b50d9da2) and the owner approval, consistent with the tick.",
+      "No code or behavior is changed, so no regression or behavior defect is attributable to this commit."
+    ]
+  }
+}

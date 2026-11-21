@@ -1,0 +1,48 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "83a671b837fea952a05718111dafe77ebbce92a2",
+    "head": "b4f5adec4e7c1aa909fd49b13347b4215e12aa3a",
+    "diff_sha256": "584618c79703606762715e5df488f51eb8e23e137d6fdfb3e0492e43c9985c46",
+    "paths": [
+      "engine/cmd/skills_candidates_cli.go",
+      "engine/cmd/skills_candidates_verb_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "83a671b837fea952a05718111dafe77ebbce92a2",
+      "head": "b4f5adec4e7c1aa909fd49b13347b4215e12aa3a",
+      "diff_sha256": "584618c79703606762715e5df488f51eb8e23e137d6fdfb3e0492e43c9985c46"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/cmd/skills_candidates_cli.go",
+        "engine/cmd/skills_candidates_verb_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "engine/cmd/skills_candidates_verb_test.go:28",
+        "claim": "The success test treats a negative exit code as success: the check is `code > 0`, so the initial sentinel -1 (exit never called) passes, and an exit(-1) or any negative code would also pass. The success path is verified only through the `read` flag, so the assertion on exit status is weaker than its failure message implies.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/cmd/skills_candidates_verb_test.go:28"
+        ]
+      }
+    ],
+    "evidence": [
+      "The one-line production change swaps parse for parseAfterVerb, matching the stated behaviour of add, remove and sync; parseAfterVerb is not shown in the diff, so its semantics are assumed from the commit message and the new tests.",
+      "The refusal test asserts a non-zero exit and that the stderr names \"extra\", which covers a stray positional after the verb.",
+      "I found no production defect in the diff itself."
+    ]
+  }
+}

@@ -1,0 +1,76 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "284962adc519179d93c09b81179bca27ff759fe6",
+    "head": "800bbcf89ab1a71c6f2eb937178d47b0c884d84f",
+    "diff_sha256": "59a64c02b469be4edcb0bb9f3e2af749a8ff160865b5be01b10284c57072a070",
+    "paths": [
+      "agents/delivery.md",
+      "agents/foreman.md",
+      "codex/agents/delivery.toml",
+      "engine/agentgen/foreman_test.go",
+      "engine/skills/role_agents_artifact_test.go",
+      "opencode/agents/delivery.md",
+      "opencode/agents/foreman.md",
+      "pi/agents/delivery.md",
+      "roles/delivery/body.md",
+      "roles/foreman/body.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "284962adc519179d93c09b81179bca27ff759fe6",
+      "head": "800bbcf89ab1a71c6f2eb937178d47b0c884d84f",
+      "diff_sha256": "59a64c02b469be4edcb0bb9f3e2af749a8ff160865b5be01b10284c57072a070"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "agents/delivery.md",
+        "agents/foreman.md",
+        "codex/agents/delivery.toml",
+        "engine/agentgen/foreman_test.go",
+        "engine/skills/role_agents_artifact_test.go",
+        "opencode/agents/delivery.md",
+        "opencode/agents/foreman.md",
+        "pi/agents/delivery.md",
+        "roles/delivery/body.md",
+        "roles/foreman/body.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "roles/delivery/body.md:9",
+        "claim": "The new sentence is ambiguous when the test run was not at the delivered head. The earlier sentence says to write 'not run' when the worktree is not at that head. The new rule says to block if the test run 'was not run or failed'. The prompt gives no order between the two rules and no guidance on what to do when `review ci` exits non-zero (CI configured). A delivery that sees CI configured will correctly not block, but the wording leaves 'when it exits 0 (no CI)' relying on an unstated exit-code meaning. The foreman Close row also requires 'delivery's entry holding the test runner's command run at the delivered head', which may conflict with delivery returning blocked and never writing the entry. A blocked delivery appends no entry, so the foreman condition only ever sees passing runs, and the 'not run or failed is no closure' clause in foreman is unreachable on that path.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "roles/delivery/body.md:9",
+          "roles/foreman/body.md:29"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "engine/skills/role_agents_artifact_test.go:1119-1129",
+        "claim": "The new test checks only that the sentence is present in the five files. It does not check the foreman Close row's wording across the generated foreman files (agents, opencode). Only the agentgen test covers the roles/foreman body, so drift in the generated foreman copies would go unnoticed here.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/skills/role_agents_artifact_test.go:1119-1129"
+        ]
+      }
+    ],
+    "evidence": [
+      "Diff changes the delivery body and its four generated copies identically, and the foreman Close row in the role body and two generated copies.",
+      "The Close row test in foreman_test.go reads only roles/foreman/body.md."
+    ]
+  }
+}

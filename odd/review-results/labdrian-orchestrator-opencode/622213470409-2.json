@@ -1,0 +1,48 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "148ac54824d97a14f653df97cc902c155acdd0ab",
+    "head": "622213470409eca7a9956f5dc339eeeb9c88ac7a",
+    "diff_sha256": "b130764aa38a32d229502be4a4c06ba6aba811fe7990ff9e766f28dbded70b93",
+    "paths": [
+      "odd/tasks/labdrian-orchestrator-opencode.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "148ac54824d97a14f653df97cc902c155acdd0ab",
+      "head": "622213470409eca7a9956f5dc339eeeb9c88ac7a",
+      "diff_sha256": "b130764aa38a32d229502be4a4c06ba6aba811fe7990ff9e766f28dbded70b93"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/labdrian-orchestrator-opencode.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "odd/tasks/labdrian-orchestrator-opencode.md:59",
+        "claim": "T13 is ticked [x], but its trailing field still reads 'commit: -'. The ticked T10 and T11 entries list their commit hashes and a log reference (L63, L65). The T13 hashes (0d30f1b8, 2c4eb2b7, 5ed63e40, 5d453747, 148ac548) appear only in L67, so a reader of the task line sees a delivered task with no commit link. This breaks the pattern the other ticked tasks follow.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/labdrian-orchestrator-opencode.md:59",
+          "odd/tasks/labdrian-orchestrator-opencode.md:57"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff changes only the T13 checkbox and appends L67 to the feature document.",
+      "The T13 line's 'commit: -' field is unchanged context, while T10 and T11 record their commits and a log reference.",
+      "L67 also reports 622 insertions against a 100-250 forecast. This is recorded openly in the log, so I did not treat it as a defect."
+    ]
+  }
+}

@@ -1,0 +1,210 @@
+{
+  "kind": "sweeper",
+  "base": "ba97a9d1b8be77f1f5b3ca641ab051b90daba359",
+  "head": "0c82ec6750d5f4f72ee43cc0cd6c8a55ce56dd73",
+  "diff_sha256": "63641df3b2a59129bf2fdab828b1866c45ff6bc0eec4a36aad766c4034986ef6",
+  "sweep": "0c82ec6750d5-4.sweep.json",
+  "commit": null,
+  "candidates": [
+    {
+      "candidate": "T1 path: engine/sddregistry/app/app.go",
+      "disposition": "live",
+      "evidence": "Deleted on purpose by T29 (S17); no live reader at the head (verifier check 1)."
+    },
+    {
+      "candidate": "T1 path: engine/sddregistry/app/app_test.go",
+      "disposition": "live",
+      "evidence": "Deleted on purpose by T29 (S17); no live reader at the head (verifier check 1)."
+    },
+    {
+      "candidate": "T1 path: engine/sddregistry/sddregistry.go",
+      "disposition": "live",
+      "evidence": "Deleted on purpose by T29 (S17); no live reader at the head (verifier check 1)."
+    },
+    {
+      "candidate": "T1 path: engine/sddregistry/sddregistry_test.go",
+      "disposition": "live",
+      "evidence": "Deleted on purpose by T29 (S17); no live reader at the head (verifier check 1)."
+    },
+    {
+      "candidate": "T1 name: --frobnicate",
+      "disposition": "live",
+      "evidence": "Still named in 27 files: a test fixture flag used by other tests, e.g. engine/cmd/skills_argv_golden_test.go, engine/cmd/skills_cli_test.go."
+    },
+    {
+      "candidate": "T1 name: CountRows",
+      "disposition": "live",
+      "evidence": "Still named in 2 files: a test fixture flag used by other tests, e.g. odd/tasks/consolidation-phase9.md, odd/tasks/labdrian-orchestrator-opencode.md."
+    },
+    {
+      "candidate": "T1 name: Error",
+      "disposition": "live",
+      "evidence": "Still named in 634 files: a test fixture flag used by other tests, e.g. archguard/archguard.go, archguard/check_test.go."
+    },
+    {
+      "candidate": "T1 name: Executor",
+      "disposition": "live",
+      "evidence": "Still named in 5 files: a test fixture flag used by other tests, e.g. odd/tasks/consolidation-phase9.md, odd/tasks/labdrian-orchestrator-opencode.md."
+    },
+    {
+      "candidate": "T1 name: Executors",
+      "disposition": "live",
+      "evidence": "Still named in 2 files: a test fixture flag used by other tests, e.g. odd/tasks/consolidation-phase9.md, odd/tasks/labdrian-orchestrator-opencode.md."
+    },
+    {
+      "candidate": "T1 name: FrontmatterDescription",
+      "disposition": "live",
+      "evidence": "Still named in 2 files: a test fixture flag used by other tests, e.g. odd/tasks/consolidation-phase9.md, odd/tasks/labdrian-orchestrator-opencode.md."
+    },
+    {
+      "candidate": "T1 name: MissingSectionError",
+      "disposition": "live",
+      "evidence": "Still named in 2 files: a test fixture flag used by other tests, e.g. odd/tasks/consolidation-phase9.md, odd/tasks/labdrian-orchestrator-opencode.md."
+    },
+    {
+      "candidate": "T1 name: New",
+      "disposition": "live",
+      "evidence": "Still named in 585 files: a test fixture flag used by other tests, e.g. baseline.md, docs/architecture/hexagonal-target.md."
+    },
+    {
+      "candidate": "T1 name: NewExecutor",
+      "disposition": "live",
+      "evidence": "Still named in 2 files: a test fixture flag used by other tests, e.g. odd/tasks/consolidation-phase9.md, odd/tasks/labdrian-orchestrator-opencode.md."
+    },
+    {
+      "candidate": "T1 name: NewRegistry",
+      "disposition": "live",
+      "evidence": "Still named in 10 files: a test fixture flag used by other tests, e.g. engine/cmd/runtime_registry.go, engine/runtime/capability_targets_test.go."
+    },
+    {
+      "candidate": "T1 name: Note",
+      "disposition": "live",
+      "evidence": "Still named in 120 files: a test fixture flag used by other tests, e.g. baseline.md, bin/lib/longterm_mem.sh."
+    },
+    {
+      "candidate": "T1 name: ProjectName",
+      "disposition": "live",
+      "evidence": "Still named in 2 files: a test fixture flag used by other tests, e.g. odd/tasks/consolidation-phase9.md, odd/tasks/labdrian-orchestrator-opencode.md."
+    },
+    {
+      "candidate": "T1 name: Read",
+      "disposition": "live",
+      "evidence": "Still named in 752 files: a test fixture flag used by other tests, e.g. agents/builder.md, agents/delivery.md."
+    },
+    {
+      "candidate": "T1 name: ReadFile",
+      "disposition": "live",
+      "evidence": "Still named in 484 files: a test fixture flag used by other tests, e.g. archguard/checker_test.go, archguard/rules.go."
+    },
+    {
+      "candidate": "T1 name: RegistryReadError",
+      "disposition": "live",
+      "evidence": "Still named in 15 files: a test fixture flag used by other tests, e.g. engine/cmd/propagate.go, engine/cmd/propagate_test.go."
+    },
+    {
+      "candidate": "T1 name: RegistryStore",
+      "disposition": "live",
+      "evidence": "Still named in 12 files: a test fixture flag used by other tests, e.g. docs/architecture/hexagonal-target.md, engine/cmd/propagate.go."
+    },
+    {
+      "candidate": "T1 name: RegistryWriteError",
+      "disposition": "live",
+      "evidence": "Still named in 7 files: a test fixture flag used by other tests, e.g. engine/cmd/propagate.go, engine/cmd/propagate_test.go."
+    },
+    {
+      "candidate": "T1 name: Repair",
+      "disposition": "live",
+      "evidence": "Still named in 5 files: a test fixture flag used by other tests, e.g. docs/architecture/hexagonal-target.md, odd/tasks/consolidation-phase9.md."
+    },
+    {
+      "candidate": "T1 name: Request",
+      "disposition": "live",
+      "evidence": "Still named in 65 files: a test fixture flag used by other tests, e.g. docs/architecture/hexagonal-target.md, docs/architecture/laya-system-one-overlay-plan.md."
+    },
+    {
+      "candidate": "T1 name: Result",
+      "disposition": "live",
+      "evidence": "Still named in 162 files: a test fixture flag used by other tests, e.g. docs/architecture/role-design/per-role-design-draft.md, docs/architecture/role-design/per-role-design-v2.md."
+    },
+    {
+      "candidate": "T1 name: Row",
+      "disposition": "live",
+      "evidence": "Still named in 65 files: a test fixture flag used by other tests, e.g. docs/architecture/hexagonal-target.md, engine/shelltest/review_bench_test.go."
+    },
+    {
+      "candidate": "T1 name: Service",
+      "disposition": "live",
+      "evidence": "Still named in 71 files: a test fixture flag used by other tests, e.g. docs/architecture/hexagonal-target.md, engine/cmd/installed_targets.go."
+    },
+    {
+      "candidate": "T1 name: SkillReadError",
+      "disposition": "live",
+      "evidence": "Still named in 1 files: a test fixture flag used by other tests, e.g. engine/skills/app/add.go."
+    },
+    {
+      "candidate": "T1 name: SkillSource",
+      "disposition": "live",
+      "evidence": "Still named in 9 files: a test fixture flag used by other tests, e.g. docs/architecture/hexagonal-target.md, engine/skillregistry/app/app.go."
+    },
+    {
+      "candidate": "T1 name: Skills",
+      "disposition": "live",
+      "evidence": "Still named in 253 files: a test fixture flag used by other tests, e.g. bin/lib/hooks.sh, docs/architecture/adr-c23-m1-memory-sources.md."
+    },
+    {
+      "candidate": "T1 name: Unwrap",
+      "disposition": "live",
+      "evidence": "Still named in 72 files: a test fixture flag used by other tests, e.g. engine/agentgen/agentgen.go, engine/agentgen/models.go."
+    },
+    {
+      "candidate": "T1 name: Write",
+      "disposition": "live",
+      "evidence": "Still named in 260 files: a test fixture flag used by other tests, e.g. agents/builder.md, agents/delivery.md."
+    },
+    {
+      "candidate": "T1 name: args",
+      "disposition": "live",
+      "evidence": "Still named in 714 files: a test fixture flag used by other tests, e.g. bin/lib/longterm_mem.sh, bin/lib/manifest_routes.sh."
+    },
+    {
+      "candidate": "T1 name: current",
+      "disposition": "live",
+      "evidence": "Still named in 588 files: a test fixture flag used by other tests, e.g. bin/lib/apply.sh, bin/lib/bootstrap.sh."
+    },
+    {
+      "candidate": "T1 name: executors",
+      "disposition": "live",
+      "evidence": "Still named in 7 files: a test fixture flag used by other tests, e.g. docs/architecture/hexagonal-target.md, engine/installer/registry_pins_world_test.go."
+    },
+    {
+      "candidate": "T1 name: install",
+      "disposition": "live",
+      "evidence": "Still named in 673 files: a test fixture flag used by other tests, e.g. bin/labdrian-overlay, bin/lib/apply.sh."
+    },
+    {
+      "candidate": "T1 name: readRegistry",
+      "disposition": "live",
+      "evidence": "Still named in 11 files: a test fixture flag used by other tests, e.g. engine/skills/app/add.go, engine/skills/app/install.go."
+    },
+    {
+      "candidate": "T1 name: records",
+      "disposition": "live",
+      "evidence": "Still named in 885 files: a test fixture flag used by other tests, e.g. .github/workflows/ci.yml, agents/foreman.md."
+    },
+    {
+      "candidate": "T1 name: whitespace",
+      "disposition": "live",
+      "evidence": "Still named in 151 files: a test fixture flag used by other tests, e.g. bin/lib/doctor.sh, docs/architecture/adr-c23-m12-codex-memory-projection.md."
+    },
+    {
+      "candidate": "T1 name: writeRegistry",
+      "disposition": "live",
+      "evidence": "Still named in 3 files: a test fixture flag used by other tests, e.g. engine/installer/registry_pins_doctor_test.go, engine/installer/registry_pins_world_test.go."
+    },
+    {
+      "candidate": "T3:  M odd/tasks/labdrian-orchestrator-opencode.md",
+      "disposition": "live",
+      "evidence": "Parent logbook, committed with the review records at delivery."
+    }
+  ]
+}

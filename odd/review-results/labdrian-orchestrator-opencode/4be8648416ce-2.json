@@ -1,0 +1,62 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "5fb6780f80ecf9c072dab70a63be576109ea896f",
+    "head": "4be8648416ce364eb15e13324a169ff9d477b7bb",
+    "diff_sha256": "190c607dfec6e472c3180a2c0304f4052bd1671f907ed514ea4cdb5aff557996",
+    "paths": [
+      "CHANGELOG.md",
+      "engine/skills/branch_pr_artifact_test.go",
+      "skills/branch-pr/SKILL.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "5fb6780f80ecf9c072dab70a63be576109ea896f",
+      "head": "4be8648416ce364eb15e13324a169ff9d477b7bb",
+      "diff_sha256": "190c607dfec6e472c3180a2c0304f4052bd1671f907ed514ea4cdb5aff557996"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "engine/skills/branch_pr_artifact_test.go",
+        "skills/branch-pr/SKILL.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "engine/skills/branch_pr_artifact_test.go:104-106",
+        "claim": "The merge test asserts only the substring \"no failing or pending line\" plus `gh pr checks`; it does not check that the closing-entry location wording added to the PR rule (last `## Log` entry, delivery role) is present, so that part of the commit is untested and can regress silently. Also the substring check would pass if the phrase appeared anywhere in the body, not in the merge rule.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/skills/branch_pr_artifact_test.go:104-106",
+          "skills/branch-pr/SKILL.md:17"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "CHANGELOG.md:12",
+        "claim": "The T28 entry now says branch-pr, issue-creation and systemic-issue-triage are 'left out here (T32 and T33 rewrite the first two)', which leaves systemic-issue-triage unexplained and refers to T33 for issue-creation, a claim not verifiable from this diff; the earlier line in the T32 entry is also not cross-referenced.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "CHANGELOG.md:12"
+        ]
+      }
+    ],
+    "evidence": [
+      "Diff changes the Hard Rule to 'no failing or pending line', matching the Decision Gate per the commit message, and updates the test and changelog consistently.",
+      "The closing-entry rule now names the location (last ## Log entry of odd/tasks/<f>.md, delivery role) and defines <f> and <base>; no behavioral contradiction found in the diff."
+    ]
+  }
+}

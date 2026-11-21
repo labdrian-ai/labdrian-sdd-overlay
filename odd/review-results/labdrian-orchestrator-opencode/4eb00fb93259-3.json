@@ -1,0 +1,67 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "e42c41c54de97dfdcc6fe1681e4157f0cebfad77",
+    "head": "4eb00fb93259d9dac9d8340ecd024ef8358f587f",
+    "diff_sha256": "c13bbebfe832a7f4100a5731f4cc2c1382ea0e8b4850a2124f20e9bbdbe2c449",
+    "paths": [
+      "agents/foreman.md",
+      "agents/shaper.md",
+      "codex/agents/shaper.toml",
+      "engine/agentgen/foreman_test.go",
+      "engine/cmd/roles_builder_guard_docs_test.go",
+      "engine/skills/role_agents_artifact_test.go",
+      "opencode/agents/foreman.md",
+      "opencode/agents/shaper.md",
+      "pi/agents/shaper.md",
+      "roles/foreman/body.md",
+      "roles/shaper/body.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "e42c41c54de97dfdcc6fe1681e4157f0cebfad77",
+      "head": "4eb00fb93259d9dac9d8340ecd024ef8358f587f",
+      "diff_sha256": "c13bbebfe832a7f4100a5731f4cc2c1382ea0e8b4850a2124f20e9bbdbe2c449"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "agents/foreman.md",
+        "agents/shaper.md",
+        "codex/agents/shaper.toml",
+        "engine/agentgen/foreman_test.go",
+        "engine/cmd/roles_builder_guard_docs_test.go",
+        "engine/skills/role_agents_artifact_test.go",
+        "opencode/agents/foreman.md",
+        "opencode/agents/shaper.md",
+        "pi/agents/shaper.md",
+        "roles/foreman/body.md",
+        "roles/shaper/body.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "roles/shaper/body.md:9",
+        "claim": "The shaper is told to copy memory_directive verbatim from odd/goals/labdrian-orchestrator-opencode.json, a file in this repository. The shaper role is shipped to every install (agents, pi, codex and opencode copies). In another project that file does not exist, so the shaper cannot follow the instruction. It will either invent a directive or fail, and the foreman's Shape row then expects a goal file that may be wrong or absent. A feature-specific path is now hard-coded into a generic role prompt, and the same text is repeated in all five generated shaper files.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "roles/shaper/body.md:9",
+          "agents/shaper.md:16",
+          "opencode/agents/shaper.md:58"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff adds the same shaper sentence to the role body and to the four generated shaper files; it names a single repository-local goal file as the source of memory_directive.",
+      "The new test TestTheGoalTheShaperIsToldToWriteParses reads that file from the overlay repository only. It does not show that the instruction can be followed in a consumer project."
+    ]
+  }
+}

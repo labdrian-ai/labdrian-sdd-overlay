@@ -1,0 +1,81 @@
+# install writes the block after the owner's text
+$ runtime install --target claude
+exit: 0
+--- stdout ---
+[claude] install: restart_required — Claude lifecycle hooks installed; restart Claude to load hook changes; owner rules written to <WORLD>/home/.claude/CLAUDE.md
+--- stderr ---
+
+--- home/.claude/CLAUDE.md ---
+<!-- gentle-ai:persona -->
+## Rules
+<!-- /gentle-ai:persona -->
+
+my own text
+
+<!-- labdrian:owner-rules -->
+## Rules
+
+- a rule
+- another rule
+<!-- /labdrian:owner-rules -->
+
+# status
+$ runtime status --target claude
+exit: 0
+--- stdout ---
+[claude] status: supported — Claude lifecycle hooks are installed and owned; owner rules block is current in <WORLD>/home/.claude/CLAUDE.md
+--- stderr ---
+
+# status after the rules changed
+$ runtime status --target claude
+exit: 1
+--- stdout ---
+[claude] status: partial — Claude owner rules block is stale in <WORLD>/home/.claude/CLAUDE.md; run 'engine runtime update --target claude'
+--- stderr ---
+
+# update replaces the block in place
+$ runtime update --target claude
+exit: 0
+--- stdout ---
+[claude] update: restart_required — Claude lifecycle hooks updated; restart Claude to load hook changes; owner rules updated in <WORLD>/home/.claude/CLAUDE.md
+--- stderr ---
+
+--- home/.claude/CLAUDE.md ---
+<!-- gentle-ai:persona -->
+## Rules
+<!-- /gentle-ai:persona -->
+
+my own text
+
+<!-- labdrian:owner-rules -->
+## Rules
+
+- a changed rule
+<!-- /labdrian:owner-rules -->
+
+# uninstall removes only the block
+$ runtime uninstall --target claude
+exit: 0
+--- stdout ---
+[claude] uninstall: restart_required — Claude lifecycle hooks removed; restart Claude to unload stale hook processes; owner rules removed from <WORLD>/home/.claude/CLAUDE.md
+--- stderr ---
+
+--- home/.claude/CLAUDE.md ---
+<!-- gentle-ai:persona -->
+## Rules
+<!-- /gentle-ai:persona -->
+
+my own text
+
+# a block without its close marker is not touched
+$ runtime install --target claude
+exit: 1
+--- stdout ---
+[claude] install: partial — Claude lifecycle hooks installed; restart Claude to load hook changes; owner rules could not be written: <WORLD>/home/.claude/CLAUDE.md: its markers are not one open line followed by one close line (open: line 2; close: none)
+--- stderr ---
+
+--- home/.claude/CLAUDE.md ---
+mine
+<!-- labdrian:owner-rules -->
+no close
+

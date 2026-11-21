@@ -1,0 +1,18 @@
+{
+  "verdicts": [
+    {
+      "id": "F1",
+      "result": "not-run",
+      "command": "none",
+      "output": "SUGGESTION: carried (wording of 'the Engram tools').",
+      "base_result": "not-run"
+    },
+    {
+      "id": "F2",
+      "result": "not-run",
+      "command": "none",
+      "output": "SUGGESTION: carried (pin the full project-line prefix).",
+      "base_result": "not-run"
+    }
+  ]
+}

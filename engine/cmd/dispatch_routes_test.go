@@ -32,13 +32,13 @@ func TestRunRoutesEachSubcommandThroughTheProcessItWasHanded(t *testing.T) {
 		{"pipkg", "stderr", "error: pipkg requires a verb: build, check\n", []int{1}},
 		{"skills", "stderr", "error: skills requires a verb: list, status, ", []int{1}},
 		{"manifest", "stderr", "error: manifest requires a verb: routes\n", []int{1}},
-		{"registry", "stderr", "error: registry requires a verb: repair-sdd\n", []int{1}},
+		{"registry", "stderr", "error: registry requires a verb: refresh\n", []int{1}},
 		{"installed-targets", "stderr", "error: installed-targets requires a verb: record, release, list, assess, retire\n", []int{1}},
 		{"sync-trigger", "stderr", "sync-trigger: error:usage event=\"\" cwd=\"\"\n", []int{0}},
 		{"review-receipt", "stderr", "error: review-receipt requires a verb: capture, hook\n", []int{1}},
 		{"shaper", "stderr", "error: shaper requires a verb: assess, clearance, guard-hook\n", []int{1}},
-		{"roles", "stderr", "error: roles requires a verb: validate, next, resume, append, match-shaper\n", []int{1}},
-		{"review", "stderr", "error: review requires a verb: bind, record, verify, check, exempt, sweep, anchor, launch, proposals, findings\n", []int{1}},
+		{"roles", "stderr", "error: roles requires a verb: validate, next, resume, append, match-shaper, skill-paths\n", []int{1}},
+		{"review", "stderr", "error: review requires a verb: bind, record, verify, check, exempt, sweep, anchor, launch, frozen-context, proposals, ci, findings\n", []int{1}},
 		{"memory", "stderr", "error: memory requires a verb: plan\n", []int{1}},
 		{"workflow", "stderr", "error: workflow requires a verb: create, start, ", []int{1}},
 		{"projection", "stderr", "error: projection requires an action: hook\n", []int{1}},
@@ -104,7 +104,7 @@ func TestRunHandsEachSubcommandTheArgumentsAfterItsName(t *testing.T) {
 
 	run(p.process, testDeps(), []string{"roles", "bogus", "x"})
 
-	if want := "error: roles: unknown verb \"bogus\" (expected validate, next, resume, append, or match-shaper)\n"; p.err.String() != want {
+	if want := "error: roles: unknown verb \"bogus\" (expected validate, next, resume, append, match-shaper, or skill-paths)\n"; p.err.String() != want {
 		t.Errorf("stderr = %q, want %q", p.err.String(), want)
 	}
 }

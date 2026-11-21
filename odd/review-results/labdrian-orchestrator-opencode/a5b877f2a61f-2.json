@@ -1,0 +1,60 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "9298a428c03289c389d6ecadf6690be2bbb9ef18",
+    "head": "a5b877f2a61f5e10377a688060268eb4639ca212",
+    "diff_sha256": "8aeb62ee3f5c6a76e4b49a3ddeb0572208919472574275743fc53b61ec063fde",
+    "paths": [
+      "engine/architecture_test.go",
+      "engine/cmd/skills_candidates_wiring_test.go",
+      "engine/cmd/skills_deps.go",
+      "engine/cmd/usage.go",
+      "engine/skills/candidate_family.go",
+      "engine/skills/candidate_family_test.go",
+      "engine/skills/memorycardcli/source.go",
+      "engine/skills/memorycardcli/source_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "9298a428c03289c389d6ecadf6690be2bbb9ef18",
+      "head": "a5b877f2a61f5e10377a688060268eb4639ca212",
+      "diff_sha256": "8aeb62ee3f5c6a76e4b49a3ddeb0572208919472574275743fc53b61ec063fde"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/architecture_test.go",
+        "engine/cmd/skills_candidates_wiring_test.go",
+        "engine/cmd/skills_deps.go",
+        "engine/cmd/usage.go",
+        "engine/skills/candidate_family.go",
+        "engine/skills/candidate_family_test.go",
+        "engine/skills/memorycardcli/source.go",
+        "engine/skills/memorycardcli/source_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "engine/skills/memorycardcli/source.go:62-64",
+        "claim": "The split-part guard matches any candidate or draft topic ending in /part-N, not only keys memorycard generated for split memories. One such topic written legitimately makes the whole listing fail with an error, hiding every other candidate and draft. I cannot show realistic input that produces such a topic from the diff alone.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/skills/memorycardcli/source.go:62-64",
+          "engine/skills/memorycardcli/source.go:73"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full diff. The family split, scope check, decode guard, wiring, ring registration and help line are consistent with the commit's claim. I did not see the skills package itself, so the splitGoalPrefix behaviour is assumed from the test cases."
+    ]
+  }
+}

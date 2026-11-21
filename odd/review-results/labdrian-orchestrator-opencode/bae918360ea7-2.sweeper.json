@@ -1,0 +1,45 @@
+{
+  "kind": "sweeper",
+  "base": "4daa9dddb0645f285c222a9d8285a99a27541fa3",
+  "head": "bae918360ea7c4becb161c0a1088bbe6565bcc4d",
+  "diff_sha256": "7004dffad05524e1900aaf0488103224c1720bb1ad059706f5a7928a58dcab89",
+  "sweep": "bae918360ea7-1.sweep.json",
+  "commit": null,
+  "candidates": [
+    {
+      "candidate": "T1 name: FeatureEntryRefusal",
+      "disposition": "live",
+      "evidence": "rg finds it only in odd/tasks/labdrian-orchestrator-opencode.md (L99 and L980), the feature document history of the rename to FeatureChainRefusal; no Go file names it. A record of what was built, kept."
+    },
+    {
+      "candidate": "T1 name: TestRolesAppendRefusesTheFirstRecordOfAFeatureBeforeWorkflowOpen",
+      "disposition": "live",
+      "evidence": "rg finds it only in odd/tasks/labdrian-orchestrator-opencode.md (T57 text, history of the test the correction rewrites); no Go file names it."
+    },
+    {
+      "candidate": "T1 name: holds",
+      "disposition": "live",
+      "evidence": "The unexported BoundWorkflow.holds became the exported Holds in engine/roles/bound.go. rg for the call holds( in Go files leaves only engine/settings/family.go:161 and status.go:77 (hookFamily.holds) and longterm-mem/internal/staleness/staleness.go:209,319 (treeIndex.holds), other types with their own callers; no reference to the old BoundWorkflow.holds remains. The rest of the hit list is the English word. go test ./roles/... ok, staticcheck ./roles/... clean."
+    },
+    {
+      "candidate": "T3:  M odd/tasks/labdrian-orchestrator-opencode.md",
+      "disposition": "live",
+      "evidence": "The foreman uncommitted L170 in the feature document; not stray."
+    },
+    {
+      "candidate": "T3: ?? CLAUDE.md",
+      "disposition": "live",
+      "evidence": "Owner file, kept verbatim (L160: se quedan los files de wiki); never deleted."
+    },
+    {
+      "candidate": "T3: ?? docs/wiki/.format",
+      "disposition": "live",
+      "evidence": "Owner wiki file, kept verbatim (L160); never deleted."
+    },
+    {
+      "candidate": "T3: ?? docs/wiki/README.md",
+      "disposition": "live",
+      "evidence": "Owner wiki file, kept verbatim (L160); never deleted."
+    }
+  ]
+}

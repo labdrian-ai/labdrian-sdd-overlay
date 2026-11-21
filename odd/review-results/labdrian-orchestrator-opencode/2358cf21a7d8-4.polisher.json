@@ -1,0 +1,49 @@
+{
+  "kind": "polisher",
+  "base": "bbf8c6eb7bd727737c3d0d2afff4997790991f71",
+  "head": "2358cf21a7d89e27d00bfb68a8995f2bf0cfdcb9",
+  "diff_sha256": "093df8ff4415d85ace68c2b275a159a55860760ad58bc571b90e72c0e21c3c2d",
+  "findings": {
+    "findings": [
+      {
+        "id": "J1",
+        "severity": "WARNING",
+        "location": "engine/runtime/opencode.go status",
+        "claim": "Status ignored a file at the legacy path. Fixed in 558d9a72.",
+        "evidence": [
+          "judge A; recheck A item 1."
+        ]
+      },
+      {
+        "id": "J2",
+        "severity": "WARNING",
+        "location": "engine/runtime/opencode_legacy_test.go",
+        "claim": "No test for a foreign file in the plugin dir or a directory at the legacy path. Fixed in 558d9a72.",
+        "evidence": [
+          "judge A; recheck A item 4."
+        ]
+      },
+      {
+        "id": "S1",
+        "severity": "WARNING",
+        "location": "engine/runtime/opencode.go:101-103",
+        "claim": "A failed legacy cleanup replaced restart_required with partial. Fixed in 558d9a72.",
+        "evidence": [
+          "series review of 2358cf21; recheck A item 3."
+        ]
+      },
+      {
+        "id": "J4",
+        "severity": "SUGGESTION",
+        "location": "engine/runtime/opencode.go uninstall",
+        "claim": "Uninstall does not mention leftovers. Answered: status now names a file at the legacy path; the marker advisory is pre-existing at the base.",
+        "evidence": [
+          "judge A; verifier advisory."
+        ]
+      }
+    ],
+    "evidence": [
+      "Bounded recheck A and B on 558d9a72 found none."
+    ]
+  }
+}

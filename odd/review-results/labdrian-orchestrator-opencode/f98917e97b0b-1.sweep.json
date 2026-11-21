@@ -1,0 +1,26 @@
+{
+  "kind": "sweep",
+  "base": "000433822b6412ef3bd3f11d89eaf72b3384d279",
+  "head": "f98917e97b0b3e1662c8fddcab6dcbcd2e155fab",
+  "diff_sha256": "d718c4f417b4834a26d61ddcb40a4a2567eb92b994e998ad9b1457a22d279ebd",
+  "outcome": "fired",
+  "t1": {
+    "deleted_or_renamed": [],
+    "removed_names": []
+  },
+  "t2": [
+    {
+      "tool": "errcheck",
+      "module": "engine",
+      "new": [
+        "runtime/ownerrules_block.go: unchecked error: defer os.Remove(tmp.Name())",
+        "runtime/ownerrules_block.go: unchecked error: tmp.Close()"
+      ]
+    }
+  ],
+  "t3": [],
+  "t4": {
+    "leftovers": [],
+    "orphaned_fixtures": []
+  }
+}

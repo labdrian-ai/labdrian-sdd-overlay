@@ -1,0 +1,97 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "72a8ccabda19d8d1d7166fd5c21354db04f0a620",
+    "head": "bbf8c6eb7bd727737c3d0d2afff4997790991f71",
+    "diff_sha256": "9e728959ab08b9744743f90a76103ad96ab3cfb3510b830591c3ba5934da1cdf",
+    "paths": [
+      "odd/tasks/labdrian-orchestrator-opencode.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "72a8ccabda19d8d1d7166fd5c21354db04f0a620",
+      "head": "bbf8c6eb7bd727737c3d0d2afff4997790991f71",
+      "diff_sha256": "9e728959ab08b9744743f90a76103ad96ab3cfb3510b830591c3ba5934da1cdf"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/labdrian-orchestrator-opencode.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "odd/tasks/labdrian-orchestrator-opencode.md:68",
+        "claim": "T28 is sequenced 'after T20' because three of its edits name 'the registry refresh T20 chooses'. T20 is marked done, but L61 chooses nothing: it only says a new verb needs a shaper entry that does not exist. T28 therefore depends on an undefined replacement. T22 removes the gentle-ai refresh hook after T20 with no task that supplies a refresh, and L61 itself says the registry then freezes silently. L60 rows I11 and I31 stay 'pending T20' and no task owns them.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/labdrian-orchestrator-opencode.md:68",
+          "odd/tasks/labdrian-orchestrator-opencode.md:70",
+          "odd/tasks/labdrian-orchestrator-opencode.md:582"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "WARNING",
+        "location": "odd/tasks/labdrian-orchestrator-opencode.md:69",
+        "claim": "T29 (a) deletes the whole `engine/sddregistry/` package and the `registry repair-sdd` verb. L61, added in the same commit, says the Hermes section refresh (`engine/sddregistry/app/hermes.go`), `sddregistry.FrontmatterDescription`, and the executor rows written by `repair-sdd` are labdrian's own. L61 also says any new refresh generator needs `FrontmatterDescription` for a real frontmatter parse. The deletion removes code the T20 answer says labdrian must keep. The package list also omits the `refresh-hermes` verb.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/labdrian-orchestrator-opencode.md:69",
+          "odd/tasks/labdrian-orchestrator-opencode.md:582"
+        ]
+      },
+      {
+        "id": "F3",
+        "severity": "WARNING",
+        "location": "odd/tasks/labdrian-orchestrator-opencode.md:69",
+        "claim": "T29 deletes `branch-pr`, `issue-creation` and `systemic-issue-triage`, which the L60 inventory marks only 'drop (leaning)' (I24-I26). T29 is BLOCKED only on the owner's answer to risk 2, which concerns the `sdd-*` family. No owner question covers these three skills, so an irreversible deletion is scheduled on an unconfirmed verdict. The same applies to the 'leaning' retags in I29.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/labdrian-orchestrator-opencode.md:69",
+          "odd/tasks/labdrian-orchestrator-opencode.md:519-521"
+        ]
+      },
+      {
+        "id": "F4",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/labdrian-orchestrator-opencode.md:578",
+        "claim": "L60 says 'T20 is a parallel prototyper' and 'T20 decides the labdrian-owned refresh', but T20 is marked [x] in the same commit and L61 says it only answered. The tense and status are inconsistent. The L60 Order line also leaves out the I11/I31 shaper entry that L61 calls for.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/labdrian-orchestrator-opencode.md:60",
+          "odd/tasks/labdrian-orchestrator-opencode.md:578"
+        ]
+      },
+      {
+        "id": "F5",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/labdrian-orchestrator-opencode.md:582",
+        "claim": "L61 has stray backticks used as apostrophes ('labdrian`s'). L60 opens with a bullet-style '- **L60**' header, unlike the 'LNN (date) —' paragraphs around it, although L59 states that single-paragraph entries follow the Log style. The result is hard to read and inconsistent.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/labdrian-orchestrator-opencode.md:490",
+          "odd/tasks/labdrian-orchestrator-opencode.md:582"
+        ]
+      }
+    ],
+    "evidence": [
+      "Only the feature document changed; all three hunks were read.",
+      "Line numbers in the third hunk are estimated from the @@ +486,97 header.",
+      "The F1 and F2 claims rest on the T28, T29 and T22 task text compared with L60 I11/I31 and the L61 findings."
+    ]
+  }
+}

@@ -1,0 +1,58 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "14bbfc55807d4a7579e042db2bbd224d38ed3e0b",
+    "head": "22e75a0402f9650ca2acaa25750311af9d05acb6",
+    "diff_sha256": "75bbeb4068f00a7c52345357ca788c3468ad0c7496729cb5466fda5c38c756f3",
+    "paths": [
+      "odd/tasks/labdrian-orchestrator-opencode.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "14bbfc55807d4a7579e042db2bbd224d38ed3e0b",
+      "head": "22e75a0402f9650ca2acaa25750311af9d05acb6",
+      "diff_sha256": "75bbeb4068f00a7c52345357ca788c3468ad0c7496729cb5466fda5c38c756f3"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/labdrian-orchestrator-opencode.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/labdrian-orchestrator-opencode.md:430-436",
+        "claim": "L42 says the T6 verifier's regeneration compared 'base 537bb264' with head, while the T6 row's last commit is 14bbfc55 and the review answers cite three commits. The log does not state which head the verifier checked (it is only implied to be e001d5ac, since Risk: 3 is cited there). A reader cannot tell whether the later commits 08038624 and 14bbfc55 were covered by the byte-identical check. The T6 row is ticked on that basis.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/labdrian-orchestrator-opencode.md:432"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/labdrian-orchestrator-opencode.md:47",
+        "claim": "The T25b row grew into a single very long line that packs the new scope-key and distinct-rows requirement into the middle of the adapter clause (after 'refusing a missing or null memories array'). This makes the task hard to read and review, and the commit-(a) size forecast of 200-330 lines was not revisited even though the adapter now has an extra requirement.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/labdrian-orchestrator-opencode.md:47"
+        ]
+      }
+    ],
+    "evidence": [
+      "Diff touches only odd/tasks/labdrian-orchestrator-opencode.md; documentation-only change with no executable code.",
+      "T6 row ticked and commit list e001d5ac, 08038624, 14bbfc55 match the L42 narrative.",
+      "T25b row's reference to L42 matches the appended L42 entry, and the command line in the row still passes --topic-prefix goal: and the other two prefixes consistent with L37."
+    ]
+  }
+}

@@ -146,3 +146,46 @@ func TestOpenCodeStatusNamesAContractThatHasBecomeMalformed(t *testing.T) {
 		t.Fatalf("Status() = %#v, want partial and a message that says %q", result, want)
 	}
 }
+
+// The subagent runs in the target project, where a path relative to the overlay does not exist, so
+// every contract path the plugin injects is an absolute file of the overlay the adapter installs from.
+func TestOpenCodeWritesAbsoluteContractPathsOfTheOverlayItWasGiven(t *testing.T) {
+	overlay := shippedOverlay(t)
+	root := t.TempDir()
+	adapter := engineRuntime.NewOpenCodeAdapter(root, engineRuntime.OpenCodeOptions{OverlayDir: overlay})
+	if result := adapter.Install(); result.Status != core.CapabilityRestartRequired {
+		t.Fatalf("Install() = %#v", result)
+	}
+
+	promptConfig := readOpenCodeConfig(t, root)["prompt_config"].(map[string]any)
+	want := filepath.Join(overlay, "skills", "_shared", "minimalism-contract.md")
+	if promptConfig["contract_path"] != want {
+		t.Fatalf("contract_path = %#v, want %q", promptConfig["contract_path"], want)
+	}
+	contracts := promptConfig["contracts"].([]any)
+	if len(contracts) < 2 {
+		t.Fatalf("contracts = %#v", contracts)
+	}
+	for _, raw := range contracts {
+		path := raw.(map[string]any)["contract_path"].(string)
+		if !filepath.IsAbs(path) || !strings.HasPrefix(path, overlay+string(filepath.Separator)) {
+			t.Errorf("contract path %q is not absolute under %q", path, overlay)
+		}
+		if _, err := os.Stat(path); err != nil {
+			t.Errorf("contract path %q does not exist: %v", path, err)
+		}
+	}
+}
+
+// The recorded config is the one the adapter derives now, absolute paths included, so Status does
+// not call it stale.
+func TestOpenCodeStatusDoesNotCallTheAbsoluteContractPathsStale(t *testing.T) {
+	root := t.TempDir()
+	adapter := engineRuntime.NewOpenCodeAdapter(root, engineRuntime.OpenCodeOptions{OverlayDir: shippedOverlay(t)})
+	if result := adapter.Install(); result.Status != core.CapabilityRestartRequired {
+		t.Fatalf("Install() = %#v", result)
+	}
+	if status := adapter.Status(); strings.Contains(status.Message, "stale or tampered") || strings.Contains(status.Message, "invalid") {
+		t.Fatalf("Status() = %#v, want the recorded config to be current", status)
+	}
+}

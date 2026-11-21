@@ -1,0 +1,57 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "6ca43786bda767a89de266e982b9c1a31937c9b9",
+    "head": "ca99713030c505f9382db75a0291d9447955a826",
+    "diff_sha256": "4ae152ceab7f2764b0ea8f3c4643cfcf19855f1048e14a7a11bea4fac4eca9e7",
+    "paths": [
+      "odd/tasks/labdrian-orchestrator-opencode.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "6ca43786bda767a89de266e982b9c1a31937c9b9",
+      "head": "ca99713030c505f9382db75a0291d9447955a826",
+      "diff_sha256": "4ae152ceab7f2764b0ea8f3c4643cfcf19855f1048e14a7a11bea4fac4eca9e7"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/labdrian-orchestrator-opencode.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "odd/tasks/labdrian-orchestrator-opencode.md:243",
+        "claim": "The log entry L18 cites commit dbae346c as the implementation, but that commit is not part of this diff (docs-only change). The claims of RED/GREEN evidence, a byte-identical check, and that two cmd tests fail and the role-chain approval is stale cannot be verified from this change. The log records that tests fail (engine/cmd/agentgen_test.go) while the work stays partial; the doc is therefore a record of an unverified, currently red state.",
+        "evidence_class": "inferential",
+        "causal_disposition": "unknown",
+        "proof_refs": [
+          "odd/tasks/labdrian-orchestrator-opencode.md:243"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/labdrian-orchestrator-opencode.md:243",
+        "claim": "The entry says the `models.md:11` line was changed and names `messages_pin_test.go` and `models_test.go` without paths, so a reader cannot find them; it also says the empty-root Check message changed, which alters a user-visible output not mentioned in the commit message 'Risk: none'.",
+        "evidence_class": "inferential",
+        "causal_disposition": "unknown",
+        "proof_refs": [
+          "odd/tasks/labdrian-orchestrator-opencode.md:243"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff only appends a log paragraph (L18) to odd/tasks/labdrian-orchestrator-opencode.md; no code is changed in this commit.",
+      "The referenced code commit dbae346c is not visible in the diff, so its claims are unverifiable here.",
+      "No blocker-level harm: documentation-only change."
+    ]
+  }
+}

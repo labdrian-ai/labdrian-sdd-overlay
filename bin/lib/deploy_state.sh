@@ -92,17 +92,34 @@ state_read_target() {
 
 # state_write_target <target> <version> <digest>
 #
-# Design decision D8: atomic tmp+mv rewrite of the whole canonical state
-# file. Existing entries for OTHER targets are preserved by re-reading them
-# through state_read_target -- if the prior file was corrupt, every "other"
-# target degrades to never-deployed too (state_read_target's own
-# tolerant-degrade behavior), so a corrupt state file self-heals into a
-# clean one containing only what this call knows, rather than propagating
-# the corruption forever.
+# Records <target> at <version> and <digest> (state_rewrite_target).
 state_write_target() {
-  local target="$1"
-  local version="$2"
-  local digest="$3"
+  state_rewrite_target write "$1" "$2" "$3"
+}
+
+# state_forget_target <target>
+#
+# Drops the entry of <target> and keeps every other one, so the target reads as never deployed: what
+# a deploy whose last step failed must say even when an earlier apply recorded it.
+state_forget_target() {
+  [[ -f "$STATE_FILE" ]] || return 0
+  state_rewrite_target forget "$1" "" ""
+}
+
+# state_rewrite_target write|forget <target> <version> <digest>
+#
+# Design decision D8: the one writer of the state file, an atomic tmp+mv rewrite of the whole
+# canonical file. Existing entries for OTHER targets are preserved by re-reading them through
+# state_read_target -- if the prior file was corrupt, every "other" target degrades to
+# never-deployed too (state_read_target's own tolerant-degrade behavior), so a corrupt state file
+# self-heals into a clean one containing only what this call knows, rather than propagating the
+# corruption forever. write gives <target> the version and digest (an empty version is recorded as
+# given); forget leaves <target> out.
+state_rewrite_target() {
+  local mode="$1"
+  local target="$2"
+  local version="$3"
+  local digest="$4"
   local applied_at
   applied_at="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 
@@ -117,7 +134,9 @@ state_write_target() {
     IFS=$'\t' read -r v d a <<< "$existing"
     entries+=("    \"${t}\": {\"version\": \"${v}\", \"digest\": \"${d}\", \"applied_at\": \"${a}\"}")
   done
-  entries+=("    \"${target}\": {\"version\": \"${version}\", \"digest\": \"${digest}\", \"applied_at\": \"${applied_at}\"}")
+  if [[ "$mode" == "write" ]]; then
+    entries+=("    \"${target}\": {\"version\": \"${version}\", \"digest\": \"${digest}\", \"applied_at\": \"${applied_at}\"}")
+  fi
 
   local tmp
   tmp="$(mktemp "${STATE_FILE}.XXXXXX")"

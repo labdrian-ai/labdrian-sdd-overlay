@@ -1,0 +1,49 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "f2fe9aaf61b74ff5e3cb469854a2ed90bb6c4c3d",
+    "head": "8d4c88d5564aa1bba579f2522e7555e5a2859fb9",
+    "diff_sha256": "7eec0e7efdf741504d47280157bf2eef42d0a0008b1a13e9b5cf02ec876766e3",
+    "paths": [
+      "engine/agentgen/models.go",
+      "engine/agentgen/models_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "f2fe9aaf61b74ff5e3cb469854a2ed90bb6c4c3d",
+      "head": "8d4c88d5564aa1bba579f2522e7555e5a2859fb9",
+      "diff_sha256": "7eec0e7efdf741504d47280157bf2eef42d0a0008b1a13e9b5cf02ec876766e3"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/agentgen/models.go",
+        "engine/agentgen/models_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "engine/agentgen/models.go:100",
+        "claim": "The removed len(head)==0 guard leaves head[0] relying on an invariant (splitRow returns at least one cell) that is enforced only in another function and is not documented at this site. If splitRow is later changed to return an empty slice for an empty or whitespace-only row, head[0] will panic instead of returning the descriptive error. The diff does not show splitRow, so the claimed invariant cannot be verified here.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/agentgen/models.go:100"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff only removes the len(head)==0 check; head[0] is now indexed unguarded.",
+      "The commit message asserts splitRow always returns at least one cell for lines accepted by the header search; splitRow's code is not in the diff, so this was not verified.",
+      "The test change broadens the not-written assertion to agents, pi and codex directories and introduces no defect."
+    ]
+  }
+}

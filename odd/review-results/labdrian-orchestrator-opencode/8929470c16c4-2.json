@@ -1,0 +1,51 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "d5ea048f075856b4956ba17d0d0701650e9fdd7b",
+    "head": "8929470c16c4f37af5f814922b8b1da647025640",
+    "diff_sha256": "df61aa7bbd49b795249b9a575bea85825170a5ed7b6ccdb38da560bef80bf75e",
+    "paths": [
+      "bin/lib/skill_registry.sh",
+      "engine/installer/registry_pins_repair_test.go",
+      "engine/installer/testdata/registry_pins.golden"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "d5ea048f075856b4956ba17d0d0701650e9fdd7b",
+      "head": "8929470c16c4f37af5f814922b8b1da647025640",
+      "diff_sha256": "df61aa7bbd49b795249b9a575bea85825170a5ed7b6ccdb38da560bef80bf75e"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "bin/lib/skill_registry.sh",
+        "engine/installer/registry_pins_repair_test.go",
+        "engine/installer/testdata/registry_pins.golden"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "bin/lib/skill_registry.sh:27-29",
+        "claim": "The fix depends on copies_skills and TARGET_PATHS[claude] being defined wherever skill_registry.sh is sourced; the diff does not show either definition or a guard. If the file is sourced without them, an unset skills_root would be passed to the engine silently. The test covers only opencode, so a target other than opencode that does not copy skills is unverified.",
+        "evidence_class": "inferential",
+        "causal_disposition": "unknown",
+        "proof_refs": [
+          "bin/lib/skill_registry.sh:27-29"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff changes repair_sdd_registry_file to use the Claude skills root when copies_skills is false for the target; the golden file and the new test are consistent with that change.",
+      "copies_skills and TARGET_PATHS are not defined in the diff, so their availability at the call site cannot be confirmed from it.",
+      "The new test sets up a stray OpenCode copy of sdd-verify and asserts it is absent, which exercises the intended behavior for opencode."
+    ]
+  }
+}

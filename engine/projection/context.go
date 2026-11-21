@@ -23,9 +23,12 @@ import (
 // repository's binding as the binding store reported it, and, only when the
 // binding is owned, the workflow it names as the workflow store reported it. A
 // nil Workflow with an owned binding means the workflow could not be loaded.
+// Runtime is the capability target whose limits the context names; "" names
+// Claude Code's.
 type ProjectionInput struct {
 	Binding  Loaded
 	Workflow *workflow.Loaded
+	Runtime  string
 }
 
 // ProjectionResult is what Project decides.
@@ -69,13 +72,13 @@ func Project(in ProjectionInput) ProjectionResult {
 	case ClassificationAbsent:
 		return ProjectionResult{}
 	case ClassificationOwned:
-		return projectOwned(in.Binding.Binding, in.Workflow)
+		return projectOwned(in.Binding.Binding, in.Workflow, in.Runtime)
 	default:
 		return ProjectionResult{Warning: bindingWarning(in.Binding)}
 	}
 }
 
-func projectOwned(b Binding, w *workflow.Loaded) ProjectionResult {
+func projectOwned(b Binding, w *workflow.Loaded, runtime string) ProjectionResult {
 	if w == nil || w.Classification != workflow.ClassificationOwned {
 		return ProjectionResult{Warning: workflowWarning(b, w)}
 	}
@@ -84,7 +87,7 @@ func projectOwned(b Binding, w *workflow.Loaded) ProjectionResult {
 		note := closedNote(b, w.State)
 		return ProjectionResult{Context: note, Unbind: true, closedNote: note}
 	case workflow.StatusCreated, workflow.StatusRunning, workflow.StatusPaused:
-		return ProjectionResult{Context: boundContext(buildContext(b, *w))}
+		return ProjectionResult{Context: boundContext(buildContext(b, *w, runtime))}
 	default:
 		return ProjectionResult{Warning: statusWarning(b, w.State.Status)}
 	}

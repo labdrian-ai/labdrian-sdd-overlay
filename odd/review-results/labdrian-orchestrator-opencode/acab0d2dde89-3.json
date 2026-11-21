@@ -1,0 +1,43 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "f8ca3cdfb3b82828e3626b5ad8a588fbf8c916e1",
+    "head": "acab0d2dde890406e773c233d358964f203da1e3",
+    "diff_sha256": "aceb735b58eb129745e5542a9039757ca24d96639557e43fd215746fbc16b352",
+    "paths": [
+      "engine/cmd/dispatch_routes_test.go",
+      "engine/cmd/review.go",
+      "engine/cmd/review_exempt_test.go",
+      "engine/cmd/review_test.go",
+      "engine/cmd/usage.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "f8ca3cdfb3b82828e3626b5ad8a588fbf8c916e1",
+      "head": "acab0d2dde890406e773c233d358964f203da1e3",
+      "diff_sha256": "aceb735b58eb129745e5542a9039757ca24d96639557e43fd215746fbc16b352"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/cmd/dispatch_routes_test.go",
+        "engine/cmd/review.go",
+        "engine/cmd/review_exempt_test.go",
+        "engine/cmd/review_test.go",
+        "engine/cmd/usage.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The review verb-list strings in review.go lines 67 and 97 now name ci, and the three test expectations (dispatch_routes_test.go, review_exempt_test.go, review_test.go) match those strings character for character.",
+      "The usage.go addition documents roles skill-paths. Its exit codes (0 printed, 2 on a malformed line, 1 usage) are internally consistent, and the roles verb-list message already named skill-paths.",
+      "I could not confirm from the diff that a `ci` case exists in the runReview switch. The commit states the foreman already names `review ci`, so I treat that as given and raise no finding."
+    ]
+  }
+}

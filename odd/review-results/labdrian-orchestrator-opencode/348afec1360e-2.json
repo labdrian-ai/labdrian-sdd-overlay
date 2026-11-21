@@ -1,0 +1,92 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "967dd4eb2e5d4aa83bad2bb5b8e98c905a7f8913",
+    "head": "348afec1360ec1220caa698ae0890de434bb9667",
+    "diff_sha256": "a98ca14f538883dd690acdb360f950ab70b348701cb099186b0d3f2d8b09182d",
+    "paths": [
+      "engine/architecture_test.go",
+      "engine/skillregistry/compose.go",
+      "engine/skillregistry/compose_test.go",
+      "engine/skillregistry/frontmatter.go",
+      "engine/skillregistry/rows_test.go",
+      "engine/skillregistry/skill_test.go",
+      "engine/skillregistry/skillregistry.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "967dd4eb2e5d4aa83bad2bb5b8e98c905a7f8913",
+      "head": "348afec1360ec1220caa698ae0890de434bb9667",
+      "diff_sha256": "a98ca14f538883dd690acdb360f950ab70b348701cb099186b0d3f2d8b09182d"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/architecture_test.go",
+        "engine/skillregistry/compose.go",
+        "engine/skillregistry/compose_test.go",
+        "engine/skillregistry/frontmatter.go",
+        "engine/skillregistry/rows_test.go",
+        "engine/skillregistry/skill_test.go",
+        "engine/skillregistry/skillregistry.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "engine/skillregistry/compose.go:43",
+        "claim": "The generated comment tells readers to run `labdrian skill-registry refresh --force`, a verb that does not exist yet (the commit says nothing calls the package). A registry written from this package before the verb lands would point at a missing command.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/skillregistry/compose.go:43"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "engine/skillregistry/skillregistry.go:5",
+        "claim": "The package doc cites a parity test in `engine/skillregistry/app`, which this change does not add. The reference is dangling until a later commit.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/skillregistry/skillregistry.go:5"
+        ]
+      },
+      {
+        "id": "F3",
+        "severity": "WARNING",
+        "location": "engine/skillregistry/compose.go:90-95",
+        "claim": "The table-end scan consumes every contiguous line starting with `| `. A Hermes or other foreign table placed directly under the rows with no blank line is silently dropped, unless its rows are `sdd-` rows. This contradicts the claim that every line outside the generated head and rows is kept byte for byte.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/skillregistry/compose.go:90-95"
+        ]
+      },
+      {
+        "id": "F4",
+        "severity": "SUGGESTION",
+        "location": "engine/skillregistry/frontmatter.go:76-92",
+        "claim": "A plain description that starts with a quote and does not end with one (e.g. `\"Use when x\" for y`) is treated as an open quoted value. If indented lines follow, such as a nested mapping, and one ends with that quote character, they are merged into the description. Gentle-ai would keep only the first line.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/skillregistry/frontmatter.go:76-92"
+        ]
+      }
+    ],
+    "evidence": [
+      "Reviewed the full diff only; no tools were available.",
+      "Compose is idempotent on its own output, and foreignHead drops every generated head line, which the tests cover.",
+      "Row.Line escapes bars in the name and description but not backticks in the name or path (minor)."
+    ]
+  }
+}

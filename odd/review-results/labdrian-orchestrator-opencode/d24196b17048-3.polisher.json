@@ -1,0 +1,32 @@
+{
+  "kind": "polisher",
+  "base": "2dc1cde4309596b73e0050f83491312592faaf4a",
+  "head": "d24196b17048fd4e8c29a4cc4598ec7184eec52c",
+  "diff_sha256": "704a886cf2beea6174e82083edd985244a6e1fb9926f6b45407cfeddb4c4526a",
+  "findings": {
+    "findings": [
+      {
+        "location": "roles/foreman/body.md:13",
+        "severity": "SUGGESTION",
+        "claim": "The new Evidence rule lists three kinds of evidence: whole commit ids, a verb's output line whole, and a role's result by its Log entry. Several \"Advance only with\" cells ask for something outside those three. The Close cell's \"CI read green\" comes from `gh pr checks`, which is not a labdrian verb. The Tier cell asks for \"the tier and the rule that fired\". The Explore cell asks for \"path:line evidence\". The Build cell asks for the `test-first` table and the test results. The general lead-in sentence, \"names in full what the stage's cell asks\", still covers these, so the foreman is not misled. The list could be read as exhaustive, though, and the merge-path Close evidence (CI read green) stays unnamed.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "evidence": [
+          "roles/foreman/body.md:13 lists the three kinds, ending \"your own re-run is added to them, never put in their place\"",
+          "roles/foreman/body.md:29 Close cell: the merge-path evidence is \"the merge commit, and CI read green\"",
+          "roles/foreman/body.md:21, :22 and :25 are the Tier, Explore and Build cells",
+          "The L130 item 3 defect is covered by the Close cell's landing-commit path",
+          "The diff changes one line; agents/foreman.md and opencode/agents/foreman.md carry it identically; engine/agentgen/foreman_test.go:228 pins it"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full diff t59.diff",
+      "Read T59 (line 101); the new line matches the exact text it specifies",
+      "Read the whole Stages table of roles/foreman/body.md",
+      "Confirmed the Log entry term is used by skills/inception-pipeline, skills/odd-feature-doc and skills/test-first",
+      "Body line count unchanged",
+      "Not run: no tests or gadu-generate --check"
+    ]
+  }
+}

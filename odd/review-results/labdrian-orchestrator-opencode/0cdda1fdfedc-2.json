@@ -1,0 +1,65 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "2dacee5f10e1299e86fe1c4246fbe13df0e80c91",
+    "head": "0cdda1fdfedc706677cdd7d7e464590ea36fdb6c",
+    "diff_sha256": "4c3a71bc48790533ffe8a31b214456eae58fdf2f16ced60ef7d4b060c5d7f7d2",
+    "paths": [
+      "engine/cmd/runtime_registry.go",
+      "engine/cmd/testdata/runtime-golden/runtime-opencode-and-pi-with-an-overlay.golden",
+      "engine/runtime/core/config.go",
+      "engine/runtime/opencode.go",
+      "engine/runtime/opencode_json.go",
+      "engine/runtime/opencode_json_write.go",
+      "engine/runtime/opencode_lookup.go",
+      "engine/runtime/opencode_lookup_test.go",
+      "engine/runtime/opencode_servers_test.go",
+      "engine/runtime/register.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "2dacee5f10e1299e86fe1c4246fbe13df0e80c91",
+      "head": "0cdda1fdfedc706677cdd7d7e464590ea36fdb6c",
+      "diff_sha256": "4c3a71bc48790533ffe8a31b214456eae58fdf2f16ced60ef7d4b060c5d7f7d2"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/cmd/runtime_registry.go",
+        "engine/cmd/testdata/runtime-golden/runtime-opencode-and-pi-with-an-overlay.golden",
+        "engine/runtime/core/config.go",
+        "engine/runtime/opencode.go",
+        "engine/runtime/opencode_json.go",
+        "engine/runtime/opencode_json_write.go",
+        "engine/runtime/opencode_lookup.go",
+        "engine/runtime/opencode_lookup_test.go",
+        "engine/runtime/opencode_servers_test.go",
+        "engine/runtime/register.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "engine/runtime/opencode_json_write.go:55-62",
+        "claim": "Install skips any server whose entry is already present, and owns() now counts the bare form as current. A user who installed earlier with bare names and re-runs install on a machine where the program is found keeps the bare command, and the message says 'already current'. The fix for launchers with a different PATH never reaches existing installs. A stale absolute path after the program moves is likewise never repaired, and Status still reports supported.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/runtime/opencode_json_write.go:56-58 (continue when present)",
+          "engine/runtime/opencode_json.go:70-80 (owns accepts either form)"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the diff for serversToWrite, writeOpenCodeJSON, owns and pathLookup.",
+      "The loop `if _, present := ...; present { continue }` means resolved servers only replace missing entries."
+    ]
+  }
+}

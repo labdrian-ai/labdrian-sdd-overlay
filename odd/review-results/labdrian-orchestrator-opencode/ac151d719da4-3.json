@@ -1,0 +1,91 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "b38a989854083799e499d73a2e86ef5c1ded86a3",
+    "head": "ac151d719da4c8a375800233b8fe64c1f2284ec2",
+    "diff_sha256": "78ededd66939b71872ed4ae5465da6d4d2014fbe213f2b1002ed16c57d29ab3e",
+    "paths": [
+      "CHANGELOG.md",
+      "engine/skills/gentle_detach_test.go",
+      "overlay.manifest",
+      "skills.registry.yaml",
+      "skills/_shared/SKILL.md",
+      "skills/chained-pr/SKILL.md",
+      "skills/cognitive-doc-design/SKILL.md",
+      "skills/comment-writer/SKILL.md",
+      "skills/go-testing/SKILL.md",
+      "skills/inception-pipeline/SKILL.md",
+      "skills/judgment-day/SKILL.md",
+      "skills/judgment-day/references/prompts-and-formats.md",
+      "skills/project-architect/SKILL.md",
+      "skills/project-inception/SKILL.md",
+      "skills/project-manifest/SKILL.md",
+      "skills/requirements-from-transcripts/SKILL.md",
+      "skills/roadmap-maker/SKILL.md",
+      "skills/skill-creator/SKILL.md",
+      "skills/skill-creator/references/skill-style-guide.md",
+      "skills/skill-improver/SKILL.md",
+      "skills/skill-improver/references/skill-style-guide.md",
+      "skills/work-unit-commits/SKILL.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "b38a989854083799e499d73a2e86ef5c1ded86a3",
+      "head": "ac151d719da4c8a375800233b8fe64c1f2284ec2",
+      "diff_sha256": "78ededd66939b71872ed4ae5465da6d4d2014fbe213f2b1002ed16c57d29ab3e"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "engine/skills/gentle_detach_test.go",
+        "overlay.manifest",
+        "skills.registry.yaml",
+        "skills/_shared/SKILL.md",
+        "skills/chained-pr/SKILL.md",
+        "skills/cognitive-doc-design/SKILL.md",
+        "skills/comment-writer/SKILL.md",
+        "skills/go-testing/SKILL.md",
+        "skills/inception-pipeline/SKILL.md",
+        "skills/judgment-day/SKILL.md",
+        "skills/judgment-day/references/prompts-and-formats.md",
+        "skills/project-architect/SKILL.md",
+        "skills/project-inception/SKILL.md",
+        "skills/project-manifest/SKILL.md",
+        "skills/requirements-from-transcripts/SKILL.md",
+        "skills/roadmap-maker/SKILL.md",
+        "skills/skill-creator/SKILL.md",
+        "skills/skill-creator/references/skill-style-guide.md",
+        "skills/skill-improver/SKILL.md",
+        "skills/skill-improver/references/skill-style-guide.md",
+        "skills/work-unit-commits/SKILL.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "overlay.manifest:82-93",
+        "claim": "Only the SKILL.md rows were retagged to custom. The reference files of the same skills remain `managed`: chained-pr/references/chaining-details.md, go-testing/references/examples.md, judgment-day/references/prompts-and-formats.md, skill-creator/references/skill-style-guide.md and skill-improver/references/skill-style-guide.md. The registry now says these skills are custom with no upstream. This commit also edits two of them, prompts-and-formats.md and the two style guides, so a managed-tagged file is locally modified. If managed rows are treated as upstream-owned (refreshed, overwritten or drift-flagged), those edits can be reverted or flagged, and the detach is incomplete. The new test checks only `<dir>/SKILL.md` rows, so it does not catch this.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "overlay.manifest:82-93",
+          "skills/judgment-day/references/prompts-and-formats.md:14-17",
+          "skills/skill-creator/references/skill-style-guide.md:75-78",
+          "engine/skills/gentle_detach_test.go:168-172"
+        ]
+      }
+    ],
+    "evidence": [
+      "Reviewed the full diff only; the worktree was not read, so how `managed` rows are handled by capture or sync is not verified.",
+      "The manifest and registry changes for the eight skills are consistent with each other.",
+      "The new test checks the manifest tag for SKILL.md rows only, not for reference files."
+    ]
+  }
+}

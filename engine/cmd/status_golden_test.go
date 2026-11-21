@@ -291,7 +291,12 @@ func statusGoldenCases() []registryGoldenCase {
 			variant("a projection entry twice", func(r map[string]any) {
 				hooks := r["hooks"].(map[string]any)
 				entries := hooks["UserPromptSubmit"].([]any)
-				hooks["UserPromptSubmit"] = append(entries, entries[len(entries)-1])
+				for _, e := range entries {
+					if strings.Contains(commandsOf(e), "projection hook") {
+						hooks["UserPromptSubmit"] = append(entries, e)
+						break
+					}
+				}
 			})
 			variant("no approve guard entries", func(r map[string]any) { dropHooks(r, "PreToolUse", "skills guard-hook") })
 			variant("an approve guard entry that was edited", func(r map[string]any) {
@@ -313,6 +318,14 @@ func statusGoldenCases() []registryGoldenCase {
 			variant("a builder guard entry that was edited", func(r map[string]any) {
 				for _, e := range r["hooks"].(map[string]any)["PreToolUse"].([]any) {
 					if strings.Contains(commandsOf(e), "roles builder-guard") {
+						e.(map[string]any)["hooks"].([]any)[0].(map[string]any)["command"] = commandsOf(e) + " # edited"
+					}
+				}
+			})
+			variant("no registry refresh entry: WARN", func(r map[string]any) { dropHooks(r, "UserPromptSubmit", "registry refresh") })
+			variant("a registry refresh entry that was edited", func(r map[string]any) {
+				for _, e := range r["hooks"].(map[string]any)["UserPromptSubmit"].([]any) {
+					if strings.Contains(commandsOf(e), "registry refresh") {
 						e.(map[string]any)["hooks"].([]any)[0].(map[string]any)["command"] = commandsOf(e) + " # edited"
 					}
 				}

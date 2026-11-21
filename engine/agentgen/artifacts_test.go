@@ -97,7 +97,15 @@ func TestEveryRoleSourceOfTheRepositoryIsProjected(t *testing.T) {
 		if !entry.IsDir() {
 			continue
 		}
-		for _, path := range []string{"agents/" + entry.Name() + ".md", "pi/agents/" + entry.Name() + ".md", "codex/agents/" + entry.Name() + ".toml"} {
+		paths := []string{"agents/" + entry.Name() + ".md", "pi/agents/" + entry.Name() + ".md", "codex/agents/" + entry.Name() + ".toml"}
+		if entry.Name() == "foreman" {
+			// The parent of the chain has no Pi or Codex file (S5): the other two are asserted absent.
+			if projected[paths[1]] || projected[paths[2]] {
+				t.Errorf("roles/foreman/ is projected to Pi or Codex, want no Pi or Codex file")
+			}
+			paths = paths[:1]
+		}
+		for _, path := range paths {
 			if !projected[path] {
 				t.Errorf("roles/%s/ has a source, and the generator emits no %s", entry.Name(), path)
 			}
@@ -179,7 +187,7 @@ func TestTheCommittedFilesOfTheRolesAreWhatTheGeneratorWrites(t *testing.T) {
 		t.Fatalf("Artifacts of the repository: %v", err)
 	}
 	if len(table) != len(allPaths()) {
-		t.Fatalf("the table of the repository holds %d files, want the %d of the eight roles", len(table), len(allPaths()))
+		t.Fatalf("the table of the repository holds %d files, want the %d of the eight roles and the foreman", len(table), len(allPaths()))
 	}
 
 	if err := agentgen.Check(root); err != nil {
@@ -195,4 +203,29 @@ func repoRoot(t *testing.T) string {
 		t.Fatalf("getwd: %v", err)
 	}
 	return filepath.Join(wd, "..", "..")
+}
+
+// A role on OpenCode cannot load a skill by name (its skill tool is denied), so each skill a body names
+// as "`<id>` skill" must have a SKILL.md the adapter can hand the role by path. A body that names one
+// that is not in the repository stops generation, with the body, the id and the file in one message.
+func TestABodyThatNamesASkillThatIsNotInTheRepositoryIsNamedAndNothingIsWritten(t *testing.T) {
+	root := seededRoot(t)
+	body := filepath.Join(root, "roles", "builder", "body.md")
+	if err := os.WriteFile(body, []byte(readText(t, body)+"\nFollow the `no-such` skill.\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	checkErr := agentgen.Check(root)
+	generateErr := agentgen.Generate(root)
+
+	const want = "roles/builder/body.md names the skill `no-such` but skills/no-such/SKILL.md is not in the repository: name a skill that has a directory under skills/, or remove the mention"
+	if generateErr == nil || !strings.Contains(generateErr.Error(), want) {
+		t.Errorf("Generate error = %v, want it to hold %q", generateErr, want)
+	}
+	if checkErr == nil || !strings.Contains(checkErr.Error(), want) || strings.Contains(checkErr.Error(), "the source of the role is not in the repository") {
+		t.Errorf("Check error = %v, want it to hold %q and not call the source missing", checkErr, want)
+	}
+	if _, err := os.Stat(filepath.Join(root, "agents")); err == nil {
+		t.Error("Generate wrote files although a body names a skill that is missing")
+	}
 }

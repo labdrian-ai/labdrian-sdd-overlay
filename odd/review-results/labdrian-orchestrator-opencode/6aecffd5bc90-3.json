@@ -1,0 +1,33 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "664e126a5e40f0a09622f5e0901213cf66225c9e",
+    "head": "6aecffd5bc902265ba82eab0dd539c40c2733193",
+    "diff_sha256": "27451e9475e20d6371cddf94fc5201d36424be572104d112436cdcf0e98d0979",
+    "paths": [
+      "engine/agentgen/models.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "664e126a5e40f0a09622f5e0901213cf66225c9e",
+      "head": "6aecffd5bc902265ba82eab0dd539c40c2733193",
+      "diff_sha256": "27451e9475e20d6371cddf94fc5201d36424be572104d112436cdcf0e98d0979"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/agentgen/models.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The diff adds only a two-line Go comment in engine/agentgen/models.go; no executable code changes, so behavior is identical to base.",
+      "The comment claim (strings.Split never returns an empty slice) is true for Go's strings.Split, so the comment is not misleading as far as the diff shows."
+    ]
+  }
+}

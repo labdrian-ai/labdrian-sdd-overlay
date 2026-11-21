@@ -1,0 +1,19 @@
+{
+  "kind": "polisher",
+  "base": "16a719fc144f4653cbbf66db42dab5b63b03d2ae",
+  "head": "729995b2173db9401f7647931bbf6080c12b3913",
+  "diff_sha256": "d1f110ea52969dc0746fa79d1837075df4cd87053d83bf1a4dd17a167366ad53",
+  "findings": {
+    "findings": [],
+    "evidence": [
+      "Read the whole diff (t60b.diff) for commit 729995b2 against 16a719fc. Did not read the worktree sources beyond the grep noted below, and did not run any tests or commands.",
+      "Read T60's line 102 (commit B text and the correction's differential) and L173 (decisions, the R1 plugin/engine version-skew risk, the R3 negated-and-quoted-mention tradeoff).",
+      "Commit B follows the spec. The `--agent` flag is optional, at most once, and refuses a missing or empty value with the specified lines. `ReadsOnlyItsCandidate` is true for exactly reviewer and polisher. `rewriteListed` is the single shared function. `RewriteListedSkillPaths` returns the prompt byte-identical when there is no header. The plugin adds `--agent` only when the field is a non-empty string. The usage text and the CHANGELOG state the new rule.",
+      "The fence rule matches CommonMark: a backtick fence whose info string holds a backtick opens none, and a tilde fence is unaffected; both tested, including the reproduced '```test-first``` is a skill' then 'go-testing'. A lone trailing \"\\r\" is trimmed with the trailing newlines, so the section gets one ending; trimming \"\\r\" for an LF-ending prompt is slightly broader than the spec's wording, harmless, and only affects the appended-section path.",
+      "Plugin version bumped to 2026-11-20-runtime-parity-18; all 6 golden files updated and match the constant. `enginetest.Cleanup()` is added to the engine/runtime TestMain.",
+      "The spoiled first RED is covered by the `--agent builder` pin at opencode_bridge_skills_test.go:55, the reviewer and no-agent plugin test, and the real-engine reviewer byte-identical test. No defect found.",
+      "The L173 differential set was not run by the builder; it is a verifier step planned after B, recorded as not run. The version-skew risk is an accepted tradeoff in L173.",
+      "Grep of labdrian-runtime-parity-plugin.mjs found `AGENT_FIELD` at lines 13, 152, 154, 434 and 448, and `FROZEN_CONTEXT_AGENT = \"reviewer\"` at line 400."
+    ]
+  }
+}

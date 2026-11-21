@@ -1,0 +1,81 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "0d30f1b8a07ced6b2454d312764eafd060618a11",
+    "head": "2c4eb2b7060d8c3f44d12c20faf9764996a2cfd0",
+    "diff_sha256": "576e9aa313b986be102a6ac2b508a64625b42259ea2d267c67e4b50f40ab7c91",
+    "paths": [
+      "CHANGELOG.md",
+      "engine/runtime/longtermmem.go",
+      "engine/runtime/longtermmem_config.go",
+      "engine/runtime/longtermmem_status.go",
+      "engine/runtime/longtermmem_test.go",
+      "longterm-mem/README.md",
+      "longterm-mem/cmd/longterm-mem/cmd_register.go",
+      "longterm-mem/cmd/longterm-mem/register_golden_test.go",
+      "longterm-mem/cmd/longterm-mem/testdata/register-golden/42-register-migrates-an-owned-opencode-1x-entry.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/register-golden/43-register-over-an-opencode-1x-entry-that-is-not-ours.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/register-golden/44-unregister-an-owned-opencode-1x-entry.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/register-golden/45-unregister-an-opencode-1x-entry-that-is-not-ours.golden",
+      "longterm-mem/internal/register/emptyconfig_test.go",
+      "longterm-mem/internal/register/jsonnested.go",
+      "longterm-mem/internal/register/jsonwrite.go",
+      "longterm-mem/internal/register/opencode.go",
+      "longterm-mem/internal/register/opencode_v2_test.go",
+      "longterm-mem/internal/register/unregister.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "0d30f1b8a07ced6b2454d312764eafd060618a11",
+      "head": "2c4eb2b7060d8c3f44d12c20faf9764996a2cfd0",
+      "diff_sha256": "576e9aa313b986be102a6ac2b508a64625b42259ea2d267c67e4b50f40ab7c91"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "engine/runtime/longtermmem.go",
+        "engine/runtime/longtermmem_config.go",
+        "engine/runtime/longtermmem_status.go",
+        "engine/runtime/longtermmem_test.go",
+        "longterm-mem/README.md",
+        "longterm-mem/cmd/longterm-mem/cmd_register.go",
+        "longterm-mem/cmd/longterm-mem/register_golden_test.go",
+        "longterm-mem/cmd/longterm-mem/testdata/register-golden/42-register-migrates-an-owned-opencode-1x-entry.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/register-golden/43-register-over-an-opencode-1x-entry-that-is-not-ours.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/register-golden/44-unregister-an-owned-opencode-1x-entry.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/register-golden/45-unregister-an-opencode-1x-entry-that-is-not-ours.golden",
+        "longterm-mem/internal/register/emptyconfig_test.go",
+        "longterm-mem/internal/register/jsonnested.go",
+        "longterm-mem/internal/register/jsonwrite.go",
+        "longterm-mem/internal/register/opencode.go",
+        "longterm-mem/internal/register/opencode_v2_test.go",
+        "longterm-mem/internal/register/unregister.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "longterm-mem/internal/register/opencode.go:95-98",
+        "claim": "RegisterOpencodeMigrating now reads the config with os.ReadFile and fails if the file does not exist, after readMember has already treated a missing file as an absent entry. The previous path went through jsonInstall, which may have handled a missing opencode.json (creating it). If the config root exists but opencode.json does not, register can now fail with a read error where it previously inserted the entry. The diff does not show jsonInstall, so this is unproven.",
+        "evidence_class": "inferential",
+        "causal_disposition": "unknown",
+        "proof_refs": [
+          "longterm-mem/internal/register/opencode.go:95-98"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the whole diff. The decide-then-write flow in RegisterOpencodeMigrating, unregisterOpencode and removeOpencodeEntries is consistent with goldens 42-45.",
+      "The engine status change marks an owned 1.x entry partial and no longer records it as owned; the new test covers this.",
+      "The one gap is the missing-file case above; jsonInstall is not in the diff, so I could not confirm it."
+    ]
+  }
+}

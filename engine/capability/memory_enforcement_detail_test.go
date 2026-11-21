@@ -45,9 +45,10 @@ func TestCodexMemoryEnforcementClaimIsPartialAndBounded(t *testing.T) {
 	}
 }
 
-// Every other declared-only runtime keeps the text it had.
+// Pi, the other declared-only runtime, keeps the text it had. OpenCode left the
+// declared-only list in T16 and states its memory claim itself.
 func TestOtherDeclaredOnlyRuntimesKeepTheMemoryEnforcementDetail(t *testing.T) {
-	for _, runtime := range []string{"Pi", "OpenCode"} {
+	for _, runtime := range []string{"Pi"} {
 		want := "Not implemented: no memory plan is projected into or enforced in a " + runtime + " session. scope"
 		if got := memoryEnforcementDetail(runtime, " scope"); got != want {
 			t.Errorf("%s detail = %q, want %q", runtime, got, want)

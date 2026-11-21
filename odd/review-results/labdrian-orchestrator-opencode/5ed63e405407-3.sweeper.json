@@ -1,0 +1,15 @@
+{
+  "kind": "sweeper",
+  "base": "2c4eb2b7060d8c3f44d12c20faf9764996a2cfd0",
+  "head": "5ed63e405407cded4f845443589034dce7802757",
+  "diff_sha256": "953a72a49b93ca39ea41f455ae3fd5bf86a2948348ebb69461f5dbe27293c33e",
+  "sweep": "5ed63e405407-1.sweep.json",
+  "commit": null,
+  "candidates": [
+    {
+      "candidate": "T1 name: reportRegister",
+      "disposition": "live",
+      "evidence": "The only hit is odd/tasks/consolidation-phase9.md, a closed feature log that records history."
+    }
+  ]
+}

@@ -1,0 +1,34 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "a5d005d7e0ba489ca3b5be877d30fccb4efe54a3",
+    "head": "4d142c012aed3590a46b9cb636cf7b0365302ad4",
+    "diff_sha256": "396bda95d9e5665a110984f85dc0742efd40e7c515a20e0b31c5e1e9bb3b1fae",
+    "paths": [
+      "odd/tasks/labdrian-orchestrator-opencode.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "a5d005d7e0ba489ca3b5be877d30fccb4efe54a3",
+      "head": "4d142c012aed3590a46b9cb636cf7b0365302ad4",
+      "diff_sha256": "396bda95d9e5665a110984f85dc0742efd40e7c515a20e0b31c5e1e9bb3b1fae"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/labdrian-orchestrator-opencode.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The change appends one log entry (L70) to a documentation file; no code, tests, or executable behavior is touched.",
+      "L70 records the owner's answer 'vamos por la reco' and states the consequence (moshi and the statusline plugin are not carried, and moshi notifications stop) without contradicting L60 through L69 as shown in the diff.",
+      "Commit claims Risk: none, which matches a docs-only log append."
+    ]
+  }
+}

@@ -1,0 +1,81 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "d42e249fb6d40cc6939e643975e7d502022dfa22",
+    "head": "d0442fec62d4b7f4ac7562f89d8886df310afa12",
+    "diff_sha256": "866c6d85193a6085157d27858457e12dbfa76e459de93f5b8ca35e41fce706d4",
+    "paths": [
+      "engine/skills/issue_creation_artifact_test.go",
+      "skills/issue-creation/SKILL.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "d42e249fb6d40cc6939e643975e7d502022dfa22",
+      "head": "d0442fec62d4b7f4ac7562f89d8886df310afa12",
+      "diff_sha256": "866c6d85193a6085157d27858457e12dbfa76e459de93f5b8ca35e41fce706d4"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/skills/issue_creation_artifact_test.go",
+        "skills/issue-creation/SKILL.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "skills/issue-creation/SKILL.md:44",
+        "claim": "The comment read-back uses $HOST, $REPO and $COMMENT_ID, but no step defines them. The write step is `gh issue comment`, which prints a comment URL, and nothing says to derive COMMENT_ID from it. The target is introduced as $TARGET in [HOST/]OWNER/REPO form, where HOST is optional and $REPO is never defined. An agent may fabricate or mis-derive the identity, or have no host for a github.com target. A read-back that cannot run is meant to be `unknown`, but nothing says that explicitly for the comment case.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "skills/issue-creation/SKILL.md:44"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "WARNING",
+        "location": "skills/issue-creation/SKILL.md:44",
+        "claim": "The comment read-back says only \"compare its body\". It does not say what the body is compared with, and it does not say that a mismatch yields `unknown`. The issue read-back keeps the \"title and body must match\" wording only through the Outcomes section. The explicit requirement was dropped from step 4, so the comparison for a comment is underspecified.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "skills/issue-creation/SKILL.md:44"
+        ]
+      },
+      {
+        "id": "F3",
+        "severity": "SUGGESTION",
+        "location": "engine/skills/issue_creation_artifact_test.go:131-143",
+        "claim": "The form-rule test only checks for two substrings, and its negative check looks for two exact strings (`this repository:` and `feature.yml)`). Rewording the hardcoded form, for example `feature.yml` without a closing parenthesis, would still pass. The guard is brittle and gives false assurance. The duplicate-procedure test likewise pins exact prose, so a harmless rewording breaks it.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/skills/issue_creation_artifact_test.go:131-143"
+        ]
+      },
+      {
+        "id": "F4",
+        "severity": "SUGGESTION",
+        "location": "skills/issue-creation/SKILL.md:36",
+        "claim": "Reading every duplicate candidate in step 1 is unbounded, because the search uses --limit 1000. The Decision Gates treat a saturated search as a stop, but nothing bounds the per-candidate reads or says which candidates to read. Up to 1000 `gh issue view` calls could be required. The \"read each candidate\" rule also does not say whether a candidate that is a pull request or a different form type counts as nonconforming.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "skills/issue-creation/SKILL.md:36"
+        ]
+      }
+    ],
+    "evidence": [
+      "Diff only; no tools were available to run the tests.",
+      "The SKILL.md changes line up with the new test assertions: all quoted strings appear in the head text."
+    ]
+  }
+}

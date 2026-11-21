@@ -1,0 +1,94 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "87f26495f03d65b7423a2d8d787eb56f36cf75d0",
+    "head": "69ef7099c732ff09f020407e0eb9e8d910170dfe",
+    "diff_sha256": "fa4ac499de04c2b626ec2a248ebab8eaecdf56e5e07666b2df1fa2b268dc996c",
+    "paths": [
+      "odd/tasks/labdrian-orchestrator-opencode.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "87f26495f03d65b7423a2d8d787eb56f36cf75d0",
+      "head": "69ef7099c732ff09f020407e0eb9e8d910170dfe",
+      "diff_sha256": "fa4ac499de04c2b626ec2a248ebab8eaecdf56e5e07666b2df1fa2b268dc996c"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/labdrian-orchestrator-opencode.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "odd/tasks/labdrian-orchestrator-opencode.md:3",
+        "claim": "The header states the branch base as `origin/main` e25f0bfe, but this commit's base is 87f26495. If the branch was cut from or rebased past e25f0bfe, the recorded base is stale and misleads whoever builds the chain of per-commit reviews from it.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/labdrian-orchestrator-opencode.md:3"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "WARNING",
+        "location": "odd/tasks/labdrian-orchestrator-opencode.md:15",
+        "claim": "S8 says `Plugin.define` installs a plugin at `<config>/plugins/<name>/index.js` with no build step, while S10 says ctx.tool.hook is the only way to deny. Tasks T9-T11 specify neither the plugin directory name nor which task owns the shared `index.js`. T10 and T11 both edit the same plugin file, which makes ownership and the review order ambiguous.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/labdrian-orchestrator-opencode.md:15",
+          "odd/tasks/labdrian-orchestrator-opencode.md:16"
+        ]
+      },
+      {
+        "id": "F3",
+        "severity": "WARNING",
+        "location": "odd/tasks/labdrian-orchestrator-opencode.md:46",
+        "claim": "T8 (inline, owner-approved) depends on T6, T18, T23 and T7, but the Order line in L12 puts T23 before T7 while T18 and T23 are listed after T6 in the Tasks list. Task numbering is out of order in the Tasks section (T6, T18, T23, T7, ..., T19, T12 ...). The sequence is only recoverable from the Log prose, which hurts readability and invites a builder to pick the wrong task.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/labdrian-orchestrator-opencode.md:43",
+          "odd/tasks/labdrian-orchestrator-opencode.md:46"
+        ]
+      },
+      {
+        "id": "F4",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/labdrian-orchestrator-opencode.md:7",
+        "claim": "S1 and S2 carry long verbatim owner quotes with typos mixed with the spec, and S3, S17 and S18 are single paragraphs of several hundred words. Acceptance criteria are buried mid-paragraph, so a reader cannot find what a test must check without reading the whole spec.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/labdrian-orchestrator-opencode.md:9",
+          "odd/tasks/labdrian-orchestrator-opencode.md:27"
+        ]
+      },
+      {
+        "id": "F5",
+        "severity": "WARNING",
+        "location": "odd/tasks/labdrian-orchestrator-opencode.md:175",
+        "claim": "The L9 body draft's Build row says the builder prompt holds `Spec:` and runner, but the Open row requires `\"bound\":true` stdout while the Tier row stops only when 'rule 4 fires'. 'Rule 4' is not defined anywhere in this document, so a foreman following the drafted body (which T6 writes verbatim) has no way to evaluate that stop condition.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/labdrian-orchestrator-opencode.md:150"
+        ]
+      }
+    ],
+    "evidence": [
+      "Reviewed the single added file; the diff is documentation only (a feature document), so findings concern internal consistency and readability.",
+      "Checked that every S-number cited in tasks exists in Specs (S1-S18) and that task ordering in the list differs from the dependency order stated in L12.",
+      "Located the undefined 'rule 4' reference in the L9 draft body table (Tier row)."
+    ]
+  }
+}

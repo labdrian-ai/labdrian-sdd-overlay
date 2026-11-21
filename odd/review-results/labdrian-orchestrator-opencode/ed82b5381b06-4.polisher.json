@@ -1,0 +1,22 @@
+{
+  "kind": "polisher",
+  "base": "dec120a460c8fdd408fffb7f5b9d62c7bebf3cb1",
+  "head": "ed82b5381b06dce4ef1f9f63ae6c3bc28edf04cf",
+  "diff_sha256": "3c4702527473c78d82a61162047907c8834debf31771d70f1c6f5231cbd91d82",
+  "findings": {
+    "findings": [
+      {
+        "id": "N-1",
+        "severity": "SUGGESTION",
+        "location": "bin/lib/sync_check.sh",
+        "claim": "No finding on this commit; the guard is pinned by TestSyncCheck_OpenCodeChecksItsAgentsWithNoSkillsDirectory and verifier check 4 reached DIGEST_MATCH.",
+        "evidence": [
+          "series clean."
+        ]
+      }
+    ],
+    "evidence": [
+      "Independent verifier (Risk 3,5) on 451cd0da..2e22df05: suite 85 ok; seeds a-f held; real OpenCode 2.2.7 loads the plugin and parses the config; claude/codex/pi identical; no change-caused blocker. Bounded recheck R1-R7 on a6e520a0: none reproduced (all reproduced at base)."
+    ]
+  }
+}

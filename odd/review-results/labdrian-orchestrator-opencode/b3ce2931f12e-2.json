@@ -1,0 +1,101 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "27efff37265a06d7c66c24d9d8b8b0f100f757f8",
+    "head": "b3ce2931f12e01ae3256ada57dffd544d8aa585c",
+    "diff_sha256": "af72560b5d1f70bb425f9cf0ce083181942b6ab65cb97f50213a8d3c5403f0bc",
+    "paths": [
+      "engine/cmd/testdata/contract-golden/runtime-opencode-context-lists-quotes-and-case.golden",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-minimalism-context-metadata-accepted-today.golden",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-phases-quoted-items-accepted-today.golden",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-reads-the-contracts-of-the-overlay.golden",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-without-the-oo-contract.golden",
+      "engine/cmd/testdata/runtime-golden/runtime-lifecycle-of-all-the-targets.golden",
+      "engine/cmd/testdata/runtime-golden/runtime-opencode-and-pi-with-an-overlay.golden",
+      "engine/runtime/opencode.go",
+      "engine/runtime/opencode_memorycard.go",
+      "engine/runtime/opencode_memorycard_plugin_test.go",
+      "engine/runtime/opencode_memorycard_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "27efff37265a06d7c66c24d9d8b8b0f100f757f8",
+      "head": "b3ce2931f12e01ae3256ada57dffd544d8aa585c",
+      "diff_sha256": "af72560b5d1f70bb425f9cf0ce083181942b6ab65cb97f50213a8d3c5403f0bc"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/cmd/testdata/contract-golden/runtime-opencode-context-lists-quotes-and-case.golden",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-minimalism-context-metadata-accepted-today.golden",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-phases-quoted-items-accepted-today.golden",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-reads-the-contracts-of-the-overlay.golden",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-without-the-oo-contract.golden",
+        "engine/cmd/testdata/runtime-golden/runtime-lifecycle-of-all-the-targets.golden",
+        "engine/cmd/testdata/runtime-golden/runtime-opencode-and-pi-with-an-overlay.golden",
+        "engine/runtime/opencode.go",
+        "engine/runtime/opencode_memorycard.go",
+        "engine/runtime/opencode_memorycard_plugin_test.go",
+        "engine/runtime/opencode_memorycard_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "engine/runtime/opencode_memorycard.go:84",
+        "claim": "The comment on the mark says it is in the first line of the plugin source, but ownership is tested with strings.Contains over the whole file. A foreign plugin that mentions the mark anywhere in its body, for example in a comment or string, is treated as written by this adapter. Install then overwrites it and uninstall deletes it, which contradicts the promise to leave files the adapter did not write.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/runtime/opencode_memorycard.go:22-24",
+          "engine/runtime/opencode_memorycard.go:84"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "WARNING",
+        "location": "engine/runtime/opencode_memorycard.go:129-143",
+        "claim": "When the file at the plugin path is foreign, uninstall still removes memorycard-opencode.json and returns success without mentioning the foreign file it left behind. Install says so in that case, but uninstall is silent. The record is deleted although the plugin it describes may still be present.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/runtime/opencode_memorycard.go:129-143",
+          "engine/runtime/opencode.go:92"
+        ]
+      },
+      {
+        "id": "F3",
+        "severity": "SUGGESTION",
+        "location": "engine/runtime/opencode_memorycard.go:76-85",
+        "claim": "memorycardPluginState returns the file content, but both callers discard it (`_`), so the extra return value is dead weight in a four-value signature.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/runtime/opencode_memorycard.go:76",
+          "engine/runtime/opencode_memorycard.go:90"
+        ]
+      },
+      {
+        "id": "F4",
+        "severity": "SUGGESTION",
+        "location": "engine/runtime/opencode_memorycard_test.go:112-113",
+        "claim": "The update test binds `adapter` and then discards it with `_ = adapter`, which is leftover noise. The install message also says 'written' on every run, even when the file was already current.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/runtime/opencode_memorycard_test.go:112-113"
+        ]
+      }
+    ],
+    "evidence": [
+      "Reviewed the full diff. The goldens differ only by the memorycard segment. The install and uninstall wiring in opencode.go is consistent with the new file."
+    ]
+  }
+}

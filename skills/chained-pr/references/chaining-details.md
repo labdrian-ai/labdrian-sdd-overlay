@@ -28,8 +28,8 @@ Steps:
 
 1. Create the feature/tracker branch from `main`.
 2. Open the tracker PR to `main`; mark it draft/no-merge.
-3. Create PR #1 from a child branch and target it to the tracker branch.
-4. Create each later child branch from the previous PR branch and target it to that parent branch.
+3. Create PR #1 from a child branch made with `git switch -c <child> --track <tracker>` and target it to the tracker branch.
+4. Create each later child branch from the previous PR branch with `git switch -c <child> --track <parent>` and target it to that parent branch. The review stop hook then asks a session only for the commits of the child, not for those it inherits from its parent.
 5. Merge/integrate children in order; merge the tracker only after the chain is complete.
 
 ## Stacked PRs to Main

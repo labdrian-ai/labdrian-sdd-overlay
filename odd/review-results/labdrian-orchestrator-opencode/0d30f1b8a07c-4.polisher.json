@@ -1,0 +1,130 @@
+{
+  "kind": "polisher",
+  "base": "201a28d2154f0e939efd40c25d9c838566039225",
+  "head": "0d30f1b8a07ced6b2454d312764eafd060618a11",
+  "diff_sha256": "dd65b0c93ae541a2111ef169c0c1e9588405a6a0dd593a0126fd4d71eb2b01d7",
+  "findings": {
+    "findings": [
+      {
+        "id": "V-D1",
+        "severity": "CRITICAL",
+        "location": "longterm-mem/internal/register/opencode.go",
+        "claim": "A foreign hand-written 1.x mcp.longterm-mem was shadowed by the new v2 entry (OpenCode 2.2.7 resolved only ours) where base refused with exit 6. Fixed in 2c4eb2b7: a foreign 1.x entry is a conflict; recheck D1 identical to base.",
+        "evidence": [
+          "verifier case d; recheck D1."
+        ]
+      },
+      {
+        "id": "A-F2",
+        "severity": "WARNING",
+        "location": "unregister.go / opencode.go",
+        "claim": "Unregister removed the owned 1.x entry before deciding the v2 entry. Fixed in 2c4eb2b7: both decided first, one write.",
+        "evidence": [
+          "judge A, judge B F3, series; recheck D2."
+        ]
+      },
+      {
+        "id": "S-1",
+        "severity": "WARNING",
+        "location": "opencode.go:62-69",
+        "claim": "Migration ran after the install record proving 1.x ownership was overwritten. Fixed in 2c4eb2b7: ownership decided before any write (regression pin, not reachable RED).",
+        "evidence": [
+          "series review."
+        ]
+      },
+      {
+        "id": "A-F1",
+        "severity": "WARNING",
+        "location": "configwrite.go",
+        "claim": "The .bak was overwritten by the second write. Fixed in 2c4eb2b7: one write per operation; recheck D3 shows .bak equals the pre-operation file.",
+        "evidence": [
+          "judge A; recheck D3."
+        ]
+      },
+      {
+        "id": "S-2",
+        "severity": "WARNING",
+        "location": "jsonnested.go:48-52",
+        "claim": "A 1.x server named servers was taken as the v2 container. Fixed in 2c4eb2b7: refused as a conflict; recheck D4.",
+        "evidence": [
+          "series, judge A F3; recheck D4."
+        ]
+      },
+      {
+        "id": "B-F1",
+        "severity": "WARNING",
+        "location": "engine/runtime/longtermmem_config.go",
+        "claim": "Doctor/status reported an owned 1.x entry as healthy. Fixed in 2c4eb2b7: partial with a migrate message; recheck D5.",
+        "evidence": [
+          "judge B; recheck D5."
+        ]
+      },
+      {
+        "id": "B-F2",
+        "severity": "WARNING",
+        "location": "register_golden_test.go",
+        "claim": "CLI goldens lacked the 1.x scenarios and migration was silent. Fixed in 2c4eb2b7: goldens 42-45, stdout says migrated.",
+        "evidence": [
+          "judge B."
+        ]
+      },
+      {
+        "id": "A-F5",
+        "severity": "SUGGESTION",
+        "location": "jsonnested.go",
+        "claim": "Inserted member indentation relative to the wrapper. Fixed in 2c4eb2b7; recheck D6.",
+        "evidence": [
+          "judges A and B; recheck D6."
+        ]
+      },
+      {
+        "id": "B-F5",
+        "severity": "SUGGESTION",
+        "location": "jsonwrite.go",
+        "claim": "Errors printed mcp/servers. Fixed in 2c4eb2b7.",
+        "evidence": [
+          "judge B."
+        ]
+      },
+      {
+        "id": "B-F6",
+        "severity": "SUGGESTION",
+        "location": "opencode.go:27-36",
+        "claim": "codemode default uncited. Fixed: cites the opencode 2.2.7 embedded schema.",
+        "evidence": [
+          "judge B."
+        ]
+      },
+      {
+        "id": "S-3",
+        "severity": "SUGGESTION",
+        "location": "longtermmem_test.go, emptyconfig_test.go",
+        "claim": "Tests inserted between a doc comment and its function. Fixed in 2c4eb2b7.",
+        "evidence": [
+          "series review."
+        ]
+      },
+      {
+        "id": "A-F4",
+        "severity": "SUGGESTION",
+        "location": "opencode.go:91-108",
+        "claim": "Without a record, a 1.x entry canonically equal to what the old writer wrote is migrated. Answered: those bytes are what longterm-mem 1.x itself wrote; anything else is a conflict.",
+        "evidence": [
+          "judge A."
+        ]
+      },
+      {
+        "id": "B-F4",
+        "severity": "SUGGESTION",
+        "location": "golden 30",
+        "claim": "Unregister leaves an empty servers object. Accepted: base leaves an empty mcp object likewise; OpenCode 2.2.7 accepts it.",
+        "evidence": [
+          "judge B; verifier b2."
+        ]
+      }
+    ],
+    "evidence": [
+      "Independent verifier (Risk 3): suites, vet, gofmt pass; probes a-f; OpenCode 2.2.7 accepts every written file; claude/codex/pi base vs new identical. Correction 2c4eb2b7, bounded recheck D1-D6 not reproduced."
+    ]
+  }
+}

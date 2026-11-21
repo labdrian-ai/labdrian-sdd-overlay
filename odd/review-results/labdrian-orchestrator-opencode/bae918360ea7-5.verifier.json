@@ -1,0 +1,18 @@
+{
+  "verdicts": [
+    {
+      "id": "F1",
+      "result": "not-run",
+      "command": "none",
+      "output": "SUGGESTION (unreachable workingDir branch in hasFeatureDocument): carried.",
+      "base_result": "not-run"
+    },
+    {
+      "id": "F2",
+      "result": "not-run",
+      "command": "none",
+      "output": "SUGGESTION (nested-cwd subtest lacks the store snapshot): carried.",
+      "base_result": "not-run"
+    }
+  ]
+}

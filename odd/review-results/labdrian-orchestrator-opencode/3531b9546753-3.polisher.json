@@ -1,0 +1,17 @@
+{
+  "kind": "polisher",
+  "base": "a8b3dc60ccb1c9e51b3378c8f844ed659aa5814e",
+  "head": "3531b9546753831c4725b5454502c2a0fc7577ee",
+  "diff_sha256": "a379efc93663172add8bcbe81a94a6391a3eb115988c10fcbe610d72de06d446",
+  "findings": {
+    "findings": [],
+    "evidence": [
+      "Read the full diff t60c.diff (CHANGELOG, 6 goldens, plugin .mjs, opencode_plugin.go version -19, bridge skills tests, gate refusalCases table and listed test).",
+      "Read T60 correction C (L102) and compared the plugin change with it: runEngine adds `code` only from the `close` handler when it is a number. skillPathsRefusal passes the verb's line through only on exit 2 with the `error: roles skill-paths:` prefix. Exit 1 gives the sentence naming engineBinary() and both remedies, and it never starts with the verb's prefix. `--agent` is still always passed with no retry. The goldens all move from -18 to -19.",
+      "Checked engine/cmd/roles_skill_paths.go:62-94 in the review worktree. The verb exits 2 only for a refused prompt and 1 for usage, read and write errors, so the exit-code split matches the verb. An older engine's unknown flag goes through fail(1), and an older engine's unknown verb exits 1 at engine/cmd/roles.go:64-66.",
+      "Confirmed engineBinary() (plugin line 209) and ENGINE_VARIABLE (line 194) exist and that the failEventWith fake-engine helper exists (opencode_bridge_test.go:92). The empty-stdout path calls skillPathsRefusal with a codeless reply and keeps today's sentence.",
+      "Not run: no tests, no engine build and no node run. The real 16a719fc engine differential belongs to the verifier.",
+      "Minor, not a defect: an exit 1 for `--skills-root ... is not a directory` also gets the older-engine remedy text; only partly apt there, but the denial still names the verb's own line and the binary."
+    ]
+  }
+}

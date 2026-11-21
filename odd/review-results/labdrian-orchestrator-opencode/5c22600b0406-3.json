@@ -1,0 +1,58 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "eb18c799e7a1f0f4f6d2a39ac368cc28d59bbd14",
+    "head": "5c22600b0406b1708279b0170b3f46b69e5df772",
+    "diff_sha256": "313e70f61f340c50472e90c3b7cf95bfa8f80c9049da44a3643032b9df803355",
+    "paths": [
+      "odd/tasks/labdrian-orchestrator-opencode.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "eb18c799e7a1f0f4f6d2a39ac368cc28d59bbd14",
+      "head": "5c22600b0406b1708279b0170b3f46b69e5df772",
+      "diff_sha256": "313e70f61f340c50472e90c3b7cf95bfa8f80c9049da44a3643032b9df803355"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/labdrian-orchestrator-opencode.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "odd/tasks/labdrian-orchestrator-opencode.md:55",
+        "claim": "T9 is ticked [x] and recorded as delivered while L58 itself admits the `./cmd` process test RED was not captured and that the hyphenated-server and underscore-name premises are unverified (deferred to T17). The tick states completion for a task whose acceptance premise (S9 mapping of `<server>_<tool>`) is only assumed; nothing in the task line marks that dependency, so a reader of the checklist sees it as fully done.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/labdrian-orchestrator-opencode.md:55",
+          "odd/tasks/labdrian-orchestrator-opencode.md:482"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/labdrian-orchestrator-opencode.md:482",
+        "claim": "L58 does not record a `review check` result (L57 ends with 'review check 87f26495..HEAD: clear'), and the closing review answers refer to reviews of `bd6a9526` and `4d34b336` without a final clear verdict for `fcf39a17`. The log is inconsistent with the precedent for ticking a task.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/labdrian-orchestrator-opencode.md:482"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff changes only the feature document: the T9 checkbox and commit field, and the new L58 log entry.",
+      "L58 states the cmd process test RED was not captured and defers the hyphenated-server premise to T17.",
+      "L57 closes with a 'review check ... clear' statement; L58 has none."
+    ]
+  }
+}

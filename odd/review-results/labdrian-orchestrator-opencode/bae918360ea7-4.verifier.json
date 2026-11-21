@@ -1,0 +1,18 @@
+{
+  "verdicts": [
+    {
+      "id": "F1",
+      "result": "reproduced",
+      "command": "Verifier L130 check (a) at bae918360ea7: seq 1 shaper->estimator piped to roles append --project proj-1 --goal f --chain f --stdin with a feature document and nothing bound",
+      "output": "exit=1 with the feature-document sentence, 0 files: skills/inception-pipeline/SKILL.md:34's shaper-first entry under --chain {change} is refused by design (L168). Fix before delivery: the owner-approved skill text alignment unit (L170), not an engine change.",
+      "base_result": "not-reproduced"
+    },
+    {
+      "id": "F2",
+      "result": "not-run",
+      "command": "none",
+      "output": "SUGGESTION (misleading sentence when odd/ is a file or unreadable): carried.",
+      "base_result": "not-run"
+    }
+  ]
+}

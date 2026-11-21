@@ -88,7 +88,7 @@ func TestProceduralCandidatesOperationalSkillContract(t *testing.T) {
 		"T2",
 		"skills candidates",
 		"do-not-capture",
-		"Engram `mem_save`",
+		"memorycard `mem_save`",
 	} {
 		if !strings.Contains(operational, required) {
 			t.Errorf("operational skill must contain %q", required)
@@ -318,7 +318,7 @@ func TestProceduralCandidateContractArtifact(t *testing.T) {
 
 	t.Run("Section9_TransitionTableRowsPresentVerbatim", func(t *testing.T) {
 		for _, row := range []string{
-			"| none | `observing` | agent | none | first occurrence (item 30) | `engram:<id>` |",
+			"| none | `observing` | agent | none | first occurrence (item 30) | `memorycard:<id>` |",
 			"| `observing` | `emitted` | agent | none | count reaches `Threshold`, no `MatchCandidate` match (item 30) | count |",
 			"| `observing` | `rejected` | agent | none | `MatchCandidate` match (item 30) | `MatchedSkillPath` |",
 			"| `observing` or `emitted` | `rejected` | agent | none | do-not-capture class matched at emission or at draft time | `RejectionReason: do-not-capture:<class>` |",

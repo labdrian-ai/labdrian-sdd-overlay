@@ -7,6 +7,7 @@ package projection_test
 // that is open, never without a binding.
 
 import (
+	"os"
 	"strings"
 	"testing"
 
@@ -16,8 +17,9 @@ import (
 )
 
 const (
+	instructionsMemorycard = "- memorycard is the source engram: its reads (mem_search, mem_context, mem_get) go ahead while engram is listed, and a memorycard record you write may be read back."
 	instructionsWrites     = "- Memory writes (mem_save, promote) are not limited by the plan."
-	instructionsProcedural = "- Procedural candidates: T1 right after a proactive mem_save of type bugfix, pattern, discovery or decision; T2 at session close, beside mem_session_summary (skills/_shared/procedural-candidate-detection.md, section 5). Load skills/procedural-candidates/SKILL.md for the procedure; run `skills candidates` before creating or updating a candidate."
+	instructionsProcedural = "- Procedural candidates: T1 right after a proactive mem_save of type bugfix, pattern, discovery or decision; T2 at session close, beside mem_session (skills/_shared/procedural-candidate-detection.md, section 5). Load skills/procedural-candidates/SKILL.md for the procedure; run `skills candidates` before creating or updating a candidate."
 )
 
 // withIdentity is w with the identity the workflow recorded at create set to identity.
@@ -38,7 +40,8 @@ func TestTheInstructionsUnderScopeGoalAreTheADRBlockExactly(t *testing.T) {
 	want := strings.Join([]string{
 		"labdrian memory instructions (workflow wf-1, scope goal):",
 		"- Read memory only from: engram, longterm-mem. A read from any other source is denied.",
-		`- Engram reads (mem_search, mem_context) name project "proj-1"; longterm-mem query and get name project "github.com/acme/proj-1".`,
+		instructionsMemorycard,
+		`- Engram and memorycard reads (mem_search, mem_context) name project "proj-1"; longterm-mem query and get name project "github.com/acme/proj-1".`,
 		`- Under goal "goal-1": pass goal "goal-1" to every longterm-mem query, and give every Engram record you create for this goal a topic_key that begins with "goal:goal-1/", for example "goal:goal-1/architecture/auth".`,
 		instructionsWrites,
 		instructionsProcedural,
@@ -48,13 +51,41 @@ func TestTheInstructionsUnderScopeGoalAreTheADRBlockExactly(t *testing.T) {
 	}
 }
 
+// The sample in the ADR is the block the renderer gives under scope goal, with the workflow, the
+// projects and the goal written as placeholders, so it cannot go stale unseen.
+func TestTheADRSampleIsTheScopeGoalBlock(t *testing.T) {
+	doc, err := os.ReadFile("../../docs/architecture/adr-c23-m6-plan-instructions.md")
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, after, found := strings.Cut(string(doc), "### The instructions block\n")
+	if !found {
+		t.Fatal("the ADR has no section \"The instructions block\"")
+	}
+	_, rest, found := strings.Cut(after, "```\n")
+	if !found {
+		t.Fatal("the ADR section has no fenced sample")
+	}
+	sample, _, found := strings.Cut(rest, "\n```")
+	if !found {
+		t.Fatal("the ADR sample fence is not closed")
+	}
+	eng, ltm := memoryscope.SourceEngram, memoryscope.SourceLongtermMem
+	w := withIdentity(narrowedWorkflow(narrowerDirective(memoryscope.ScopeGoal, eng, ltm), nil, nil), "github.com/acme/proj-1")
+	placeholders := strings.NewReplacer("github.com/acme/proj-1", "<project id>", "proj-1", "<engram name>", "wf-1", "<wf>", "goal-1", "<goal id>")
+	if want := placeholders.Replace(block(w)); sample != want {
+		t.Errorf("the ADR sample =\n%s\nwant the block of scope goal with placeholders\n%s", sample, want)
+	}
+}
+
 // The goal line appears only under scope goal; the sources line names every source of the plan.
 func TestTheInstructionsUnderScopeProjectHaveNoGoalLine(t *testing.T) {
 	w := withIdentity(loadedWorkflow("odd", workflow.StatusRunning), "github.com/acme/proj-1")
 	want := strings.Join([]string{
 		"labdrian memory instructions (workflow wf-1, scope project):",
 		"- Read memory only from: engram, longterm-mem, procedural-skills. A read from any other source is denied.",
-		`- Engram reads (mem_search, mem_context) name project "proj-1"; longterm-mem query and get name project "github.com/acme/proj-1".`,
+		instructionsMemorycard,
+		`- Engram and memorycard reads (mem_search, mem_context) name project "proj-1"; longterm-mem query and get name project "github.com/acme/proj-1".`,
 		instructionsWrites,
 		instructionsProcedural,
 	}, "\n")
@@ -77,11 +108,38 @@ func TestTheInstructionsUnderScopeNoneSayToReadNoMemory(t *testing.T) {
 	}
 }
 
+// A plan that holds engram says once, right after the sources line, that memorycard is the source
+// engram; a plan without engram and a scope-none plan say nothing of it.
+func TestTheInstructionsSayMemorycardIsTheSourceEngram(t *testing.T) {
+	with := lines(block(withIdentity(loadedWorkflow("odd", workflow.StatusRunning), "github.com/acme/proj-1")))
+	at := -1
+	for i, line := range with {
+		if strings.HasPrefix(line, "- Read memory only from:") {
+			at = i
+		}
+	}
+	if at < 0 || at+1 >= len(with) || with[at+1] != instructionsMemorycard {
+		t.Errorf("a plan with engram: the line after the sources line is not %q:\n%s", instructionsMemorycard, strings.Join(with, "\n"))
+	}
+	if n := strings.Count(strings.Join(with, "\n"), instructionsMemorycard); n != 1 {
+		t.Errorf("a plan with engram holds the memorycard line %d times, want once", n)
+	}
+	ltm := withIdentity(narrowedWorkflow(narrowerDirective(memoryscope.ScopeProject, memoryscope.SourceLongtermMem), nil, nil), "github.com/acme/proj-1")
+	for name, w := range map[string]*workflow.Loaded{
+		"a plan without engram": ltm,
+		"a scope-none plan":     loadedWorkflow("standalone-minimal", workflow.StatusRunning),
+	} {
+		if got := block(w); strings.Contains(got, "memorycard") {
+			t.Errorf("%s names memorycard:\n%s", name, got)
+		}
+	}
+}
+
 // A project is named only for a source the plan includes, and the Engram name only when the
 // workflow recorded an identity, as the gate checks it only then.
 func TestTheInstructionsNameAProjectOnlyForASourceThePlanIncludes(t *testing.T) {
 	engramOnly := withIdentity(loadedWorkflow("sdd", workflow.StatusRunning), "github.com/acme/proj-1")
-	if line := lineWithPrefix(t, block(engramOnly), "- Engram"); line != `- Engram reads (mem_search, mem_context) name project "proj-1".` {
+	if line := lineWithPrefix(t, block(engramOnly), "- Engram"); line != `- Engram and memorycard reads (mem_search, mem_context) name project "proj-1".` {
 		t.Errorf("engram alone: project line %q", line)
 	}
 	longtermOnly := withIdentity(narrowedWorkflow(narrowerDirective(memoryscope.ScopeProject, memoryscope.SourceLongtermMem), nil, nil), "github.com/acme/proj-1")
@@ -90,13 +148,13 @@ func TestTheInstructionsNameAProjectOnlyForASourceThePlanIncludes(t *testing.T) 
 	}
 	noIdentity := withIdentity(loadedWorkflow("odd", workflow.StatusRunning), "")
 	got := block(noIdentity)
-	if strings.Contains(got, "Engram reads") {
+	if strings.Contains(got, "- Engram and memorycard reads (") {
 		t.Errorf("a workflow with no identity names an Engram project:\n%s", got)
 	}
 	if line := lineWithPrefix(t, got, "- longterm-mem"); line != `- longterm-mem query and get name project "proj-1".` {
 		t.Errorf("a workflow with no identity: project line %q", line)
 	}
-	if got := projection.InstructionsBlock(validBinding(), engramOnly.State, nil, nil); strings.Contains(got, "Engram reads") {
+	if got := projection.InstructionsBlock(validBinding(), engramOnly.State, nil, nil); strings.Contains(got, "- Engram and memorycard reads (") {
 		t.Errorf("with no naming rule the block names an Engram project:\n%s", got)
 	}
 }

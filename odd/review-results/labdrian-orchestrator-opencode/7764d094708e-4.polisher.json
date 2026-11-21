@@ -1,0 +1,40 @@
+{
+  "kind": "polisher",
+  "base": "fbd629c6d6fcabc70af3f6ec4ab8e1d10e3db93c",
+  "head": "7764d094708e8ce5c73125956a69aa23fb8214dc",
+  "diff_sha256": "03f769b22be2e8f1cb1e7a080c75ab8fae3caca1161c1dd01e0ced26b48641cf",
+  "findings": {
+    "findings": [
+      {
+        "id": "C-F1",
+        "severity": "WARNING",
+        "location": "engine/settings/codegraph_prompt.go:143-145",
+        "claim": "Uninstall restores a wrapper of any engine path, not only its own. Answered: requested in the correction batch (F-F1: uninstall restores the bare command from any wrapper); a settings file holds one codegraph entry, and a stale-path wrapper left behind would run a missing binary path.",
+        "evidence": [
+          "series review 7764d094."
+        ]
+      },
+      {
+        "id": "C-F2",
+        "severity": "SUGGESTION",
+        "location": "engine/cmd/settings_hooks.go:83",
+        "claim": "Unused hookCommand parameter of codegraphPromptIsBare and noticeCodegraphPromptReplaced. Fixed in 652a8d47.",
+        "evidence": [
+          "go vet, cmd tests pass."
+        ]
+      },
+      {
+        "id": "C-F3",
+        "severity": "SUGGESTION",
+        "location": "engine/hookwire/prompt.go:57-62",
+        "claim": "A notification with leading whitespace or a BOM before the tag reaches codegraph. Answered: the hook input observed in this session starts with the tag; a miss only loses the saving, never drops a user prompt. Kept unverified until T17 or a recorded counterexample.",
+        "evidence": [
+          "codegraph hook previews in this session start with the task-notification tag."
+        ]
+      }
+    ],
+    "evidence": [
+      "series review fbd629c6..7764d094: sweep clean."
+    ]
+  }
+}

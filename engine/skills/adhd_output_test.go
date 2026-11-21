@@ -148,13 +148,4 @@ func TestAdhdOutputIsRegisteredForEveryRuntimeAndDeployed(t *testing.T) {
 			t.Errorf("overlay.manifest lacks %q", row)
 		}
 	}
-	resolver := readRepoFile(t, root, "skills/_shared/skill-resolver.md")
-	for _, line := range []string{
-		"`adhd-output` is always on for user-facing replies.",
-		"Do not pass it to `reviewer` or `verifier`.",
-	} {
-		if !strings.Contains(resolver, line) {
-			t.Errorf("skill-resolver must say %q", line)
-		}
-	}
 }

@@ -1,0 +1,25 @@
+{
+  "verdicts": [
+    {
+      "id": "F1",
+      "result": "not-run",
+      "command": "none",
+      "output": "SUGGESTION: This merge brings main's #6179 changelog item into the branch, and it describes the S2 guard wrongly. It says the walk ends 'when the commit the range ends at, whose first parent is that start, is not",
+      "base_result": "not-run"
+    },
+    {
+      "id": "F2",
+      "result": "not-run",
+      "command": "none",
+      "output": "SUGGESTION: The doc comment of topicMadeOnAMainMerge, brought in from main, says 'It returns M, the first commit of topic and the merge of main into topic', which is three values. The signature returns four: (m, ",
+      "base_result": "not-run"
+    },
+    {
+      "id": "F3",
+      "result": "not-run",
+      "command": "none",
+      "output": "SUGGESTION: After the merge, the branch routes, documents and tests the new `review findings` verb (engine/cmd/review.go case \"findings\", usage.go, README.md, bin/lib/usage.sh). Its output is a JSON contract that",
+      "base_result": "not-run"
+    }
+  ]
+}

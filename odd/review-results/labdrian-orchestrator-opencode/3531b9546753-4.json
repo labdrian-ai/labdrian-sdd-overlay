@@ -1,0 +1,75 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "a8b3dc60ccb1c9e51b3378c8f844ed659aa5814e",
+    "head": "3531b9546753831c4725b5454502c2a0fc7577ee",
+    "diff_sha256": "a379efc93663172add8bcbe81a94a6391a3eb115988c10fcbe610d72de06d446",
+    "paths": [
+      "CHANGELOG.md",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-context-lists-quotes-and-case.golden",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-minimalism-context-metadata-accepted-today.golden",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-phases-quoted-items-accepted-today.golden",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-reads-the-contracts-of-the-overlay.golden",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-without-the-oo-contract.golden",
+      "engine/cmd/testdata/runtime-golden/runtime-opencode-and-pi-with-an-overlay.golden",
+      "engine/gate/skillpaths_listed_test.go",
+      "engine/gate/skillpaths_test.go",
+      "engine/runtime/labdrian-runtime-parity-plugin.mjs",
+      "engine/runtime/opencode_bridge_skills_test.go",
+      "engine/runtime/opencode_plugin.go"
+    ]
+  },
+  "rows": [
+    "risk-line",
+    "recall"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "a8b3dc60ccb1c9e51b3378c8f844ed659aa5814e",
+      "head": "3531b9546753831c4725b5454502c2a0fc7577ee",
+      "diff_sha256": "a379efc93663172add8bcbe81a94a6391a3eb115988c10fcbe610d72de06d446"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-context-lists-quotes-and-case.golden",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-minimalism-context-metadata-accepted-today.golden",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-phases-quoted-items-accepted-today.golden",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-reads-the-contracts-of-the-overlay.golden",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-without-the-oo-contract.golden",
+        "engine/cmd/testdata/runtime-golden/runtime-opencode-and-pi-with-an-overlay.golden",
+        "engine/gate/skillpaths_listed_test.go",
+        "engine/gate/skillpaths_test.go",
+        "engine/runtime/labdrian-runtime-parity-plugin.mjs",
+        "engine/runtime/opencode_bridge_skills_test.go",
+        "engine/runtime/opencode_plugin.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "engine/runtime/labdrian-runtime-parity-plugin.mjs:247-255",
+        "severity": "SUGGESTION",
+        "claim": "skillPathsRefusal treats every exit 1 as an engine older than the plugin. The verb also exits 1 for causes unrelated to engine age: a --skills-root that is not a directory, an unreadable prompt, or a failed write to stdout (roles_skill_paths.go:56-58, 75-79, 89-92). For those, the denial now says the engine 'does not accept this plugin's call, as an engine older than the plugin does' and tells the user to rebuild the engine. A moved or deleted overlay skills root is a realistic trigger. The line the engine printed is still appended, and `labdrian apply` may fix a stale root, so the harm is a misleading diagnosis, not a lost message. Before this commit such a case read as a plain 'could not be checked' sentence. This follows the task's design, which classifies by exit code alone. No test pins the wording for these non-version exit-1 causes.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/cmd/roles_skill_paths.go:56-58",
+          "engine/cmd/roles_skill_paths.go:62-63",
+          "engine/runtime/labdrian-runtime-parity-plugin.mjs:251-253"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full diff and T60 commit C criteria at line 102 of odd/tasks/labdrian-orchestrator-opencode.md.",
+      "Read runEngine in the plugin at head. The code is set only in the close handler when the exit code is a number. Timeout, output-limit, spawn-error and signal paths carry no code.",
+      "Read engine/cmd/roles_skill_paths.go. Exit 2 is a refused prompt, and exit 1 is a usage error or any other failure. The unknown-verb path in roles.go:65 prints 'error: roles:' and exits 1, so an old engine with no such verb gets the remedy.",
+      "The empty-stdout call passes {failure} with no code and gets today's sentence. A refusal at exit 2 with the verb's prefix passes through verbatim.",
+      "The refusalCases refactor keeps the eight cases and feeds them to both rewrite entry points.",
+      "The plugin version bump to 19 matches all six golden updates.",
+      "Not run: no tests or commands."
+    ]
+  }
+}

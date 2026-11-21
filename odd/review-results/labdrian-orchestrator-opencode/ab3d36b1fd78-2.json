@@ -1,0 +1,77 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "9dc48fdd3d5b6221b294342b1f616d1e44559c51",
+    "head": "ab3d36b1fd789cfc2c663e2328b256ad0d3c17ee",
+    "diff_sha256": "4ef50317f377bbbb325ec08e400b1e074d1608f8f6feafeeba98b368b1d5b734",
+    "paths": [
+      "CHANGELOG.md",
+      "README.md",
+      "engine/capability/declarations.go",
+      "engine/capability/declarations_test.go",
+      "engine/capability/memory_enforcement_detail_test.go",
+      "engine/capability/opencode_declaration_test.go",
+      "engine/capability/testdata/codex-declaration.golden",
+      "engine/cmd/phase7_acceptance_test.go",
+      "engine/cmd/runtime_capabilities_test.go",
+      "engine/cmd/usage.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "9dc48fdd3d5b6221b294342b1f616d1e44559c51",
+      "head": "ab3d36b1fd789cfc2c663e2328b256ad0d3c17ee",
+      "diff_sha256": "4ef50317f377bbbb325ec08e400b1e074d1608f8f6feafeeba98b368b1d5b734"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "README.md",
+        "engine/capability/declarations.go",
+        "engine/capability/declarations_test.go",
+        "engine/capability/memory_enforcement_detail_test.go",
+        "engine/capability/opencode_declaration_test.go",
+        "engine/capability/testdata/codex-declaration.golden",
+        "engine/cmd/phase7_acceptance_test.go",
+        "engine/cmd/runtime_capabilities_test.go",
+        "engine/cmd/usage.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "engine/capability/declarations.go:282-293",
+        "claim": "The OpenCode memory-enforcement claim cites cmd:TestCodexSourceProcesses as evidence. By its name this test exercises the Codex hook source, not --source opencode, so it does not back the OpenCode gate claim. The cited tests for the opencode source are only the hookwire name-adaptation test and the bridge deny test. The opencode_declaration_test.go test pins the same citation, so the mismatch would pass the guard unnoticed. Inferential: the test body is not in the diff.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/capability/declarations.go:284",
+          "engine/capability/opencode_declaration_test.go:132"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "engine/capability/memory_enforcement_detail_test.go:48-54",
+        "claim": "The test no longer exercises the OpenCode branch of memoryEnforcementDetail, and the declaration no longer calls it for OpenCode. If the helper still has an OpenCode-specific path, that path is now dead code with no test. The helper is not in the diff, so this is unverified.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/capability/memory_enforcement_detail_test.go:50"
+        ]
+      }
+    ],
+    "evidence": [
+      "The whole diff was read. Only declarations, tests, docs and usage text changed.",
+      "The Claude skills claim loses four OpenCode test references, which now sit on the OpenCode skills claim. TestNoOtherRuntimeCitesAnOpenCodeTest pins this.",
+      "I could not check that the cited tests exist or what they assert, because only the diff is visible. The repo's guard test is meant to verify that they exist."
+    ]
+  }
+}

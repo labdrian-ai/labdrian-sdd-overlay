@@ -1,0 +1,17 @@
+{
+  "kind": "polisher",
+  "base": "a61a18717aa509556c197085bee78785bbb83873",
+  "head": "16a719fc144f4653cbbf66db42dab5b63b03d2ae",
+  "diff_sha256": "b6cd4fb05380375335df6cf4c7e1d5f1e2aec82a782a909bc2a9e0858d37c392",
+  "findings": {
+    "findings": [],
+    "evidence": [
+      "Read the whole diff t60a.diff and the full text of T60 line 102 of odd/tasks/labdrian-orchestrator-opencode.md, which holds the commit A design, S8 L173 and the review finding references.",
+      "Checked each item the task and line 102 require against the diff. Pinned sha256 and its import are removed. The no-header CRLF section uses the prompt's ending, detected as a '\\r' at the end of the first line when there is more than one line. Fences open on three or more backticks or tildes after leading whitespace and close on a same-character run at least as long followed by spaces, tabs or '\\r'. An absolute SKILL.md path is listed by the base of its cleaned parent directory. A per-call asked map keeps one isFile call per distinct word. The skillid package has the Pattern, Valid and WordChar the spec names, plus its ring row and architecture comment. The RewriteSkillPaths doc comment follows the order the spec gives, and the usage line is reworded as specified. The wrapper path is single-quoted. The behaviour test takes enginetest.Binary(t). Tests were added for the CRLF, fence, listed-path, ### heading, once-per-word and skillid rows.",
+      "Grep in the review worktree's engine for 'func wordChar|proseIDForm|skillIDForm' found no matches. In engine/runtime/opencode_bridge_test.go, 'fmt' and 'os/exec' are still used and 'crypto/sha256' is gone, so there is no unused import.",
+      "Not run: no go test, gofmt or build in this session. The foreman's re-run of `go test . ./skillid/ ./gate/` (ok) is taken from the task text, not reproduced.",
+      "Not verified: the 'three rewritten fixtures recorded' item, because the diff touches no task document or wiki.",
+      "Minor, within the spec's stated rule and not a defect: a line beginning with three backticks that has a backtick in its info string opens a fence in fenceOpening but would not in CommonMark; mentions after it are missed, which is the status quo of no skill listed."
+    ]
+  }
+}

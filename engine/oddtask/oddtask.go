@@ -108,13 +108,34 @@ var (
 )
 
 // ParseDocument reads the text of a feature document. The ## Tasks section runs from the line
-// "## Tasks" to the next line that starts "## "; the ## Log section likewise.
+// "## Tasks" to the next line that starts "## "; the ## Log section likewise. A "## " line inside a
+// fenced code block (a Log entry that quotes a Markdown file) is quoted text, not a heading. A fence still
+// open at the end of the document is taken for a stray line, and the document is read without fences, as
+// it was before they counted, so one stray fence never hides the headings after it.
 func ParseDocument(text string) Document {
-	d := Document{tasks: map[string][]string{}, shapers: map[int]int{}}
+	if d, closed := parseDocument(text, true); closed {
+		return d
+	}
+	d, _ := parseDocument(text, false)
+	return d
+}
+
+// parseDocument reads text as ParseDocument says, honouring fences when fences is true; closed is false when
+// a fence is still open at the end.
+func parseDocument(text string, fences bool) (d Document, closed bool) {
+	d = Document{tasks: map[string][]string{}, shapers: map[int]int{}}
 	section := ""
+	var fence string // the run of ` or ~ that opened the fenced block the line is in, "" outside one
 	for _, line := range strings.Split(text, "\n") {
 		line = strings.TrimSuffix(line, "\r")
-		if strings.HasPrefix(line, "## ") {
+		if run, info := fenceRun(line); fences && run != "" {
+			switch {
+			case fence == "":
+				fence = run
+			case run[0] == fence[0] && len(run) >= len(fence) && strings.TrimSpace(info) == "":
+				fence = ""
+			}
+		} else if fence == "" && strings.HasPrefix(line, "## ") {
 			section = line
 			continue
 		}
@@ -130,7 +151,23 @@ func ParseDocument(text string) Document {
 			}
 		}
 	}
-	return d
+	return d, fence == ""
+}
+
+// fenceRun reports a fence line: its run of three or more ` or ~ after any indentation (a fence inside a
+// list item is indented), and the text after the run (the info string of an opening fence). run is "" when
+// the line is not a fence line, which includes a run of backticks followed by text holding a backtick, as
+// CommonMark has it: "```x``` text" is inline code.
+func fenceRun(line string) (run, info string) {
+	trimmed := strings.TrimLeft(line, " \t")
+	if !strings.HasPrefix(trimmed, "```") && !strings.HasPrefix(trimmed, "~~~") {
+		return "", ""
+	}
+	n := len(trimmed) - len(strings.TrimLeft(trimmed, trimmed[:1]))
+	if trimmed[0] == '`' && strings.Contains(trimmed[n:], "`") {
+		return "", ""
+	}
+	return trimmed[:n], trimmed[n:]
 }
 
 // mark is the number n of the one segment "shaped: L<n>" of a task line, or 0 when the line has none or

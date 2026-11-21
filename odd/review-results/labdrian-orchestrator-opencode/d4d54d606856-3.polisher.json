@@ -1,0 +1,17 @@
+{
+  "kind": "polisher",
+  "base": "58d635efdc941d227111a3d82baccc3bbda29a45",
+  "head": "d4d54d6068568a4740f4b846e949e1fac23b7a84",
+  "diff_sha256": "28a1b968e0e0b6be4b1ed5cbc21772c6ca0cc6372a54054fa5b508acc3e6f5e2",
+  "findings": {
+    "findings": [],
+    "evidence": [
+      "Read the full diff t56b.diff (roles_bound.go and roles_bound_test.go).",
+      "Read engine/cmd/roles_bound.go in the review worktree. It resolves the working directory, then the repository through newRepoLocator().RepoKey, before describeBinding. An unavailable binding, or an owned binding whose workflow log is unavailable, returns an error built from Detail. Absent, foreign, malformed, closed and chainless cases return the zero value or fall through to the rule, as before.",
+      "Read engine/cmd/roles.go:317-326. runRolesAppend prints `error: roles append: the binding of this checkout could not be read (%v)` on that error and exits 1 before the evidence check and any store write. boundReadRefusal (roles_bound.go:61-67) turns any error into \"\", so resume and next are unchanged.",
+      "Read engine/cmd/roles_builder_guard.go:123-174. describeBinding and boundWorkflows.Of are untouched, so the builder guard output is unchanged. The new test pins its relative-state-home answer.",
+      "Read the T56 spec at line 98 of the tasks file. Each requirement named in the prompt is covered by a test in the diff: unavailable binding, unavailable log, working directory error, outside any repository equal to the base, a real foreign binding, and the closed status tied to workflow.StatusClosed.",
+      "Not run: go test and the differential. This session had no shell tool, so pass and fail results are unverified."
+    ]
+  }
+}

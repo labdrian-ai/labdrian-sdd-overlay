@@ -210,6 +210,10 @@ func (s Service) Check(req Request) Report {
 		checkApproveGuard(loaded, binaryPath),
 		checkReviewStopHook(loaded, binaryPath),
 		checkBuilderGuard(loaded, binaryPath),
+		checkRegistryRefreshHook(loaded, binaryPath),
+		checkMainAgent(loaded, binaryPath),
+		checkOutputStyle(loaded, binaryPath),
+		checkCodegraphPromptHook(loaded, binaryPath),
 		CheckContract(contractPath, s.Files),
 	}
 	if check := s.codexHook(req, binaryPath); check != nil {
@@ -405,6 +409,23 @@ func checkReviewStopHook(s loadedSettings, binaryPath string) Check {
 	return Check{Label: label, Level: OK, Note: "installed; " + restartNote + " if this session started earlier"}
 }
 
+// checkRegistryRefreshHook reports whether the registry refresh hook (the one UserPromptSubmit entry that runs
+// 'registry refresh') is exactly in place. It is judged as checkReviewStopHook is: an entry that is missing or
+// drifted warns with the remediation, settings that cannot be read fail, and the note asks for a restart. What a
+// missing hook costs is said in the note; the skills table can still be refreshed by hand.
+func checkRegistryRefreshHook(s loadedSettings, binaryPath string) Check {
+	label := "hook: UserPromptSubmit (registry refresh)"
+	const cost = "the table of skills of the project's registry is not refreshed when a prompt is sent"
+	if c, done := s.beforeEntries(label, Warn, "; "+cost+"; "+remediation+"; "+restartNote); done {
+		return c
+	}
+	if missing := settings.MissingRegistryRefreshHookParts(s.root, binaryPath); len(missing) > 0 {
+		return Check{Label: label, Level: Warn,
+			Note: "missing or drifted: " + strings.Join(missing, ", ") + "; " + cost + "; " + remediation + "; " + restartNote}
+	}
+	return Check{Label: label, Level: OK, Note: "installed; " + restartNote + " if this session started earlier"}
+}
+
 // checkBuilderGuard reports whether the builder guard (the one PreToolUse entry on the Agent tool that
 // runs 'roles builder-guard') is exactly in place. It is judged as checkApproveGuard is: an entry that
 // is missing or drifted warns with the remediation, settings that cannot be read fail, the note asks
@@ -423,6 +444,70 @@ func checkBuilderGuard(s loadedSettings, binaryPath string) Check {
 			Note: "missing or drifted: " + strings.Join(missing, ", ") + "; " + cost + " (" + speedBump + "); " + remediation + "; " + restartNote}
 	}
 	return Check{Label: label, Level: OK, Note: "installed; " + speedBump + "; " + restartNote + " if this session started earlier"}
+}
+
+// checkMainAgent reports whether the settings key that makes the main Claude Code session run as the
+// foreman (S6) is set. A missing key warns with the install remedy alone (installing writes the key,
+// so uninstalling first is not needed) and the restart note; settings that cannot be read fail. A key
+// that holds another value is a conflict and warns too: the overlay never overwrites it, so the note
+// says what to do instead. A value that is not a string is printed as JSON.
+func checkMainAgent(s loadedSettings, binaryPath string) Check {
+	label := `settings: "agent" (main session runs as the foreman)`
+	const cost = "the main session does not run as the foreman"
+	const installRemedy = "run 'labdrian install-hooks'"
+	if c, done := s.beforeEntries(label, Warn, "; "+cost+"; "+installRemedy+"; "+restartNote); done {
+		return c
+	}
+	switch settings.MainAgent(s.root) {
+	case settings.MainAgentOwned:
+		return Check{Label: label, Level: OK, Note: "installed; " + restartNote + " if this session started earlier"}
+	case settings.MainAgentConflict:
+		return Check{Label: label, Level: Warn,
+			Note: fmt.Sprintf(`"agent" is %s, not %q; the overlay never overwrites it, so %s; set it to %q or remove the key, then run 'labdrian install-hooks'`,
+				settings.MainAgentValueJSON(s.root), settings.MainAgentName, cost, settings.MainAgentName)}
+	}
+	return Check{Label: label, Level: Warn, Note: `"agent" key missing in ` + s.path + "; " + cost + "; " + installRemedy + "; " + restartNote}
+}
+
+// checkOutputStyle reports whether the settings key that names the output style of a session is the
+// labdrian one (T27), as checkMainAgent does for the main-session agent: missing warns with the install
+// remedy, another value is a conflict the overlay never overwrites, and a value that is not a string
+// is printed as JSON.
+func checkOutputStyle(s loadedSettings, binaryPath string) Check {
+	label := `settings: "outputStyle" (labdrian output style)`
+	const cost = "the labdrian output style is not enabled"
+	const installRemedy = "run 'labdrian install-hooks'"
+	if c, done := s.beforeEntries(label, Warn, "; "+cost+"; "+installRemedy+"; "+restartNote); done {
+		return c
+	}
+	switch settings.OutputStyle(s.root) {
+	case settings.OutputStyleOwned:
+		return Check{Label: label, Level: OK, Note: "installed; " + restartNote + " if this session started earlier"}
+	case settings.OutputStyleConflict:
+		return Check{Label: label, Level: Warn,
+			Note: fmt.Sprintf(`"outputStyle" is %s, not %q; the overlay never overwrites it, so %s; set it to %q or remove the key, then run 'labdrian install-hooks'`,
+				settings.OutputStyleValueJSON(s.root), settings.OutputStyleName, cost, settings.OutputStyleName)}
+	}
+	return Check{Label: label, Level: Warn, Note: `"outputStyle" key missing in ` + s.path + "; " + cost + "; " + installRemedy + "; " + restartNote}
+}
+
+// checkCodegraphPromptHook reports whether the codegraph prompt hook runs through the labdrian wrapper that
+// skips task notifications (S19, L87). The entry is written by the codegraph installer, not by the overlay: a
+// settings file with no such entry is fine, and so is the wrapper. The bare `codegraph prompt-hook` command is
+// a warning, because it is what a codegraph reinstall or upgrade writes back; install-hooks wraps it again.
+func checkCodegraphPromptHook(s loadedSettings, binaryPath string) Check {
+	label := `settings: UserPromptSubmit "codegraph prompt-hook" (task notifications skipped)`
+	if c, done := s.beforeEntries(label, OK, "; nothing to wrap"); done {
+		return c
+	}
+	switch settings.CodegraphPrompt(s.root) {
+	case settings.CodegraphPromptWrapped:
+		return Check{Label: label, Level: OK, Note: "wrapped by labdrian: task notifications do not reach codegraph"}
+	case settings.CodegraphPromptBare:
+		return Check{Label: label, Level: Warn,
+			Note: `the bare "codegraph prompt-hook" entry is back (a codegraph reinstall rewrites it), so codegraph explores every task notification; run 'labdrian install-hooks'; ` + restartNote}
+	}
+	return Check{Label: label, Level: OK, Note: "no codegraph entry, nothing to wrap"}
 }
 
 // CheckContract verifies the contract at path is readable and its frontmatter parses.

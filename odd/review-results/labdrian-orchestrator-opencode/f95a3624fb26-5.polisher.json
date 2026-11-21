@@ -1,0 +1,67 @@
+{
+  "kind": "polisher",
+  "base": "f3cbdc308e5698d3c15f6d4ca97703e5f52f623e",
+  "head": "f95a3624fb26b61e886b3ce3aa2f7df5159b13a8",
+  "diff_sha256": "7501a91e801c67efbf4bf4447405f510d14ffbab3219705f39c3748d0965c742",
+  "findings": {
+    "findings": [
+      {
+        "id": "A-F1",
+        "severity": "WARNING",
+        "location": "engine/runtime/claude.go status()",
+        "claim": "The runtime Claude adapter status ignored the agent key and said supported while status-hooks warned. Fixed in 92f65588 (mainAgentStatus through settings.MainAgent) and 1e6d6cdb (the inspection is part of the HookInstaller port, no type assertion).",
+        "evidence": [
+          "judge A round 1 on 9091d9ce; bounded recheck A and B on 65894e6f found it fixed."
+        ]
+      },
+      {
+        "id": "B-F2",
+        "severity": "WARNING",
+        "location": "engine/runtime/claude.go; engine/capability/declarations.go:36",
+        "claim": "Same as A-F1, plus the Claude installation claim did not mention the key. Fixed in 92f65588.",
+        "evidence": [
+          "judge B round 1; bounded recheck found declarations.go:36-46 naming the key and citing three runtime tests that exist."
+        ]
+      },
+      {
+        "id": "B-F1",
+        "severity": "WARNING",
+        "location": "engine/runtime/claude.go Install/Update",
+        "claim": "The runtime install and update left a foreign agent value silently. Fixed in 92f65588: both append settings.ForeignMainAgentNotice, the builder merge-settings also uses.",
+        "evidence": [
+          "judge B round 1; bounded recheck B confirmed one shared builder."
+        ]
+      },
+      {
+        "id": "B-F3",
+        "severity": "SUGGESTION",
+        "location": "engine/cmd/main_agent_files_test.go",
+        "claim": "No command-level tests read the file back. Fixed in 92f65588 (merge-settings keeps a foreign value and writes .bak; uninstall-hooks removes foreman only; status notes asserted).",
+        "evidence": [
+          "judge B round 1; bounded recheck B read lines 23-93."
+        ]
+      },
+      {
+        "id": "A-F2",
+        "severity": "SUGGESTION",
+        "location": "engine/settings/main_agent.go",
+        "claim": "Ownership by value: a hand-written \"foreman\" is removed on uninstall. Kept by design: \"foreman\" names the agent file this overlay installs (overlay.manifest foreman.md), so uninstall must not leave the key pointing at it; stated in the code comment and README.",
+        "evidence": [
+          "judges A round 1 and the regular review of f95a3624; answered in the Log."
+        ]
+      },
+      {
+        "id": "B-F4",
+        "severity": "SUGGESTION",
+        "location": "engine/settings/main_agent.go",
+        "claim": "A JSON null agent value is a conflict. Kept: null is a value the user wrote and is never overwritten; status and the notice name it.",
+        "evidence": [
+          "judge B round 1; answered in the Log."
+        ]
+      }
+    ],
+    "evidence": [
+      "Two blind polisher judges read the 9091d9ce tree (f95a3624..9091d9ce) on a detached worktree; findings attributed to f95a3624, which introduced the key. The independent verifier passed the suite, vet, gofmt and sandbox-HOME probes of six inputs plus two rejected files against the f3cbdc30 base: foreign values identical, second install a no-op, uninstall removes only foreman, rejected runs leave the hash unchanged, output differs only by the status line and the notice."
+    ]
+  }
+}

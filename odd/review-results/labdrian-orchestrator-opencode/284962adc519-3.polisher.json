@@ -1,0 +1,15 @@
+{
+  "kind": "polisher",
+  "base": "e5ffe5ee1d8cd07aa3b151e0765c89f1324a7bb6",
+  "head": "284962adc519179d93c09b81179bca27ff759fe6",
+  "diff_sha256": "a053d10448ec974f700e4c4b041207fa620feb684d4fcc48f9800b381433d07b",
+  "findings": {
+    "findings": [],
+    "evidence": [
+      "P1 resolved: riskWithoutReason scans the reason with a depth counter and returns the whole value when depth reaches 0 before the last byte or is not 0 at the end; traces of 'none (x) 3 (y)', '2 (x), 3 (y)', '3 (a) more (b)' and '3 (a) (b)' are all refused by ParseRisk.",
+      "P2 resolved: '3 ( )' trims to blank and is refused; pinned at risk_test.go:128-129.",
+      "Residual, no under-declaration: '3 (( ))' is accepted as a reason and still reads item 3.",
+      "Not run: read-only static judgment."
+    ]
+  }
+}

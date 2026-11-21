@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "664e126a5e40f0a09622f5e0901213cf66225c9e",
+    "head": "6aecffd5bc902265ba82eab0dd539c40c2733193",
+    "diff_sha256": "27451e9475e20d6371cddf94fc5201d36424be572104d112436cdcf0e98d0979",
+    "paths": [
+      "engine/agentgen/models.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "664e126a5e40f0a09622f5e0901213cf66225c9e",
+      "head": "6aecffd5bc902265ba82eab0dd539c40c2733193",
+      "diff_sha256": "27451e9475e20d6371cddf94fc5201d36424be572104d112436cdcf0e98d0979"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/agentgen/models.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The change adds only a two-line comment in engine/agentgen/models.go; no executable code is altered, so no behavior can regress.",
+      "The comment's claim (header line starts with `|`, splitRow yields at least one cell because strings.Split never returns an empty slice) is consistent with the surrounding code visible in the diff: head[0] is indexed right after splitRow.",
+      "The header-search and splitRow bodies are not in the diff, so the comment's premise about them is unverifiable here, but it is a comment and cannot cause a defect."
+    ]
+  }
+}

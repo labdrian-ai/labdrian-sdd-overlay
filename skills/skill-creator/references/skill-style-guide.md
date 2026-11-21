@@ -75,7 +75,7 @@ Run `labdrian skills lint <path>` to check a skill against every rule below, or 
 
 ## Registry Behavior
 
-- `gentle-ai skill-registry refresh` indexes skills; it does not summarize or rewrite them.
+- `labdrian skill-registry refresh` indexes skills; it does not summarize or rewrite them.
 - The registry records `name`, `description` trigger text, scope, and exact `SKILL.md` path.
 - Delegators pass matching paths to subagents, and subagents read the full skill before work.
 - Use `skill-improver` to audit and refactor existing skills against this guide.

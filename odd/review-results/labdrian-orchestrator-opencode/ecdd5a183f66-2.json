@@ -1,0 +1,37 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "27730185be686aee3f8c12ac5296106ed651eb68",
+    "head": "ecdd5a183f666f1d2fee00460bb013afc3a356f1",
+    "diff_sha256": "fe1d36d2a636c97bab4bd80463af2fe05a30fc8d52f9fc595e5e1758be0f96dc",
+    "paths": [
+      "odd/tasks/labdrian-orchestrator-opencode.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "27730185be686aee3f8c12ac5296106ed651eb68",
+      "head": "ecdd5a183f666f1d2fee00460bb013afc3a356f1",
+      "diff_sha256": "fe1d36d2a636c97bab4bd80463af2fe05a30fc8d52f9fc595e5e1758be0f96dc"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/labdrian-orchestrator-opencode.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "Docs-only change to one feature document. I read the S19 addition, the T34 and T35 task text and the L88 log entry.",
+      "The forecast arithmetic is consistent: T34's two commits (180-300 and 240-460 lines) add up to its stated 420-760.",
+      "The wrapper shell command short-circuits correctly: when the binary is present `||` skips the fallback and `;` runs `exec <bin>`, and when it is absent codegraph runs bare.",
+      "T34 is marked after T15, and L86 records T15 as closed, so the dependency holds.",
+      "I found no defect this commit introduces."
+    ]
+  }
+}

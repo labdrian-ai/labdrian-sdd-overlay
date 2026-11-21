@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "f2fe9aaf61b74ff5e3cb469854a2ed90bb6c4c3d",
+    "head": "8d4c88d5564aa1bba579f2522e7555e5a2859fb9",
+    "diff_sha256": "7eec0e7efdf741504d47280157bf2eef42d0a0008b1a13e9b5cf02ec876766e3",
+    "paths": [
+      "engine/agentgen/models.go",
+      "engine/agentgen/models_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "f2fe9aaf61b74ff5e3cb469854a2ed90bb6c4c3d",
+      "head": "8d4c88d5564aa1bba579f2522e7555e5a2859fb9",
+      "diff_sha256": "7eec0e7efdf741504d47280157bf2eef42d0a0008b1a13e9b5cf02ec876766e3"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/agentgen/models.go",
+        "engine/agentgen/models_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "engine/agentgen/models.go:100",
+        "claim": "The guard is removed and head[0] is indexed directly, so correctness now depends on splitRow always returning at least one element. The commit message asserts this, but splitRow is not in the diff and I could not verify the claim. If splitRow can return an empty slice for some line the header search accepts, the parse would panic with index out of range instead of returning an error. The commit gives no regression test pinning the invariant.",
+        "evidence_class": "inferential",
+        "causal_disposition": "unknown",
+        "proof_refs": [
+          "engine/agentgen/models.go:100"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff only removes the len(head)==0 check; splitRow and the header search are outside the diff, so the unreachable-guard claim is unverified from here.",
+      "The test change only widens the assertions to cover agents/, pi/ and codex/; it is stricter and introduces no defect. Whether the generator writes only into these three directories is not visible in the diff."
+    ]
+  }
+}

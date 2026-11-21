@@ -1,0 +1,32 @@
+{
+  "version": 3,
+  "project_id": "labdrian-sdd-overlay",
+  "goal_id": "labdrian-orchestrator-opencode",
+  "objective": "Deliver the branch feat/labdrian-orchestrator-opencode: the labdrian foreman role shared by Claude Code and OpenCode v2, and the OpenCode v2 runtime, per odd/tasks/labdrian-orchestrator-opencode.md.",
+  "scope": "Every S# of odd/tasks/labdrian-orchestrator-opencode.md; one workflow per task.",
+  "constraints": [
+    "Every commit is reviewed or exempted, and labdrian review check clears it.",
+    "Live files (~/.claude/CLAUDE.md, ~/.claude/settings.json, ~/.config/opencode) change only with the owner's approval, after a backup.",
+    "Push, pull request and merge follow the owner's standing merge ok: green CI and a clear review check."
+  ],
+  "non_goals": [
+    "Writing to Engram.",
+    "OpenCode 1.x, DSH, Pi customization."
+  ],
+  "acceptance_criteria": [
+    "Each task of odd/tasks/labdrian-orchestrator-opencode.md is checked off with its commits.",
+    "labdrian review check --onto main clears the head of each pull request."
+  ],
+  "memory_directive": {
+    "version": 1,
+    "scope": "project",
+    "sources": [
+      "engram",
+      "longterm-mem",
+      "procedural-skills"
+    ],
+    "write": "none"
+  },
+  "runtime_scope": "Claude Code runs the labdrian workflow and the role agents as the parent; the deliverable adds OpenCode v2 as a second runtime of the same foreman role and role agents.",
+  "delivery_boundary": "Work-unit commits on feat/labdrian-orchestrator-opencode; merges under the owner's standing merge ok, releases and live writes remain the owner's."
+}

@@ -1,0 +1,46 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "2c4eb2b7060d8c3f44d12c20faf9764996a2cfd0",
+    "head": "5ed63e405407cded4f845443589034dce7802757",
+    "diff_sha256": "953a72a49b93ca39ea41f455ae3fd5bf86a2948348ebb69461f5dbe27293c33e",
+    "paths": [
+      "longterm-mem/cmd/longterm-mem/cmd_register.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "2c4eb2b7060d8c3f44d12c20faf9764996a2cfd0",
+      "head": "5ed63e405407cded4f845443589034dce7802757",
+      "diff_sha256": "953a72a49b93ca39ea41f455ae3fd5bf86a2948348ebb69461f5dbe27293c33e"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/cmd/longterm-mem/cmd_register.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/cmd/longterm-mem/cmd_register.go:43-48",
+        "claim": "The commit removes reportRegister, a one-line wrapper, and merges its doc comment into reportRegisterNoting. If any other file or test in the package still calls reportRegister, the package would fail to compile. The diff cannot show callers outside this file; the commit message says it was unused. The visible call site in cmdRegister already uses reportRegisterNoting. Check with a build.",
+        "evidence_class": "inferential",
+        "causal_disposition": "unknown",
+        "proof_refs": [
+          "longterm-mem/cmd/longterm-mem/cmd_register.go:40-48"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff only deletes the one-line wrapper reportRegister and moves its doc comment onto reportRegisterNoting, with no other behavior change.",
+      "cmdRegister at the context line already returns reportRegisterNoting(report, noting.migrated), so the main path does not use the removed function.",
+      "The diff shows only this one file, so a remaining caller in another file or a test cannot be ruled out; this is the only residual risk."
+    ]
+  }
+}

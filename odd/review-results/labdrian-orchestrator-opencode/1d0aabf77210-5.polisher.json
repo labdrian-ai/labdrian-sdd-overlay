@@ -1,0 +1,34 @@
+{
+  "kind": "polisher",
+  "base": "b35a55b868da5d3efcc422386433f52ec6c0c29e",
+  "head": "1d0aabf772101c18bc45330574a0420340671db4",
+  "diff_sha256": "d276cef4df0b99adf408b8cb3b6aae791e1408a54a5d9aac8d0770d7d569538f",
+  "findings": {
+    "findings": [
+      {
+        "id": "P1",
+        "severity": "WARNING",
+        "location": "engine/agentgen/agentgen.go:119-130",
+        "claim": "checkSkillsNamed is a generation-wide gate that every runtime shares. It requires `skills/<id>/SKILL.md` for every \"`<id>` skill\" mention in a role body, although only opencode needs that file, because opencode alone injects skills by path. A body that names a skill supplied from outside `skills/` now makes Generate and Check fail for all four runtimes.",
+        "evidence": [
+          "The diff calls checkSkillsNamed from build() for every role and for the foreman, before r.project.",
+          "The only existence test is os.Stat(repoRoot/skills/<id>/SKILL.md); no per-runtime scoping.",
+          "The new test covers only the missing-file case."
+        ]
+      },
+      {
+        "id": "P2",
+        "severity": "SUGGESTION",
+        "location": "engine/runtime/opencode_contracts_test.go:291",
+        "claim": "The foreman body is not pinned for opencode skill injection: the end-to-end test skips `foreman`, and the launch test covers only the builder and the reviewer.",
+        "evidence": [
+          "In TestEveryIdEachRoleBodyNamesHasExactlyOneEntry..., the loop has `dir.Name() == \"foreman\"` -> continue."
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the complete diff of 1d0aabf7 (agentgen.go, artifacts_test.go, roles_test.go, roles/skills.go and its test, opencode_contracts.go and its test, opencodeprompt/derive.go, derive_test.go, source.go).",
+      "Not run: read-only static judgment."
+    ]
+  }
+}

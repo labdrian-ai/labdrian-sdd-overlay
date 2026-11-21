@@ -1,0 +1,40 @@
+{
+  "kind": "polisher",
+  "base": "0c82ec6750d5f4f72ee43cc0cd6c8a55ce56dd73",
+  "head": "bc881e69d2b46beb5b25933291b290397eba521c",
+  "diff_sha256": "d841978f9e53a749be372fbb3ad8dc8ba299b1b1c45beae810602f68919fb1a1",
+  "findings": {
+    "findings": [
+      {
+        "id": "b-W1",
+        "severity": "WARNING",
+        "location": "skills/_shared/SKILL.md:14-15",
+        "claim": "Cited examples may not exist. Answered: skills/_shared/minimalism-contract.md and oo-quality-contract.md exist (fd).",
+        "evidence": [
+          "fd at 4748e19a"
+        ]
+      },
+      {
+        "id": "b-F2",
+        "severity": "SUGGESTION",
+        "location": "tools/deterministic-check-runner/main.go:104",
+        "claim": "Comment says since removed one commit early. Answered: the skill is deleted two commits later in the same task (9593f57b); the exit-code rationale stays in the comment.",
+        "evidence": [
+          "9593f57b"
+        ]
+      },
+      {
+        "id": "b-W3",
+        "severity": "WARNING",
+        "location": "tools/entry-contract-validator/pipeline_vocabulary_pins_test.go",
+        "claim": "Deleted helpers may be used elsewhere. Answered: go test, go vet and staticcheck of the module pass at bc881e69 and every later commit.",
+        "evidence": [
+          "builder per-commit verification"
+        ]
+      }
+    ],
+    "evidence": [
+      "series review cb3b8bca..4748e19a"
+    ]
+  }
+}

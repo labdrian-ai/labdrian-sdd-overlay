@@ -1,0 +1,33 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "e9f96e0129cc231e1a7cc35431873ecb8d889186",
+    "head": "c8d6f48d1fb309b904016d0c011ebcaa07ccff93",
+    "diff_sha256": "d1b2e670483ba6600c49d4d78083fecc2d6cff16228a0a1af1c169fbdaaaf565",
+    "paths": [
+      "odd/tasks/labdrian-orchestrator-opencode.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "e9f96e0129cc231e1a7cc35431873ecb8d889186",
+      "head": "c8d6f48d1fb309b904016d0c011ebcaa07ccff93",
+      "diff_sha256": "d1b2e670483ba6600c49d4d78083fecc2d6cff16228a0a1af1c169fbdaaaf565"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/labdrian-orchestrator-opencode.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The change only appends one log entry (L80) to odd/tasks/labdrian-orchestrator-opencode.md; no code, config or behavior is touched, so it cannot introduce a runtime defect.",
+      "The L80 entry is internally consistent: it records the owner's verbatim approval and states that the frontmatter line is added after description: with nothing else changing."
+    ]
+  }
+}

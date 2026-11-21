@@ -20,7 +20,7 @@ args = ["mcp"]
 model = "o3"
 === .config/opencode/opencode.json ===
 {"mcp": {
-  "longterm-mem": {"type":"local","command":["<home>/.labdrian-overlay/bin/longterm-mem","mcp"],"enabled":true}}}
+  "servers": {"longterm-mem":{"type":"local","command":["<home>/.labdrian-overlay/bin/longterm-mem","mcp"],"codemode":true}}}}
 === .config/opencode/opencode.json.bak ===
 {"mcp": {}}
 === .labdrian-overlay/longterm-mem/install-state.json ===

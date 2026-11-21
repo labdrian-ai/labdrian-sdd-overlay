@@ -285,7 +285,7 @@ var fullLogPathPattern = regexp.MustCompile(`full: (\S+)$`)
 // shape, the expected tool name, and the banned-literal guard; it returns
 // the exit_code field for caller-specific checks. When the summary carries a
 // "full: <path>" clause, it also os.Stat's that path: the row's claim is
-// only true evidence (skills/sdd-verify/SKILL.md:70) if the named file
+// only true evidence (the sdd-verify skill, since removed) if the named file
 // genuinely exists, so a row must never advertise a path nothing wrote.
 func assertRow(t *testing.T, i int, line, wantTool string) string {
 	t.Helper()
@@ -1513,7 +1513,7 @@ func TestDefaultOutDirInsideRootFailsClosed(t *testing.T) {
 // the only caller-controlled input that reaches the emitted row block
 // unsplit: it flows verbatim through logPathFor into result.logPath, into
 // renderSummary's "; full: %s" clause, and from there into the bytes
-// skills/sdd-verify/SKILL.md hands to capture-evidence. A newline in it
+// the sdd-verify skill (since removed) handed to capture-evidence. A newline in it
 // appends a line that satisfies the same "tool | exit_code | summary"
 // contract the capture parser reads. The fixture is deliberately
 // unformatted so gofmt reports a finding: renderSummary only emits the
@@ -2052,7 +2052,7 @@ func partialCoverageCheck(t *testing.T, blocking bool) (check, []string) {
 // through to outcomePassed. Live reproduction in this repository: tui/go.mod
 // declares go 1.26.1, staticcheck@v0.7.0 is built older and is excluded from
 // that module, the other three modules are clean, so the run exited 0 and
-// skills/sdd-verify/SKILL.md mapped that to `passed` — tui was never
+// the sdd-verify skill (since removed) mapped that to `passed` — tui was never
 // statically analyzed and the gate still recorded a clean verification. Before
 // B1 that exact condition exited 3; the correction converted a fail-closed
 // into a pass. Driven through runCheck (the real per-module loop) into

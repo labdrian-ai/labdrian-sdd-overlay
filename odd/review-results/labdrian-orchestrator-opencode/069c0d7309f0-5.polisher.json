@@ -1,0 +1,58 @@
+{
+  "kind": "polisher",
+  "base": "b8b6ca8bf08248feb34ed94c5235034016f80b03",
+  "head": "069c0d7309f00fa43dca3426112dc8367a253ed6",
+  "diff_sha256": "12fe1150f3eae1cffc0c07f799490e8e58f4107af848a19d2a575bec457ca1b6",
+  "findings": {
+    "findings": [
+      {
+        "id": "A-F2",
+        "severity": "WARNING",
+        "location": "skills/procedural-candidates/SKILL.md steps 5-6",
+        "claim": "The skill did not repeat the stop-on-resolve-failure rule this commit added to the contract. Fixed in afb10297 (step 6 states it) and ddced25e (with the lifecycle exception).",
+        "evidence": [
+          "judge A round 1; parent check: TestProceduralCandidateContractCarriesTheExceptionAndTheMergeTies pins the SKILL.md sentence."
+        ]
+      },
+      {
+        "id": "A-F3",
+        "severity": "WARNING",
+        "location": "skills/_shared/procedural-candidate-detection.md section 3 item 2",
+        "claim": "The failure clause referred to an ids array whose envelope was never shown. Fixed in afb10297: the full {\"source\":\"engram\",\"ids\":[...]} envelope, one entry per key in the order asked, a different source, count or order is a failure, never call resolve with no legacy id.",
+        "evidence": [
+          "judge A round 1; parent check: TestProceduralCandidateContractNamesTheResolveEnvelope; judge B round 2 confirmed it matches resolver.go decodeResolve."
+        ]
+      },
+      {
+        "id": "A-F4",
+        "severity": "WARNING",
+        "location": "skills/_shared/procedural-candidate-detection.md section 3 item 2",
+        "claim": "The stop covered every save, so a Promoted, retirement or revision-draft History line whose external action already happened could be lost. Fixed in afb10297 (the stop covers occurrence work; that History line is still saved with Occurrences exactly as stored) and ddced25e/7ca4f581 (item 6 and SKILL.md carry the same exception).",
+        "evidence": [
+          "judge A round 1; parent check: TestProceduralCandidateContractScopesTheResolveStop and TestProceduralCandidateContractCarriesTheExceptionAndTheMergeTies."
+        ]
+      },
+      {
+        "id": "B-F1",
+        "severity": "SUGGESTION",
+        "location": "skills/procedural-candidates/SKILL.md:20-21",
+        "claim": "Same gap as A-F2, plus the merge rule missing from the skill. Fixed in afb10297 and ddced25e.",
+        "evidence": [
+          "judge B round 1; parent check as A-F2."
+        ]
+      },
+      {
+        "id": "B-F4",
+        "severity": "SUGGESTION",
+        "location": "skills/_shared/procedural-candidate-detection.md section 3 item 2",
+        "claim": "The contract was looser than the engine on the legacy-id shape and resolve refusals. Fixed in afb10297 ('engram:' followed by digits; different source, count or order is a failure) and ddced25e/7ca4f581 (one call, each distinct number once, sorted as strings, as written, matching legacyNumbers).",
+        "evidence": [
+          "judge B round 1; parent check: TestProceduralCandidateContractNamesTheResolveEnvelope; judge B round 2 found the shape and refusals matching."
+        ]
+      }
+    ],
+    "evidence": [
+      "Two blind polisher judges read the 069c0d73 tree on a detached worktree; this record holds the findings the parent attributed to 069c0d73 (the resolve-failure stop) by its diff. Neither judge ran tests. RED for this commit's own test was observed against the previous text before the commit; the independent verifier passed the suite and the engine/text consistency probe on 069c0d73."
+    ]
+  }
+}

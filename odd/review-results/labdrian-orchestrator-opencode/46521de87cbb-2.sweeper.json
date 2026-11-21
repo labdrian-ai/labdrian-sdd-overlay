@@ -1,0 +1,30 @@
+{
+  "kind": "sweeper",
+  "base": "62828131b67423edb6488248dbab0cd495876c10",
+  "head": "46521de87cbb5fc474a9db55318ed01572b13cd1",
+  "diff_sha256": "5604805a015fa44d2090f9ae91607cc19a862604922561b9c0acb852f35b99c6",
+  "sweep": "46521de87cbb-1.sweep.json",
+  "commit": null,
+  "candidates": [
+    {
+      "candidate": "T3:  M odd/tasks/labdrian-orchestrator-opencode.md",
+      "disposition": "live",
+      "evidence": "The shaper's uncommitted edit of the task document (L172); the parent named it live. Deleting it would drop the shaper's work."
+    },
+    {
+      "candidate": "T3: ?? CLAUDE.md",
+      "disposition": "live",
+      "evidence": "Owner file kept verbatim (L160: se quedan los files de wiki); it is the project instruction file telling agents to read docs/wiki/README.md first."
+    },
+    {
+      "candidate": "T3: ?? docs/wiki/.format",
+      "disposition": "live",
+      "evidence": "Owner wiki file kept verbatim (L160: se quedan los files de wiki); never deleted."
+    },
+    {
+      "candidate": "T3: ?? docs/wiki/README.md",
+      "disposition": "live",
+      "evidence": "Owner wiki entry page kept verbatim (L160); read in this run, named by CLAUDE.md as the first read."
+    }
+  ]
+}

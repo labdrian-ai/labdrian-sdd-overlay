@@ -1,0 +1,8 @@
+args: unregister --target opencode
+exit: 6
+--- stdout ---
+longterm-mem: unregister: opencode: unmanaged (an entry exists that longterm-mem does not own; left untouched)
+--- stderr ---
+--- machine ---
+=== .config/opencode/opencode.json ===
+{"mcp": {"longterm-mem": {"type": "local", "command": ["/someone/elses/binary", "mcp"]}}}

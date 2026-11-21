@@ -1,0 +1,82 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "b88a3c8ae3f8bd4de114b8bbc2b1bdd518d9828f",
+    "head": "000433822b6412ef3bd3f11d89eaf72b3384d279",
+    "diff_sha256": "50d852989a738555214bc087f0a7e67709400d05ac7fc6938c8a464914daf354",
+    "paths": [
+      "engine/runtime/ownerrules_text_test.go",
+      "instructions/owner-rules.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "b88a3c8ae3f8bd4de114b8bbc2b1bdd518d9828f",
+      "head": "000433822b6412ef3bd3f11d89eaf72b3384d279",
+      "diff_sha256": "50d852989a738555214bc087f0a7e67709400d05ac7fc6938c8a464914daf354"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/runtime/ownerrules_text_test.go",
+        "instructions/owner-rules.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "engine/runtime/ownerrules_text_test.go:33-48",
+        "claim": "inOrder keeps scanning after a missing line: the inner loop runs `at` to len(lines) without a match, so every later expected line is also reported as missing. One deleted or reworded rule then produces a cascade of false 'missing' errors, which hides the real cause. The helper should restore `at` or stop at the first miss.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/runtime/ownerrules_text_test.go:36-47"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "engine/runtime/ownerrules_text_test.go:94-99",
+        "claim": "The lint-rule check uses Contains on '\\n'+rule+'\\n', so it does not pin the line as a whole line the way inOrder does. It also cannot match a rule placed on the first line of the file. It accepts an optional '- ' prefix that the test message does not mention, and it does not check the '## Known errors' heading or its position.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/runtime/ownerrules_text_test.go:94-99"
+        ]
+      },
+      {
+        "id": "F3",
+        "severity": "SUGGESTION",
+        "location": "engine/runtime/ownerrules_text_test.go:101-113",
+        "claim": "The forbidden-name test matches `(?i)engram` and `gentle-ai` anywhere in the text. A legitimate future mention such as 'engramatic' or a prose reference will fail it. The `\\bmem_` pattern is also narrow. The test pins the stated intent only loosely.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/runtime/ownerrules_text_test.go:101-113"
+        ]
+      },
+      {
+        "id": "F4",
+        "severity": "SUGGESTION",
+        "location": "engine/runtime/ownerrules_text_test.go:10-13",
+        "claim": "The comment says the Claude, OpenCode and Codex adapters write this file into their instruction files. No adapter in this diff reads instructions/owner-rules.md, so the comment describes behavior that does not yet exist and may mislead readers.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/runtime/ownerrules_text_test.go:10-13"
+        ]
+      }
+    ],
+    "evidence": [
+      "Only two files are added: the rules markdown and its text test. Neither is wired into any adapter in this diff.",
+      "The verbatim-rule tests check whole-line equality in order, which matches the commit's claim for the eleven rules, the expertise line and the remote authorization rules.",
+      "inOrder's shared index `at` is not reset after a miss, so the first missing line makes every later line fail too."
+    ]
+  }
+}

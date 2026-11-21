@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "1bca84239795537ec1ab3e44aa4767402f38c798",
+    "head": "8048bc87764d993feecc893cf4b435097b873447",
+    "diff_sha256": "40deec96005e57d052678181ad7c9b8b66a03a6e8e09e560aaedc6ede54c997d",
+    "paths": [
+      "odd/tasks/labdrian-orchestrator-opencode.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "1bca84239795537ec1ab3e44aa4767402f38c798",
+      "head": "8048bc87764d993feecc893cf4b435097b873447",
+      "diff_sha256": "40deec96005e57d052678181ad7c9b8b66a03a6e8e09e560aaedc6ede54c997d"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/labdrian-orchestrator-opencode.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "odd/tasks/labdrian-orchestrator-opencode.md:34",
+        "claim": "The new S17 settings.json check uses `jq -r '.. | strings'`, which emits only string values, never object keys. The same spec says the check covers 'the whole of' settings.json and 'every other value', and that the plugin source `Gentleman-Programming/engram` is found by content. In Claude Code settings, plugin identifiers are often object keys (for example under enabledPlugins), so a gentle-ai or engram reference held in a key is never searched. The check can then pass while the key remains. The claim that the decoded check closes the gap is therefore only partly true.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/labdrian-orchestrator-opencode.md:34 `jq -r '.. | strings' ~/.claude/settings.json | rg -n ...`"
+        ]
+      }
+    ],
+    "evidence": [
+      "The only changed path is odd/tasks/labdrian-orchestrator-opencode.md, a documentation change.",
+      "The reordered Tasks list matches the order stated in L29. Every added 'after' clause (T6 after T19, T11 after T9 and T10, T12 after T19, T14 after T21) points to a task that appears earlier in the list.",
+      "The S8, T10 and T11 plugin path and id are consistent across the three entries.",
+      "The S2 and T6 Tier-row rewording is consistent with the L29 design delta."
+    ]
+  }
+}

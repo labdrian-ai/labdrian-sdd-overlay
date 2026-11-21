@@ -1,0 +1,20 @@
+{
+  "kind": "sweeper",
+  "base": "000433822b6412ef3bd3f11d89eaf72b3384d279",
+  "head": "f98917e97b0b3e1662c8fddcab6dcbcd2e155fab",
+  "diff_sha256": "d718c4f417b4834a26d61ddcb40a4a2567eb92b994e998ad9b1457a22d279ebd",
+  "sweep": "f98917e97b0b-1.sweep.json",
+  "commit": null,
+  "candidates": [
+    {
+      "candidate": "T2 errcheck engine: runtime/ownerrules_block.go: unchecked error: defer os.Remove(tmp.Name())",
+      "disposition": "finding",
+      "evidence": "Fixed in b88fbec6 (the deferred remove assigns its error to _)."
+    },
+    {
+      "candidate": "T2 errcheck engine: runtime/ownerrules_block.go: unchecked error: tmp.Close()",
+      "disposition": "finding",
+      "evidence": "Fixed in b88fbec6 (each early close assigns its error to _)."
+    }
+  ]
+}

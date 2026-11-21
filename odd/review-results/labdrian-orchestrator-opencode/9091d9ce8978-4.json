@@ -1,0 +1,38 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "6bd701ddf2ec8110b613b2f8acf07e70b66c5795",
+    "head": "9091d9ce8978010a5f7120ee8b2b88b6dfb8a50c",
+    "diff_sha256": "23e69497acf30a5916b7606bbe9303131c067318f967d00e52973a0a09540acd",
+    "paths": [
+      "engine/cmd/main_agent_notice_test.go",
+      "engine/cmd/settings_hooks.go",
+      "engine/settings/main_agent.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "6bd701ddf2ec8110b613b2f8acf07e70b66c5795",
+      "head": "9091d9ce8978010a5f7120ee8b2b88b6dfb8a50c",
+      "diff_sha256": "23e69497acf30a5916b7606bbe9303131c067318f967d00e52973a0a09540acd"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/cmd/main_agent_notice_test.go",
+        "engine/cmd/settings_hooks.go",
+        "engine/settings/main_agent.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "noticeForeignMainAgent now prints settingsPath (the path the caller already passes) instead of the hard-coded 'settings.json'; the format string has one added %s and one added argument, in matching order, so verbs and arguments line up.",
+      "MainAgentValueJSON now uses json.Encoder with SetEscapeHTML(false) and trims the single trailing newline Encode appends; Encode of a valid value ends in exactly one newline, so TrimSuffix restores the Marshal-shaped output. The error fallback is unchanged.",
+      "Tests assert the path-bearing notice and the unescaped a<b>&c value, covering both changes; the non-string object case still yields compact JSON, as Encoder does not indent by default."
+    ]
+  }
+}

@@ -1,0 +1,69 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "8d4c88d5564aa1bba579f2522e7555e5a2859fb9",
+    "head": "664e126a5e40f0a09622f5e0901213cf66225c9e",
+    "diff_sha256": "f36b668bea296728579493136414d572f8e0c2a73c197e87b6d54da2486578e6",
+    "paths": [
+      "odd/tasks/labdrian-orchestrator-opencode.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "8d4c88d5564aa1bba579f2522e7555e5a2859fb9",
+      "head": "664e126a5e40f0a09622f5e0901213cf66225c9e",
+      "diff_sha256": "f36b668bea296728579493136414d572f8e0c2a73c197e87b6d54da2486578e6"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/labdrian-orchestrator-opencode.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/labdrian-orchestrator-opencode.md:34",
+        "claim": "The S17 acceptance sentence says `outputStyle` names the labdrian style but gives no concrete value or check, while the other keys got exact checks. This is a minor readability and recall gap beside the newly precise theme and plugin checks. The acceptance also does not say which value of `theme` remains acceptable, so a removed key and a replaced key both pass.",
+        "evidence_class": "inferential",
+        "causal_disposition": "unknown",
+        "proof_refs": [
+          "odd/tasks/labdrian-orchestrator-opencode.md:34"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/labdrian-orchestrator-opencode.md:34",
+        "claim": "The new binary definition (first token after `env` assignments has basename exactly `gentle-ai`) does not cover commands wrapped in a shell, such as `sh -c 'gentle-ai ...'` or `bash -lc`, nor ones that follow `&&` or `;`. Such a hook would still invoke the binary and pass the acceptance check. The definition is also embedded as a long parenthetical in a single very long paragraph, which hurts readability.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/labdrian-orchestrator-opencode.md:34"
+        ]
+      },
+      {
+        "id": "F3",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/labdrian-orchestrator-opencode.md:288",
+        "claim": "L23 says the acceptance fix landed 'in the commit that holds this entry', a self-referential statement that does not name a commit, unlike the other entries that cite hashes. It will become ambiguous once later commits are added. The entry also refers to review findings (`fm-review3.log`) and to commits `d900ab96` whose checks are not verifiable from this diff.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/labdrian-orchestrator-opencode.md:288"
+        ]
+      }
+    ],
+    "evidence": [
+      "Only odd/tasks/labdrian-orchestrator-opencode.md changed; the diff modifies the S17 acceptance sentence and appends the L23 log entry.",
+      "The new S17 acceptance adds theme and plugin source checks and a binary definition that excludes gentle-ai-overlay, matching the commit claim.",
+      "The findings are about documentation precision and traceability only; no behavior is changed by a doc-only commit."
+    ]
+  }
+}

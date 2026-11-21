@@ -1,0 +1,40 @@
+{
+  "kind": "polisher",
+  "base": "f98917e97b0b3e1662c8fddcab6dcbcd2e155fab",
+  "head": "052d446962ff288ead60e8e4357035d3ed0b42f3",
+  "diff_sha256": "c10e6053e504445f0ef9211bcce78aef2bd5e2ca5b7d63bd2d620622a892c179",
+  "findings": {
+    "findings": [
+      {
+        "id": "S-2",
+        "severity": "WARNING",
+        "location": "ownerrules_block.go:245-249",
+        "claim": "Uninstall deletes a pre-existing empty CLAUDE.md that install appended to. Answered: an empty file and an absent one give the same bytes after install; restoring absence is the common case (no CLAUDE.md); the empty file a user may have had is recreated by any editor and holds no content.",
+        "evidence": [
+          "series review of 052d4469 (two judges)."
+        ]
+      },
+      {
+        "id": "S-3",
+        "severity": "WARNING",
+        "location": "ownerrules.go:42-44",
+        "claim": "Every locateOverlay failure with an empty OverlayDir was mapped to the benign note. Fixed in b88fbec6: only overlayNotFoundError is; a failed search stays partial (RED test with a removed working directory).",
+        "evidence": [
+          "series review of 052d4469."
+        ]
+      },
+      {
+        "id": "S-4",
+        "severity": "SUGGESTION",
+        "location": "claude.go:126-133",
+        "claim": "Status read the owner rules twice. Fixed in b88fbec6.",
+        "evidence": [
+          "series review of 052d4469."
+        ]
+      }
+    ],
+    "evidence": [
+      "Bounded recheck not reproduced; suite 85 ok after b88fbec6."
+    ]
+  }
+}

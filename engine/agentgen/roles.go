@@ -21,46 +21,35 @@ const memoryLine = "Read every artifact the prompt locates (file path, or memory
 // gives it a memorycard id, never a topic.
 const byIDLine = "Read every artifact the prompt locates (file path, or memorycard id via mem_get) before acting. A missing required locator is a blocker: report it, never substitute another store."
 
-// modelFamily is a family of models named once for the runtimes that take the model from the agent
-// file. Codex has no entry: its files omit the model, the parent passes it at spawn (D14).
-type modelFamily struct {
-	// claude is the alias Claude Code resolves to its current model of the family.
-	claude string
-	// pi is the provider-prefixed ref gentle-pi runs the family by.
-	pi string
-}
-
-// piSonnetModel is the model id the Pi file of a sonnet role declares in its frontmatter.
+// The three tiers of the tier table (skills/role-chain/references/models.md), which holds the model id
+// of each tier for each runtime. Codex has no id there: its files omit the model, the parent passes it
+// at spawn (D14).
 //
-// Verified live 2026-09-13 (Pi 0.85.1, gentle-pi 2.6.0, @saccolabs/pi-claude-cli 0.8.1): gentle-pi's
-// native subagent_run only completes a child whose agent file declares a "pi-claude-cli/<model>" id.
-// An "anthropic/*" (OAuth) or "openai-codex/*" model ends the child with "assistant reported an
-// error", and an absent model: routes to "anthropic/claude-opus-4-8" (also fails). Separately, the
+// What the Pi column holds, as verified when the ids were chosen. The Pi refs are ids of the provider
+// pi-claude-cli, which registers the Anthropic models of Pi (index.ts:200 of pi-claude-cli 0.10.0), and
+// all three are in the model list of Pi 1.3.0 on this machine. Only the mid one is the ref that was
+// run: it completed a native subagent_run on 2026-09-13 (Pi 0.85.1, gentle-pi 2.6.0), while an
+// "anthropic/*" (OAuth) or "openai-codex/*" model ends the child with "assistant reported an error",
+// and an absent model routes to "anthropic/claude-opus-4-8" (also fails). The frontier and light refs
+// are the same provider's ids of the same generation, assumed to complete one too; the live check of
+// the PR (PR 4 of the design, row "live check per runtime") is what proves them. Separately, the
 // pi-claude-cli bridge passes the agent's system prompt to a fresh Claude Code process via
-// --append-system-prompt-file: a ~7 KB prompt (the full persona body of GADU, or a same-size neutral
-// filler) HANGS that child indefinitely, while a ~400-byte prompt completes normally. That limit was
-// measured with GADU's body (GADU is retired); it belongs to the bridge, not to GADU, so it can bound
-// the Pi file of any role. The role files are well under it (the largest, the reviewer's, is about
-// 2 KB in October 2026); a run of a ~2 KB prompt through the bridge has not been measured.
-const piSonnetModel = "pi-claude-cli/claude-sonnet-5"
-
-// The Pi refs are ids of the provider pi-claude-cli, which registers the Anthropic models of Pi
-// (index.ts:200 of pi-claude-cli 0.10.0), and all three are in the model list of Pi 1.3.0 on this
-// machine. Only sonnet's is the ref that was run: piSonnetModel completed a native subagent_run on
-// 2026-09-13 (Pi 0.85.1, gentle-pi 2.6.0). The opus and haiku refs are the same provider's ids of the
-// same generation, assumed to complete one too; the live check of the PR (PR 4 of the design, row
-// "live check per runtime") is what proves them.
-var (
-	sonnet = modelFamily{claude: "sonnet", pi: piSonnetModel}
-	opus   = modelFamily{claude: "opus", pi: "pi-claude-cli/claude-opus-5"}
-	haiku  = modelFamily{claude: "haiku", pi: "pi-claude-cli/claude-haiku-4-5"}
+// --append-system-prompt-file: a ~7 KB prompt HANGS that child indefinitely, while a ~400-byte prompt
+// completes normally. That limit belongs to the bridge; the role files are well under it (the largest,
+// the reviewer's, is about 2 KB in October 2026), and a run of a ~2 KB prompt has not been measured.
+const (
+	tierFrontier = "frontier"
+	tierMid      = "mid"
+	tierLight    = "light"
 )
 
 // role is what the files of the runtimes hold for one role.
 type role struct {
 	name        string
 	description string
-	model       modelFamily
+	// tier is the model tier of the role (models.md of skills/role-chain); the ids of each runtime come from
+	// the tier table there, not from this file.
+	tier string
 	// effort is how hard the role thinks, written once for the two runtimes that take it from the file:
 	// the thinking of Pi and the model_reasoning_effort of Codex. The owner set three tiers (per-role
 	// design v3, D15): frontier and mid think at medium, light at low. Both vocabularies also know max
@@ -71,6 +60,9 @@ type role struct {
 	// them. The Claude files that existed before the generator are the oracle for these lists, byte
 	// for byte; the tools of Pi are made from them (piTools).
 	tools []string
+	// openCodeSkill keeps the skill tool of OpenCode for a role whose Claude list names no Skill tool: only the
+	// foreman, whose recorded OpenCode run loads a skill body in its session (S7, S13).
+	openCodeSkill bool
 }
 
 // roles are the eight roles in the order of the table of per-role design v3, section 2.
@@ -78,7 +70,7 @@ var roles = []role{
 	{
 		name:        "builder",
 		description: "Implements the tasks a labdrian workflow names, or fixes confirmed ledger ids, and reports the evidence of each work unit.",
-		model:       sonnet,
+		tier:        tierMid,
 		effort:      "medium",
 		tools: []string{
 			"Read", "Edit", "Write", "Glob", "Grep", "Bash",
@@ -89,7 +81,7 @@ var roles = []role{
 	{
 		name:        "shaper",
 		description: "Writes the Specs and Tasks of the feature document of a labdrian workflow and returns open product decisions as risks.",
-		model:       opus,
+		tier:        tierFrontier,
 		effort:      "medium",
 		tools: []string{
 			"Read", "Edit", "Write", "Grep", "Glob",
@@ -100,7 +92,7 @@ var roles = []role{
 	{
 		name:        "polisher",
 		description: "Polisher role, the read-only blind judge of an immutable target (judgment-day launches it for both judges); returns one JSON findings object.",
-		model:       sonnet,
+		tier:        tierMid,
 		effort:      "medium",
 		tools: []string{
 			"Read", "Glob", "Grep",
@@ -111,7 +103,7 @@ var roles = []role{
 	{
 		name:        "prototyper",
 		description: "Answers listed feasibility questions with throwaway spikes in a disposable worktree and returns kill, narrow or continue per question.",
-		model:       sonnet,
+		tier:        tierMid,
 		effort:      "medium",
 		tools: []string{
 			"Read", "Glob", "Grep", "Bash", "Write", "Edit",
@@ -121,7 +113,7 @@ var roles = []role{
 	{
 		name:        "sweeper",
 		description: "Removal-only cleanup of dead code and stale prose that a work unit left behind; commits one chore(sweep) commit or none.",
-		model:       sonnet,
+		tier:        tierMid,
 		effort:      "medium",
 		tools: []string{
 			"Read", "Edit", "Glob", "Grep", "Bash",
@@ -132,27 +124,48 @@ var roles = []role{
 	{
 		name:        "reviewer",
 		description: "Reviewer role, the read-only reader of a committed diff and its detached worktree (send base, head, diff_sha256, the diff, the worktree path and the lens rows); returns one JSON object of findings.",
-		model:       opus,
+		tier:        tierFrontier,
 		effort:      "medium",
 		tools:       []string{"Read", "Grep", "Glob"},
 	},
 	{
 		name:        "verifier",
 		description: "Verifier role, runs the checks a prompt names and reproduces the findings it lists (send the finding ids, the exact checks and the worktree); returns reproduced, not-reproduced or not-run per id, or, with no finding id, the report of an exemption, each check as pass, fail or not-run.",
-		model:       opus,
+		tier:        tierFrontier,
 		effort:      "medium",
 		tools:       []string{"Read", "Grep", "Glob", "Bash", "mcp__memorycard__mem_get"},
 	},
 	{
 		name:        "delivery",
 		description: "Closes the feature document of a finished labdrian workflow in place with a final Log entry, recording unfinished work as unfinished.",
-		model:       haiku,
+		tier:        tierLight,
 		effort:      "low",
 		tools: []string{
 			"Read", "Edit", "Write", "Glob", "Bash",
 			"mcp__memorycard__mem_search", "mcp__memorycard__mem_get", "mcp__memorycard__mem_save",
 			"mcp__codegraph__codegraph_explore",
 		},
+	},
+}
+
+// foreman is the parent of the role chain (S2 of odd/tasks/labdrian-orchestrator-opencode.md): the agent a
+// main session runs as, which talks with the owner and launches the eight roles. It is not one of them:
+// the closed role vocabulary of engine/roles has no foreman, and it has two files here, the Claude one and the OpenCode one (S5).
+// Its model is the frontier row of the tier table, as the parent's is (S18, models.md of role-chain). Its
+// tools are the Claude names; the subagent tool is Agent (T1 of the feature), which the eight roles never
+// hold. AskUserQuestion shows the owner a question menu; in OpenCode it keeps the question tool (T48, L134).
+// It writes only the feature document: the Edit and Write it holds are a limit of its instructions,
+// not of its tool list (S16 B8).
+var foreman = role{
+	name:        "foreman",
+	description: "Talks with the owner and drives the labdrian workflow: entry, the role chain and closure; writes only the feature document.",
+	tier:        tierFrontier,
+	// Its OpenCode file keeps the skill tool (S7): the recorded run of S13 loads a skill body in its session.
+	openCodeSkill: true,
+	tools: []string{
+		"Read", "Grep", "Glob", "Edit", "Write", "Bash", "Agent", "AskUserQuestion",
+		"mcp__memorycard__mem_search", "mcp__memorycard__mem_get", "mcp__memorycard__mem_save", "mcp__memorycard__mem_update",
+		"mcp__codegraph__codegraph_explore",
 	},
 }
 
@@ -256,7 +269,15 @@ func (r role) piTools() (string, error) {
 
 // project makes the three files of the role from its source: for Claude Code, Pi and Codex, in that
 // order.
-func (r role) project(source string) ([]Artifact, error) {
+func (r role) project(source string, models ModelTable) ([]Artifact, error) {
+	claudeModel, err := models.ID(r.tier, runtimeClaude)
+	if err != nil {
+		return nil, err
+	}
+	piModel, err := models.ID(r.tier, runtimePi)
+	if err != nil {
+		return nil, err
+	}
 	body, err := r.body(source)
 	if err != nil {
 		return nil, err
@@ -269,15 +290,34 @@ func (r role) project(source string) ([]Artifact, error) {
 	if err != nil {
 		return nil, err
 	}
-	claude := "---\nname: " + r.name + "\ndescription: " + r.description + "\nmodel: " + r.model.claude +
-		"\ntools: " + strings.Join(r.tools, ", ") + "\n---\n\n" + body
-	pi := "---\nname: " + r.name + "\ndescription: " + r.description + "\nmodel: " + r.model.pi +
+	claude := r.claudeFile(claudeModel, body)
+	pi := "---\nname: " + r.name + "\ndescription: " + r.description + "\nmodel: " + piModel +
 		"\nthinking: " + r.effort + "\ntools: " + piTools + "\n---\n\n" + body
 	return []Artifact{
 		{Path: "agents/" + r.name + ".md", Content: claude},
 		{Path: "pi/agents/" + r.name + ".md", Content: pi},
 		{Path: "codex/agents/" + r.name + ".toml", Content: codex},
 	}, nil
+}
+
+// claudeFile is the Claude agent file: the four keys of claudeKeys, a blank line and the body.
+func (r role) claudeFile(model, body string) string {
+	return "---\nname: " + r.name + "\ndescription: " + r.description + "\nmodel: " + model +
+		"\ntools: " + strings.Join(r.tools, ", ") + "\n---\n\n" + body
+}
+
+// projectClaude makes the Claude file of a role that has no Pi or Codex file (the foreman): its source, the
+// model of its tier from the table, and no Pi or Codex file.
+func (r role) projectClaude(source string, models ModelTable) (Artifact, error) {
+	model, err := models.ID(r.tier, runtimeClaude)
+	if err != nil {
+		return Artifact{}, err
+	}
+	body, err := r.body(source)
+	if err != nil {
+		return Artifact{}, err
+	}
+	return Artifact{Path: "agents/" + r.name + ".md", Content: r.claudeFile(model, body)}, nil
 }
 
 // codexFile is the Codex agent file: the four fields of the design in the order it lists them, and no

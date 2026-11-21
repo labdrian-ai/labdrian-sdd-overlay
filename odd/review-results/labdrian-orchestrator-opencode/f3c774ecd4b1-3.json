@@ -1,0 +1,90 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "747e3231c9a7e21c89fc213c37b72a2ae40d9d1c",
+    "head": "f3c774ecd4b1d88f869be66b4cf4ee615c757b5d",
+    "diff_sha256": "cf3a55c99657c3c93d12e598c19b6490b7aff26d27cc8dc4f51950b06b5f17dd",
+    "paths": [
+      "CHANGELOG.md",
+      "engine/cmd/roles.go",
+      "engine/cmd/roles_bound.go",
+      "engine/cmd/roles_bound_test.go",
+      "engine/cmd/roles_feature_entry_test.go",
+      "engine/cmd/usage.go",
+      "engine/roles/bound.go",
+      "engine/roles/bound_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line",
+    "recall"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "747e3231c9a7e21c89fc213c37b72a2ae40d9d1c",
+      "head": "f3c774ecd4b1d88f869be66b4cf4ee615c757b5d",
+      "diff_sha256": "cf3a55c99657c3c93d12e598c19b6490b7aff26d27cc8dc4f51950b06b5f17dd"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "engine/cmd/roles.go",
+        "engine/cmd/roles_bound.go",
+        "engine/cmd/roles_bound_test.go",
+        "engine/cmd/roles_feature_entry_test.go",
+        "engine/cmd/usage.go",
+        "engine/roles/bound.go",
+        "engine/roles/bound_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "engine/cmd/roles_bound.go:52-62",
+        "severity": "WARNING",
+        "claim": "hasFeatureDocument answers true only when fsdoc.Reader.Read succeeds. Read refuses a symlinked document, a non-regular file, one larger than oddtask.MaxDocumentBytes, and one that cannot be opened. Each of those cases returns false, so the seq 1 refusal is skipped and the record is stored. The task rule and the CHANGELOG say the refusal applies when odd/tasks/<G>.md is at the worktree root. A document that exists but cannot be read therefore lets the pre-open record through, which is the L130 duplicate-chain shape this change closes. Only the missing-file and no-repository cases are intended to answer as before. The only test of the false path is the goal with no document.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/oddtask/fsdoc/fsdoc.go:53-81",
+          "engine/cmd/roles_bound.go:60-61"
+        ]
+      },
+      {
+        "id": "F2",
+        "location": "skills/inception-pipeline/SKILL.md:34",
+        "severity": "WARNING",
+        "claim": "The inception-pipeline skill still tells the parent to append a chain-entry record (seq 1, goal and chain both equal to the change name) with `labdrian roles append`. The skill was not updated to match this change. When odd/tasks/<change>.md already exists in the checkout, which is possible when the pipeline is re-entered for an existing feature, that documented step now exits 1 and the skill gives no recovery path. TestInceptionChainEntryRecordRunsThroughTheRolesVerbs passes only because its example goal add-wishlist has no document, so no test covers the skill's flow against a feature that already has a document.",
+        "evidence_class": "inferential",
+        "causal_disposition": "behavior-activated",
+        "proof_refs": [
+          "skills/inception-pipeline/SKILL.md:34",
+          "skills/inception-pipeline/references/chain-entry.md:3",
+          "engine/cmd/roles.go:328"
+        ]
+      },
+      {
+        "id": "F3",
+        "location": "engine/cmd/roles_feature_entry_test.go:189-226",
+        "severity": "SUGGESTION",
+        "claim": "The task's tests include a cwd outside a repository answering as before, and the rule reads the document at the worktree root and not at cwd. Neither is tested here. A subdirectory cwd and a no-repository cwd are not covered. Neither are the fail-open reader refusals from F1 (symlinked, oversized or unreadable document).",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/cmd/roles_feature_entry_test.go",
+          "engine/cmd/roles_bound.go:52-62"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the whole diff and task T57 (line 99 of the task file)",
+      "Read engine/cmd/roles.go runRolesAppend, where the new check sits after BoundAppendRefusal and before the evidence check",
+      "Read engine/cmd/workflow_open.go worktreeRoot",
+      "Read engine/oddtask/fsdoc/fsdoc.go Read refusal paths",
+      "Grepped the skills for `roles append` callers: inception-pipeline and role-chain",
+      "Not run: no tests or commands, per the review constraints"
+    ]
+  }
+}

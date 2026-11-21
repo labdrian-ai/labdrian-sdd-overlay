@@ -1,0 +1,73 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "8ff0e9f85d3f6f4d0c7580d57862345b28743488",
+    "head": "70a28bad2618d18ccb5cbf210eed5ad2b310dce6",
+    "diff_sha256": "95aff354ac91a03e379731916f1b77af974cfd44a9d7419a8888fe7cec802dc1",
+    "paths": [
+      "CHANGELOG.md",
+      "README.md",
+      "engine/cmd/review.go",
+      "engine/cmd/review_ci.go",
+      "engine/cmd/review_ci_test.go",
+      "engine/cmd/usage.go",
+      "engine/review/app/app.go",
+      "engine/review/app/ci.go",
+      "engine/review/app/ci_test.go",
+      "engine/review/app/fakes_test.go",
+      "engine/review/ci.go",
+      "engine/review/ci_test.go",
+      "engine/review/gitexec/gitexec.go",
+      "engine/review/gitexec/proposals_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "8ff0e9f85d3f6f4d0c7580d57862345b28743488",
+      "head": "70a28bad2618d18ccb5cbf210eed5ad2b310dce6",
+      "diff_sha256": "95aff354ac91a03e379731916f1b77af974cfd44a9d7419a8888fe7cec802dc1"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "README.md",
+        "engine/cmd/review.go",
+        "engine/cmd/review_ci.go",
+        "engine/cmd/review_ci_test.go",
+        "engine/cmd/usage.go",
+        "engine/review/app/app.go",
+        "engine/review/app/ci.go",
+        "engine/review/app/ci_test.go",
+        "engine/review/app/fakes_test.go",
+        "engine/review/ci.go",
+        "engine/review/ci_test.go",
+        "engine/review/gitexec/gitexec.go",
+        "engine/review/gitexec/proposals_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "engine/review/ci_test.go:12-13",
+        "claim": "The comment on ciMarkerPaths says 'each of the nine files', but the list of file markers (and ciMarkerFiles in ci.go) has ten entries: .gitlab-ci.yml, .circleci/config.yml, .travis.yml, azure-pipelines.yml, Jenkinsfile, bitbucket-pipelines.yml, .drone.yml, .woodpecker.yml, appveyor.yml, .appveyor.yml. The count is misleading for a closed list a reader is meant to check.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/review/ci_test.go:12-13",
+          "engine/review/ci.go ciMarkerFiles lists ten files"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the whole diff. The CheckNoCI order of checks, the Remotes adapter and the marker matching are consistent with the documented behavior.",
+      "The only defect found is the wrong count in a test comment."
+    ]
+  }
+}

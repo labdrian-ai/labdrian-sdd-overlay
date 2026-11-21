@@ -1,0 +1,70 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "4d34b33684b544382ffe2101849bf9d7888f87fa",
+    "head": "bd6a9526b4ae0004272207bbce467e1d2022431b",
+    "diff_sha256": "3bb75e47d73196a0b2d4d0b535bf10dc62a078e12d9b33f4e2af4d1b03e4bdc7",
+    "paths": [
+      "CHANGELOG.md",
+      "README.md",
+      "engine/cmd/codex_source_test.go",
+      "engine/cmd/projection_hook.go",
+      "engine/cmd/usage.go",
+      "engine/hookwire/source.go",
+      "engine/hookwire/source_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "4d34b33684b544382ffe2101849bf9d7888f87fa",
+      "head": "bd6a9526b4ae0004272207bbce467e1d2022431b",
+      "diff_sha256": "3bb75e47d73196a0b2d4d0b535bf10dc62a078e12d9b33f4e2af4d1b03e4bdc7"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "README.md",
+        "engine/cmd/codex_source_test.go",
+        "engine/cmd/projection_hook.go",
+        "engine/cmd/usage.go",
+        "engine/hookwire/source.go",
+        "engine/hookwire/source_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "engine/hookwire/source.go:41-58",
+        "claim": "adaptOpencode treats every unrecognized name containing an underscore as an MCP tool. OpenCode built-ins or custom tools with underscores (other than experimental_image_generate) get rewritten to mcp__<first>__<rest>, so a policy keyed on an mcp__ prefix could match a non-MCP tool, or a server with an underscore in its name maps to the wrong server (e.g. long_term_query becomes mcp__long__term_query). The exclusion list is a single hard-coded name, so any future built-in with an underscore is silently misclassified.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/hookwire/source.go:41-58"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "engine/hookwire/source_test.go:50-65",
+        "claim": "Tests do not cover a server name containing an underscore, the documented limitation (e.g. long_term_query), nor a tool name with further underscores beyond memorycard_mem_search. The limitation is only stated in a comment, so a change to the cut rule would not be caught.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/hookwire/source_test.go:50-65"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read adaptOpencode in the diff: shell and patch map exactly, experimental_image_generate and mcp__-prefixed names pass, others cut at the first underscore.",
+      "Usage, README, CHANGELOG and error messages consistently add opencode; tests updated to the new message text.",
+      "claude and codex branches are unchanged, and the new test asserts opencode names stay opaque to them."
+    ]
+  }
+}

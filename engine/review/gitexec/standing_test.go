@@ -5,6 +5,7 @@ package gitexec_test
 // they make in temporary directories, as realgit_test.go does.
 
 import (
+	"path/filepath"
 	"reflect"
 	"strings"
 	"testing"
@@ -104,6 +105,109 @@ func TestStandingSaysWhereHeadStandsInItsBranch(t *testing.T) {
 			f.commit("m1.txt") // the local main has it; the remote has not
 			f.git("checkout", "-q", "-b", "feat")
 			c1 := f.commit("c1.txt")
+			return app.Standing{Branch: "feat", Default: "main", Commits: []string{c1}}
+		}},
+		{"a branch tracking a local branch of another name lists only its own commits", func(f *fixture) app.Standing {
+			f.commit("m0.txt")
+			f.git("checkout", "-q", "-b", "parent")
+			f.commit("p1.txt")
+			f.git("checkout", "-q", "-b", "feat", "--track", "parent")
+			c1 := f.commit("c1.txt")
+			return app.Standing{Branch: "feat", Default: "main", Commits: []string{c1}}
+		}},
+		{"a branch tracking a remote-tracking branch of another name is asked as before", func(f *fixture) app.Standing {
+			f.commit("m0.txt")
+			f.git("checkout", "-q", "-b", "parent")
+			p1 := f.commit("p1.txt")
+			f.git("checkout", "-q", "-b", "feat")
+			c1 := f.commit("c1.txt")
+			f.git("remote", "add", "origin", f.root)
+			f.git("update-ref", "refs/remotes/origin/parent", p1)
+			f.git("config", "branch.feat.remote", "origin")
+			f.git("config", "branch.feat.merge", "refs/heads/parent")
+			return app.Standing{Branch: "feat", Default: "main", Commits: []string{p1, c1}}
+		}},
+		{"a branch pushed with -u to a remote branch of another name is asked its own commits", func(f *fixture) app.Standing {
+			f.commit("m0.txt")
+			f.git("checkout", "-q", "-b", "parent")
+			p1 := f.commit("p1.txt")
+			f.git("checkout", "-q", "-b", "feat", "--track", "parent")
+			c1 := f.commit("c1.txt")
+			bare := filepath.Join(f.t.TempDir(), "remote.git")
+			f.git("init", "-q", "--bare", bare)
+			f.git("remote", "add", "bare", bare)
+			f.git("push", "-q", "-u", "bare", "HEAD:other")
+			return app.Standing{Branch: "feat", Default: "main", Commits: []string{p1, c1}}
+		}},
+		{"a child the parent holds by fast-forward is asked as before", func(f *fixture) app.Standing {
+			f.commit("m0.txt")
+			f.git("checkout", "-q", "-b", "parent")
+			p1 := f.commit("p1.txt")
+			f.git("checkout", "-q", "-b", "feat", "--track", "parent")
+			c1 := f.commit("c1.txt")
+			f.git("checkout", "-q", "parent")
+			f.git("merge", "-q", "--ff-only", "feat")
+			f.git("checkout", "-q", "feat")
+			return app.Standing{Branch: "feat", Default: "main", Commits: []string{p1, c1}}
+		}},
+		{"a child the parent holds by a merge commit is asked as before", func(f *fixture) app.Standing {
+			f.commit("m0.txt")
+			f.git("checkout", "-q", "-b", "parent")
+			p1 := f.commit("p1.txt")
+			f.git("checkout", "-q", "-b", "feat", "--track", "parent")
+			c1 := f.commit("c1.txt")
+			f.git("checkout", "-q", "parent")
+			f.git("merge", "-q", "--no-ff", "-m", "merge feat", "feat")
+			f.git("checkout", "-q", "feat")
+			return app.Standing{Branch: "feat", Default: "main", Commits: []string{p1, c1}}
+		}},
+		{"an upstream whose merge name is not a branch is asked as before", func(f *fixture) app.Standing {
+			f.commit("m0.txt")
+			f.git("checkout", "-q", "-b", "parent")
+			p1 := f.commit("p1.txt")
+			f.git("checkout", "-q", "-b", "feat")
+			c1 := f.commit("c1.txt")
+			f.git("config", "branch.feat.remote", ".")
+			f.git("config", "branch.feat.merge", "garbage")
+			return app.Standing{Branch: "feat", Default: "main", Commits: []string{p1, c1}}
+		}},
+		{"a branch with no upstream lists the commits of the branch it was made on and its own", func(f *fixture) app.Standing {
+			f.commit("m0.txt")
+			f.git("checkout", "-q", "-b", "parent")
+			p1 := f.commit("p1.txt")
+			f.git("checkout", "-q", "-b", "feat")
+			c1 := f.commit("c1.txt")
+			return app.Standing{Branch: "feat", Default: "main", Commits: []string{p1, c1}}
+		}},
+		{"an upstream of the branch's own name keeps every commit the default branch lacks", func(f *fixture) app.Standing {
+			f.commit("m0.txt")
+			f.git("checkout", "-q", "-b", "feat")
+			c1, c2 := f.commit("c1.txt"), f.commit("c2.txt")
+			f.git("remote", "add", "origin", f.root)
+			f.git("update-ref", "refs/remotes/origin/feat", c2)
+			f.git("config", "branch.feat.remote", "origin")
+			f.git("config", "branch.feat.merge", "refs/heads/feat")
+			return app.Standing{Branch: "feat", Default: "main", Commits: []string{c1, c2}}
+		}},
+		{"an upstream naming a branch that does not exist excludes nothing", func(f *fixture) app.Standing {
+			f.commit("m0.txt")
+			f.git("checkout", "-q", "-b", "parent")
+			p1 := f.commit("p1.txt")
+			f.git("checkout", "-q", "-b", "feat")
+			c1 := f.commit("c1.txt")
+			f.git("config", "branch.feat.remote", ".")
+			f.git("config", "branch.feat.merge", "refs/heads/ghost")
+			return app.Standing{Branch: "feat", Default: "main", Commits: []string{p1, c1}}
+		}},
+		{"a parent that moved on after the branch was made leaves the branch's own commits", func(f *fixture) app.Standing {
+			f.commit("m0.txt")
+			f.git("checkout", "-q", "-b", "parent")
+			f.commit("p1.txt")
+			f.git("checkout", "-q", "-b", "feat", "--track", "parent")
+			c1 := f.commit("c1.txt")
+			f.git("checkout", "-q", "parent")
+			f.commit("p2.txt")
+			f.git("checkout", "-q", "feat")
 			return app.Standing{Branch: "feat", Default: "main", Commits: []string{c1}}
 		}},
 	} {

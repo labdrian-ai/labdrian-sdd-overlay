@@ -1,0 +1,40 @@
+{
+  "kind": "polisher",
+  "base": "ebdac5b14c68c2ac61f72619f8eaac032d485e67",
+  "head": "5fb6780f80ecf9c072dab70a63be576109ea896f",
+  "diff_sha256": "92a30dad7748d91cd909b63c595935922136adde738a148979dd8ebdb057471c",
+  "findings": {
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "skills/branch-pr/SKILL.md:18",
+        "claim": "Merge rule allowed pending checks (both reviewers). Fixed in 4be86484: no failing or pending line; test pins it.",
+        "evidence": [
+          "RED/GREEN branch_pr_artifact_test"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "CHANGELOG.md:12",
+        "claim": "T28 entry said branch-pr unchanged. Fixed in 4be86484.",
+        "evidence": [
+          "4be86484"
+        ]
+      },
+      {
+        "id": "F3",
+        "severity": "SUGGESTION",
+        "location": "skills/branch-pr/SKILL.md:17",
+        "claim": "Closing entry undefined. Fixed in 4be86484: the last Log entry of odd/tasks/<f>.md by the delivery role; <f> and <base> named.",
+        "evidence": [
+          "4be86484"
+        ]
+      }
+    ],
+    "evidence": [
+      "series review"
+    ]
+  }
+}

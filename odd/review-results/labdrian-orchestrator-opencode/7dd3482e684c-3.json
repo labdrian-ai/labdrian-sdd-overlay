@@ -1,0 +1,84 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "275328171b959d8dcc8e58530365d2d8f883c12d",
+    "head": "7dd3482e684c66349a4fee47b53234766e2553a2",
+    "diff_sha256": "6b65b51648257fc31438b6ba85d26dd3bcc11bcaefdc0dfeace1072ba996eff2",
+    "paths": [
+      "CHANGELOG.md",
+      "README.md",
+      "engine/runtime/labdrian-runtime-parity-plugin.mjs",
+      "engine/runtime/opencode_bridge_test.go",
+      "engine/skills/role_chain_artifact_test.go",
+      "overlay.manifest",
+      "skills/role-chain/SKILL.md",
+      "skills/role-chain/references/launch.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "275328171b959d8dcc8e58530365d2d8f883c12d",
+      "head": "7dd3482e684c66349a4fee47b53234766e2553a2",
+      "diff_sha256": "6b65b51648257fc31438b6ba85d26dd3bcc11bcaefdc0dfeace1072ba996eff2"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "README.md",
+        "engine/runtime/labdrian-runtime-parity-plugin.mjs",
+        "engine/runtime/opencode_bridge_test.go",
+        "engine/skills/role_chain_artifact_test.go",
+        "overlay.manifest",
+        "skills/role-chain/SKILL.md",
+        "skills/role-chain/references/launch.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "skills/role-chain/SKILL.md:34",
+        "claim": "The body still tells the parent to send the reviewer the diff (up to 150 KB), while the new OpenCode line in references/launch.md says to send the brief without the diff. The two instructions conflict, and the engine's frozen-context verb may refuse or misread a brief that already carries a diff (more than one base/head pair, or an over-limit reply). The contract does not say that the OpenCode rule overrides the body line.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "skills/role-chain/SKILL.md:34",
+          "skills/role-chain/references/launch.md:4"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "WARNING",
+        "location": "skills/role-chain/SKILL.md:36",
+        "claim": "The Codex launch rule (pipe the brief to `review launch`, never a native reviewer sub-agent) is no longer in the always-read body. It now sits behind a pointer, so a Codex foreman that does not open references/launch.md can launch a native reviewer sub-agent. Other runtimes' contract text changed in the same edit, and the commit itself says role-chain needs the owner's re-approval.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "skills/role-chain/SKILL.md:36",
+          "skills/role-chain/references/launch.md:3"
+        ]
+      },
+      {
+        "id": "F3",
+        "severity": "SUGGESTION",
+        "location": "engine/runtime/labdrian-runtime-parity-plugin.mjs:412-425",
+        "claim": "attachFrozenContext mutates input.prompt in place. If the hook runs a second time on the same call object (a retry or re-dispatch), the already-expanded prompt contains the brief and a frozen-context block. The verb would then likely refuse it as more than one base/head pair, or the prompt would be duplicated, and a launch that was valid the first time would be denied. The code has no idempotence guard.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/runtime/labdrian-runtime-parity-plugin.mjs:412-425"
+        ]
+      }
+    ],
+    "evidence": [
+      "Reviewed the full diff only; no tools or worktree access were used.",
+      "Plugin ordering (gate, then attachFrozenContext, then injectContract) matches the stated design.",
+      "The failure paths covered by the tests (refusal, missing engine, timeout, empty reply) deny the launch and leave the prompt unchanged."
+    ]
+  }
+}

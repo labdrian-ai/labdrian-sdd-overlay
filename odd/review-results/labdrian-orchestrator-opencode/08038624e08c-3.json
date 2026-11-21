@@ -1,0 +1,67 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "e001d5accdb5e3b60c93ff021dffd8bebc079891",
+    "head": "08038624e08c52c0161b3a55374be12f1641cdb9",
+    "diff_sha256": "cbe297b0a1960affeee225c0a091baf9941bb940b7fd9b81b1e826cb03a6a834",
+    "paths": [
+      "agents/foreman.md",
+      "engine/agentgen/foreman_internal_test.go",
+      "engine/agentgen/foreman_test.go",
+      "engine/agentgen/roles.go",
+      "engine/cmd/agentgen_test.go",
+      "roles/foreman/body.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "e001d5accdb5e3b60c93ff021dffd8bebc079891",
+      "head": "08038624e08c52c0161b3a55374be12f1641cdb9",
+      "diff_sha256": "cbe297b0a1960affeee225c0a091baf9941bb940b7fd9b81b1e826cb03a6a834"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "agents/foreman.md",
+        "engine/agentgen/foreman_internal_test.go",
+        "engine/agentgen/foreman_test.go",
+        "engine/agentgen/roles.go",
+        "engine/cmd/agentgen_test.go",
+        "roles/foreman/body.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "engine/agentgen/foreman_test.go:81",
+        "claim": "The no-effort check looks for the substrings \"effort:\" and \"thinking:\" anywhere in the generated file, including the body. Prose that contains the word \"effort:\" or \"thinking:\" would fail the test although no frontmatter field exists. It does not inspect only the frontmatter, so it is a brittle check.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/agentgen/foreman_test.go:78-84"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "engine/cmd/agentgen_test.go:121-150",
+        "claim": "The second skill-detection loop adds every backticked word that equals a skills/ directory to the named set. This is how `inception-pipeline` and `role-chain` get found, since they also appear next to the word skill. However, a backticked word like `test-first` is only counted if it is a skill directory, so a misspelled skill name in a table cell without the word skill is silently not checked. This leaves a gap in the claimed check that every named skill exists.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/cmd/agentgen_test.go:140-148"
+        ]
+      }
+    ],
+    "evidence": [
+      "Diff read in full; body.md and agents/foreman.md edits are identical, so the generated file stays in sync with its source.",
+      "Removing effort from the foreman row is consistent with the new internal test and the agents file, which has no effort field.",
+      "The labdrian-prefix check in foremanBodyCommands covers every verb span in the body, and the body edits add the prefix to all three review verbs."
+    ]
+  }
+}

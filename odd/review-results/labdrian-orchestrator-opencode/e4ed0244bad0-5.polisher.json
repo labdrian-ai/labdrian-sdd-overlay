@@ -1,0 +1,31 @@
+{
+  "kind": "polisher",
+  "base": "c2dd90fb0422a1413366c40e0be3d31c05d07b87",
+  "head": "e4ed0244bad085e8b7fcd8519035ee66e691ca8d",
+  "diff_sha256": "b2c3f2252afa56d8e68253535e841e5635cfe2b62926aaddae9e9ba211738edb",
+  "findings": {
+    "findings": [
+      {
+        "id": "E1",
+        "severity": "WARNING",
+        "location": "engine/runtime/codex_ownerrules.go:188-201",
+        "claim": "Uninstall lost the alias match once the first file was removed. Fixed in caa0f523 (aliases settled before any removal), RED then GREEN.",
+        "evidence": [
+          "TestCodexLinkToAFileTheInstallCreatedIsRemovedOnce"
+        ]
+      },
+      {
+        "id": "E2",
+        "severity": "SUGGESTION",
+        "location": "engine/runtime/codex_ownerrules.go:182-185",
+        "claim": "Long comment line. Wrapped in caa0f523.",
+        "evidence": [
+          "caa0f523"
+        ]
+      }
+    ],
+    "evidence": [
+      "series review of e4ed0244"
+    ]
+  }
+}

@@ -1,0 +1,34 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "dcdf610e24df7d4ee0347445092611669430ee39",
+    "head": "2bf126211283fadb29bb4d34a89231125a0a2a96",
+    "diff_sha256": "03a8a3363b94a2549b8c9ebd070b8fe5c57b54b0b5344fd97a8c6ccd230bee03",
+    "paths": [
+      "odd/goals/labdrian-orchestrator-opencode.json"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "dcdf610e24df7d4ee0347445092611669430ee39",
+      "head": "2bf126211283fadb29bb4d34a89231125a0a2a96",
+      "diff_sha256": "03a8a3363b94a2549b8c9ebd070b8fe5c57b54b0b5344fd97a8c6ccd230bee03"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/goals/labdrian-orchestrator-opencode.json"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The change adds one new JSON goal file; the JSON is syntactically well formed in the diff.",
+      "The file contains no executable code and modifies no existing file, so no regression on previously valid input is possible.",
+      "The runtime_scope names Claude Code only while the objective covers OpenCode v2; this is a content choice, not a demonstrable defect from the diff alone."
+    ]
+  }
+}

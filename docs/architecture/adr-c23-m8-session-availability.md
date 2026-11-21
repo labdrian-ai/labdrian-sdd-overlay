@@ -55,3 +55,44 @@ a file or starts a process. Two defects follow:
 - A new port in `projection/app` and an adapter in `cmd`; the gate (`engine/projection/gate.go`) and the
   `UserPromptSubmit` plan line do not change.
 - A session can still read a source the probe called unavailable, and the gate still allows it.
+
+## Amendment (2026-11-20, labdrian-orchestrator-opencode T64)
+
+The question (the foreman's, L184 of `odd/tasks/labdrian-orchestrator-opencode.md`): "¿Cambiamos esa
+comprobación para que mire memorycard, en una unidad propia después de T59?" The owner's answer,
+verbatim: "Sí, después de T59 (Recommended)".
+
+For the source `engram` the session probe now asks memorycard (S3, L186), not the engram program,
+because Engram is frozen and memorycard is the store new memories go to (`~/.claude/CLAUDE.md`,
+"memorycard is the memory store"):
+
+- The path is `MEMORYCARD_DB` when it is set and not empty, else `~/.memorycard/memory.db`, read through
+  the deps, never the process.
+- The probe stats that path before it runs anything, following links. With no path, a path that does not
+  exist, cannot be stat'ed, is not a regular file or is an empty file, the source is unavailable with
+  that reason and memorycard is not run: every memorycard command that opens the store opens it
+  read-write, creates a missing one and initialises an empty one (0 to 81920 bytes), and so does its MCP
+  server (checked with a missing path and a 0-byte file), so asking it there would make the probe a
+  write. A missing or empty store is not a broken one: it is not created yet, the answer is marked
+  `Uncreated`, and the block gives the no-store line below.
+- Otherwise `memorycard list --topic-prefix labdrian/session-probe/ --project labdrian-session-probe`
+  runs within the probe's deadline: a read that records no use count. A missing program, a failure and a
+  timeout are unavailable with the reason the other programs get.
+- The line for engram when the store does not exist or is empty is `- memorycard has no store yet
+  (<reason>): memorycard creates it when it first opens it, so its reads find nothing until a record is
+  saved.` It forbids no tool: the block says memory writes are not limited, and a write is what creates
+  the store, so a ban would repeat every session. For every other unavailable answer (no store located,
+  a stat error, not a regular file, no program, a failure, a timeout) the line is `- Do not call the
+  memorycard tools: memorycard is unavailable in this session (<reason>), though the plan allows its
+  reads and does not limit its writes.`, because the gate reads no probe and the plan still allows
+  those reads, and writes would fail there too. Both lines leave out ` (<reason>)` when the probe gives
+  none.
+- The stat and the run are not atomic: a store removed between them is created by memorycard. The check
+  is best-effort over the milliseconds between the stat and memorycard's open.
+- What the probe does not see: it reads `MEMORYCARD_DB` from the hook's environment, so a memorycard MCP
+  entry that sets another path is not what it probes (no installed entry sets one); and a holder of the
+  store in SQLite's exclusive locking mode makes `list` wait past the deadline, which reads as a
+  timeout.
+
+Decisions 1 to 6 stay as written; read them with this amendment for engram: "Engram's database is
+opened read-only" and "the read-only `engram stats`" now mean the stat and the `memorycard list` above.

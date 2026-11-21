@@ -1,0 +1,40 @@
+{
+  "kind": "polisher",
+  "base": "6ed8ea51028630bc0d897ac9aa85f201e91ce1de",
+  "head": "c2dd90fb0422a1413366c40e0be3d31c05d07b87",
+  "diff_sha256": "51a7f1e020fa9ef159a7a0fed0f17174a942c3cd7546ff01be0ef5e48f75d324",
+  "findings": {
+    "findings": [
+      {
+        "id": "C1",
+        "severity": "SUGGESTION",
+        "location": "engine/runtime/codex_ownerrules.go",
+        "claim": "rulesFiles did not de-duplicate paths that are the same file (both reviewers). Fixed in e4ed0244 (sameFiles, tests for CODEX_HOME=HOME and a symlink).",
+        "evidence": [
+          "TestCodexFileThatIsALinkToAnotherOfTheThreeIsHandledOnce"
+        ]
+      },
+      {
+        "id": "C2",
+        "severity": "SUGGESTION",
+        "location": "bin/lib/apply.sh",
+        "claim": "Only the first failure line was indented. Fixed in e4ed0244 (indent_lines).",
+        "evidence": [
+          "TestApplyCodexIndentsEveryLineOfAMultiLineFailure"
+        ]
+      },
+      {
+        "id": "C3",
+        "severity": "ADVISORY",
+        "location": "bin/lib/apply.sh",
+        "claim": "Independent verifier: no blockers; the engine-missing note is unreachable through apply. Kept as a guard with a comment in e4ed0244.",
+        "evidence": [
+          "verifier run on c2dd90fb, 10 probes pass"
+        ]
+      }
+    ],
+    "evidence": [
+      "series review of c2dd90fb, independent verifier"
+    ]
+  }
+}

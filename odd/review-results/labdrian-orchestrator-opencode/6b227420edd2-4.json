@@ -1,0 +1,91 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "bd090aafa08c47aac6ec9b6918175271c9534d32",
+    "head": "6b227420edd2da17f78c2ffa4a0a966b10ca434c",
+    "diff_sha256": "617edde01a15662c4ff078de1cb4bbcee46f1e3ee71364075b36ac24da165562",
+    "paths": [
+      "CHANGELOG.md",
+      "engine/cmd/codex_hooks_test.go",
+      "engine/cmd/memory_acceptance_test.go",
+      "engine/cmd/plan_instructions_test.go",
+      "engine/gate/instructions_test.go",
+      "engine/projection/availability_test.go",
+      "engine/projection/instructions_test.go",
+      "engine/projection/render.go",
+      "engine/shelltest/memory_live_acceptance_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line",
+    "recall"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "bd090aafa08c47aac6ec9b6918175271c9534d32",
+      "head": "6b227420edd2da17f78c2ffa4a0a966b10ca434c",
+      "diff_sha256": "617edde01a15662c4ff078de1cb4bbcee46f1e3ee71364075b36ac24da165562"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "engine/cmd/codex_hooks_test.go",
+        "engine/cmd/memory_acceptance_test.go",
+        "engine/cmd/plan_instructions_test.go",
+        "engine/gate/instructions_test.go",
+        "engine/projection/availability_test.go",
+        "engine/projection/instructions_test.go",
+        "engine/projection/render.go",
+        "engine/shelltest/memory_live_acceptance_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "engine/projection/render.go:327-330",
+        "severity": "WARNING",
+        "claim": "When the probe finds engram unavailable, the block now holds two lines that disagree. The degradation line says 'Do not read engram: it is unavailable in this session (the engram program was not found)'. The new memorycardLine follows it and says 'memorycard is the source engram: its reads ... go ahead while engram is listed'. The gate treats memorycard reads as source engram, so they pass while the engram binary is missing. An agent cannot tell from the block whether to read memorycard. The pinned tests (availability_test.go, codex_hooks_test.go, memory_acceptance_test.go) fix this contradictory order without covering the semantics. The trigger is not shown: it needs a session where the engram binary is absent or fails. The code appends the line whenever the plan holds engram, whatever the probe said.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/projection/render.go:327-330",
+          "engine/projection/availability_test.go:46-49",
+          "engine/cmd/codex_hooks_test.go:64"
+        ]
+      },
+      {
+        "id": "F2",
+        "location": "engine/projection/render.go:346-348",
+        "severity": "SUGGESTION",
+        "claim": "The line says memorycard reads 'go ahead while engram is listed', with no condition. The gate checks memorycard mem_search and mem_context with checkEngramProject (engine/projection/gate.go:319), so a call that names no project, another project or all projects is still denied. The block's project line says only 'Engram reads (mem_search, mem_context) name project X' and never mentions memorycard. An agent that follows the new line literally can send an unscoped memorycard mem_search and be denied, which is the failure T58 meant to remove. The line should say that memorycard mem_search and mem_context name the same project.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/projection/gate.go:319-320",
+          "engine/projection/render.go:357"
+        ]
+      },
+      {
+        "id": "F3",
+        "location": "docs/architecture/adr-c23-m6-plan-instructions.md:54-61",
+        "severity": "SUGGESTION",
+        "claim": "The ADR that is the cited authority for the block shows the scope-goal block without the new memorycard line. The commit changes the block and CHANGELOG but leaves the ADR sample unchanged. It already differs from the code in its procedural line, so this is only a small widening of the gap.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "worsened",
+        "proof_refs": [
+          "docs/architecture/adr-c23-m6-plan-instructions.md:54-61"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the diff t58.diff in full and the T58 criteria at line 100",
+      "Read engine/projection/render.go InstructionsBlock and memorycardLine in the head worktree",
+      "Read engine/projection/gate.go: memorycard mem_search, mem_context and mem_get are classified as source engram, with project checks on mem_search and mem_context",
+      "Grepped for other places that pin or describe the block; only the ADR sample is stale",
+      "The new line is added only when the plan sources hold engram; scope-none untouched",
+      "Not run: no tests or commands"
+    ]
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "kind": "polisher",
+  "base": "8929470c16c4f37af5f814922b8b1da647025640",
+  "head": "b243254a7632239863206aeeea669f0371a11a0b",
+  "diff_sha256": "976d4e37b38b5328fe01df2b16d41e15d95503efceb8633beb51eff17f302b90",
+  "findings": {
+    "findings": [
+      {
+        "id": "S-10",
+        "severity": "WARNING",
+        "location": "bin/lib/apply.sh:225-233",
+        "claim": "localhost scp/ssh and FILE:// counted as network. Fixed in 4196e145, d12ce674.",
+        "evidence": [
+          "series."
+        ]
+      },
+      {
+        "id": "S-11",
+        "severity": "WARNING",
+        "location": "bin/lib/apply.sh:210-214",
+        "claim": "A deliberate local bare origin no longer gets main pushed. Answered: intended (the incident class); the real origin is GitHub; the skip is announced.",
+        "evidence": [
+          "series."
+        ]
+      }
+    ],
+    "evidence": [
+      "Independent verifier (Risk 3,5) on 451cd0da..2e22df05: suite 85 ok; seeds a-f held; real OpenCode 2.2.7 loads the plugin and parses the config; claude/codex/pi identical; no change-caused blocker. Bounded recheck R1-R7 on a6e520a0: none reproduced (all reproduced at base)."
+    ]
+  }
+}

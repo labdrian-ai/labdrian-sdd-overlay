@@ -1,0 +1,11 @@
+{
+  "verdicts": [
+    {
+      "id": "F1",
+      "result": "reproduced",
+      "command": "old engine built from git archive 16a719fc (isolated HOME/GOCACHE under /home/labdrian/.cache); (a) printf '## Skills to load before work\\ngo-test\\n' | old-engine roles skill-paths --skills-root <skills> --agent builder; (b) probe test driving the head and base plugin with runPluginWithEngine(launchOf(\"subagent\",\"builder\",listedPrompt)) and F1_OLD_ENGINE=old-engine; (c) read bin/lib/apply.sh, manifest_routes.sh, engine_binary.sh, locations.sh, engine/runtime/opencode_plugin.go, opencode.go",
+      "output": "(a) 'error: roles skill-paths: unknown flag \"--agent\"', exit 1. (b) head plugin: DENIED Tool.Error 'error: roles skill-paths: unknown flag \"--agent\"' (passed through by skillPathsRefusal as the verb's own refusal); base plugin with the same engine: PASS. (c) runtime install|update writes the plugin embedded in the running binary (opencode_plugin.go:24-25, opencode.go:128) and rebuilds nothing; labdrian apply rebuilds a stale ~/.claude/bin/gentle-ai-overlay first (apply.sh:173 -> manifest_routes.sh:67 -> engine_binary.sh:89-118) before apply.sh:214/57 installs, so the apply path matches. Exposure: LABDRIAN_ENGINE_BINARY elsewhere, a direct runtime install from a newer build, or a later downgrade of ~/.claude/bin (hooks.sh:32).",
+      "base_result": "not-reproduced"
+    }
+  ]
+}

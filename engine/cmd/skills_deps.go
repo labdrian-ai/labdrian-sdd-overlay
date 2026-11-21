@@ -11,7 +11,7 @@ import (
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/execrunner"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/skills"
-	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/skills/engramexport"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/skills/memorycardcli"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/skills/projectidentity"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/skills/skillsfs"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/identity/gitfs"
@@ -32,7 +32,9 @@ func newSkillsDeps(d deps) skills.Deps {
 		Identity:     newProjectIdentity(),
 		Locker:       newSkillsLocker(d.skillsLockWait),
 		Now:          wallClockUTC,
-		Candidates:   engramexport.Source{Runner: execrunner.New()},
+		Candidates:   memorycardcli.Source{Runner: execrunner.New()},
+		// Asked only when a candidate lists a legacy engram id.
+		LegacyOccurrences: memorycardcli.Resolver{Runner: execrunner.New()},
 	}
 }
 

@@ -1,0 +1,40 @@
+{
+  "kind": "polisher",
+  "base": "afb10297085cc474b423c30bb3fa18ccaecfbb84",
+  "head": "ddced25ef0dde1a6c1a57429c80084de462b8281",
+  "diff_sha256": "41f8c8e9702aae5ed19aa5dd25c3b2614238094414ca2e5e92cd9995e32b1adf",
+  "findings": {
+    "findings": [
+      {
+        "id": "J1",
+        "severity": "WARNING",
+        "location": "skills/_shared/procedural-candidate-detection.md section 3 item 2",
+        "claim": "The resolve-failure exception named only the History line, while a promotion, registration or retirement also writes Status and the fields of its section 9 row; the text also said both 'do not save the record' and 'still saved'. Fixed in 094353a7: occurrence work stops (count, append, rewrite) and the whole lifecycle transition is saved with Occurrences exactly as stored.",
+        "evidence": [
+          "recheck judge A on the 7ca4f581 tree; bounded recheck judges A and B on 094353a7 found it fixed; pinned in TestProceduralCandidateContractScopesTheResolveStop."
+        ]
+      },
+      {
+        "id": "J2",
+        "severity": "SUGGESTION",
+        "location": "skills/_shared/procedural-candidate-detection.md section 3 items 4 and 6",
+        "claim": "The merge and straddle rules applied only on save, so a read could count two entries of one id differently. Fixed in 094353a7: on read, entries that translate to one id count once by the merge rule of item 6.",
+        "evidence": [
+          "recheck judge A; bounded recheck A and B found it fixed and matching candidate_record.go TranslateOccurrence."
+        ]
+      },
+      {
+        "id": "J3",
+        "severity": "SUGGESTION",
+        "location": "skills/procedural-candidates/SKILL.md step 5",
+        "claim": "Step 5 showed a single-key resolve form while step 6 requires one call with every distinct number (also judge B recheck F1). Fixed in 094353a7: step 6 shows the one-call form, step 5 points to it; pinned in 9cbee989.",
+        "evidence": [
+          "recheck judges A and B; bounded recheck A and B found it fixed."
+        ]
+      }
+    ],
+    "evidence": [
+      "Two blind polisher judges rechecked the 7ca4f581 tree, which holds ddced25e and 7ca4f581, against the four round-2 findings: all four fixed; their new findings J1-J3 are attributed to ddced25e, whose diff added the lifecycle exception, the merge ties and the SKILL.md step 6 text. A bounded recheck pair on 094353a7 found J1-J3 fixed and no data-loss or double-count path. No judge ran tests; the suite passed with only the pending APPROVAL_STALE."
+    ]
+  }
+}

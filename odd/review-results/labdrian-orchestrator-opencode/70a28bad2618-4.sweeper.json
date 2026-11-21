@@ -1,0 +1,30 @@
+{
+  "kind": "sweeper",
+  "base": "8ff0e9f85d3f6f4d0c7580d57862345b28743488",
+  "head": "70a28bad2618d18ccb5cbf210eed5ad2b310dce6",
+  "diff_sha256": "95aff354ac91a03e379731916f1b77af974cfd44a9d7419a8888fe7cec802dc1",
+  "sweep": "70a28bad2618-1.sweep.json",
+  "commit": null,
+  "candidates": [
+    {
+      "candidate": "T2 staticcheck engine: cmd/review_ci_test.go: this value of landing is never used (SA4006)",
+      "disposition": "live",
+      "evidence": "Already gone at the branch head: staticcheck ./cmd/ prints nothing at 402f1f0f (L141)."
+    },
+    {
+      "candidate": "T2 errcheck engine: cmd/review_ci_test.go: unchecked error: filepath.WalkDir(root, func(path string, e fs.DirEntry, err error) error {",
+      "disposition": "live",
+      "evidence": "Fixed in 402f1f0f (T51 C2): the walk error fails the test with t.Fatalf."
+    },
+    {
+      "candidate": "T2 nilerr engine: engine/cmd/review_ci_test.go: error is not nil but it returns nil",
+      "disposition": "live",
+      "evidence": "Fixed in 402f1f0f (T51 C2): the walk records the path error; nilerr ./cmd/ reports nothing for review_ci at head."
+    },
+    {
+      "candidate": "T3:  M odd/tasks/labdrian-orchestrator-opencode.md",
+      "disposition": "live",
+      "evidence": "Parent logbook, committed with the review records at delivery."
+    }
+  ]
+}

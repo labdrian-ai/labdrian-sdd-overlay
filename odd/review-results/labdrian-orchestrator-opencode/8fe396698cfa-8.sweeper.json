@@ -1,0 +1,40 @@
+{
+  "kind": "sweeper",
+  "base": "348afec1360ec1220caa698ae0890de434bb9667",
+  "head": "8fe396698cfa91873f30322c081637fbc4ae0cf0",
+  "diff_sha256": "11bc287c09423d0f6be6da9ac1771f22b3339eefdfb92cc48e3d15e7b20907c2",
+  "sweep": "8fe396698cfa-7.sweep.json",
+  "commit": null,
+  "candidates": [
+    {
+      "candidate": "T2 errcheck engine: skillregistry/fsscan/fsscan_test.go: unchecked error: \"a .git directory\":  func(dir string) { os.MkdirAll(filepath.Join(dir, \".git\"), 0o755) },",
+      "disposition": "finding",
+      "evidence": "Fixed by the later commit 34028c8e: every MkdirAll in fsscan_test.go goes through a mkdir helper that calls t.Fatal on error."
+    },
+    {
+      "candidate": "T2 errcheck engine: skillregistry/fsscan/fsscan_test.go: unchecked error: \"an .atl directory\": func(dir string) { os.MkdirAll(filepath.Join(dir, \".atl\"), 0o755) },",
+      "disposition": "finding",
+      "evidence": "Fixed by the later commit 34028c8e: every MkdirAll in fsscan_test.go goes through a mkdir helper that calls t.Fatal on error."
+    },
+    {
+      "candidate": "T2 errcheck engine: skillregistry/fsscan/fsscan_test.go: unchecked error: os.MkdirAll(dir, 0o755)",
+      "disposition": "finding",
+      "evidence": "Fixed by the later commit 34028c8e: every MkdirAll in fsscan_test.go goes through a mkdir helper that calls t.Fatal on error."
+    },
+    {
+      "candidate": "T2 errcheck engine: skillregistry/fsscan/fsscan_test.go: unchecked error: os.MkdirAll(filepath.Join(dir, \"asdir\", \"SKILL.md\"), 0o755)",
+      "disposition": "finding",
+      "evidence": "Fixed by the later commit 34028c8e: every MkdirAll in fsscan_test.go goes through a mkdir helper that calls t.Fatal on error."
+    },
+    {
+      "candidate": "T2 errcheck engine: skillregistry/fsscan/fsscan_test.go: unchecked error: os.MkdirAll(filepath.Join(dir, \"emptydir\"), 0o755)",
+      "disposition": "finding",
+      "evidence": "Fixed by the later commit 34028c8e: every MkdirAll in fsscan_test.go goes through a mkdir helper that calls t.Fatal on error."
+    },
+    {
+      "candidate": "T2 errcheck engine: skillregistry/fsscan/fsscan_test.go: unchecked error: os.MkdirAll(filepath.Join(plain, \"skills\"), 0o755)",
+      "disposition": "finding",
+      "evidence": "Fixed by the later commit 34028c8e: every MkdirAll in fsscan_test.go goes through a mkdir helper that calls t.Fatal on error."
+    }
+  ]
+}

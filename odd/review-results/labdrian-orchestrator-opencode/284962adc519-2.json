@@ -1,0 +1,61 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "e5ffe5ee1d8cd07aa3b151e0765c89f1324a7bb6",
+    "head": "284962adc519179d93c09b81179bca27ff759fe6",
+    "diff_sha256": "a053d10448ec974f700e4c4b041207fa620feb684d4fcc48f9800b381433d07b",
+    "paths": [
+      "engine/review/risk.go",
+      "engine/review/risk_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "e5ffe5ee1d8cd07aa3b151e0765c89f1324a7bb6",
+      "head": "284962adc519179d93c09b81179bca27ff759fe6",
+      "diff_sha256": "a053d10448ec974f700e4c4b041207fa620feb684d4fcc48f9800b381433d07b"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/review/risk.go",
+        "engine/review/risk_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "engine/review/risk.go:112-122",
+        "claim": "The new paren-depth scan refuses a reason that contains an unbalanced parenthesis, such as an emoticon or a lone ')' or '(' (e.g. 'Risk: 3 (fixes :) the hook)' or '3 (a :( b)'). The base accepted any non-empty reason ending in ')'. Such a trailer now fails with ErrRiskTrailer. It fails closed, so risk is not under-declared, but a previously valid trailer is rejected and the commit message must be rewritten. Nothing in the docs or tests states that reasons must have balanced parentheses.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/review/risk.go:112-122",
+          "engine/review/risk.go:123-125"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "engine/review/risk_test.go:123-131",
+        "claim": "The tests cover only rejections. No case checks that a reason with balanced nested parentheses (e.g. '3 (a (b) c)') is still accepted and reads as 3. No case pins the unbalanced-reason behaviour from F1 either, so the depth logic could regress in either direction unnoticed.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/review/risk_test.go:123-131"
+        ]
+      }
+    ],
+    "evidence": [
+      "Traced 'none (x) 3 (y)': depth reaches 0 at index 1, which is not the last byte, so the value is returned unchanged and ParseRisk refuses it. The fix works for the reported cases.",
+      "Traced '3 ( )': the blank check on the reason refuses it. '3 ()' is also refused, as in the base.",
+      "Traced '3 (a (b) c)': depth ends at 0 on the last byte, so the value reads as 3 and is accepted."
+    ]
+  }
+}

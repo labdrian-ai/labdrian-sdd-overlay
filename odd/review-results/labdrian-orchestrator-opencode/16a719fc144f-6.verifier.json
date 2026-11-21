@@ -1,0 +1,32 @@
+{
+  "verdicts": [
+    {
+      "id": "F1",
+      "result": "reproduced",
+      "command": "same as 16a719fc144f-3 F1: inline triple-backtick line, then go-testing in prose, through roles skill-paths at 16a719fc",
+      "output": "prompt unchanged, go-testing not added.",
+      "base_result": "not-run"
+    },
+    {
+      "id": "F2",
+      "result": "not-run",
+      "command": "none",
+      "output": "SUGGESTION: carried to correction B.",
+      "base_result": "not-run"
+    },
+    {
+      "id": "F3",
+      "result": "not-run",
+      "command": "none",
+      "output": "SUGGESTION: carried to correction B.",
+      "base_result": "not-run"
+    },
+    {
+      "id": "F4",
+      "result": "not-run",
+      "command": "none",
+      "output": "SUGGESTION: carried to correction B.",
+      "base_result": "not-run"
+    }
+  ]
+}

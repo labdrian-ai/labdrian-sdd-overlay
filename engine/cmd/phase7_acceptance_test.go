@@ -48,6 +48,7 @@ import (
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/capability"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/capabilitytest"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/enginetest"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/projection"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/workflowprofile"
 )
@@ -156,18 +157,14 @@ func (w phase7World) goalPath(project, wf string) string {
 // repository to it, every step in its own process.
 func (w phase7World) bindRunning(project, wf, profile string, stages ...string) {
 	w.t.Helper()
-	w.createWorkflow(project, wf, profile)
-	w.verb(project, wf, "start")
-	for _, stage := range stages {
-		w.verb(project, wf, "stage", "--stage", stage)
-	}
-	w.engine(w.repo, "", "workflow", "bind", "--project", project, "--workflow", wf).must(w.t, "workflow bind")
+	enginetest.BindRunning(w.t, w.binary, w.env(), w.dir, w.repo, project, wf, profile, stages...)
 }
 
 // promptHook is what Claude Code runs when the user submits a prompt from cwd.
 func (w phase7World) promptHook(cwd string) phase7Run {
 	w.t.Helper()
-	return w.engine(w.dir, hookInput(w.t, cwd, "session-1", "please continue with the task"), "projection", "hook", "--event", "UserPromptSubmit")
+	// No session id, so the hook keeps nothing of its own (S19) and every call is a first prompt.
+	return w.engine(w.dir, hookInput(w.t, cwd, "", "please continue with the task"), "projection", "hook", "--event", "UserPromptSubmit")
 }
 
 // toolHook is what Claude Code runs before the session uses a tool from cwd.
@@ -350,10 +347,20 @@ func phase7Capabilities(t *testing.T, binary string) {
 					}
 					continue
 				}
+				if d.Target == capability.TargetOpenCode {
+					// T16: OpenCode states claims of its own. A partial one names its tests
+					// and a limit; an unsupported one names none and says why.
+					if c.Detail == "" || c.Status == capability.Supported || (c.Status == capability.Partial) != (len(c.Tests) != 0) {
+						t.Errorf("opencode %s = %s with %d tests and detail %q, want partial with tests or unsupported without, and a written limit", name, c.Status, len(c.Tests), c.Detail)
+					}
+					continue
+				}
 				if c.Status != capability.Unsupported || c.Detail == "" || len(c.Tests) != 0 {
 					t.Errorf("%s %s = %s with %d tests and detail %q, want unsupported, no tests, and a written limit", d.Target, name, c.Status, len(c.Tests), c.Detail)
 				}
 			}
+			// Only OpenCode carries an untested reason: its model sessions are the one
+			// thing no test drives (T17).
 			if untested := d.Untested != ""; untested != (d.Target == capability.TargetOpenCode) {
 				t.Errorf("%s untested = %q: only opencode is marked untested", d.Target, d.Untested)
 			}
@@ -638,6 +645,8 @@ func phase7Restart(t *testing.T, binary string) {
 	}
 	for name, cwd := range map[string]string{"the main checkout": w.repo, "a linked worktree": worktree, "a subdirectory of it": deeper} {
 		for _, session := range []string{"session-b", "session-c"} {
+			// A session of its own for each directory: one session repeating a block is silent (S19).
+			session += "-" + strings.ReplaceAll(name, " ", "-")
 			r := w.engine(w.dir, hookInput(t, cwd, session, "a later prompt in "+session), "projection", "hook", "--event", "UserPromptSubmit")
 			if r.stdout != first.stdout || r.code != 0 || r.stderr != "" {
 				t.Errorf("a new process in %s (%s): exit %d, stderr %q, stdout\n%s\nwant the bytes of the first process\n%s", name, session, r.code, r.stderr, r.stdout, first.stdout)
@@ -966,17 +975,18 @@ func phase7Settings(t *testing.T, binary string) {
 	merge := func() {
 		w.engine(w.dir, "", "merge-settings", "--settings", settingsPath, "--hook-command", hookCommand).must(t, "merge-settings")
 	}
-	statusLine := func() string {
+	statusLineOf := func(label string) string {
 		t.Helper()
 		out := w.engine(w.dir, "", "status").stdout
 		for _, line := range strings.Split(out, "\n") {
-			if strings.Contains(line, "hooks: projection (") {
+			if strings.Contains(line, label) {
 				return line
 			}
 		}
-		t.Fatalf("status prints no projection line:\n%s", out)
+		t.Fatalf("status prints no line for %q:\n%s", label, out)
 		return ""
 	}
+	statusLine := func() string { return statusLineOf("hooks: projection (") }
 	assertForeignKept := func(stage string) {
 		t.Helper()
 		doc := phase7ReadSettings(t, settingsPath)
@@ -1080,11 +1090,13 @@ func phase7Settings(t *testing.T, binary string) {
 	}
 
 	// Drift: an edited entry is reported, and the next merge repairs it to the
-	// same bytes, without touching a foreign entry.
+	// same bytes, without touching a foreign entry. The entry edited is the one of the
+	// family installed last on UserPromptSubmit: a repair removes a drifted entry and appends its
+	// replacement, so only the last family keeps its place.
 	doc := phase7ReadSettings(t, settingsPath)
 	for _, e := range doc["hooks"].(map[string]any)["UserPromptSubmit"].([]any) {
 		inner := e.(map[string]any)["hooks"].([]any)[0].(map[string]any)
-		if strings.Contains(inner["command"].(string), " projection hook --event ") && strings.Contains(inner["command"].(string), hookCommand) {
+		if strings.Contains(inner["command"].(string), " registry refresh ") && strings.Contains(inner["command"].(string), hookCommand) {
 			inner["command"] = inner["command"].(string) + " --extra"
 		}
 	}
@@ -1095,7 +1107,7 @@ func phase7Settings(t *testing.T, binary string) {
 	if err := os.WriteFile(settingsPath, drifted, 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if line := statusLine(); !strings.HasPrefix(line, "[WARN]") || !strings.Contains(line, "drifted") {
+	if line := statusLineOf("(registry refresh)"); !strings.HasPrefix(line, "[WARN]") || !strings.Contains(line, "drifted") {
 		t.Errorf("status with a drifted entry: %q", line)
 	}
 	merge()

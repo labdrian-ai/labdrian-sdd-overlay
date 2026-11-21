@@ -1,0 +1,43 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "58d635efdc941d227111a3d82baccc3bbda29a45",
+    "head": "d4d54d6068568a4740f4b846e949e1fac23b7a84",
+    "diff_sha256": "28a1b968e0e0b6be4b1ed5cbc21772c6ca0cc6372a54054fa5b508acc3e6f5e2",
+    "paths": [
+      "engine/cmd/roles_bound.go",
+      "engine/cmd/roles_bound_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "hunt"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "58d635efdc941d227111a3d82baccc3bbda29a45",
+      "head": "d4d54d6068568a4740f4b846e949e1fac23b7a84",
+      "diff_sha256": "28a1b968e0e0b6be4b1ed5cbc21772c6ca0cc6372a54054fa5b508acc3e6f5e2"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/cmd/roles_bound.go",
+        "engine/cmd/roles_bound_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "Read the whole diff at /tmp/claude-1000/-home-labdrian-labdrian-sdd-overlay-worktrees-labdrian-orchestrator-opencode/4200d7c8-449a-4ded-84a4-5e93e8a111c1/scratchpad/t56b.diff, the path the prompt names.",
+      "Read /home/labdrian/labdrian-sdd-overlay-worktrees/review-d4d54d606856/engine/cmd/roles_bound.go at head. boundWorkflowHere now returns the working-directory error. It resolves the repository with newRepoLocator().RepoKey before describeBinding, so outside any repository no binding store is built. It returns the Detail of an unavailable binding and of an owned binding's unavailable workflow as errors. Absent, foreign and malformed bindings, and workflows that are not owned, give the zero value. boundReadRefusal still drops the error, so resume and next answer as before.",
+      "Read engine/cmd/roles.go:317-326. runRolesAppend turns any boundWorkflowHere error into 'the binding of this checkout could not be read (%v)' before the evidence check and before any store write, so a refusal stores nothing.",
+      "Read engine/cmd/roles_builder_guard.go:117-159. describeBinding builds the binding store before Describe resolves the repository. That is why the new RepoKey pre-check is needed for the outside-repository case. boundWorkflows.Of, the builder guard, is unchanged by the diff.",
+      "Read engine/projection/app/bind.go:156-171 (Describe). It loads the workflow only for an owned binding, which matches the new nil and owned checks.",
+      "Read engine/gitfs/locator.go:61-74 (RepoKey). An empty or relative directory, or no usable .git, gives false. The NoRepositoryError branch stays only as a fallback for a race.",
+      "Checked that every way of building an unavailable classification sets a non-empty Detail: projection/fsstore/store.go:177-215, workflow/filelog/store.go:167-199, cmd/binding_wiring.go:127-140. So errors.New(Detail) never gives an empty '()' message.",
+      "Read T56 at line 98 of odd/tasks/labdrian-orchestrator-opencode.md in the review worktree and compared it with the behavior and the new tests. The tests cover an unavailable binding file, an unavailable workflow log, a working directory that cannot be determined (resume and next unchanged in each case), outside any repository equal to the verb without a working directory, the builder guard's denial unchanged, malformed and foreign bindings answering as before, and the closed-status copy.",
+      "Did not run anything (the reviewer role forbids it). No tests or differentials were run by this reviewer."
+    ]
+  }
+}

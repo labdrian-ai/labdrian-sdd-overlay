@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "98df66f8d3bbe9f8acf8626b654d4554b001e687",
+    "head": "f40192c21348e4574fe0ba4529b56282b9b5ddb2",
+    "diff_sha256": "68ebbf20e760dccf03c99674de4897842e917a14857c487a1b54fe3387f7241c",
+    "paths": [
+      "odd/tasks/labdrian-orchestrator-opencode.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "98df66f8d3bbe9f8acf8626b654d4554b001e687",
+      "head": "f40192c21348e4574fe0ba4529b56282b9b5ddb2",
+      "diff_sha256": "68ebbf20e760dccf03c99674de4897842e917a14857c487a1b54fe3387f7241c"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/labdrian-orchestrator-opencode.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The diff adds a single log entry (L75) at the end of odd/tasks/labdrian-orchestrator-opencode.md; it is documentation only and matches the commit message and Risk: none.",
+      "L75 follows L74, which said the choice of which of the three skills to rewrite would be asked next. L75 records the owner's answer, 'dale', as agreement with the stated recommendation, so the entry is consistent with L74.",
+      "The entry names L71, T28, T29 and T30 as references; their content is outside the diff, so I cannot check the references. Nothing in the diff shows them to be wrong."
+    ]
+  }
+}

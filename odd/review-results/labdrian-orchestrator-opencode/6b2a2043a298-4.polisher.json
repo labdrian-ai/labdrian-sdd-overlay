@@ -1,0 +1,49 @@
+{
+  "kind": "polisher",
+  "base": "2b9943d451cd99da6188ad5e068bb403cadbeb11",
+  "head": "6b2a2043a2984a734f86cc4a096884eb995d8e1e",
+  "diff_sha256": "d4ad0fcaf23f41ad65264d96f63da187ab916c5d2f8ade91b0b965e60427d279",
+  "findings": {
+    "findings": [
+      {
+        "id": "B-F1",
+        "severity": "WARNING",
+        "location": "labdrian-runtime-parity-plugin.mjs reportToolResult",
+        "claim": "execute.after payload fields (status, result) not measured by L10. Answered: read from the 2.2.7 binary; T17 checks live.",
+        "evidence": [
+          "judge B."
+        ]
+      },
+      {
+        "id": "B-F2",
+        "severity": "WARNING",
+        "location": "engine/cmd/opencode_bridge_e2e_test.go",
+        "claim": "PostToolUse e2e had no Claude reference. Fixed in dd99e6e5.",
+        "evidence": [
+          "judge B; recheck B item 1."
+        ]
+      },
+      {
+        "id": "B-F3",
+        "severity": "WARNING",
+        "location": "labdrian-runtime-parity-plugin.mjs sessionIdle",
+        "claim": "Stop loop guard reset by any prompt; Stop ran in child sessions. Fixed in dd99e6e5 (own synthetic text ignored, child sessions skipped via ctx.session.get parentID) and 4e96003d (a stale own text is forgotten at the next idle). The session.get shape goes to T17.",
+        "evidence": [
+          "judge B; recheck B item 2; series review of dd99e6e5."
+        ]
+      },
+      {
+        "id": "S-2",
+        "severity": "WARNING",
+        "location": "labdrian-runtime-parity-plugin.mjs contextRequested",
+        "claim": "The note replayed on every context push; a rejected session.start cached. Fixed in dd99e6e5.",
+        "evidence": [
+          "series review of 6b2a2043; recheck A items 1,6."
+        ]
+      }
+    ],
+    "evidence": [
+      "See the record of 2b9943d4 for the round; bounded recheck B on dd99e6e5 found none."
+    ]
+  }
+}

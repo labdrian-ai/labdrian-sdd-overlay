@@ -1,0 +1,74 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "92f6558883de0159c7ec7cb9dab3431c5ef34584",
+    "head": "1e6d6cdbe93247d5ad8ee6ca56cdace3de9efdd9",
+    "diff_sha256": "9fa775a77e8fb6e386a6f3a3fdec05533ada21291bdc910deb825bf8fec438e7",
+    "paths": [
+      "engine/runtime/claude.go",
+      "engine/runtime/claude_ports.go",
+      "engine/runtime/claude_ports_test.go",
+      "engine/runtime/missing_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "92f6558883de0159c7ec7cb9dab3431c5ef34584",
+      "head": "1e6d6cdbe93247d5ad8ee6ca56cdace3de9efdd9",
+      "diff_sha256": "9fa775a77e8fb6e386a6f3a3fdec05533ada21291bdc910deb825bf8fec438e7"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/runtime/claude.go",
+        "engine/runtime/claude_ports.go",
+        "engine/runtime/claude_ports_test.go",
+        "engine/runtime/missing_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "engine/runtime/claude_ports.go:25-29",
+        "claim": "The InspectMainAgent doc comment is attached to the interface method as two stacked comment blocks, with a redundant second summary line directly above the method. More importantly, the diff does not show the production installer (in engine/settings or wherever HookInstaller is implemented) or any other implementer of HookInstaller outside the four changed files. Widening the interface is a compile-breaking change for any implementer not updated here; if one exists outside this diff, the build breaks. This cannot be confirmed from the diff.",
+        "evidence_class": "inferential",
+        "causal_disposition": "unknown",
+        "proof_refs": [
+          "engine/runtime/claude_ports.go:25-29"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "engine/runtime/claude_ports_test.go:5",
+        "claim": "The settings import is placed in the stdlib import group, between errors and path/filepath, instead of with the module imports. This is a formatting inconsistency only.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/runtime/claude_ports_test.go:5"
+        ]
+      },
+      {
+        "id": "F3",
+        "severity": "SUGGESTION",
+        "location": "engine/runtime/claude_ports_test.go:41-49",
+        "claim": "fakeHooks.InspectMainAgent returns the shared inspectErr, so a test that sets inspectErr to exercise the hooks Inspect error path also makes the agent key inspection fail. That conflates two error paths, and no separate error field exists to test a key read failure independently of the hooks read.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/runtime/claude_ports_test.go:41-49"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff removes the type assertion to MainAgentInspector in mainAgentStatus and foreignAgentNotice and calls a.hooks.InspectMainAgent directly. The method is now in the HookInstaller interface.",
+      "The fakes in the test files (fakeHooks, nilInstaller, ptrHooks, mapHooks, sliceHooks, funcHooks, chanHooks, valueHooks) all gain InspectMainAgent, so the visible implementers compile.",
+      "The updated call-order test expects an inspect-agent call after each of install, install and status, which matches the adapter calling the inspection after those verbs. The adapter code for those call sites is not in the diff, so this is unverified."
+    ]
+  }
+}

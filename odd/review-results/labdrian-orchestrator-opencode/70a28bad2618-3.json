@@ -1,0 +1,62 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "8ff0e9f85d3f6f4d0c7580d57862345b28743488",
+    "head": "70a28bad2618d18ccb5cbf210eed5ad2b310dce6",
+    "diff_sha256": "95aff354ac91a03e379731916f1b77af974cfd44a9d7419a8888fe7cec802dc1",
+    "paths": [
+      "CHANGELOG.md",
+      "README.md",
+      "engine/cmd/review.go",
+      "engine/cmd/review_ci.go",
+      "engine/cmd/review_ci_test.go",
+      "engine/cmd/usage.go",
+      "engine/review/app/app.go",
+      "engine/review/app/ci.go",
+      "engine/review/app/ci_test.go",
+      "engine/review/app/fakes_test.go",
+      "engine/review/ci.go",
+      "engine/review/ci_test.go",
+      "engine/review/gitexec/gitexec.go",
+      "engine/review/gitexec/proposals_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "8ff0e9f85d3f6f4d0c7580d57862345b28743488",
+      "head": "70a28bad2618d18ccb5cbf210eed5ad2b310dce6",
+      "diff_sha256": "95aff354ac91a03e379731916f1b77af974cfd44a9d7419a8888fe7cec802dc1"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "README.md",
+        "engine/cmd/review.go",
+        "engine/cmd/review_ci.go",
+        "engine/cmd/review_ci_test.go",
+        "engine/cmd/usage.go",
+        "engine/review/app/app.go",
+        "engine/review/app/ci.go",
+        "engine/review/app/ci_test.go",
+        "engine/review/app/fakes_test.go",
+        "engine/review/ci.go",
+        "engine/review/ci_test.go",
+        "engine/review/gitexec/gitexec.go",
+        "engine/review/gitexec/proposals_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "CheckNoCI validates both revisions, resolves them to full commit names, requires the head to be an ancestor of the landing, then reads the landing tree and the remotes. Every git failure returns an error, never a no-CI answer.",
+      "The marker matching in engine/review/ci.go uses root-anchored prefixes for directories and whole-path equality for files, and this matches the documented closed list.",
+      "Remotes in gitexec.go parses `git remote` output line by line. Its tests cover no remote, one, two, a worktree and a failure.",
+      "The flag parsing and the require map accept --landing, and the verb's output paths match the documented exit behavior.",
+      "The diff does not show how TreeFiles is implemented, so I cannot say whether it lists the tree recursively with unquoted paths. That is an existing method this commit only calls, so I raise no finding on it."
+    ]
+  }
+}

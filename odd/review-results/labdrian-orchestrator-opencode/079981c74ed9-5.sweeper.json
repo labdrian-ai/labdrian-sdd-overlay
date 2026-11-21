@@ -1,0 +1,20 @@
+{
+  "kind": "sweeper",
+  "base": "4748e19a0685220f03735056599458041561cfc0",
+  "head": "079981c74ed9a40e9345f6065ce71e3d976e64a0",
+  "diff_sha256": "c4fa415829cbf20f03df39f17adaa68f5dfa21a726c2e2998f32aee3460d6de1",
+  "sweep": "079981c74ed9-1.sweep.json",
+  "commit": null,
+  "candidates": [
+    {
+      "candidate": "T1 name: isDir",
+      "disposition": "live",
+      "evidence": "Removed by this same commit: staticcheck U1000 reported it unused once holdsGoFile replaced its one caller; no reference left (rg)."
+    },
+    {
+      "candidate": "T3:  M odd/tasks/labdrian-orchestrator-opencode.md",
+      "disposition": "live",
+      "evidence": "Parent logbook, committed with the review records at delivery."
+    }
+  ]
+}

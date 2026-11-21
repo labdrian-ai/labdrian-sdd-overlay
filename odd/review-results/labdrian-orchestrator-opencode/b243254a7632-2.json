@@ -1,0 +1,60 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "8929470c16c4f37af5f814922b8b1da647025640",
+    "head": "b243254a7632239863206aeeea669f0371a11a0b",
+    "diff_sha256": "976d4e37b38b5328fe01df2b16d41e15d95503efceb8633beb51eff17f302b90",
+    "paths": [
+      "bin/lib/apply.sh",
+      "engine/shelltest/apply_push_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "8929470c16c4f37af5f814922b8b1da647025640",
+      "head": "b243254a7632239863206aeeea669f0371a11a0b",
+      "diff_sha256": "976d4e37b38b5328fe01df2b16d41e15d95503efceb8633beb51eff17f302b90"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "bin/lib/apply.sh",
+        "engine/shelltest/apply_push_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "engine/shelltest/apply_push_test.go:76-95",
+        "claim": "The test comment and commit message say a main that is not ahead is still not pushed, but TestApplyPushStepKeepsItsOtherBehaviour only covers the no-origin case. No origin with a non-ahead main is ever configured, so that behaviour has no test. The trailing os.Stat check on work/.git only confirms the fixture was created and asserts nothing about the step.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/shelltest/apply_push_test.go:76-95"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "bin/lib/apply.sh:225-233",
+        "claim": "The classifier treats any host:path or scheme:// URL as a network remote. A loopback or same-machine ssh origin such as localhost:/repo or ssh://localhost/repo would still receive the push, so the scratch-clone protection covers only path-style origins. A user whose real origin is a local bare path now silently stops publishing main, and only an info line records it.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "bin/lib/apply.sh:225-233"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the case patterns in origin_is_network_remote: empty, file://, absolute, ./, ../, ~ and Windows drive paths return 1; scheme:// returns 0; host:path returns 0 only when the part before the first colon contains no slash. This matches the stated intent.",
+      "The extracted push_main_to_origin keeps the no-origin and ahead-count logic unchanged, and cmd_apply still returns 1 when an mcp install failed or a pi stub was included.",
+      "The first new test mocks git push, so none of the seven URL cases can reach a real remote."
+    ]
+  }
+}

@@ -1,0 +1,88 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "8de9550a548d3e3a84e8b2bcbf10891cd412697d",
+    "head": "6bd701ddf2ec8110b613b2f8acf07e70b66c5795",
+    "diff_sha256": "ed7d4a05a27a55200563c7063c9cffcb4438f49b43114fabc140f994151c6294",
+    "paths": [
+      "CHANGELOG.md",
+      "README.md",
+      "engine/cmd/main_agent_notice_test.go",
+      "engine/cmd/settings_hooks.go",
+      "engine/cmd/testdata/status-golden/status-in-an-empty-home.golden",
+      "engine/cmd/testdata/status-golden/status-settings-that-are-not-an-object.golden",
+      "engine/cmd/testdata/status-golden/status-settings-without-the-hooks.golden",
+      "engine/cmd/testdata/status-golden/status-with-no-home.golden",
+      "engine/settings/main_agent.go",
+      "engine/status/main_agent_test.go",
+      "engine/status/status.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "8de9550a548d3e3a84e8b2bcbf10891cd412697d",
+      "head": "6bd701ddf2ec8110b613b2f8acf07e70b66c5795",
+      "diff_sha256": "ed7d4a05a27a55200563c7063c9cffcb4438f49b43114fabc140f994151c6294"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "README.md",
+        "engine/cmd/main_agent_notice_test.go",
+        "engine/cmd/settings_hooks.go",
+        "engine/cmd/testdata/status-golden/status-in-an-empty-home.golden",
+        "engine/cmd/testdata/status-golden/status-settings-that-are-not-an-object.golden",
+        "engine/cmd/testdata/status-golden/status-settings-without-the-hooks.golden",
+        "engine/cmd/testdata/status-golden/status-with-no-home.golden",
+        "engine/settings/main_agent.go",
+        "engine/status/main_agent_test.go",
+        "engine/status/status.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "engine/cmd/settings_hooks.go:57-67",
+        "claim": "noticeForeignMainAgent swallows the re-read error silently. If the file was just written but cannot be parsed again (or the read fails), the user gets no notice even when an agent conflict could exist. Also the settings file is re-read and re-parsed a second time after the merge instead of reusing the document the merge already held, so the notice can disagree with what the merge actually saw if the file changes between the two reads.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/cmd/settings_hooks.go:57-67"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "engine/settings/main_agent.go:30-42",
+        "claim": "MainAgentValueJSON returns an empty string when the key is absent, and callers do not guard that; the fallback %v on a Marshal error yields a non-JSON form, contradicting the doc comment that says the value is as JSON. Marshal of a value decoded from JSON cannot fail in practice, so the branch is dead code.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/settings/main_agent.go:30-42"
+        ]
+      },
+      {
+        "id": "F3",
+        "severity": "SUGGESTION",
+        "location": "engine/cmd/settings_hooks.go:63-66",
+        "claim": "The notice text is written to stderr with a hard-coded 'settings.json' name rather than the actual settingsPath passed via --settings, so a custom settings path yields a message that names the wrong file.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/cmd/settings_hooks.go:63-66"
+        ]
+      }
+    ],
+    "evidence": [
+      "Reviewed the full diff; the status.go change replaces quotedValue with settings.MainAgentValueJSON and splits the remedy for the missing key, with golden files updated consistently.",
+      "The new tests cover foreign string, non-string and unset or foreman cases for the notice, and the status tests cover the missing, conflict and JSON-printed cases."
+    ]
+  }
+}

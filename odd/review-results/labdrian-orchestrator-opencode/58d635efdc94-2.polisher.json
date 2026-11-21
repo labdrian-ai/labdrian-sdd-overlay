@@ -1,0 +1,45 @@
+{
+  "kind": "polisher",
+  "base": "20883812ce18dd41f2a715c44dbbd5035b6efeff",
+  "head": "58d635efdc941d227111a3d82baccc3bbda29a45",
+  "diff_sha256": "7d2e983c24aa10471de0b3a74a4a6ae5b7de06a1cbe5cbd4e07f14fe33f6383c",
+  "findings": {
+    "findings": [
+      {
+        "location": "/home/labdrian/labdrian-sdd-overlay-worktrees/review-58d635efdc94/engine/cmd/roles_bound.go:161-164",
+        "severity": "WARNING",
+        "claim": "A binding the store classifies `unavailable` (the binding file cannot be read, for example a permission error or a non-regular file) goes through `roles append` as if nothing were bound. `roles append` therefore stores a hop under the wrong chain in the exact situation where the checkout may be bound to a workflow. T56 says a binding store that cannot be read refuses `append`. The commit refuses only when `describeBinding` returns a Go error, and in practice that happens only when the state home is unusable.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "evidence": [
+          "bindingstore.go:50-57 defines ClassificationUnavailable as 'the state could not be read: a permission error, a state home or store directory that is not a plain directory ... or a binding path that is not a regular file'. fsstore/store.go:214 returns it as a classification, not as an error.",
+          "bind.go:156-171 Describe returns an error only when Load itself errors; an unreadable binding file comes back as Classification unavailable with a nil error.",
+          "roles_bound.go:161 returns the zero BoundWorkflow for every classification other than owned, so `unavailable` takes the 'go as today' path. The unreadable-store refusal at roles.go:317-320 is not reached.",
+          "No test sets a binding to `unavailable`. TestRolesAppendRefusesWhenTheBindingCannotBeRead uses only a relative XDG_STATE_HOME.",
+          "The builder guard already carries the classification through (roles_builder_guard.go:141 sets BindingClass to the raw classification), so it can tell `unavailable` apart from foreign and malformed. The roles verbs do not.",
+          "Builder choice (2) is a defensible reading of the task text, which lists only absent, foreign and malformed as 'go as today'. The risk is that an unreadable binding re-opens the L130 mis-chain that S16 B5 closes, and the task's own unreadable-store sentence is the fail-closed case for it. I did not build or run anything; this is read from the code and the classification doc."
+        ]
+      },
+      {
+        "location": "/home/labdrian/labdrian-sdd-overlay-worktrees/review-58d635efdc94/engine/cmd/roles_bound.go:149-152",
+        "severity": "SUGGESTION",
+        "claim": "The nilerr flag is real but harmless. A failing `workingDir()` is swallowed and treated as 'no bound workflow', so `append` goes as today. `boundReadRefusal` also swallows the binding error, which is the specified behaviour for `resume` and `next`. The first case is unspecified in T56 and is not documented as a choice.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "evidence": [
+          "roles_bound.go:149-152 returns (BoundWorkflow{}, nil) when workingDir() errors.",
+          "roles_bound.go:173-178 discards err on purpose, matching the T56 sentence that `resume` and `next` leave the binding as today.",
+          "deps.workingDir failing means the cwd is already unusable; the chain store does not depend on it, so a hop would be stored unguarded. This is rare and low impact."
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the whole diff (t56.diff) and T56 at line 98 of the tasks file.",
+      "Read engine/projection/app/bind.go Describe (:146-171) and the Classification docs in engine/projection/bindingstore.go.",
+      "Read engine/cmd/roles_builder_guard.go in the review worktree: describeBinding and boundWorkflows.Of, which are shared, so there is one binding reader.",
+      "Read newBindingStore and newRoleChainStore in engine/cmd/state_stores.go. Both resolve the same state home, so a bad state home outside a repository fails in the chain store anyway, which is not a new defect.",
+      "The exact stderr sentences in roles/bound.go match T56 word for word. The append check sits after the flag-record match and before the evidence check. The chain-store-unchanged assertions in the tests check sha256 per file. The clause for all three verbs lives in the `roles append` usage entry, which is acceptable because the other two have no entries.",
+      "I ran no tests or builds; correctness beyond reading the code is not run."
+    ]
+  }
+}

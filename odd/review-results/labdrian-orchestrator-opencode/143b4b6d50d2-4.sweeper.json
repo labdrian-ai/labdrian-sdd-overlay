@@ -1,0 +1,15 @@
+{
+  "kind": "sweeper",
+  "base": "e5abaf3a3a469e607504a72ddaaddec7b7b797fd",
+  "head": "143b4b6d50d20dbee31150a172febc29989fa14a",
+  "diff_sha256": "4679ee0564e129a393ce4de05394a3757f070c6b3405f3e4f51fdc0cdbdc9448",
+  "sweep": "143b4b6d50d2-1.sweep.json",
+  "commit": null,
+  "candidates": [
+    {
+      "candidate": "T1 name: contains",
+      "disposition": "live",
+      "evidence": "The commit removed only the unexported helper func contains(list []string, item string) bool from engine/agentgen along with its sole caller (runtimes check) in the same diff. At branch HEAD 5caf9593 (exported via git archive to a scratch dir, because the working tree has uncommitted builder edits to models_test.go that do not parse), go vet ./agentgen ./cmd printed nothing, and rg finds no contains in engine/agentgen. The ~250 hits are other packages own unrelated contains helpers (e.g. engine/workflowprofile/workflowprofile_test.go:406), prose, goldens and receipts. Nothing dead or dangling; no commit."
+    }
+  ]
+}

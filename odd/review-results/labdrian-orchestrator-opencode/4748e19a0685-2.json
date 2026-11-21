@@ -1,0 +1,64 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "f68b765a121f2e5baf8dd9dd5b488278cd0efed9",
+    "head": "4748e19a0685220f03735056599458041561cfc0",
+    "diff_sha256": "90ff23ff740f2c6d7e1752d12063425bb38e82e1080d8feba135821a280524c0",
+    "paths": [
+      "CHANGELOG.md",
+      "README.md",
+      "bin/lib/skill_registry.sh",
+      "bin/lib/usage.sh",
+      "engine/architecture_test.go",
+      "engine/cmd/registry.go",
+      "engine/cmd/registry_refresh_test.go",
+      "engine/cmd/usage.go",
+      "engine/sddregistry/fsstore/fsstore.go",
+      "engine/sddregistry/fsstore/fsstore_test.go",
+      "engine/skillregistry/app/app_test.go",
+      "engine/skillregistry/compose.go",
+      "engine/skillregistry/compose_test.go",
+      "engine/skillregistry/fsstore/fsstore.go",
+      "engine/skillregistry/fsstore/fsstore_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "f68b765a121f2e5baf8dd9dd5b488278cd0efed9",
+      "head": "4748e19a0685220f03735056599458041561cfc0",
+      "diff_sha256": "90ff23ff740f2c6d7e1752d12063425bb38e82e1080d8feba135821a280524c0"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "README.md",
+        "bin/lib/skill_registry.sh",
+        "bin/lib/usage.sh",
+        "engine/architecture_test.go",
+        "engine/cmd/registry.go",
+        "engine/cmd/registry_refresh_test.go",
+        "engine/cmd/usage.go",
+        "engine/sddregistry/fsstore/fsstore.go",
+        "engine/sddregistry/fsstore/fsstore_test.go",
+        "engine/skillregistry/app/app_test.go",
+        "engine/skillregistry/compose.go",
+        "engine/skillregistry/compose_test.go",
+        "engine/skillregistry/fsstore/fsstore.go",
+        "engine/skillregistry/fsstore/fsstore_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The fsstore move is a pure rename: the file contents are identical, the import in engine/cmd/registry.go is updated, and the architecture ring entry moves with it.",
+      "executorScopeRow in compose.go is applied both to the rows of the table block and to the trailing block, which ends at the first heading or comment line. That matches the stated scope: Hermes sections and rows below a heading are left alone, which the updated tests assert.",
+      "withoutExecutorNote drops the note line and the single blank line after it. Its output feeds headLines, so both head paths (complete generated parts, or not) lose the note, and the new tests check that a second compose changes nothing.",
+      "In bin/lib/skill_registry.sh the dropped `target` variable is replaced by `$1` after the `shift`. The validation behaviour is unchanged, and the usage and comment text now say what is true."
+    ]
+  }
+}

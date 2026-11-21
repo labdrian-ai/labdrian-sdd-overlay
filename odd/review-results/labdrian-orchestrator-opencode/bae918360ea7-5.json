@@ -1,0 +1,80 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "4daa9dddb0645f285c222a9d8285a99a27541fa3",
+    "head": "bae918360ea7c4becb161c0a1088bbe6565bcc4d",
+    "diff_sha256": "7004dffad05524e1900aaf0488103224c1720bb1ad059706f5a7928a58dcab89",
+    "paths": [
+      "CHANGELOG.md",
+      "engine/cmd/roles.go",
+      "engine/cmd/roles_bound.go",
+      "engine/cmd/roles_feature_entry_test.go",
+      "engine/cmd/usage.go",
+      "engine/roles/bound.go",
+      "engine/roles/bound_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability",
+    "hunt"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "4daa9dddb0645f285c222a9d8285a99a27541fa3",
+      "head": "bae918360ea7c4becb161c0a1088bbe6565bcc4d",
+      "diff_sha256": "7004dffad05524e1900aaf0488103224c1720bb1ad059706f5a7928a58dcab89"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "engine/cmd/roles.go",
+        "engine/cmd/roles_bound.go",
+        "engine/cmd/roles_feature_entry_test.go",
+        "engine/cmd/usage.go",
+        "engine/roles/bound.go",
+        "engine/roles/bound_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "engine/cmd/roles_bound.go:72-75",
+        "severity": "SUGGESTION",
+        "claim": "The new branch that returns true when workingDir() fails cannot be reached from its only caller, and no test covers it. runRolesAppend (engine/cmd/roles.go:318-321) calls boundWorkflowHere first. That function returns the same workingDir error (roles_bound.go:29-31), so the append is refused with 'the binding of this checkout could not be read' before hasFeatureDocument runs. The 'a working directory that cannot be read' case in the comment is therefore never observable through the verb. If that check is ever reordered, nothing pins the fail-closed answer.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/cmd/roles.go:318-332",
+          "engine/cmd/roles_bound.go:29-31",
+          "engine/cmd/roles_bound.go:72-75"
+        ]
+      },
+      {
+        "id": "F2",
+        "location": "engine/cmd/roles_feature_entry_test.go:224-234",
+        "severity": "SUGGESTION",
+        "claim": "The nested-working-directory subtest checks only the exit code and stderr. It does not take a boundChainStore snapshot or check that stdout is empty, so a regression that wrote a record and still printed the refusal would pass this case. The sibling cases go through requireFeatureRefusal, which compares the store before and after. Calling requireFeatureRefusal with the nested directory would give the same 'nothing stored' guarantee here.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/cmd/roles_feature_entry_test.go:40-49",
+          "engine/cmd/roles_feature_entry_test.go:224-234"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the whole diff t57b.diff",
+      "Read T57 (line 99) and L168 in the review worktree's feature document",
+      "Read engine/cmd/roles.go:290-349 at head: the gate reads the document only when the binding does not hold, the chain is the goal and from_role is not the prototyper; FeatureChainRefusal runs after BoundAppendRefusal and before the evidence check and the store",
+      "Read engine/cmd/roles_bound.go in full: hasFeatureDocument returns false only for an invalid feature name, a nil workingDir, CauseNotFound and CauseNoRepository, and true otherwise, as T57 requires",
+      "Read engine/oddtask/fsdoc/fsdoc.go in full: links, non-regular files, files over the size limit and open or read errors count as present; ENOTDIR counts as present (shaper R3, by design)",
+      "MaxDocumentBytes is 8<<20, matching the CHANGELOG's '8 MiB'",
+      "Checked the refusal sentence in engine/roles/bound.go and in both tests against T57's required stderr text: they match",
+      "Checked the usage.go and CHANGELOG.md changes against T57",
+      "Nothing was run (reviewer role, read-only)"
+    ]
+  }
+}

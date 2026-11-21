@@ -1,0 +1,38 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "7dd3482e684c66349a4fee47b53234766e2553a2",
+    "head": "9553cf544e386b2f125614e37f2dad1983ad4426",
+    "diff_sha256": "1a356a1d0ac1417737aacd7d83c36f13d0e4ef5511ce01935f20f162f897b0a5",
+    "paths": [
+      "engine/skills/role_chain_artifact_test.go",
+      "skills/role-chain/SKILL.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "7dd3482e684c66349a4fee47b53234766e2553a2",
+      "head": "9553cf544e386b2f125614e37f2dad1983ad4426",
+      "diff_sha256": "1a356a1d0ac1417737aacd7d83c36f13d0e4ef5511ce01935f20f162f897b0a5"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/skills/role_chain_artifact_test.go",
+        "skills/role-chain/SKILL.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The pointer line in skills/role-chain/SKILL.md matches the roleChainLaunchPointer constant in the test character for character, so a test that compares the two stays consistent.",
+      "The Codex rule (review launch, never a native reviewer sub-agent) and the OpenCode rule (brief without the diff) are now both named in the body pointer. This answers the claimed review finding.",
+      "The own-rdd S9 (d) comment moved to the test that checks the Codex launch line, which matches the commit message. No behavior changed.",
+      "The diff does not show the body size budget, so I could not tell whether the longer pointer line breaks it."
+    ]
+  }
+}

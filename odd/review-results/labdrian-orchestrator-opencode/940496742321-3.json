@@ -1,0 +1,45 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "99290fbc2144bec46d2351da401840ea87230b2f",
+    "head": "940496742321891133905e5f2135cd11e63135c3",
+    "diff_sha256": "7430de326dccc64a783a3d0888343f0316c1a0e7e14e7b33f3a7b0e7bea615e4",
+    "paths": [
+      "agents/foreman.md",
+      "engine/agentgen/foreman_test.go",
+      "engine/agentgen/opencode_denies_test.go",
+      "engine/agentgen/opencode_test.go",
+      "engine/agentgen/roles.go",
+      "opencode/agents/foreman.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "99290fbc2144bec46d2351da401840ea87230b2f",
+      "head": "940496742321891133905e5f2135cd11e63135c3",
+      "diff_sha256": "7430de326dccc64a783a3d0888343f0316c1a0e7e14e7b33f3a7b0e7bea615e4"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "agents/foreman.md",
+        "engine/agentgen/foreman_test.go",
+        "engine/agentgen/opencode_denies_test.go",
+        "engine/agentgen/opencode_test.go",
+        "engine/agentgen/roles.go",
+        "opencode/agents/foreman.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "roles.go adds AskUserQuestion to the foreman tool list; agents/foreman.md tools line matches exactly the new list and the foreman_test.go constant.",
+      "opencode/agents/foreman.md drops only the question deny; webfetch, websearch and experimental_image_generate denies remain, matching the updated want tables in opencode_test.go and opencode_denies_test.go.",
+      "The eight roles' tool lists are unchanged in the diff, so their question deny is unaffected.",
+      "The generated files were regenerated consistently with the generator change; no behavior regression or ignored option found in the diff."
+    ]
+  }
+}

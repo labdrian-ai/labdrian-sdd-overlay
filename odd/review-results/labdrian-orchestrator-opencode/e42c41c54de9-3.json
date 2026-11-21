@@ -1,0 +1,67 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "800bbcf89ab1a71c6f2eb937178d47b0c884d84f",
+    "head": "e42c41c54de97dfdcc6fe1681e4157f0cebfad77",
+    "diff_sha256": "8685c61351cf98437c13b32c6ef1d99960efbd8a48614eafc7fc60891ee18beb",
+    "paths": [
+      "agents/delivery.md",
+      "codex/agents/delivery.toml",
+      "engine/skills/role_agents_artifact_test.go",
+      "opencode/agents/delivery.md",
+      "pi/agents/delivery.md",
+      "roles/delivery/body.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "800bbcf89ab1a71c6f2eb937178d47b0c884d84f",
+      "head": "e42c41c54de97dfdcc6fe1681e4157f0cebfad77",
+      "diff_sha256": "8685c61351cf98437c13b32c6ef1d99960efbd8a48614eafc7fc60891ee18beb"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "agents/delivery.md",
+        "codex/agents/delivery.toml",
+        "engine/skills/role_agents_artifact_test.go",
+        "opencode/agents/delivery.md",
+        "pi/agents/delivery.md",
+        "roles/delivery/body.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "roles/delivery/body.md:9",
+        "claim": "The new sentence 'On any other exit put its stderr line in the entry instead; the no-CI closure then does not apply' does not say what delivery does next. It does not say whether delivery closes, blocks or returns partial. A configured CI that is still running or has failed, or a command error, leaves the agent without an instruction, so it may close the feature anyway. The 'instead' also says to drop the exact output line, which the preceding clause required in every case. The no-CI closure is the only stated block, so the commit message's 'say what delivery does' is only partly met.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "roles/delivery/body.md:9 'On any other exit put its stderr line in the entry instead; the no-CI closure then does not apply.'"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "engine/skills/role_agents_artifact_test.go:1123",
+        "claim": "The test pins the new sentence only as a substring of the whole paragraph. The test name and its comment still describe only the no-CI requirement. It does not check that the exit-code semantics ('any other exit') match what the `review ci` verb really returns, so the wording could drift from the engine without the test failing.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/skills/role_agents_artifact_test.go:1123"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff adds the same sentence to all five delivery artifacts: roles/delivery/body.md, agents/delivery.md, opencode/agents/delivery.md, codex/agents/delivery.toml and pi/agents/delivery.md. The test's want string matches that sentence, so the five files stay consistent.",
+      "The diff does not show the `review ci` exit-code contract, so I could not check the claim that 'any other exit' covers both a configured CI and a command error."
+    ]
+  }
+}

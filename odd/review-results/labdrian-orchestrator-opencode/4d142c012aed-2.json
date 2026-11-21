@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "a5d005d7e0ba489ca3b5be877d30fccb4efe54a3",
+    "head": "4d142c012aed3590a46b9cb636cf7b0365302ad4",
+    "diff_sha256": "396bda95d9e5665a110984f85dc0742efd40e7c515a20e0b31c5e1e9bb3b1fae",
+    "paths": [
+      "odd/tasks/labdrian-orchestrator-opencode.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "a5d005d7e0ba489ca3b5be877d30fccb4efe54a3",
+      "head": "4d142c012aed3590a46b9cb636cf7b0365302ad4",
+      "diff_sha256": "396bda95d9e5665a110984f85dc0742efd40e7c515a20e0b31c5e1e9bb3b1fae"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/labdrian-orchestrator-opencode.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/labdrian-orchestrator-opencode.md:625",
+        "claim": "L70 records the owner's answer as \"vamos por la reco\" but never states what the recommendation was; the reader must go back to L60 risk 4 to learn it. The log entry also states consequences (T14 writes neither, notifications stop) without updating the Tasks/Specs sections, so T14 may still read as carrying them if its text was not changed elsewhere. The diff touches only the Log.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/labdrian-orchestrator-opencode.md:625"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff adds one log line (L70) to odd/tasks/labdrian-orchestrator-opencode.md and changes nothing else.",
+      "L68 and L69 show the pattern: the owner's answer is recorded and a task is named as the one to carry it out. L70 names T14 but the diff does not show T14's text or any Spec being updated.",
+      "The \"Not carried\" content is self-contained enough to be readable, so this is only a suggestion."
+    ]
+  }
+}

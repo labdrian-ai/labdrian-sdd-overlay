@@ -1,0 +1,63 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "9916944454b0427eb16da95defa47d2a5d4c4032",
+    "head": "4f7d93d949a7ff1786622903c5f5f7c8716d206d",
+    "diff_sha256": "8fef6158ce525638b3fa774aa7a84da06f9e3011228235b020aedfee71ea4b25",
+    "paths": [
+      "engine/cmd/inception_chain_entry_test.go",
+      "engine/skills/foreman_skills_test.go",
+      "engine/skills/odd_role_skills_artifact_test.go",
+      "skills/odd-feature-doc/SKILL.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "9916944454b0427eb16da95defa47d2a5d4c4032",
+      "head": "4f7d93d949a7ff1786622903c5f5f7c8716d206d",
+      "diff_sha256": "8fef6158ce525638b3fa774aa7a84da06f9e3011228235b020aedfee71ea4b25"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/cmd/inception_chain_entry_test.go",
+        "engine/skills/foreman_skills_test.go",
+        "engine/skills/odd_role_skills_artifact_test.go",
+        "skills/odd-feature-doc/SKILL.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "skills/odd-feature-doc/SKILL.md:23",
+        "claim": "The shortened line drops the definition of L<n> as the shaper's Log entry. 'exactly one such entry' no longer has an antecedent in the sentence, so the rule 'holds only while the Log has exactly one such entry' is ambiguous. The definition now lives only in the Decision Gates table, and the test fragments do not pin the link between the two.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "skills/odd-feature-doc/SKILL.md:23"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "engine/cmd/inception_chain_entry_test.go:133-152",
+        "claim": "The new opener detection only counts lines that begin with ```json at column 0. The old check counted '```json\\n' anywhere, including an indented or list-nested fence. An indented second json block in a reference is now not counted, so the 'exactly one block' guard is weaker for that shape.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/cmd/inception_chain_entry_test.go:133-152"
+        ]
+      }
+    ],
+    "evidence": [
+      "Reviewed all four changed files in the diff.",
+      "The test fragments added in odd_role_skills_artifact_test.go and foreman_skills_test.go appear verbatim in the edited SKILL.md.",
+      "The new JSON block parser handles CRLF, ```jsonc, and trailing-character openers, and the added test cases cover them."
+    ]
+  }
+}

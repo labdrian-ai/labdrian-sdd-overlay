@@ -1,0 +1,24 @@
+{
+  "kind": "sweep",
+  "base": "2c4eb2b7060d8c3f44d12c20faf9764996a2cfd0",
+  "head": "5ed63e405407cded4f845443589034dce7802757",
+  "diff_sha256": "953a72a49b93ca39ea41f455ae3fd5bf86a2948348ebb69461f5dbe27293c33e",
+  "outcome": "fired",
+  "t1": {
+    "deleted_or_renamed": [],
+    "removed_names": [
+      {
+        "name": "reportRegister",
+        "hits": [
+          "odd/tasks/consolidation-phase9.md"
+        ]
+      }
+    ]
+  },
+  "t2": [],
+  "t3": [],
+  "t4": {
+    "leftovers": [],
+    "orphaned_fixtures": []
+  }
+}

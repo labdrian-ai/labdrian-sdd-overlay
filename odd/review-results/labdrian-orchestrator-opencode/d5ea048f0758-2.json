@@ -1,0 +1,38 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "0cdda1fdfedc706677cdd7d7e464590ea36fdb6c",
+    "head": "d5ea048f075856b4956ba17d0d0701650e9fdd7b",
+    "diff_sha256": "fc8d13fc2c6fd8874defab74d6b443714a5888f8af4a718ed12fc17069a92f48",
+    "paths": [
+      "engine/runtime/opencode.go",
+      "engine/runtime/opencode_agents.go",
+      "engine/runtime/opencode_style_status_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "0cdda1fdfedc706677cdd7d7e464590ea36fdb6c",
+      "head": "d5ea048f075856b4956ba17d0d0701650e9fdd7b",
+      "diff_sha256": "fc8d13fc2c6fd8874defab74d6b443714a5888f8af4a718ed12fc17069a92f48"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/runtime/opencode.go",
+        "engine/runtime/opencode_agents.go",
+        "engine/runtime/opencode_style_status_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "styleBody: I traced the empty-frontmatter, closing-at-EOF, empty-at-EOF and no-frontmatter shapes through the new switch and suffix checks; each returns the intended body.",
+      "status now wraps statusOf and appends the shadowing note once. The only in-diff removal of the note was from the supported return, so I found no duplicate in the diff. I could not see SyncCheck, so I could not verify that it routes through status, and I assume it does. The tests cover that path, but I did not run them."
+    ]
+  }
+}

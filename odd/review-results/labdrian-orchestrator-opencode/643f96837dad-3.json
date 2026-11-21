@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "4f1cfd61d4505c1db572199b8cf0b8dd5025fd73",
+    "head": "643f96837dad8e34f0267986e153eefa441f24c9",
+    "diff_sha256": "51e24a4cff6c0bbd87d31b0dfd338e8a2c137c4f535873e1a50f4fd1b5abd044",
+    "paths": [
+      "engine/capability/declarations.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "4f1cfd61d4505c1db572199b8cf0b8dd5025fd73",
+      "head": "643f96837dad8e34f0267986e153eefa441f24c9",
+      "diff_sha256": "51e24a4cff6c0bbd87d31b0dfd338e8a2c137c4f535873e1a50f4fd1b5abd044"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/capability/declarations.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The diff changes one string literal in the MemoryEnforcement detail of the OpenCode declaration. No code logic or cited test names change.",
+      "The detail restores the 'puts context on new main sessions' claim, which matches the commit message.",
+      "By hand count the new detail is about 496 bytes, under the stated 512-byte cap. It is ASCII only and the count is approximate, so I could not confirm the margin exactly.",
+      "The cited tests (cmd:TestCodexSourceProcesses, hookwire:TestAdaptToolNameOpencode, runtime:TestMemorycardPluginAsksNothingInAChildSession) are unchanged, so no new mismatch arises."
+    ]
+  }
+}

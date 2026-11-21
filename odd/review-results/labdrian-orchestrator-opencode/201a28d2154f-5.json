@@ -1,0 +1,46 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "56300ca2da6619dc5008006e0943159e54ffb4d4",
+    "head": "201a28d2154f0e939efd40c25d9c838566039225",
+    "diff_sha256": "0017e95c8bfdbc7c5dc226862a9156bc3beee0e2b7eedf9669dc7fb1abc3ba46",
+    "paths": [
+      "odd/tasks/labdrian-orchestrator-opencode.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "56300ca2da6619dc5008006e0943159e54ffb4d4",
+      "head": "201a28d2154f0e939efd40c25d9c838566039225",
+      "diff_sha256": "0017e95c8bfdbc7c5dc226862a9156bc3beee0e2b7eedf9669dc7fb1abc3ba46"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/labdrian-orchestrator-opencode.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/labdrian-orchestrator-opencode.md:617",
+        "claim": "The last clause of L66 ('the pause length is whole seconds for the integer-millisecond timeouts the bridge reads, so the raw division prints `60`') has no antecedent in L66 or in the S9 change. It refers to the note restored by `54b0cbdd` in L65. A reader of L66 alone cannot tell what 'the pause' or the 'raw division' is, or why the clause belongs in a log entry about S9.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/labdrian-orchestrator-opencode.md:617"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff changes only docs. The S9 edit matches the read/skill mapping that L65 records as accepted, and it does not contradict S7, which denies `skill` for the eight roles and keeps it for the foreman.",
+      "L66 line 617 contains the unexplained pause-length clause."
+    ]
+  }
+}

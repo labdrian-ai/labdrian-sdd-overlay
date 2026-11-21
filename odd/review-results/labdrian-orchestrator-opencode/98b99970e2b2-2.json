@@ -1,0 +1,52 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "d3227f9c66b1db58c5621bd2c8ffcef369e86dcd",
+    "head": "98b99970e2b26196a3d723308e7e00878bc87d5a",
+    "diff_sha256": "8521c2e320b1dbd1f23511ad4c2cd23a87a5ee65d5d74478befb0bace75a27ba",
+    "paths": [
+      "engine/skills/procedural_candidate_contract_test.go",
+      "engine/skills/procedural_candidate_memorycard_test.go",
+      "skills/_shared/procedural-candidate-detection.md",
+      "skills/procedural-candidates/SKILL.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "d3227f9c66b1db58c5621bd2c8ffcef369e86dcd",
+      "head": "98b99970e2b26196a3d723308e7e00878bc87d5a",
+      "diff_sha256": "8521c2e320b1dbd1f23511ad4c2cd23a87a5ee65d5d74478befb0bace75a27ba"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/skills/procedural_candidate_contract_test.go",
+        "engine/skills/procedural_candidate_memorycard_test.go",
+        "skills/_shared/procedural-candidate-detection.md",
+        "skills/procedural-candidates/SKILL.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "skills/_shared/procedural-candidate-detection.md:112-140",
+        "claim": "The translate-on-read and rewrite-on-save rules need `memorycard resolve` on every save, but say nothing about what the agent does when the command fails or is unavailable. An agent could then treat a failed resolve as 'all ids unknown' and count legacy and memorycard ids as separate occurrences. That would inflate OccurrenceCount and could trigger a premature emission. The existing guidance to 'resolve source errors; do not treat unavailable data as an empty list' covers `skills candidates` but not `resolve`.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "skills/_shared/procedural-candidate-detection.md:112-140",
+          "skills/procedural-candidates/SKILL.md:20-21"
+        ]
+      }
+    ],
+    "evidence": [
+      "Reviewed all four changed paths in the diff only. The wording changes and added tests are consistent with each other. The one gap found is that the contract text does not specify how a failing `memorycard resolve` call is handled."
+    ]
+  }
+}

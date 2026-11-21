@@ -1,0 +1,40 @@
+{
+  "kind": "polisher",
+  "base": "cb3b8bca6b81a0262efd1bff4d3b192bc2ada487",
+  "head": "ba97a9d1b8be77f1f5b3ca641ab051b90daba359",
+  "diff_sha256": "dfcb2e5d9ba9c10c2eb14ae42efdf07dbcf14b3ab286bfba5637f0714fe91f75",
+  "findings": {
+    "findings": [
+      {
+        "id": "a1-F1",
+        "severity": "SUGGESTION",
+        "location": "bin/lib/usage.sh:113-115",
+        "claim": "--target described as doing nothing while still validated. Fixed in 4748e19a.",
+        "evidence": [
+          "4748e19a"
+        ]
+      },
+      {
+        "id": "a1-F2",
+        "severity": "SUGGESTION",
+        "location": "bin/lib/skill_registry.sh:32-33",
+        "claim": "History comment and unused target variable. Fixed in 4748e19a.",
+        "evidence": [
+          "4748e19a"
+        ]
+      },
+      {
+        "id": "a1-W1",
+        "severity": "WARNING",
+        "location": "bin/lib/skill_registry.sh:14-17",
+        "claim": "Stale executor rows with dead paths kept forever. Fixed in 4748e19a: every executor row of the table block and the executor note are dropped; Hermes and below-heading rows kept.",
+        "evidence": [
+          "RED 7 compose tests then GREEN; differential against cb3b8bca."
+        ]
+      }
+    ],
+    "evidence": [
+      "Independent verifier on ba3fbd34 (= a1+a2 tree before the B1 fix): no live reader of removed symbols; differential only requested changes; B1 found, fixed in 0c82ec67, recheck not-reproduced with the probe reproducing at ba3fbd34; A1 fixed."
+    ]
+  }
+}

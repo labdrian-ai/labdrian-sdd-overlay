@@ -5,14 +5,14 @@ disable-model-invocation: true
 user-invocable: false
 license: MIT
 metadata:
-  author: gentleman-programming
+  author: labdrian
   version: "1.0"
 ---
 
 ## Purpose
 
-This directory stores shared reference documents consumed by real SDD skills
-(for example: `sdd-phase-common.md`, `persistence-contract.md`).
+This directory stores shared reference documents consumed by skills
+(for example: `minimalism-contract.md`, `oo-quality-contract.md`).
 
 ## Not Invokable
 

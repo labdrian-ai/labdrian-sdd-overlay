@@ -1,0 +1,15 @@
+args: unregister --target opencode
+exit: 0
+--- stdout ---
+longterm-mem: unregister: opencode: removed
+--- stderr ---
+--- machine ---
+=== .config/opencode/opencode.json ===
+{"mcp": {"other": {"type": "local", "command": ["/o"]}}}
+=== .config/opencode/opencode.json.bak ===
+{"mcp": {"other": {"type": "local", "command": ["/o"]}, "longterm-mem": {"type":"local","command":["<home>/.labdrian-overlay/bin/longterm-mem","mcp"],"enabled":true}}}
+=== .labdrian-overlay/longterm-mem/install-state.json ===
+{
+  "schema": 1,
+  "targets": {}
+}

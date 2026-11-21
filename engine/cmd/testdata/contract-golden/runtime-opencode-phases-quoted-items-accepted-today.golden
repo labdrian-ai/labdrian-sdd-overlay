@@ -1,11 +1,11 @@
 $ runtime install --target opencode --config-root <CONFIG>
 exit: 0
 --- stdout ---
-[opencode] install: restart_required — OpenCode plugin changed; restart OpenCode to load version 2026-07-08-runtime-parity-4
+[opencode] install: restart_required — OpenCode plugin changed; restart OpenCode to load version 2026-11-20-runtime-parity-20; memorycard plugin written to <CONFIG>/plugins/memorycard/index.js (version 2026-11-17-memorycard-2); opencode.json written to <CONFIG>/opencode.json; AGENTS.md not written: no overlay checkout holds the instruction sources: read the owner rules: open <OVERLAY>/instructions/owner-rules.md: no such file or directory
 --- stderr ---
 --- prompt_config ---
 {
-  "contract_path": "skills/_shared/minimalism-contract.md",
+  "contract_path": "<OVERLAY>/skills/_shared/minimalism-contract.md",
   "included_phases": [
     "sdd-tasks",
     "sdd-apply"
@@ -16,7 +16,7 @@ exit: 0
   "injection_point": "## Skills to load before work",
   "contracts": [
     {
-      "contract_path": "skills/_shared/minimalism-contract.md",
+      "contract_path": "<OVERLAY>/skills/_shared/minimalism-contract.md",
       "included_phases": [
         "sdd-tasks",
         "sdd-apply"
@@ -27,7 +27,7 @@ exit: 0
       "injection_point": "## Skills to load before work"
     },
     {
-      "contract_path": "skills/_shared/anti-generic-design.md",
+      "contract_path": "<OVERLAY>/skills/_shared/anti-generic-design.md",
       "included_phases": [
         "builder"
       ],

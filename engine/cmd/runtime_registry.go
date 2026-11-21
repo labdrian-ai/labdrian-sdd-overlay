@@ -23,9 +23,9 @@ import (
 func newRuntimeRegistry(registries skills.RegistryRepository, hooks runtimepkg.HookInstaller, commands runtimepkg.CommandRunner, source pipkg.SourceRepo, packages pipkg.Options) (*runtimecore.Registry, error) {
 	r := runtimecore.NewRegistry()
 	for _, register := range []func(*runtimecore.Registry) error{
-		func(r *runtimecore.Registry) error { return runtimepkg.RegisterClaude(r, hooks) },
+		func(r *runtimecore.Registry) error { return runtimepkg.RegisterClaudeWithOwnerRules(r, hooks) },
 		runtimepkg.RegisterOpenCode,
-		runtimepkg.RegisterCodex,
+		runtimepkg.RegisterCodexWithOwnerRules,
 		func(r *runtimecore.Registry) error {
 			return runtimepkg.RegisterPi(r, runtimepkg.PiPorts{
 				Commands: commands,
@@ -79,5 +79,6 @@ func runtimeConfigFromEnv(getenv func(string) string, userHomeDir func() (string
 		LabdrianOverlayDir: getenv(runtimecore.LabdrianOverlayDirVariable),
 		// Only the exact value 1 turns the probe off, as it always has.
 		PiSkipSubagents: getenv(piSkipSubagentsVariable) == "1",
+		Path:            getenv("PATH"),
 	}
 }

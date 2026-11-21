@@ -1,0 +1,24 @@
+{
+  "kind": "polisher",
+  "base": "32f1f7cc6a000820fe5506b7d9757e0373e67948",
+  "head": "dbaf2ca1fe7d0144b8066ce51f3be06d40696c51",
+  "diff_sha256": "bf96b22193a4a3575f15255b519183d291921883f8b8300a22727026a707bef3",
+  "findings": {
+    "findings": [
+      {
+        "id": "P1",
+        "severity": "SUGGESTION",
+        "location": "roles/shaper/body.md:9",
+        "claim": "The sentence does not say constraints and non_goals may be [] or that array items must be non-blank; a shaper could invent filler or write an empty item.",
+        "evidence": [
+          "engine/fieldrule/fieldrule.go:24-37 refuses nil, too few items and blank items; goal.go:156-168 gives minItems 0 for constraints and non_goals."
+        ]
+      }
+    ],
+    "evidence": [
+      "Stated types match engine/goal/goal.go exactly; acceptance_criteria minItems 1 matches.",
+      "The full sentence is pinned in all five shaper files by TestTheShaperRoleFilesTellItToWriteTheGoalTheForemanNames.",
+      "Not run: read-only static judgment."
+    ]
+  }
+}

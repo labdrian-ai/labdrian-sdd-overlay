@@ -1,0 +1,31 @@
+{
+  "kind": "polisher",
+  "base": "45212078ae1db021c4f7e22b87dab9a67e219a27",
+  "head": "bfc2ed7d9fc91a886386f6a031801f6c778236fd",
+  "diff_sha256": "38bf4230d960f35ee7d80c6d01d7e60f3ba94c08248d0ebfcd613f33db10b6ab",
+  "findings": {
+    "findings": [
+      {
+        "id": "S-W1",
+        "severity": "WARNING",
+        "location": "engine/runtime/labdrian-runtime-parity-plugin.mjs:483-488",
+        "claim": "Answer dropped silently on an unexpected prompt shape (series review of 2bb6d495). Fixed here: logged once per process naming the shape; system untouched.",
+        "evidence": [
+          "series review; node test TestOpenCodeBridgeLogsOncePerProcessAnAnswerItCannotPutInAPromptOfAnUnexpectedShape RED then GREEN."
+        ]
+      },
+      {
+        "id": "S-S1",
+        "severity": "SUGGESTION",
+        "location": "engine/runtime/labdrian-runtime-parity-plugin.mjs:444-446",
+        "claim": "sessionState comment read as a broken sentence. Fixed here.",
+        "evidence": [
+          "series review."
+        ]
+      }
+    ],
+    "evidence": [
+      "series review of 45212078..bfc2ed7d: sweep clean, no findings."
+    ]
+  }
+}

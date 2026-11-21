@@ -1,0 +1,32 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "f2fdef1f6612172cd3e49a5f092d9a76203e85c0",
+    "head": "f0b0eb115e31b921dd2fa71dd019660441c086b1",
+    "diff_sha256": "221a291f267e5ebb7eac99e66b8af3162f13b7ffca710a0702ed6f6c527fd78f",
+    "paths": [
+      "odd/tasks/labdrian-orchestrator-opencode.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "f2fdef1f6612172cd3e49a5f092d9a76203e85c0",
+      "head": "f0b0eb115e31b921dd2fa71dd019660441c086b1",
+      "diff_sha256": "221a291f267e5ebb7eac99e66b8af3162f13b7ffca710a0702ed6f6c527fd78f"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/labdrian-orchestrator-opencode.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The change only appends a documentation Log entry (L30) to odd/tasks/labdrian-orchestrator-opencode.md; no code, behavior or requirement is altered, so no defect is introduced by it."
+    ]
+  }
+}

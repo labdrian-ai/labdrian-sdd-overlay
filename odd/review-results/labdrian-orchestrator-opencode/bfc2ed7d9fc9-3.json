@@ -1,0 +1,86 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "45212078ae1db021c4f7e22b87dab9a67e219a27",
+    "head": "bfc2ed7d9fc91a886386f6a031801f6c778236fd",
+    "diff_sha256": "38bf4230d960f35ee7d80c6d01d7e60f3ba94c08248d0ebfcd613f33db10b6ab",
+    "paths": [
+      "CHANGELOG.md",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-context-lists-quotes-and-case.golden",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-minimalism-context-metadata-accepted-today.golden",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-phases-quoted-items-accepted-today.golden",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-reads-the-contracts-of-the-overlay.golden",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-without-the-oo-contract.golden",
+      "engine/cmd/testdata/runtime-golden/runtime-opencode-and-pi-with-an-overlay.golden",
+      "engine/runtime/labdrian-runtime-parity-plugin.mjs",
+      "engine/runtime/opencode_bridge_session_test.go",
+      "engine/runtime/opencode_plugin.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "45212078ae1db021c4f7e22b87dab9a67e219a27",
+      "head": "bfc2ed7d9fc91a886386f6a031801f6c778236fd",
+      "diff_sha256": "38bf4230d960f35ee7d80c6d01d7e60f3ba94c08248d0ebfcd613f33db10b6ab"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-context-lists-quotes-and-case.golden",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-minimalism-context-metadata-accepted-today.golden",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-phases-quoted-items-accepted-today.golden",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-reads-the-contracts-of-the-overlay.golden",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-without-the-oo-contract.golden",
+        "engine/cmd/testdata/runtime-golden/runtime-opencode-and-pi-with-an-overlay.golden",
+        "engine/runtime/labdrian-runtime-parity-plugin.mjs",
+        "engine/runtime/opencode_bridge_session_test.go",
+        "engine/runtime/opencode_plugin.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "engine/runtime/opencode_bridge_session_test.go:169",
+        "claim": "The test claims to check that the log names the shape seen, but the assertions are vacuous. The message always contains 'prompt' and, through 'want { text: string }', always contains 'string'. It would pass even if the shape part were wrong or missing, and it does not distinguish a string prompt from an object with a non-string text. The array, null and undefined branches of warnPromptShape are not tested either.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/runtime/opencode_bridge_session_test.go:169",
+          "engine/runtime/labdrian-runtime-parity-plugin.mjs:505"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "engine/runtime/opencode_bridge_session_test.go:147-148",
+        "claim": "The new test was inserted between the comment about the system prompt being byte-stable across prompts and the test it describes (TestOpenCodeBridgeKeepsTheSystemPromptByteStableAcrossPrompts). The comment is now attached to the wrong test, and the new test has no comment of its own.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/runtime/opencode_bridge_session_test.go:147-149"
+        ]
+      },
+      {
+        "id": "F3",
+        "severity": "SUGGESTION",
+        "location": "engine/runtime/labdrian-runtime-parity-plugin.mjs:505",
+        "claim": "A null prompt is described as 'the prompt is object' because typeof null is 'object' and isRecord(null) is false. The log line is misleading for that shape.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/runtime/labdrian-runtime-parity-plugin.mjs:503-506"
+        ]
+      }
+    ],
+    "evidence": [
+      "Reviewed the full diff. The plugin logic in promptSubmitted (early return when there are no lines, append when the prompt is { text: string }, otherwise warn once) matches the commit's claim, and system is untouched.",
+      "The version bump and the golden updates are consistent across all changed files."
+    ]
+  }
+}

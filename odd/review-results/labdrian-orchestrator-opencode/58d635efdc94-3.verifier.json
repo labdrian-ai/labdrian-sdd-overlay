@@ -1,0 +1,25 @@
+{
+  "verdicts": [
+    {
+      "id": "F1",
+      "result": "reproduced",
+      "command": "Verifier W-C: in $S/norepo (not a git repository), env -i PATH=$PATH HOME=$S/home XDG_STATE_HOME=relstate XDG_CONFIG_HOME=$S/config, $S/bin/base and $S/bin/head roles append --project proj-1 --goal f --chain other --stdin < rec-other.json",
+      "output": "Base: exit=1, stderr 'error: roles append: role chain store: XDG_STATE_HOME \"relstate\" is not absolute'. Head: exit=1, stderr 'error: roles append: the binding of this checkout could not be read (projection store: XDG_STATE_HOME \"relstate\" is not absolute)'. Introduced by 58d635ef.",
+      "base_result": "not-reproduced"
+    },
+    {
+      "id": "F2",
+      "result": "reproduced",
+      "command": "Verifier W-A and W-B: bound scratch repo (workflow open --feature f --task T1); chmod 000 on the binding file, then on the workflow log; separately a removed cwd under env -i; $S/bin/head roles append --project proj-1 --goal f --chain other --stdin < rec-other.json",
+      "output": "Binding unavailable: stored .../role-chains/proj-1/f/other/000001.json, exit=0. Workflow log unavailable: stored, exit=0. Removed cwd: stored, exit=0. Control with a readable binding: refused with the bound-chain sentence, exit=1. Base stores in every case (no rule).",
+      "base_result": "reproduced"
+    },
+    {
+      "id": "F3",
+      "result": "not-run",
+      "command": "none",
+      "output": "SUGGESTION (closedStatus copy of workflow.StatusClosed); answered in d4d54d60 by TestRolesRuleClosedStatusIsTheWorkflowsClosedStatus.",
+      "base_result": "not-run"
+    }
+  ]
+}

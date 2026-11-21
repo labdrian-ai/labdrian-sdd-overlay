@@ -1,0 +1,25 @@
+{
+  "verdicts": [
+    {
+      "id": "F1",
+      "result": "not-run",
+      "command": "none",
+      "output": "SUGGESTION: The wrapper and README coverage checks accept any line in the section that starts with the verb word at the expected indent, so prose can satisfy them. The wrapper check looks for ' {35}verb( |$)' and",
+      "base_result": "not-run"
+    },
+    {
+      "id": "F2",
+      "result": "not-run",
+      "command": "none",
+      "output": "SUGGESTION: Four tests pin exact prose: the review ci wrapper and README sentences, the #6179 CHANGELOG sentence and the topicMadeOnAMainMerge doc comment. Any rewording of the engine usage, wrapper help or READM",
+      "base_result": "not-run"
+    },
+    {
+      "id": "F3",
+      "result": "not-run",
+      "command": "none",
+      "output": "SUGGESTION: The routed-verb parse has a hard-coded floor of 13 verbs. If a verb is later removed from runReview, the test fails with a message about the parse finding nothing, not about a removed verb. The count ",
+      "base_result": "not-run"
+    }
+  ]
+}

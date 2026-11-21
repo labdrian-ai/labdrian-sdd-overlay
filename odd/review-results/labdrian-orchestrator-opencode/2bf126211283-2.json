@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "dcdf610e24df7d4ee0347445092611669430ee39",
+    "head": "2bf126211283fadb29bb4d34a89231125a0a2a96",
+    "diff_sha256": "03a8a3363b94a2549b8c9ebd070b8fe5c57b54b0b5344fd97a8c6ccd230bee03",
+    "paths": [
+      "odd/goals/labdrian-orchestrator-opencode.json"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "dcdf610e24df7d4ee0347445092611669430ee39",
+      "head": "2bf126211283fadb29bb4d34a89231125a0a2a96",
+      "diff_sha256": "03a8a3363b94a2549b8c9ebd070b8fe5c57b54b0b5344fd97a8c6ccd230bee03"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/goals/labdrian-orchestrator-opencode.json"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The change adds a single new JSON goal file; it is syntactically valid and structurally consistent.",
+      "Scope names specs S1-S18 and the feature task document, which I cannot verify from the diff alone; no defect is demonstrable from the diff.",
+      "Constraints, non_goals, acceptance_criteria and delivery_boundary are mutually consistent: both the constraints and the delivery_boundary use the owner's standing merge ok and keep releases and live writes with the owner."
+    ]
+  }
+}

@@ -1,0 +1,33 @@
+{
+  "kind": "polisher",
+  "base": "4eb00fb93259d9dac9d8340ecd024ef8358f587f",
+  "head": "8510c7b69ea5319c956c1d8935507da62b73ae11",
+  "diff_sha256": "c9e9a87ac2919a30acc0ab3d1a39fab1850dbd981db6625ddf8836abfc05dd57",
+  "findings": {
+    "findings": [
+      {
+        "id": "P1",
+        "severity": "WARNING",
+        "location": "engine/review/gitexec/gitexec.go:1047-1076",
+        "claim": "Excluding the whole tip of an upstream of another name drops the branch own commits once that upstream holds them: a branch pushed with git push -u origin HEAD:other, or a child fast-forwarded or merged into its parent, is asked nothing.",
+        "evidence": [
+          "upstreamTip returned the tip whenever branch.<b>.merge is refs/heads/<x> with x != b, and Standing added ^<tip>.",
+          "Fixed in ad9e5e4e (L153): local upstream only, exclude up to merge-base, ask as before when the tip holds HEAD."
+        ]
+      },
+      {
+        "id": "P2",
+        "severity": "SUGGESTION",
+        "location": "engine/review/gitexec/standing_test.go:125-154",
+        "claim": "Edge and read-failure rows were thin.",
+        "evidence": [
+          "Rows for other-name remote upstream, fast-forward, --no-ff merge and garbage merge config added in ad9e5e4e."
+        ]
+      }
+    ],
+    "evidence": [
+      "Read Standing and upstreamTip at 8510c7b6.",
+      "Not run: read-only static judgment."
+    ]
+  }
+}

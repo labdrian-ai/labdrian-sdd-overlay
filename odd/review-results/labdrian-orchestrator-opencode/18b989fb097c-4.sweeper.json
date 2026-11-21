@@ -1,0 +1,95 @@
+{
+  "kind": "sweeper",
+  "base": "9593f57bf11915c9daa4d63bddb509f159aa03fd",
+  "head": "18b989fb097cb5453e57c9d9079b62ef12d3b044",
+  "diff_sha256": "d4cbf475e11cabc14b19f974d890eec88efdf99e6af384d6049477efc1cfebda",
+  "sweep": "18b989fb097c-1.sweep.json",
+  "commit": null,
+  "candidates": [
+    {
+      "candidate": "T1 path: skills/sdd-design/.approval.json",
+      "disposition": "live",
+      "evidence": "Deleted on purpose by T29 (S17, L68); Grep at the head finds no live reader outside docs/architecture history and CHANGELOG."
+    },
+    {
+      "candidate": "T1 path: skills/sdd-design/SKILL.md",
+      "disposition": "live",
+      "evidence": "Deleted on purpose by T29 (S17, L68); Grep at the head finds no live reader outside docs/architecture history and CHANGELOG."
+    },
+    {
+      "candidate": "T1 path: skills/sdd-design/references/threat-matrix.md",
+      "disposition": "live",
+      "evidence": "Deleted on purpose by T29 (S17, L68); Grep at the head finds no live reader outside docs/architecture history and CHANGELOG."
+    },
+    {
+      "candidate": "T1 path: skills/sdd-explore/.approval.json",
+      "disposition": "live",
+      "evidence": "Deleted on purpose by T29 (S17, L68); Grep at the head finds no live reader outside docs/architecture history and CHANGELOG."
+    },
+    {
+      "candidate": "T1 path: skills/sdd-explore/SKILL.md",
+      "disposition": "live",
+      "evidence": "Deleted on purpose by T29 (S17, L68); Grep at the head finds no live reader outside docs/architecture history and CHANGELOG."
+    },
+    {
+      "candidate": "T1 path: skills/sdd-init/.approval.json",
+      "disposition": "live",
+      "evidence": "Deleted on purpose by T29 (S17, L68); Grep at the head finds no live reader outside docs/architecture history and CHANGELOG."
+    },
+    {
+      "candidate": "T1 path: skills/sdd-init/SKILL.md",
+      "disposition": "live",
+      "evidence": "Deleted on purpose by T29 (S17, L68); Grep at the head finds no live reader outside docs/architecture history and CHANGELOG."
+    },
+    {
+      "candidate": "T1 path: skills/sdd-init/references/init-details.md",
+      "disposition": "live",
+      "evidence": "Deleted on purpose by T29 (S17, L68); Grep at the head finds no live reader outside docs/architecture history and CHANGELOG."
+    },
+    {
+      "candidate": "T1 path: skills/sdd-onboard/.approval.json",
+      "disposition": "live",
+      "evidence": "Deleted on purpose by T29 (S17, L68); Grep at the head finds no live reader outside docs/architecture history and CHANGELOG."
+    },
+    {
+      "candidate": "T1 path: skills/sdd-onboard/SKILL.md",
+      "disposition": "live",
+      "evidence": "Deleted on purpose by T29 (S17, L68); Grep at the head finds no live reader outside docs/architecture history and CHANGELOG."
+    },
+    {
+      "candidate": "T1 path: skills/sdd-propose/.approval.json",
+      "disposition": "live",
+      "evidence": "Deleted on purpose by T29 (S17, L68); Grep at the head finds no live reader outside docs/architecture history and CHANGELOG."
+    },
+    {
+      "candidate": "T1 path: skills/sdd-propose/SKILL.md",
+      "disposition": "live",
+      "evidence": "Deleted on purpose by T29 (S17, L68); Grep at the head finds no live reader outside docs/architecture history and CHANGELOG."
+    },
+    {
+      "candidate": "T1 path: skills/sdd-spec/.approval.json",
+      "disposition": "live",
+      "evidence": "Deleted on purpose by T29 (S17, L68); Grep at the head finds no live reader outside docs/architecture history and CHANGELOG."
+    },
+    {
+      "candidate": "T1 path: skills/sdd-spec/SKILL.md",
+      "disposition": "live",
+      "evidence": "Deleted on purpose by T29 (S17, L68); Grep at the head finds no live reader outside docs/architecture history and CHANGELOG."
+    },
+    {
+      "candidate": "T1 path: skills/sdd-tasks/.approval.json",
+      "disposition": "live",
+      "evidence": "Deleted on purpose by T29 (S17, L68); Grep at the head finds no live reader outside docs/architecture history and CHANGELOG."
+    },
+    {
+      "candidate": "T1 path: skills/sdd-tasks/SKILL.md",
+      "disposition": "live",
+      "evidence": "Deleted on purpose by T29 (S17, L68); Grep at the head finds no live reader outside docs/architecture history and CHANGELOG."
+    },
+    {
+      "candidate": "T3:  M odd/tasks/labdrian-orchestrator-opencode.md",
+      "disposition": "live",
+      "evidence": "The feature document is the parent logbook, edited between commits; committed with the review records at delivery."
+    }
+  ]
+}

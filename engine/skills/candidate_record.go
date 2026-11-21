@@ -96,9 +96,9 @@ func readRecordFields(content, stopAt string) recordFields {
 	return f
 }
 
-// ParseCandidateRecord reads the candidate observation stored under topicKey. It always returns the record
+// parseCandidateRecord reads the candidate observation stored under topicKey. It always returns the record
 // it could read, and the anomalies it found; a record with an anomaly is not repaired.
-func ParseCandidateRecord(topicKey, content string) (CandidateRecord, []Anomaly) {
+func parseCandidateRecord(topicKey, content string, mapped map[string]int) (CandidateRecord, []Anomaly) {
 	goal, key := splitGoalPrefix(topicKey)
 	rec := CandidateRecord{Key: key, Goal: goal}
 	var anomalies []Anomaly
@@ -148,7 +148,7 @@ func ParseCandidateRecord(topicKey, content string) (CandidateRecord, []Anomaly)
 	for _, item := range f.lists["Occurrences"] {
 		id, _, _ := strings.Cut(item, " ")
 		rec.Occurrences = append(rec.Occurrences, id)
-		distinct[id] = true
+		distinct[TranslateOccurrence(id, mapped)] = true
 	}
 	if _, stated := f.scalars["OccurrenceCount"]; stated && rec.OccurrenceCount != len(distinct) {
 		add("OccurrenceCount is %d but %d distinct occurrences are listed", rec.OccurrenceCount, len(distinct))
@@ -157,6 +157,49 @@ func ParseCandidateRecord(topicKey, content string) (CandidateRecord, []Anomaly)
 	rec.History = readHistory(f.lists["History"], add)
 	checkHistory(rec, add)
 	return rec, anomalies
+}
+
+const legacyOccurrencePrefix = "engram:"
+
+// LegacyOccurrenceNumber returns the number of a legacy occurrence id `engram:<digits>`, as written. Any other id,
+// or an `engram:` with no digits or with anything but digits after it, is not one.
+func LegacyOccurrenceNumber(id string) (string, bool) {
+	digits, found := strings.CutPrefix(id, legacyOccurrencePrefix)
+	if !found || digits == "" {
+		return "", false
+	}
+	for _, r := range digits {
+		if r < '0' || r > '9' {
+			return "", false
+		}
+	}
+	return digits, true
+}
+
+// TranslateOccurrence returns the id an occurrence is counted as: a legacy `engram:<n>` that mapped says
+// it was imported as memory <m> is `memorycard:<m>`; every other id, a legacy one the import never mapped
+// included, is returned as it is. The record itself is never rewritten by the engine.
+func TranslateOccurrence(id string, mapped map[string]int) string {
+	if number, ok := LegacyOccurrenceNumber(id); ok {
+		if memory, found := mapped[number]; found {
+			return fmt.Sprintf("memorycard:%d", memory)
+		}
+	}
+	return id
+}
+
+// ParseCandidateRecord reads the candidate observation stored under topicKey, counting each occurrence as
+// it is written. See ParseCandidateRecordTranslated for the count that merges legacy ids.
+func ParseCandidateRecord(topicKey, content string) (CandidateRecord, []Anomaly) {
+	return ParseCandidateRecordTranslated(topicKey, content, nil)
+}
+
+// ParseCandidateRecordTranslated is ParseCandidateRecord with the distinct-occurrence check counting
+// TranslateOccurrence of each listed id, so a legacy `engram:<n>` and the `memorycard:<m>` it was imported as
+// are one occurrence. With a nil map, or a record that lists no mapped legacy id, the result is that of
+// ParseCandidateRecord. The Occurrences of the record are always the ids as written.
+func ParseCandidateRecordTranslated(topicKey, content string, mapped map[string]int) (CandidateRecord, []Anomaly) {
+	return parseCandidateRecord(topicKey, content, mapped)
 }
 
 // number reads a scalar that must be a whole number; an absent field is 0, a field that is not a number is

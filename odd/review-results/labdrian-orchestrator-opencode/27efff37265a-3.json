@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "f5c4607dbf8c0427dd6956310d860dc5fe52005c",
+    "head": "27efff37265a06d7c66c24d9d8b8b0f100f757f8",
+    "diff_sha256": "5b988c84e4b8c74bc6e72a7fa59973d1e816f493e375a4aa39231eff766c113c",
+    "paths": [
+      "engine/runtime/memorycard-opencode-plugin.mjs",
+      "engine/runtime/opencode_memorycard_plugin_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "f5c4607dbf8c0427dd6956310d860dc5fe52005c",
+      "head": "27efff37265a06d7c66c24d9d8b8b0f100f757f8",
+      "diff_sha256": "5b988c84e4b8c74bc6e72a7fa59973d1e816f493e375a4aa39231eff766c113c"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/runtime/memorycard-opencode-plugin.mjs",
+        "engine/runtime/opencode_memorycard_plugin_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "engine/runtime/memorycard-opencode-plugin.mjs:133-139",
+        "claim": "toolFinished awaits `memorycard capture` inside the execute.after hook, so a slow or hung memorycard delays the subagent result reaching the parent session by up to the timeout (default 20s) on every subagent call. The failure is swallowed, but the latency is not. Fire-and-forget or a shorter timeout for capture would avoid this.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/runtime/memorycard-opencode-plugin.mjs:136"
+        ]
+      }
+    ],
+    "evidence": [
+      "Reviewed the full diff of both changed paths. textOf and toolFinished filter correctly on tool, status and empty text, and the tests cover those filters.",
+      "runMemorycard and the 2.2.7 hook shape are not visible in the diff, so I could not verify the stdin handling or the `result.output`/`result.content` shape."
+    ]
+  }
+}

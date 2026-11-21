@@ -1,0 +1,45 @@
+{
+  "kind": "sweeper",
+  "base": "a61a18717aa509556c197085bee78785bbb83873",
+  "head": "16a719fc144f4653cbbf66db42dab5b63b03d2ae",
+  "diff_sha256": "b6cd4fb05380375335df6cf4c7e1d5f1e2aec82a782a909bc2a9e0858d37c392",
+  "sweep": "16a719fc144f-4.sweep.json",
+  "commit": null,
+  "candidates": [
+    {
+      "candidate": "T1 name: pluginSHA256",
+      "disposition": "live",
+      "evidence": "rg -w over *.go finds no reference; only hit is the feature document (history). Nothing to delete."
+    },
+    {
+      "candidate": "T1 name: proseIDForm",
+      "disposition": "live",
+      "evidence": "rg -w over *.go finds no reference; only hit is the feature document (history)."
+    },
+    {
+      "candidate": "T1 name: skillIDForm",
+      "disposition": "live",
+      "evidence": "rg -w over *.go finds no reference; only hit is the feature document (history)."
+    },
+    {
+      "candidate": "T1 name: wordChar",
+      "disposition": "live",
+      "evidence": "rg -w over *.go finds no reference; only hit is the feature document (history); moved to engine/skillid."
+    },
+    {
+      "candidate": "T3: ?? CLAUDE.md",
+      "disposition": "live",
+      "evidence": "owner verbatim L160: se quedan los files de wiki; kept."
+    },
+    {
+      "candidate": "T3: ?? docs/wiki/.format",
+      "disposition": "live",
+      "evidence": "owner verbatim L160: se quedan los files de wiki; kept."
+    },
+    {
+      "candidate": "T3: ?? docs/wiki/README.md",
+      "disposition": "live",
+      "evidence": "owner verbatim L160: se quedan los files de wiki; kept; CLAUDE.md names it as first read."
+    }
+  ]
+}

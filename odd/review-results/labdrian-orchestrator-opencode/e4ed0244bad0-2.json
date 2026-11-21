@@ -1,0 +1,68 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "c2dd90fb0422a1413366c40e0be3d31c05d07b87",
+    "head": "e4ed0244bad085e8b7fcd8519035ee66e691ca8d",
+    "diff_sha256": "b2c3f2252afa56d8e68253535e841e5635cfe2b62926aaddae9e9ba211738edb",
+    "paths": [
+      "CHANGELOG.md",
+      "README.md",
+      "bin/lib/apply.sh",
+      "engine/runtime/codex_ownerrules.go",
+      "engine/runtime/codex_ownerrules_test.go",
+      "engine/shelltest/apply_codex_runtime_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "c2dd90fb0422a1413366c40e0be3d31c05d07b87",
+      "head": "e4ed0244bad085e8b7fcd8519035ee66e691ca8d",
+      "diff_sha256": "b2c3f2252afa56d8e68253535e841e5635cfe2b62926aaddae9e9ba211738edb"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "README.md",
+        "bin/lib/apply.sh",
+        "engine/runtime/codex_ownerrules.go",
+        "engine/runtime/codex_ownerrules_test.go",
+        "engine/shelltest/apply_codex_runtime_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "engine/runtime/codex_ownerrules.go:188-201",
+        "claim": "sameFiles.has only recognises a symlink or case-insensitive alias while both paths still exist. If the first path is a file that install created, uninstall removes it. The alias is then dangling, or missing on a case-insensitive file system, so os.Stat fails and the alias is processed and reported as a separate path. The 'removed and reported once' promise therefore breaks for a file install created. Uninstall of a link-aliased file the install created reports the alias a second time. The tests only cover a pre-existing file, so this path is untested.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/runtime/codex_ownerrules.go:188-201",
+          "engine/runtime/codex_ownerrules.go:109-114"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "engine/runtime/codex_ownerrules.go:182-185",
+        "claim": "The doc comment of sameFiles ends in one very long line that mixes the hard-link remark with the 'written once' rule. It is hard to read and should be wrapped.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/runtime/codex_ownerrules.go:182-185"
+        ]
+      }
+    ],
+    "evidence": [
+      "Reviewed the sameFiles dedupe in withOwnerRules, removeOwnerRules and ownerRulesReasons. The os.Stat of a dangling or removed alias fails, so only the cleaned-path comparison remains.",
+      "Checked indent_lines: $(...) strips trailing newlines and the here-string adds one, so the last line is not dropped."
+    ]
+  }
+}

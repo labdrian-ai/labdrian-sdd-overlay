@@ -1,0 +1,25 @@
+{
+  "kind": "sweeper",
+  "base": "37d8726ab95fa57b7bb1fd9e18bb35173cac7546",
+  "head": "ced4dcfea11d9eb65fa85db58ef2821ed9a3f9eb",
+  "diff_sha256": "75aab2509aa3c7de79a6593ab525b2c55d7bd2112abd34e897026dcf7362c4d4",
+  "sweep": "ced4dcfea11d-1.sweep.json",
+  "commit": null,
+  "candidates": [
+    {
+      "candidate": "T3: ?? CLAUDE.md",
+      "disposition": "live",
+      "evidence": "owner verbatim L160: se quedan los files de wiki; CLAUDE.md is the project instruction file that points to docs/wiki/README.md, untracked by design"
+    },
+    {
+      "candidate": "T3: ?? docs/wiki/.format",
+      "disposition": "live",
+      "evidence": "owner verbatim L160: se quedan los files de wiki; wiki file kept"
+    },
+    {
+      "candidate": "T3: ?? docs/wiki/README.md",
+      "disposition": "live",
+      "evidence": "owner verbatim L160: se quedan los files de wiki; read: wiki root page named by CLAUDE.md and the contract"
+    }
+  ]
+}

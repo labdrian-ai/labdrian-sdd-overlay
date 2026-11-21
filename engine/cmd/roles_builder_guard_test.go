@@ -300,8 +300,8 @@ func TestRolesPreviousVerbsStillAnswerAsBefore(t *testing.T) {
 		args []string
 		want string
 	}{
-		"no verb":      {nil, "error: roles requires a verb: validate, next, resume, append, match-shaper\n"},
-		"unknown verb": {[]string{"bogus"}, "error: roles: unknown verb \"bogus\" (expected validate, next, resume, append, or match-shaper)\n"},
+		"no verb":      {nil, "error: roles requires a verb: validate, next, resume, append, match-shaper, skill-paths\n"},
+		"unknown verb": {[]string{"bogus"}, "error: roles: unknown verb \"bogus\" (expected validate, next, resume, append, match-shaper, or skill-paths)\n"},
 		"validate":     {[]string{"validate"}, "error: roles validate: --file is required\n"},
 		"match-shaper": {[]string{"match-shaper"}, "error: roles match-shaper: --root is required\n"},
 	}

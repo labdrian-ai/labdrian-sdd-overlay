@@ -57,6 +57,17 @@ for _catalog_entry in "${TARGET_CATALOG[@]}"; do
 done
 unset _catalog_entry
 
+# Targets that read the skills of ~/.claude/skills and so get no copy of their own: a copy in their
+# directory would shadow the Claude one (S13, precedence measured in L10 T5). The engine says the same
+# for each skill row (no destination), and the `agents` route still deploys to them.
+# shellcheck disable=SC2034  # read by the other modules
+declare -A TARGET_READS_CLAUDE_SKILLS=([opencode]=1)
+
+# True (exit 0) when a skill row is copied into the skills directory of target $1.
+copies_skills() {
+  [[ ! -v TARGET_READS_CLAUDE_SKILLS["${1:-}"] ]]
+}
+
 # True (exit 0) when $1 names any recognized target, copy or package.
 is_valid_target() {
   [[ -v TARGET_KINDS["${1:-}"] ]]

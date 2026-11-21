@@ -1,0 +1,50 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "a10c3d441a9aea56c22947abaefe3b6a5bcdf585",
+    "head": "4196e145bdf2c4d2c3b5ea1ce7c0efff579c48d2",
+    "diff_sha256": "13187455bf33be75e454c79088f48c379c6405fcde75a95583f29adffe23ff5d",
+    "paths": [
+      "bin/lib/capture.sh",
+      "bin/lib/common.sh",
+      "engine/shelltest/apply_push_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "a10c3d441a9aea56c22947abaefe3b6a5bcdf585",
+      "head": "4196e145bdf2c4d2c3b5ea1ce7c0efff579c48d2",
+      "diff_sha256": "13187455bf33be75e454c79088f48c379c6405fcde75a95583f29adffe23ff5d"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "bin/lib/capture.sh",
+        "bin/lib/common.sh",
+        "engine/shelltest/apply_push_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "bin/lib/common.sh:109-113",
+        "claim": "The localhost check runs for every `scheme://` URL, not only ssh. An origin such as `http://localhost:3000/org/repo.git` or `https://127.0.0.1/repo.git` (a local git server like Gitea) was a network remote before and is now treated as local. Apply and capture then silently skip the push to it. The commit message only names scp forms, ssh URLs and file://. The new tests also cover only ssh and scp forms, so this wider behavior change is untested.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "bin/lib/common.sh:109-113",
+          "bin/lib/common.sh:120-122"
+        ]
+      }
+    ],
+    "evidence": [
+      "Traced the scp form for `git@localhost:overlay.git`, `localhost:/srv/x`, `[::1]:/srv/x` and `example.com:a@localhost:overlay.git`. All four are classified correctly by the new parsing.",
+      "The `*://*` branch parses the host without looking at the scheme, and the final case returns 1 for localhost hosts under any scheme, including http and https."
+    ]
+  }
+}

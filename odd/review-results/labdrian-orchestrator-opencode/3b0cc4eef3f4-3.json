@@ -1,0 +1,58 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "b243254a7632239863206aeeea669f0371a11a0b",
+    "head": "3b0cc4eef3f45440f3dd981ea70865eb0994be89",
+    "diff_sha256": "4a1137d6c27b4c87e69245ed77b1dab300a7b1a431b9479427f9d1b54beb954e",
+    "paths": [
+      "engine/cmd/runtime_opencode_cli_test.go",
+      "engine/shelltest/copies_skills_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "b243254a7632239863206aeeea669f0371a11a0b",
+      "head": "3b0cc4eef3f45440f3dd981ea70865eb0994be89",
+      "diff_sha256": "4a1137d6c27b4c87e69245ed77b1dab300a7b1a431b9479427f9d1b54beb954e"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/cmd/runtime_opencode_cli_test.go",
+        "engine/shelltest/copies_skills_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "engine/shelltest/copies_skills_test.go:21",
+        "claim": "The caller count uses grep -c over declare -f output, which counts lines containing copies_skills, not distinct callers. A function mentioning it twice, or a comment, would shift the count and break the pin (or two callers on one line would hide one). The test could fail for reasons unrelated to the three commands asking the question, or pass if one caller is replaced by another line mentioning it.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/shelltest/copies_skills_test.go:21"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "engine/cmd/runtime_opencode_cli_test.go:108-111",
+        "claim": "The status assertion pins exit code 1 for a restart_required state, which couples the test to an exit convention not shown in the commit; also it asserts the shadowing skill text only after install, not after status/uninstall, so a later skills-directory modification by uninstall would go unnoticed.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/cmd/runtime_opencode_cli_test.go:108-111"
+        ]
+      }
+    ],
+    "evidence": [
+      "Both changed files are new test-only files; no production code is altered, so no regression on previously valid input is possible.",
+      "Could not run the tests; the diff is the only view, so correctness of expected strings against the adapter output is unverified."
+    ]
+  }
+}

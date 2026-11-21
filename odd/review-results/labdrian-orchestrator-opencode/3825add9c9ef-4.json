@@ -1,0 +1,57 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "068db6faac1a8e33bbf862dcb7286408ddb0df6b",
+    "head": "3825add9c9ef31d98da884383fbc57509a9bd302",
+    "diff_sha256": "36a0bd72a77fd2c4ff927b051c260cc96b22702bd40a8a8adda9787c704ae23d",
+    "paths": [
+      "CHANGELOG.md",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-context-lists-quotes-and-case.golden",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-minimalism-context-metadata-accepted-today.golden",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-phases-quoted-items-accepted-today.golden",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-reads-the-contracts-of-the-overlay.golden",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-without-the-oo-contract.golden",
+      "engine/cmd/testdata/runtime-golden/runtime-opencode-and-pi-with-an-overlay.golden",
+      "engine/runtime/labdrian-runtime-parity-plugin.mjs",
+      "engine/runtime/opencode_bridge_skills_test.go",
+      "engine/runtime/opencode_plugin.go"
+    ]
+  },
+  "rows": [
+    "risk-line",
+    "recall"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "068db6faac1a8e33bbf862dcb7286408ddb0df6b",
+      "head": "3825add9c9ef31d98da884383fbc57509a9bd302",
+      "diff_sha256": "36a0bd72a77fd2c4ff927b051c260cc96b22702bd40a8a8adda9787c704ae23d"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-context-lists-quotes-and-case.golden",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-minimalism-context-metadata-accepted-today.golden",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-phases-quoted-items-accepted-today.golden",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-reads-the-contracts-of-the-overlay.golden",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-without-the-oo-contract.golden",
+        "engine/cmd/testdata/runtime-golden/runtime-opencode-and-pi-with-an-overlay.golden",
+        "engine/runtime/labdrian-runtime-parity-plugin.mjs",
+        "engine/runtime/opencode_bridge_skills_test.go",
+        "engine/runtime/opencode_plugin.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "Read the whole diff at t60d.diff.",
+      "Read T60 commit D criteria at line 102. The exit-1 sentence matches the specified text exactly. Version 19 becomes 20 in opencode_plugin.go, the five contract goldens and the runtime golden. The L175 CHANGELOG sentence is replaced as specified.",
+      "Read runEngine (plugin lines 224-293) at head: `code` only in the close handler when the exit is a number; spawn errors, signals, timeouts and the output limit carry no code and fall to the unchanged `unchecked` sentence.",
+      "Read skillPathsRefusal and resolveSkillPaths at head: exit 2 with the verb prefix passed through verbatim; exit 1 gets the conditional-remedy sentence; any other exit or code-less failure gets the `unchecked` sentence.",
+      "Read engine/cmd/roles_skill_paths.go at head: comment line citations (56-58, 75-78, 89-91) match the exit-1 paths.",
+      "Grepped outside odd/ for `runtime-parity-19` and `does not accept this plugin`: only the banned-string assertion in the test file matches.",
+      "Read the test changes. Nothing was run."
+    ]
+  }
+}

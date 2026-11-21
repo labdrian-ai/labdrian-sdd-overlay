@@ -1,0 +1,89 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "b38a989854083799e499d73a2e86ef5c1ded86a3",
+    "head": "ac151d719da4c8a375800233b8fe64c1f2284ec2",
+    "diff_sha256": "78ededd66939b71872ed4ae5465da6d4d2014fbe213f2b1002ed16c57d29ab3e",
+    "paths": [
+      "CHANGELOG.md",
+      "engine/skills/gentle_detach_test.go",
+      "overlay.manifest",
+      "skills.registry.yaml",
+      "skills/_shared/SKILL.md",
+      "skills/chained-pr/SKILL.md",
+      "skills/cognitive-doc-design/SKILL.md",
+      "skills/comment-writer/SKILL.md",
+      "skills/go-testing/SKILL.md",
+      "skills/inception-pipeline/SKILL.md",
+      "skills/judgment-day/SKILL.md",
+      "skills/judgment-day/references/prompts-and-formats.md",
+      "skills/project-architect/SKILL.md",
+      "skills/project-inception/SKILL.md",
+      "skills/project-manifest/SKILL.md",
+      "skills/requirements-from-transcripts/SKILL.md",
+      "skills/roadmap-maker/SKILL.md",
+      "skills/skill-creator/SKILL.md",
+      "skills/skill-creator/references/skill-style-guide.md",
+      "skills/skill-improver/SKILL.md",
+      "skills/skill-improver/references/skill-style-guide.md",
+      "skills/work-unit-commits/SKILL.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "b38a989854083799e499d73a2e86ef5c1ded86a3",
+      "head": "ac151d719da4c8a375800233b8fe64c1f2284ec2",
+      "diff_sha256": "78ededd66939b71872ed4ae5465da6d4d2014fbe213f2b1002ed16c57d29ab3e"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "engine/skills/gentle_detach_test.go",
+        "overlay.manifest",
+        "skills.registry.yaml",
+        "skills/_shared/SKILL.md",
+        "skills/chained-pr/SKILL.md",
+        "skills/cognitive-doc-design/SKILL.md",
+        "skills/comment-writer/SKILL.md",
+        "skills/go-testing/SKILL.md",
+        "skills/inception-pipeline/SKILL.md",
+        "skills/judgment-day/SKILL.md",
+        "skills/judgment-day/references/prompts-and-formats.md",
+        "skills/project-architect/SKILL.md",
+        "skills/project-inception/SKILL.md",
+        "skills/project-manifest/SKILL.md",
+        "skills/requirements-from-transcripts/SKILL.md",
+        "skills/roadmap-maker/SKILL.md",
+        "skills/skill-creator/SKILL.md",
+        "skills/skill-creator/references/skill-style-guide.md",
+        "skills/skill-improver/SKILL.md",
+        "skills/skill-improver/references/skill-style-guide.md",
+        "skills/work-unit-commits/SKILL.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "overlay.manifest:93",
+        "claim": "The SKILL.md rows were retagged to custom, but the reference files of the same skills stay `managed` in the manifest (judgment-day/references/prompts-and-formats.md, skill-creator and skill-improver references/skill-style-guide.md, chained-pr/references/chaining-details.md, go-testing/references/examples.md). This commit edited three of them to remove the gentle text. If a managed row means capture copies the file from upstream, the next capture can restore the gentle-ai wording (capture-result and `gentle-ai skill-registry refresh`) that this change removed. The changelog says capture no longer copies these skills. The new test checks only the SKILL.md rows, so it would not catch this.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "overlay.manifest:82-93",
+          "skills/judgment-day/references/prompts-and-formats.md:14-18"
+        ]
+      }
+    ],
+    "evidence": [
+      "Diff-only review. The manifest hunk changes only the SKILL.md rows. The edited reference files keep their managed tag.",
+      "The test reads only `<dir>/SKILL.md` tags, so a managed reference row is unchecked."
+    ]
+  }
+}

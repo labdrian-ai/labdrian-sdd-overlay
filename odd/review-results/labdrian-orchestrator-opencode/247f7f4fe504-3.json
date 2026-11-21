@@ -1,0 +1,44 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "a410de63215c76d5b9e4250551b4cac509a332d3",
+    "head": "247f7f4fe50444219531e9c7fd3c676ce060d138",
+    "diff_sha256": "94d841f38c26bda4c69109fc4db82f0cb5e7c7643713c8b92971a841ba09ef9a",
+    "paths": [
+      "engine/capability/declarations.go",
+      "engine/cmd/memory_test.go",
+      "engine/cmd/phase7_acceptance_test.go",
+      "engine/enginetest/bind.go",
+      "engine/runtime/opencode_bridge_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "a410de63215c76d5b9e4250551b4cac509a332d3",
+      "head": "247f7f4fe50444219531e9c7fd3c676ce060d138",
+      "diff_sha256": "94d841f38c26bda4c69109fc4db82f0cb5e7c7643713c8b92971a841ba09ef9a"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/capability/declarations.go",
+        "engine/cmd/memory_test.go",
+        "engine/cmd/phase7_acceptance_test.go",
+        "engine/enginetest/bind.go",
+        "engine/runtime/opencode_bridge_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The diff adds a test and moves a test helper into enginetest. It changes no production behavior.",
+      "The moved helper BindRunning runs the same create, start, stage and bind sequence, each step in its own process. I could not see the old createWorkflow body, so I cannot show a difference in goal path, working directory or environment.",
+      "The new test checks the engine's reason against the plugin's thrown Tool.Error for the deny cases, and checks that the allow cases and the state home are unchanged.",
+      "The check c.deny == (want[i]==\"\") fails the test in exactly the two cases where the engine's answer disagrees with the expected deny flag.",
+      "The new declarations.go test reference matches the new test's name."
+    ]
+  }
+}

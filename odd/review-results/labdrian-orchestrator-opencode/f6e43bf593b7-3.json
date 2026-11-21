@@ -1,0 +1,34 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "a556acff09f4fa4ec4804f136d4e67d424b46034",
+    "head": "f6e43bf593b7352ad6100b15cf149dd899bfb31e",
+    "diff_sha256": "1345944095dcde01467fed6f08154086ff5eb68efb32007704752d23d0e07d5d",
+    "paths": [
+      "odd/tasks/labdrian-orchestrator-opencode.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "a556acff09f4fa4ec4804f136d4e67d424b46034",
+      "head": "f6e43bf593b7352ad6100b15cf149dd899bfb31e",
+      "diff_sha256": "1345944095dcde01467fed6f08154086ff5eb68efb32007704752d23d0e07d5d"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/labdrian-orchestrator-opencode.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The diff only appends one log entry (L77) to odd/tasks/labdrian-orchestrator-opencode.md, which is documentation and not executable code.",
+      "The entry records the owner's verbatim requests and the pending approval state consistently with the commit message and the stated Risk: none.",
+      "No code, configuration or behavior is changed, so no regression or violated requested behavior can be attributed to this commit."
+    ]
+  }
+}

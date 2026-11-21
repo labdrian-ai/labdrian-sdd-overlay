@@ -1,0 +1,73 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "881afe7a5d930e7fa949f973a4cb543de9e4b607",
+    "head": "22e597e7b356843d4b57a2620c55d407ed349f26",
+    "diff_sha256": "3bbc31cd4a59304cbb1b8d0b047f549256a4d345cd7af6d3b52b0b070681227a",
+    "paths": [
+      "CHANGELOG.md",
+      "README.md",
+      "bin/lib/manifest_routes.sh",
+      "engine/cmd/usage.go",
+      "engine/runtime/outputstyle_text_test.go",
+      "engine/skills/routes.go",
+      "engine/skills/routes_output_style_test.go",
+      "output-styles/labdrian.md",
+      "overlay.manifest"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "881afe7a5d930e7fa949f973a4cb543de9e4b607",
+      "head": "22e597e7b356843d4b57a2620c55d407ed349f26",
+      "diff_sha256": "3bbc31cd4a59304cbb1b8d0b047f549256a4d345cd7af6d3b52b0b070681227a"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "README.md",
+        "bin/lib/manifest_routes.sh",
+        "engine/cmd/usage.go",
+        "engine/runtime/outputstyle_text_test.go",
+        "engine/skills/routes.go",
+        "engine/skills/routes_output_style_test.go",
+        "output-styles/labdrian.md",
+        "overlay.manifest"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "engine/skills/routes.go:289",
+        "claim": "The destination is derived with path.Dir(AgentsRoot). If the script hands over an agents root with a trailing slash, Dir returns the agents directory itself, so the style would land in <agents>/output-styles instead of beside it. No test covers a trailing slash or a root without a parent. A bare-file name containing '/' or '..' is also joined unchecked, as the agent route already does.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/skills/routes.go:289"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "bin/lib/manifest_routes.sh:18-19",
+        "claim": "Only comments changed on the shell side. The diff does not show that the script's apply, status, capture and restore dispatch handles the new route name. A script that switches on route and treats unknown names as skills would place or report the output-style row wrongly. This cannot be proved from the diff.",
+        "evidence_class": "inferential",
+        "causal_disposition": "unknown",
+        "proof_refs": [
+          "bin/lib/manifest_routes.sh:18-19"
+        ]
+      }
+    ],
+    "evidence": [
+      "Reviewed all nine changed paths in the diff. routes.go adds the route, the bare-file exemption and withOutputStyleDest. The new tests cover the three targets, the missing-root error, the longterm-mem refusal and the bare-file case.",
+      "The output style text matches the approved text pinned in outputstyle_text_test.go."
+    ]
+  }
+}

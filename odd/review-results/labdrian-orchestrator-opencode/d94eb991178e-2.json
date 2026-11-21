@@ -1,0 +1,74 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "f60786d05ee498ffb914de46d00acfc74b15f8c0",
+    "head": "d94eb991178ef17812f48543dc5809d85f5d6e5e",
+    "diff_sha256": "e7436b31ab7460785adc382039e7dba32b22bc5e3b35763931290181e754c65e",
+    "paths": [
+      "engine/cmd/codegraph_prompt_hook.go",
+      "engine/cmd/codegraph_prompt_hook_test.go",
+      "engine/cmd/dispatch.go",
+      "engine/cmd/testdata/codegraph_prompt_hook/ordinary_prompt.json",
+      "engine/cmd/testdata/codegraph_prompt_hook/system_notification.json",
+      "engine/cmd/testdata/codegraph_prompt_hook/task_notification.json",
+      "engine/cmd/usage.go",
+      "engine/hookwire/prompt.go",
+      "engine/hookwire/prompt_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "f60786d05ee498ffb914de46d00acfc74b15f8c0",
+      "head": "d94eb991178ef17812f48543dc5809d85f5d6e5e",
+      "diff_sha256": "e7436b31ab7460785adc382039e7dba32b22bc5e3b35763931290181e754c65e"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/cmd/codegraph_prompt_hook.go",
+        "engine/cmd/codegraph_prompt_hook_test.go",
+        "engine/cmd/dispatch.go",
+        "engine/cmd/testdata/codegraph_prompt_hook/ordinary_prompt.json",
+        "engine/cmd/testdata/codegraph_prompt_hook/system_notification.json",
+        "engine/cmd/testdata/codegraph_prompt_hook/task_notification.json",
+        "engine/cmd/usage.go",
+        "engine/hookwire/prompt.go",
+        "engine/hookwire/prompt_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "engine/cmd/codegraph_prompt_hook.go:55-62",
+        "claim": "The ExitCode() branch is checked before the too-much-output branch. If the runner returns an error that wraps both an exit error and ErrOutputTooLarge (for example, a process killed after the output cap), the output-too-large branch is never reached. The message is then lost and the exit code comes from the signal fallback. The test uses a fake error that is only one of the two, so it cannot catch this. The diff does not show execrunner's actual error shape.",
+        "evidence_class": "inferential",
+        "causal_disposition": "unknown",
+        "proof_refs": [
+          "engine/cmd/codegraph_prompt_hook.go:55-62"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "engine/hookwire/prompt.go:49-51",
+        "claim": "IsTaskNotification skips any prompt that contains the system notification mark anywhere. A user prompt that quotes or pastes that marker text is silently dropped from codegraph exploration. The usage text documents this behavior, but the substring match is broader than the start-only rule applied to the tag.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/hookwire/prompt.go:49-51"
+        ]
+      }
+    ],
+    "evidence": [
+      "Reviewed the full diff; no tool access beyond it.",
+      "Ordinary, invalid-JSON, empty and over-cap inputs all reach the codegraph runner with the same bytes.",
+      "The not-found and permission error paths map to 127 and 126 as documented."
+    ]
+  }
+}

@@ -3,8 +3,11 @@ package main
 import (
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/roles"
 )
 
 func agentgenRun(t *testing.T, env map[string]string, args ...string) *capturedProcess {
@@ -16,31 +19,159 @@ func agentgenRun(t *testing.T, env map[string]string, args ...string) *capturedP
 	return p
 }
 
-// seedRoleSources puts the role sources of this repository under root, which is all the generator
-// reads from the repository.
+// seedRoleSources puts what the generator reads from the repository under root: the role sources, and
+// the tier table of the role-chain skill that holds each role's model id, and the SKILL.md of each skill
+// a role body names, which the generator requires to exist.
 func seedRoleSources(t *testing.T, root string) {
 	t.Helper()
-	source := filepath.Join("..", "..", "roles")
+	const repo = "../.."
+	source := filepath.Join(repo, "roles")
 	err := filepath.Walk(source, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
-		rel, err := filepath.Rel(source, path)
+		rel, err := filepath.Rel(repo, path)
 		if err != nil {
 			return err
 		}
-		target := filepath.Join(root, "roles", rel)
 		if info.IsDir() {
-			return os.MkdirAll(target, 0o755)
+			return os.MkdirAll(filepath.Join(root, rel), 0o755)
 		}
-		data, err := os.ReadFile(path)
-		if err != nil {
-			return err
-		}
-		return os.WriteFile(target, data, 0o644)
+		return copyFileTo(path, filepath.Join(root, rel))
 	})
 	if err != nil {
 		t.Fatalf("copying the role sources: %v", err)
+	}
+	models := filepath.Join("skills", "role-chain", "references", "models.md")
+	if err := os.MkdirAll(filepath.Join(root, filepath.Dir(models)), 0o755); err != nil {
+		t.Fatalf("creating the model table directory: %v", err)
+	}
+	if err := copyFileTo(filepath.Join(repo, models), filepath.Join(root, models)); err != nil {
+		t.Fatalf("copying the model table: %v", err)
+	}
+	bodies, err := filepath.Glob(filepath.Join(root, "roles", "*", "body.md"))
+	if err != nil {
+		t.Fatalf("listing the role bodies: %v", err)
+	}
+	for _, body := range bodies {
+		text, err := os.ReadFile(body)
+		if err != nil {
+			t.Fatalf("reading %s: %v", body, err)
+		}
+		for _, id := range roles.SkillsNamed(string(text)) {
+			skill := filepath.Join("skills", id, "SKILL.md")
+			if err := os.MkdirAll(filepath.Join(root, filepath.Dir(skill)), 0o755); err != nil {
+				t.Fatalf("creating %s: %v", filepath.Dir(skill), err)
+			}
+			if err := copyFileTo(filepath.Join(repo, skill), filepath.Join(root, skill)); err != nil {
+				t.Fatalf("copying the skill a role body names: %v", err)
+			}
+		}
+	}
+}
+
+func copyFileTo(from, to string) error {
+	data, err := os.ReadFile(from)
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(to, data, 0o644)
+}
+
+// foremanBodyCommands are the `<group> <verb>` pairs the foreman body names inside backticks, which
+// must carry the leading `labdrian`; a span whose second word is a flag, a placeholder or absent is no verb.
+func foremanBodyCommands(t *testing.T) [][2]string {
+	t.Helper()
+	data, err := os.ReadFile(filepath.Join("..", "..", "roles", "foreman", "body.md"))
+	if err != nil {
+		t.Fatalf("reading the foreman body: %v", err)
+	}
+	groups := map[string]bool{"workflow": true, "review": true, "skills": true, "roles": true, "shaper": true, "projection": true}
+	var commands [][2]string
+	for _, span := range regexp.MustCompile("`([^`]+)`").FindAllStringSubmatch(string(data), -1) {
+		fields := strings.Fields(strings.TrimPrefix(span[1], "labdrian "))
+		if len(fields) < 2 || !groups[fields[0]] || !regexp.MustCompile(`^[a-z][a-z-]*$`).MatchString(fields[1]) {
+			continue
+		}
+		if !strings.HasPrefix(span[1], "labdrian ") {
+			t.Errorf("the foreman body names `%s` without the `labdrian ` prefix", span[1])
+		}
+		commands = append(commands, [2]string{fields[0], fields[1]})
+	}
+	return commands
+}
+
+// verbsOf are the verbs the program says a group takes when it is run with none (the message of the
+// public interface, so the test does not read the dispatcher's tables).
+func verbsOf(t *testing.T, group string) []string {
+	t.Helper()
+	p := newCapturedProcess()
+	d := testDeps()
+	d.getenv = environmentOf(map[string]string{"HOME": t.TempDir()})
+	d.getwd = func() (string, error) { return t.TempDir(), nil }
+	run(p.process, d, []string{group})
+	_, list, ok := strings.Cut(strings.SplitN(p.err.String(), "\n", 2)[0], " requires a verb: ")
+	if !ok {
+		t.Fatalf("`%s` with no verb said %q, want it to list its verbs", group, p.err.String())
+	}
+	return strings.Split(list, ", ")
+}
+
+// Every `labdrian` verb the foreman body names is a verb the program takes: a verb renamed or removed
+// fails here instead of leaving the foreman to run a command that does not exist (S2).
+func TestEveryLabdrianVerbTheForemanBodyNamesExists(t *testing.T) {
+	commands := foremanBodyCommands(t)
+	named := map[string]bool{}
+	for _, c := range commands {
+		named[c[0]+" "+c[1]] = true
+		found := false
+		for _, verb := range verbsOf(t, c[0]) {
+			found = found || verb == c[1]
+		}
+		if !found {
+			t.Errorf("the foreman body names `%s %s`, and `%s` takes no verb %q", c[0], c[1], c[0], c[1])
+		}
+	}
+	// The body names the verbs of its stage table: a parse that finds none proves nothing.
+	for _, want := range []string{"workflow open", "workflow close", "review bind", "review record", "review verify", "review check", "review sweep", "skills approve"} {
+		if !named[want] {
+			t.Errorf("the foreman body no longer names `%s`; the test read %v", want, commands)
+		}
+	}
+}
+
+// Every skill the foreman body names is a skill of the repository (S2). A backticked name is a skill
+// when it is written next to the word "skill" ("the `x` skill", "skill `x`") or equals a directory of
+// skills/; each such name has its SKILL.md. The three skills S2 says the body sends work to must be
+// named, so a parse that finds none proves nothing.
+func TestEverySkillTheForemanBodyNamesExists(t *testing.T) {
+	data, err := os.ReadFile(filepath.Join("..", "..", "roles", "foreman", "body.md"))
+	if err != nil {
+		t.Fatalf("reading the foreman body: %v", err)
+	}
+	body := string(data)
+	hasSkill := func(name string) bool {
+		_, err := os.Stat(filepath.Join("..", "..", "skills", name, "SKILL.md"))
+		return err == nil
+	}
+	named := map[string]bool{}
+	for _, pattern := range []string{"`([a-z][a-z-]*)` skill\\b", "\\bskill `([a-z][a-z-]*)`"} {
+		for _, m := range regexp.MustCompile(pattern).FindAllStringSubmatch(body, -1) {
+			named[m[1]] = true
+			if !hasSkill(m[1]) {
+				t.Errorf("the foreman body names the skill `%s`, and skills/%s/SKILL.md is not there", m[1], m[1])
+			}
+		}
+	}
+	for _, m := range regexp.MustCompile("`([a-z][a-z-]*)`").FindAllStringSubmatch(body, -1) {
+		if hasSkill(m[1]) {
+			named[m[1]] = true
+		}
+	}
+	for _, want := range []string{"inception-pipeline", "role-chain", "odd-feature-doc"} {
+		if !named[want] {
+			t.Errorf("the foreman body no longer names the skill `%s`", want)
+		}
 	}
 }
 

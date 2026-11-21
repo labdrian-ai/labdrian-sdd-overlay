@@ -1,0 +1,64 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "537bb26475b2db7b216246a8878bb5e61484ea00",
+    "head": "e001d5accdb5e3b60c93ff021dffd8bebc079891",
+    "diff_sha256": "a334f9853effc8e2bd88a74627f393b1b35491b4bf41535b4cb768e801e2d4fb",
+    "paths": [
+      "agents/foreman.md",
+      "engine/agentgen/agentgen.go",
+      "engine/agentgen/artifacts_test.go",
+      "engine/agentgen/foreman_test.go",
+      "engine/agentgen/messages_pin_test.go",
+      "engine/agentgen/roles.go",
+      "engine/cmd/agentgen_test.go",
+      "overlay.manifest",
+      "roles/foreman/body.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "537bb26475b2db7b216246a8878bb5e61484ea00",
+      "head": "e001d5accdb5e3b60c93ff021dffd8bebc079891",
+      "diff_sha256": "a334f9853effc8e2bd88a74627f393b1b35491b4bf41535b4cb768e801e2d4fb"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "agents/foreman.md",
+        "engine/agentgen/agentgen.go",
+        "engine/agentgen/artifacts_test.go",
+        "engine/agentgen/foreman_test.go",
+        "engine/agentgen/messages_pin_test.go",
+        "engine/agentgen/roles.go",
+        "engine/cmd/agentgen_test.go",
+        "overlay.manifest",
+        "roles/foreman/body.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "engine/agentgen/foreman_test.go:170",
+        "claim": "The test comment and failure message say the body should have about 45 lines (S2), but the committed body has 37 lines and the accepted range is 35-55. The stated target and the check disagree, which misleads a reader about what is pinned.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/agentgen/foreman_test.go: `n < 35 || n > 55` with \"about 45\"",
+          "roles/foreman/body.md has 37 lines"
+        ]
+      }
+    ],
+    "evidence": [
+      "The generator wiring (build order, projectClaude, claudeFile reuse) is consistent with the tests and the messages pin.",
+      "The agents/foreman.md frontmatter matches the foreman role definition and the body.",
+      "Skill and verb parsing in the new cmd tests match the spans in the body; no false matches found."
+    ]
+  }
+}

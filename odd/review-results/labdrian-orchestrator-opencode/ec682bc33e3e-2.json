@@ -1,0 +1,69 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "a5b877f2a61f5e10377a688060268eb4639ca212",
+    "head": "ec682bc33e3e9f1a44730b1f1d501a85a92d5b19",
+    "diff_sha256": "520b704c71c72aad6229108045298d20475721242e61c9eba8ac5294c74e24d7",
+    "paths": [
+      "odd/tasks/labdrian-orchestrator-opencode.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "a5b877f2a61f5e10377a688060268eb4639ca212",
+      "head": "ec682bc33e3e9f1a44730b1f1d501a85a92d5b19",
+      "diff_sha256": "520b704c71c72aad6229108045298d20475721242e61c9eba8ac5294c74e24d7"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/labdrian-orchestrator-opencode.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "odd/tasks/labdrian-orchestrator-opencode.md:45",
+        "claim": "The T23 task line now contradicts itself. The body still says legacy `engram:<n>` ids are 'translated and never rewritten (L46)'. The clause appended at the end says the skill rewrites each mapped legacy id as `memorycard:<m>` on the next save (L52). The builder is given two opposing rules, and the earlier one was not reworded or marked superseded.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/labdrian-orchestrator-opencode.md:45 'never rewritten (L46)' versus '; when the skill next saves a record, it rewrites each legacy `engram:<n>` ... (L52)'"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "WARNING",
+        "location": "odd/tasks/labdrian-orchestrator-opencode.md:45",
+        "claim": "L52 says T23 carries `Risk: 1` and gets an independent verifier, but the T23 line records neither. The brief has no risk marker and no verifier requirement, so the owner's decision can be missed at execution time.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/labdrian-orchestrator-opencode.md:472 'T23 carries `Risk: 1` and gets an independent verifier'; the T23 line at :45 contains no Risk or verifier text"
+        ]
+      },
+      {
+        "id": "F3",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/labdrian-orchestrator-opencode.md:45",
+        "claim": "The rewrite-on-save rule adds work, but the forecast (130-320 lines, 'widened in L46') and the test requirement ('one of which pins the translation rule') are unchanged. No test is required for the new rewrite behavior. The trailing `shaped: L46` still cites the older shaping, not L52.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/labdrian-orchestrator-opencode.md:45 forecast and test text left as in L46, with the rewrite clause appended after the minutes"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff changes only the T23 task line and appends Log entry L52 in odd/tasks/labdrian-orchestrator-opencode.md.",
+      "The T23 line keeps 'never rewritten' and adds a rewrite rule, which is a direct contradiction.",
+      "L52 requires Risk: 1 and a verifier; the T23 line does not."
+    ]
+  }
+}

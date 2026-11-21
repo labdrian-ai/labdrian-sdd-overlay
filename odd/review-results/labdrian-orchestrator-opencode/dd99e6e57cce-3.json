@@ -1,0 +1,87 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "6b2a2043a2984a734f86cc4a096884eb995d8e1e",
+    "head": "dd99e6e57ccee870faca20715f6d2a11691daaaf",
+    "diff_sha256": "07767d5efc151493181b38a2366394f10cc9e1eea842a5de60ce0039dc0bceb6",
+    "paths": [
+      "CHANGELOG.md",
+      "README.md",
+      "engine/cmd/opencode_bridge_e2e_test.go",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-context-lists-quotes-and-case.golden",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-minimalism-context-metadata-accepted-today.golden",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-phases-quoted-items-accepted-today.golden",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-reads-the-contracts-of-the-overlay.golden",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-without-the-oo-contract.golden",
+      "engine/cmd/testdata/runtime-golden/runtime-opencode-and-pi-with-an-overlay.golden",
+      "engine/hookwire/source.go",
+      "engine/hookwire/source_test.go",
+      "engine/runtime/labdrian-runtime-parity-plugin.mjs",
+      "engine/runtime/opencode_bridge_failure_test.go",
+      "engine/runtime/opencode_bridge_session_test.go",
+      "engine/runtime/opencode_plugin.go",
+      "engine/runtime/opencode_plugin_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "6b2a2043a2984a734f86cc4a096884eb995d8e1e",
+      "head": "dd99e6e57ccee870faca20715f6d2a11691daaaf",
+      "diff_sha256": "07767d5efc151493181b38a2366394f10cc9e1eea842a5de60ce0039dc0bceb6"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "README.md",
+        "engine/cmd/opencode_bridge_e2e_test.go",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-context-lists-quotes-and-case.golden",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-minimalism-context-metadata-accepted-today.golden",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-phases-quoted-items-accepted-today.golden",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-reads-the-contracts-of-the-overlay.golden",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-without-the-oo-contract.golden",
+        "engine/cmd/testdata/runtime-golden/runtime-opencode-and-pi-with-an-overlay.golden",
+        "engine/hookwire/source.go",
+        "engine/hookwire/source_test.go",
+        "engine/runtime/labdrian-runtime-parity-plugin.mjs",
+        "engine/runtime/opencode_bridge_failure_test.go",
+        "engine/runtime/opencode_bridge_session_test.go",
+        "engine/runtime/opencode_plugin.go",
+        "engine/runtime/opencode_plugin_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "engine/runtime/labdrian-runtime-parity-plugin.mjs:357-368",
+        "claim": "toolInputFor keeps an existing file_path/skill and does not overwrite it with OpenCode's real path/id. A model-supplied call such as read {path:'/protected/SKILL.md', file_path:'/benign'} or skill {id:'x', skill:'y'} shows the engine one value while the tool acts on another, so the policies that read file_path/skill (procedural-skill gate) can be bypassed. The new test even asserts this behavior.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/runtime/labdrian-runtime-parity-plugin.mjs:360 `input.file_path === undefined`",
+          "engine/runtime/opencode_bridge_failure_test.go: 'a file_path the call already has is not overwritten'"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "engine/runtime/labdrian-runtime-parity-plugin.mjs:250-272",
+        "claim": "After the 2 MiB limit is exceeded, every further stdout/stderr chunk calls end() again, sending repeated SIGTERMs and creating new SIGKILL timers and close listeners until the process dies. Only the first call should act. A shell-script engine's grandchildren are also not killed, since only the direct child receives the signals.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/runtime/labdrian-runtime-parity-plugin.mjs:263-271 collect() calls end() on every chunk once size > limit"
+        ]
+      }
+    ],
+    "evidence": [
+      "Reviewed the full diff; the bridge changes are in labdrian-runtime-parity-plugin.mjs.",
+      "Fail-open pause after a hang is by design; the guard is unenforced for 2x timeout, noted but not a defect against the stated behavior."
+    ]
+  }
+}

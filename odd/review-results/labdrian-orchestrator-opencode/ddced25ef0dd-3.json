@@ -1,0 +1,60 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "afb10297085cc474b423c30bb3fa18ccaecfbb84",
+    "head": "ddced25ef0dde1a6c1a57429c80084de462b8281",
+    "diff_sha256": "41f8c8e9702aae5ed19aa5dd25c3b2614238094414ca2e5e92cd9995e32b1adf",
+    "paths": [
+      "engine/skills/procedural_candidate_memorycard_test.go",
+      "skills/_shared/procedural-candidate-detection.md",
+      "skills/procedural-candidates/SKILL.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "afb10297085cc474b423c30bb3fa18ccaecfbb84",
+      "head": "ddced25ef0dde1a6c1a57429c80084de462b8281",
+      "diff_sha256": "41f8c8e9702aae5ed19aa5dd25c3b2614238094414ca2e5e92cd9995e32b1adf"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/skills/procedural_candidate_memorycard_test.go",
+        "skills/_shared/procedural-candidate-detection.md",
+        "skills/procedural-candidates/SKILL.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "skills/_shared/procedural-candidate-detection.md:115-117",
+        "claim": "Item 2 now says 'once for all of them' and, in the next sentence, 'Ask `resolve` once with each distinct legacy number'. The two sentences say nearly the same thing back to back, and it is unclear whether the second is a refinement (dedupe and sort) or a separate call. Merging them into one sentence would be easier to read.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "skills/_shared/procedural-candidate-detection.md:115-117"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "skills/_shared/procedural-candidate-detection.md:152-154",
+        "claim": "The sentence added to item 6 is appended unwrapped to a hard-wrapped line, leaving a long line. The 'unless resolve failed' clause is placed after 'An id reported unknown stays as written', so it is unclear which preceding rewrite rule it qualifies. This makes the passage harder to read.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "skills/_shared/procedural-candidate-detection.md:152-154"
+        ]
+      }
+    ],
+    "evidence": [
+      "Reviewed the three changed files from the diff only. I found no behavioral contradiction between the contract text, the SKILL.md text and the new test's required strings, assuming requireText normalizes the line-wrapped phrases. I could not verify that from the diff."
+    ]
+  }
+}

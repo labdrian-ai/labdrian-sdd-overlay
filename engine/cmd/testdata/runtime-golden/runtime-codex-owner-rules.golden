@@ -1,0 +1,134 @@
+# status before the block is there
+$ runtime status --target codex
+exit: 1
+--- stdout ---
+[codex] status: partial — Codex lifecycle manifest not found at <WORLD>/home/.codex/labdrian-runtime-lifecycle.json — reasons: owner rules block is missing in <WORLD>/home/AGENTS.md; run 'engine runtime install --target codex'; owner rules block is missing in <WORLD>/home/.codex/AGENTS.md; run 'engine runtime install --target codex'; owner rules block is missing in <WORLD>/home/.codex/agents.md; run 'engine runtime install --target codex' (note: Codex reads no file named agents.md (it loads AGENTS.override.md and AGENTS.md, and any name project_doc_fallback_filenames lists))
+--- stderr ---
+
+# install writes the block in the three files
+$ runtime install --target codex
+exit: 0
+--- stdout ---
+[codex] install: restart_required — Codex lifecycle manifest installed; restart long-running Codex processes to pick up updates; owner rules written to <WORLD>/home/AGENTS.md; owner rules written to <WORLD>/home/.codex/AGENTS.md; owner rules written to <WORLD>/home/.codex/agents.md (note: Codex reads no file named agents.md (it loads AGENTS.override.md and AGENTS.md, and any name project_doc_fallback_filenames lists))
+--- stderr ---
+
+--- home/AGENTS.md ---
+<!-- gentle-ai:orchestrator -->
+placeholder
+<!-- /gentle-ai:orchestrator -->
+
+my own text
+
+<!-- labdrian:owner-rules -->
+## Rules
+
+- a rule
+- another rule
+<!-- /labdrian:owner-rules -->
+
+--- home/.codex/AGENTS.md ---
+<!-- gentle-ai:persona -->
+placeholder
+<!-- /gentle-ai:persona -->
+
+<!-- user:memorycard-store -->
+store
+<!-- /user:memorycard-store -->
+
+<!-- labdrian:owner-rules -->
+## Rules
+
+- a rule
+- another rule
+<!-- /labdrian:owner-rules -->
+
+--- home/.codex/agents.md ---
+<!-- labdrian:owner-rules -->
+## Rules
+
+- a rule
+- another rule
+<!-- /labdrian:owner-rules -->
+
+# status
+$ runtime status --target codex
+exit: 1
+--- stdout ---
+[codex] status: partial — Codex lifecycle manifest is present and managed, but activation/reload state is unverified — reasons: activation/reload proof unavailable until Codex session lifecycle integration is implemented; owner rules block is current in <WORLD>/home/AGENTS.md; owner rules block is current in <WORLD>/home/.codex/AGENTS.md; owner rules block is current in <WORLD>/home/.codex/agents.md (note: Codex reads no file named agents.md (it loads AGENTS.override.md and AGENTS.md, and any name project_doc_fallback_filenames lists))
+--- stderr ---
+
+# status after the rules changed
+$ runtime status --target codex
+exit: 1
+--- stdout ---
+[codex] status: partial — Codex lifecycle manifest is present and managed, but activation/reload state is unverified — reasons: activation/reload proof unavailable until Codex session lifecycle integration is implemented; owner rules block is stale in <WORLD>/home/AGENTS.md; run 'engine runtime update --target codex'; owner rules block is stale in <WORLD>/home/.codex/AGENTS.md; run 'engine runtime update --target codex'; owner rules block is stale in <WORLD>/home/.codex/agents.md; run 'engine runtime update --target codex' (note: Codex reads no file named agents.md (it loads AGENTS.override.md and AGENTS.md, and any name project_doc_fallback_filenames lists))
+--- stderr ---
+
+# update replaces the block in place
+$ runtime update --target codex
+exit: 0
+--- stdout ---
+[codex] update: restart_required — Codex lifecycle manifest updated; restart long-running Codex processes to pick up updates; owner rules updated in <WORLD>/home/AGENTS.md; owner rules updated in <WORLD>/home/.codex/AGENTS.md; owner rules updated in <WORLD>/home/.codex/agents.md (note: Codex reads no file named agents.md (it loads AGENTS.override.md and AGENTS.md, and any name project_doc_fallback_filenames lists))
+--- stderr ---
+
+--- home/AGENTS.md ---
+<!-- gentle-ai:orchestrator -->
+placeholder
+<!-- /gentle-ai:orchestrator -->
+
+my own text
+
+<!-- labdrian:owner-rules -->
+## Rules
+
+- a changed rule
+<!-- /labdrian:owner-rules -->
+
+# uninstall removes only the block
+$ runtime uninstall --target codex
+exit: 0
+--- stdout ---
+[codex] uninstall: restart_required — Codex lifecycle manifest removed; restart long-running Codex processes; owner rules removed from <WORLD>/home/AGENTS.md; owner rules removed from <WORLD>/home/.codex/AGENTS.md; owner rules removed from <WORLD>/home/.codex/agents.md
+--- stderr ---
+
+--- home/AGENTS.md ---
+<!-- gentle-ai:orchestrator -->
+placeholder
+<!-- /gentle-ai:orchestrator -->
+
+my own text
+
+--- home/.codex/AGENTS.md ---
+<!-- gentle-ai:persona -->
+placeholder
+<!-- /gentle-ai:persona -->
+
+<!-- user:memorycard-store -->
+store
+<!-- /user:memorycard-store -->
+
+# a block without its close marker is not touched, the other files are written
+$ runtime install --target codex
+exit: 1
+--- stdout ---
+[codex] install: partial — Codex lifecycle manifest installed; restart long-running Codex processes to pick up updates; owner rules written to <WORLD>/home/AGENTS.md; owner rules could not be written: <WORLD>/home/.codex/AGENTS.md: its markers are not one open line followed by one close line (open: line 2; close: none); owner rules written to <WORLD>/home/.codex/agents.md (note: Codex reads no file named agents.md (it loads AGENTS.override.md and AGENTS.md, and any name project_doc_fallback_filenames lists))
+--- stderr ---
+
+--- home/.codex/AGENTS.md ---
+mine
+<!-- labdrian:owner-rules -->
+no close
+
+--- home/AGENTS.md ---
+<!-- gentle-ai:orchestrator -->
+placeholder
+<!-- /gentle-ai:orchestrator -->
+
+my own text
+
+<!-- labdrian:owner-rules -->
+## Rules
+
+- a changed rule
+<!-- /labdrian:owner-rules -->
+

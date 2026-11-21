@@ -1,0 +1,58 @@
+{
+  "kind": "polisher",
+  "base": "8df8f69a8b11dea3ea9fa254c10a01c283444981",
+  "head": "4ee2cccbec59217fa63581813568192e62737c01",
+  "diff_sha256": "972c836bd4d325fd50c6088483eb7f3e331dfb403ba651f77966d84558c87ea8",
+  "findings": {
+    "findings": [
+      {
+        "id": "S-W1",
+        "severity": "WARNING",
+        "location": "CHANGELOG.md:7",
+        "claim": "Note that the OpenCode bridge would save nothing if the context hook fires every turn was wrong. Fixed in f82925ff and 513c8f51: the bridge asks SessionStart once per session and the answer stays in the prompt history (read from the plugin source, unverified with a model until T17); the true limit stated: no SessionStart on OpenCode compaction, so the block returns only when it changes.",
+        "evidence": [
+          "series review 4ee2cccb; parity plugin askSessionStart."
+        ]
+      },
+      {
+        "id": "S-S1",
+        "severity": "SUGGESTION",
+        "location": "engine/cmd/projection_hook.go:262",
+        "claim": "Hash recorded before the block was printed. Fixed in f82925ff: recorded only after a successful stdout write.",
+        "evidence": [
+          "RED/GREEN TestABlockThatWasNotWrittenIsAddedByTheNextPrompt."
+        ]
+      },
+      {
+        "id": "S-S2",
+        "severity": "SUGGESTION",
+        "location": "engine/cmd/projection_hook.go:245-246",
+        "claim": "Doc comment contradicted the suppression. Fixed in f82925ff.",
+        "evidence": [
+          "series review."
+        ]
+      },
+      {
+        "id": "V-A1",
+        "severity": "SUGGESTION",
+        "location": "engine/cmd/state_stores.go",
+        "claim": "Verifier advisory: the store did not separate sources, so one source silenced another for the same session id. Fixed in f82925ff: keyed by source and session.",
+        "evidence": [
+          "verifier probe 8; RED/GREEN TestTheSameSessionIdUnderTwoSourcesIsTwoSessions."
+        ]
+      },
+      {
+        "id": "V-A2",
+        "severity": "SUGGESTION",
+        "location": "state home",
+        "claim": "Verifier advisory: a read-only state home whose labdrian dir already exists is not a store failure. Answered: expected, the store writes where it can.",
+        "evidence": [
+          "verifier probe 5 p5a."
+        ]
+      }
+    ],
+    "evidence": [
+      "independent verifier probes 1-11 pass, no blockers."
+    ]
+  }
+}

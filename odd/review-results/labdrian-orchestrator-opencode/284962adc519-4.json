@@ -1,0 +1,60 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "e5ffe5ee1d8cd07aa3b151e0765c89f1324a7bb6",
+    "head": "284962adc519179d93c09b81179bca27ff759fe6",
+    "diff_sha256": "a053d10448ec974f700e4c4b041207fa620feb684d4fcc48f9800b381433d07b",
+    "paths": [
+      "engine/review/risk.go",
+      "engine/review/risk_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "e5ffe5ee1d8cd07aa3b151e0765c89f1324a7bb6",
+      "head": "284962adc519179d93c09b81179bca27ff759fe6",
+      "diff_sha256": "a053d10448ec974f700e4c4b041207fa620feb684d4fcc48f9800b381433d07b"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/review/risk.go",
+        "engine/review/risk_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "engine/review/risk.go:106-125",
+        "claim": "The new parenthesis-depth scan requires the reason's parentheses to be balanced. A reason with an unbalanced parenthesis (for example \"3 (works :) fine)\" or \"3 (see foo( )\") was accepted before and is now refused as a malformed trailer. The failure is closed and visible, and it follows the commit's stated intent. It is still a change in which reasons are accepted, and the tests do not cover it (only the extra-close case is tested).",
+        "evidence_class": "deterministic",
+        "causal_disposition": "behavior-activated",
+        "proof_refs": [
+          "engine/review/risk.go:109-123"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "engine/review/risk.go:108",
+        "claim": "The blank-reason check only strips one trailing \")\" before trimming. A reason such as \"3 (())\" or \"3 (( ))\" has no real text but still passes, so the blank-reason rule is incomplete.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/review/risk.go:108"
+        ]
+      }
+    ],
+    "evidence": [
+      "Traced \"none (x) 3 (y)\": the first \")\" brings depth to 0 before the last byte, so the value is returned unchanged and ParseRisk refuses it. This is the intended fix.",
+      "Traced \"2 (x), 3 (y)\": same path, refused as intended.",
+      "Traced \"3 (a (b))\": depth returns to 0 only at the last byte, so the head \"3\" is returned. Nested reasons still work.",
+      "Traced \"3 ( )\": the blank check returns the value unchanged, so it is refused."
+    ]
+  }
+}

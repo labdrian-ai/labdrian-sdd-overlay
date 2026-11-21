@@ -1,0 +1,59 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "8929470c16c4f37af5f814922b8b1da647025640",
+    "head": "b243254a7632239863206aeeea669f0371a11a0b",
+    "diff_sha256": "976d4e37b38b5328fe01df2b16d41e15d95503efceb8633beb51eff17f302b90",
+    "paths": [
+      "bin/lib/apply.sh",
+      "engine/shelltest/apply_push_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "8929470c16c4f37af5f814922b8b1da647025640",
+      "head": "b243254a7632239863206aeeea669f0371a11a0b",
+      "diff_sha256": "976d4e37b38b5328fe01df2b16d41e15d95503efceb8633beb51eff17f302b90"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "bin/lib/apply.sh",
+        "engine/shelltest/apply_push_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "bin/lib/apply.sh:225-233",
+        "claim": "The classifier decides by URL syntax, so some same-machine origins still count as network and the scratch-clone push can happen again. Examples: the scp form `localhost:/path` or `127.0.0.1:/path`, an uppercase `FILE://` scheme, and a `C:/path` Windows drive path, which reaches the `*:*` branch. The `ext::cmd` transport also matches `*:*` and counts as network. The commit's goal is to stop pushes into a local repository, so these cases leave that guard incomplete. They are unusual inputs, and the verifier's failing case (a plain path) is handled.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "bin/lib/apply.sh:228-231"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "WARNING",
+        "location": "bin/lib/apply.sh:210-214",
+        "claim": "A deliberate local bare-repo origin (a path or file:// URL used as the shared publish point) used to get main pushed and now silently stops. The skip is only an info line, and the function still returns success. Any workflow or test that relied on apply pushing to such an origin will see main diverge without an error. Only the network and no-origin cases are covered by the new tests. I cannot see whether other tests exercise a local bare origin.",
+        "evidence_class": "inferential",
+        "causal_disposition": "behavior-activated",
+        "proof_refs": [
+          "bin/lib/apply.sh:212-213"
+        ]
+      }
+    ],
+    "evidence": [
+      "I read the new origin_is_network_remote case patterns and traced the cases the tests list: https, scp, ssh, absolute, relative, file://, and ~. Each one classifies as the tests expect.",
+      "The cmd_apply return logic is moved unchanged, so the exit-status behavior is preserved.",
+      "The test stubs git push so no case can reach a real remote."
+    ]
+  }
+}

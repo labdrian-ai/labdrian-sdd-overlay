@@ -1,0 +1,68 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "99290fbc2144bec46d2351da401840ea87230b2f",
+    "head": "940496742321891133905e5f2135cd11e63135c3",
+    "diff_sha256": "7430de326dccc64a783a3d0888343f0316c1a0e7e14e7b33f3a7b0e7bea615e4",
+    "paths": [
+      "agents/foreman.md",
+      "engine/agentgen/foreman_test.go",
+      "engine/agentgen/opencode_denies_test.go",
+      "engine/agentgen/opencode_test.go",
+      "engine/agentgen/roles.go",
+      "opencode/agents/foreman.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "99290fbc2144bec46d2351da401840ea87230b2f",
+      "head": "940496742321891133905e5f2135cd11e63135c3",
+      "diff_sha256": "7430de326dccc64a783a3d0888343f0316c1a0e7e14e7b33f3a7b0e7bea615e4"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "agents/foreman.md",
+        "engine/agentgen/foreman_test.go",
+        "engine/agentgen/opencode_denies_test.go",
+        "engine/agentgen/opencode_test.go",
+        "engine/agentgen/roles.go",
+        "opencode/agents/foreman.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "engine/agentgen/opencode_denies_test.go:62-64",
+        "claim": "The test header still cites the foreman row as 'S7, acceptance of L21' while the comment now also describes the T48/L134 change; the comment mixes two provenance records, and nothing states that the earlier acceptance of L21 (a deny on question) is superseded, which could mislead a reader checking L21.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/agentgen/opencode_denies_test.go:62-64"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "engine/agentgen/roles.go:156-157",
+        "claim": "The roles.go comment says 'in OpenCode it keeps the question tool' but the foreman's other OpenCode keeps (skill) are set via an explicit openCodeSkill field with its own comment, while question is kept implicitly by the absence of a deny derived from the Claude list. The derivation rule (AskUserQuestion maps to question) is not visible from this change, so a reader cannot confirm the mapping from the diff; no test pins the AskUserQuestion-to-question mapping directly other than the generated foreman file.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/agentgen/roles.go:156-157",
+          "engine/agentgen/roles.go:166"
+        ]
+      }
+    ],
+    "evidence": [
+      "Reviewed all six changed paths; the tool list, regenerated Claude and OpenCode files, and test expectations are mutually consistent (question deny removed, three denies remain).",
+      "No functional defect found: the OpenCode projection removes only the question deny and the tests assert the exact remaining three denies."
+    ]
+  }
+}

@@ -10,6 +10,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/fs"
 	"os"
@@ -75,10 +76,26 @@ func TestMemoryWiringAcceptance(t *testing.T) {
 
 	const block = "labdrian memory instructions (workflow wf-1, scope project):\n" +
 		"- Read memory only from: engram. A read from any other source is denied.\n" +
-		"- Engram reads (mem_search, mem_context) name project \"proj-1\".\n" +
+		"- memorycard is the source engram: its reads (mem_search, mem_context, mem_get) go ahead while engram is listed, and a memorycard record you write may be read back.\n" +
+		"- Engram and memorycard reads (mem_search, mem_context) name project \"proj-1\".\n" +
 		"- Memory writes (mem_save, promote) are not limited by the plan.\n" +
-		"- Procedural candidates: T1 right after a proactive mem_save of type bugfix, pattern, discovery or decision; T2 at session close, beside mem_session_summary (skills/_shared/procedural-candidate-detection.md, section 5). Load skills/procedural-candidates/SKILL.md for the procedure; run `skills candidates` before creating or updating a candidate."
-	const unavailable = "- Do not read engram: it is unavailable in this session (the engram program was not found).\n"
+		"- Procedural candidates: T1 right after a proactive mem_save of type bugfix, pattern, discovery or decision; T2 at session close, beside mem_session (skills/_shared/procedural-candidate-detection.md, section 5). Load skills/procedural-candidates/SKILL.md for the procedure; run `skills candidates` before creating or updating a candidate."
+	// The memorycard store the hook probes is under this world's home; each proof that asks the
+	// probe puts the store where it needs it (a file) or removes it, whatever ran before.
+	memorycardDir := filepath.Join(w.home, ".memorycard")
+	store := filepath.Join(memorycardDir, "memory.db")
+	withoutStore := func(t *testing.T) {
+		t.Helper()
+		if err := os.RemoveAll(memorycardDir); err != nil {
+			t.Fatal(err)
+		}
+	}
+	withStore := func(t *testing.T) {
+		t.Helper()
+		withoutStore(t)
+		writeFixtureFile(t, store, "SQLite format 3\x00")
+	}
+	unavailable := "- memorycard has no store yet (the memorycard store " + store + " does not exist): memorycard creates it when it first opens it, so its reads find nothing until a record is saved.\n"
 	sessionOutput := func(instructions string) string {
 		return `{"hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":` + strconv.Quote(instructions) + "}}\n"
 	}
@@ -99,9 +116,10 @@ func TestMemoryWiringAcceptance(t *testing.T) {
 		unchanged(t, before)
 	}
 	claudeInstructions := func(t *testing.T) {
+		withoutStore(t)
 		instructions(t)
 		before := w.stateSnapshot()
-		degraded := strings.Replace(block, "- Engram reads", unavailable+"- Engram reads", 1)
+		degraded := strings.Replace(block, "- memorycard is", unavailable+"- memorycard is", 1)
 		check(t, "SessionStart", w.engine(w.dir, sessionStartInput(t, w.repo, "startup"), "projection", "hook", "--event", "SessionStart"), sessionOutput(degraded))
 		contract := writeMemoryTestFile(t, w.dir, "contract.md", contractContentForE2E)
 		prompt := "Do the task.\n\n## Skills to load before work\n" + contract + "\n\n" + block + "\n"
@@ -160,18 +178,42 @@ func TestMemoryWiringAcceptance(t *testing.T) {
 		denied(t)
 	}
 	claudeAvailability := func(t *testing.T) {
-		// The earlier SessionStart pinned the unavailable line. Now a scratch
-		// Engram stub answers stats; no real memory service can be contacted.
-		marker := filepath.Join(w.dir, "engram-args")
-		writeFixtureFile(t, filepath.Join(w.bin, "engram"), "#!/bin/sh\nprintf '%s\\n' \"$*\" > '"+marker+"'\n")
-		if err := os.Chmod(filepath.Join(w.bin, "engram"), 0o700); err != nil {
+		// A scratch memorycard stub records its arguments; no real memory service can be contacted.
+		// With no store the probe stats first, reports it and runs nothing, so it creates nothing.
+		withoutStore(t)
+		marker := filepath.Join(w.dir, "memorycard-args")
+		if err := os.RemoveAll(marker); err != nil {
+			t.Fatal(err)
+		}
+		writeFixtureFile(t, filepath.Join(w.bin, "memorycard"), "#!/bin/sh\nprintf '%s\\n' \"$*\" > '"+marker+"'\n")
+		if err := os.Chmod(filepath.Join(w.bin, "memorycard"), 0o700); err != nil {
 			t.Fatal(err)
 		}
 		before := w.stateSnapshot()
+		check(t, "SessionStart with no store", w.engine(w.dir, sessionStartInput(t, w.repo, "startup"), "projection", "hook", "--event", "SessionStart"), sessionOutput(strings.Replace(block, "- memorycard is", unavailable+"- memorycard is", 1)))
+		if _, err := os.Stat(marker); !errors.Is(err, fs.ErrNotExist) {
+			t.Fatalf("memorycard ran with no store (marker stat: %v)", err)
+		}
+		if _, err := os.Stat(memorycardDir); !errors.Is(err, fs.ErrNotExist) {
+			t.Fatalf("the probe created %s (stat: %v)", memorycardDir, err)
+		}
+		// An empty store is no store: memorycard would initialise the file, so the probe runs nothing
+		// and says memorycard has no store yet.
+		withoutStore(t)
+		writeFixtureFile(t, store, "")
+		emptyLine := strings.Replace(unavailable, "does not exist", "is empty", 1)
+		check(t, "SessionStart with an empty store", w.engine(w.dir, sessionStartInput(t, w.repo, "startup"), "projection", "hook", "--event", "SessionStart"), sessionOutput(strings.Replace(block, "- memorycard is", emptyLine+"- memorycard is", 1)))
+		if _, err := os.Stat(marker); !errors.Is(err, fs.ErrNotExist) {
+			t.Fatalf("memorycard ran on an empty store (marker stat: %v)", err)
+		}
+		if info, err := os.Stat(store); err != nil || info.Size() != 0 {
+			t.Fatalf("the probe changed the empty store: %v, %v", info, err)
+		}
+		withStore(t)
 		check(t, "available SessionStart", w.engine(w.dir, sessionStartInput(t, w.repo, "resume"), "projection", "hook", "--event", "SessionStart"), sessionOutput(block))
 		args, err := os.ReadFile(marker)
-		if err != nil || string(args) != "stats\n" {
-			t.Fatalf("session probe args %q, %v, want stats", args, err)
+		if want := "list --topic-prefix labdrian/session-probe/ --project labdrian-session-probe\n"; err != nil || string(args) != want {
+			t.Fatalf("session probe args %q, %v, want %q", args, err, want)
 		}
 		unchanged(t, before)
 	}
@@ -304,11 +346,12 @@ func TestMemoryWiringAcceptance(t *testing.T) {
 			t.Fatalf("our entry or the foreign one is missing: %s", data)
 		}
 		// sh falls back to its own default PATH when PATH is empty, which on a developer machine can
-		// find a real engram; the probe is made deterministic with a PATH that holds a stub that
-		// answers `engram stats`, so the block carries no availability line.
+		// find a real memorycard; the probe is made deterministic with a store file and a PATH that
+		// holds a stub that answers `memorycard list`, so the block carries no availability line.
+		withStore(t)
 		hw := w
 		hw.bin = t.TempDir()
-		if err := os.WriteFile(filepath.Join(hw.bin, "engram"), []byte("#!/bin/sh\nexit 0\n"), 0o700); err != nil {
+		if err := os.WriteFile(filepath.Join(hw.bin, "memorycard"), []byte("#!/bin/sh\nexit 0\n"), 0o700); err != nil {
 			t.Fatal(err)
 		}
 		for _, source := range []string{"startup", "resume", "clear", "compact"} {
@@ -319,17 +362,18 @@ func TestMemoryWiringAcceptance(t *testing.T) {
 	codexAvailability := func(t *testing.T) {
 		t.Helper()
 		// The hook shares Claude's SessionStart renderer, so the session-time probe of C23 M8 runs
-		// in the hook process too: a stub engram that fails is reported in the block.
+		// in the hook process too: a stub memorycard that fails, over a store file, is reported in the block.
 		if codexCommand == "" {
 			t.Fatal("the instructions proof did not install the Codex hook")
 		}
+		withStore(t)
 		hw := w
 		hw.bin = t.TempDir()
-		if err := os.WriteFile(filepath.Join(hw.bin, "engram"), []byte("#!/bin/sh\nexit 1\n"), 0o700); err != nil {
+		if err := os.WriteFile(filepath.Join(hw.bin, "memorycard"), []byte("#!/bin/sh\nexit 1\n"), 0o700); err != nil {
 			t.Fatal(err)
 		}
-		line := "- Do not read engram: it is unavailable in this session (the engram program failed: exit status 1).\n"
-		want := sessionOutput(strings.Replace(block, "- Engram reads", line+"- Engram reads", 1))
+		line := "- Do not call the memorycard tools: memorycard is unavailable in this session (the memorycard program failed: exit status 1), though the plan allows its reads and does not limit its writes.\n"
+		want := sessionOutput(strings.Replace(block, "- memorycard is", line+"- memorycard is", 1))
 		check(t, "codex SessionStart availability", hw.run(hw.dir, sessionStartInput(t, hw.repo, "startup"), "sh", "-c", codexCommand), want)
 	}
 	codexTool := func(t *testing.T, event, tool string, input any) phase7Run {

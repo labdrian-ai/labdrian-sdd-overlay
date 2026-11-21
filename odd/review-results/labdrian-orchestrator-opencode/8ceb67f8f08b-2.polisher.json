@@ -1,0 +1,18 @@
+{
+  "kind": "polisher",
+  "base": "ec250124001db54af43d4fe63df6e1d20941b2eb",
+  "head": "8ceb67f8f08b7db3dd816fc9ca38bf7190a69f75",
+  "diff_sha256": "760fde698a0988f6e3bbb62a0547c068242f240f607ac14ec4381429a8a78a14",
+  "findings": {
+    "findings": [],
+    "evidence": [
+      "Read the whole diff t64.diff and L186 and L187.",
+      "engine/cmd/session_availability.go: the engram case calls storeProblem first, which stats the path (following links) and returns a reason without running memorycard when the path is empty, absent, unreadable or not a regular file; otherwise it runs memorycard with the spec's argument list. MEMORYCARD_DB is read through the deps, else <home>/.memorycard/memory.db. Matches the T64 design.",
+      "engine/cmd/deps.go: deps has env() and homeDir(); the test fields getenv and userHomeDir exist; environmentOf is defined in deps_test.go:46. Not compiled or run.",
+      "engine/cmd/process_boundary_test.go: os.Stat is allowed (line 274). Not run.",
+      "Imports used by the new tests exist in codex_hooks_test.go and both live_guard_test.go files.",
+      "The line text matches across availability.go, usage.go, README.md, the ADR amendment and CHANGELOG.md, and tests pin them. No remaining operative reference to `engram stats` or the old Engram line; remaining matches are the C23 M10 ADR, older CHANGELOG entries (~line 119) and ADR M8 decisions 1-6, covered by the amendment or left historical by L186 R5.",
+      "Known unproven items, not code defects: the TestMain MEMORYCARD_DB pins have no mutation proof; codex/availability's mutation failure was not isolated. The 439 changed lines against 150-260 is a size note."
+    ]
+  }
+}

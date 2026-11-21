@@ -1,0 +1,57 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "5c22600b0406b1708279b0170b3f46b69e5df772",
+    "head": "16825fd3c345f8f0c10c4f96a10e5512f59fdc19",
+    "diff_sha256": "bcd85bd5657f0b7cc86c6ce3601761127865e5b732749bcf161739fc16d2618b",
+    "paths": [
+      "odd/tasks/labdrian-orchestrator-opencode.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "5c22600b0406b1708279b0170b3f46b69e5df772",
+      "head": "16825fd3c345f8f0c10c4f96a10e5512f59fdc19",
+      "diff_sha256": "bcd85bd5657f0b7cc86c6ce3601761127865e5b732749bcf161739fc16d2618b"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/labdrian-orchestrator-opencode.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/labdrian-orchestrator-opencode.md:484",
+        "claim": "L59 states 'review check 87f26495..HEAD after T9: clear' as a record, but this docs commit is itself part of HEAD and the check cannot have covered it; the claim's range is ambiguous. Also L58 still says 'the ./cmd process test RED not captured' while L59 now contradicts it; the earlier line is left unamended, so a reader of L58 alone gets a stale statement (acceptable for an append-only log, but unflagged).",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/labdrian-orchestrator-opencode.md:484"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/labdrian-orchestrator-opencode.md:484",
+        "claim": "The RED claim names three failing tests but gives no command or revert commit evidence beyond '4d34b336'. Note that 4d34b336 is described elsewhere as a review target of a docs/T20 change (L58 'Review of 4d34b336 F1 (no L91 in that diff)'), so using it as the pre-T9 source.go revert point is confusing; the base for the revert should be the parent of bd6a9526.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/labdrian-orchestrator-opencode.md:484"
+        ]
+      }
+    ],
+    "evidence": [
+      "Single changed file is a documentation log; added lines 482-484 append L59 only.",
+      "No code behavior changes; findings concern record accuracy only."
+    ]
+  }
+}

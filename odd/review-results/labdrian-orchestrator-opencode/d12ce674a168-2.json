@@ -1,0 +1,49 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "12ed029296bb54975f29c88daa0c95b464e9f5eb",
+    "head": "d12ce674a16895508d379436465b6c848f768193",
+    "diff_sha256": "b221ba98a874869e2381fb8be8fcc360ae54ffe17cd019a92e05fc60466ff14c",
+    "paths": [
+      "bin/lib/common.sh",
+      "engine/shelltest/apply_push_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "12ed029296bb54975f29c88daa0c95b464e9f5eb",
+      "head": "d12ce674a16895508d379436465b6c848f768193",
+      "diff_sha256": "b221ba98a874869e2381fb8be8fcc360ae54ffe17cd019a92e05fc60466ff14c"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "bin/lib/common.sh",
+        "engine/shelltest/apply_push_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "bin/lib/common.sh:109",
+        "claim": "The case pattern only covers git+ssh:// and ssh+git:// by enumeration. Other ssh-transport URL forms (for example a scheme with different casing is handled by lowercasing, but variants such as git+ssh with a port or userinfo are handled by the shared host extraction only if it strips the port; the diff does not show that the host parsing handles ports, so a URL like git+ssh://localhost:2222/x would depend on code outside the diff). The new tests cover only the bare-host form for the two new schemes, with no user@ or port cases.",
+        "evidence_class": "inferential",
+        "causal_disposition": "unknown",
+        "proof_refs": [
+          "bin/lib/common.sh:109-112"
+        ]
+      }
+    ],
+    "evidence": [
+      "The change only widens the existing ssh:// case arm to two more scheme prefixes; the shared host extraction (strip scheme, strip path, strip user@) is reused unchanged, so behavior for the new schemes matches ssh://.",
+      "Tests added for localhost via git+ssh and 127.0.0.1 via ssh+git match the claimed behavior (false = not a network remote).",
+      "Host extraction after the visible lines (port stripping, loopback comparison) is not in the diff, so port or userinfo handling for the new schemes cannot be verified from here."
+    ]
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "kind": "sweeper",
+  "base": "ec250124001db54af43d4fe63df6e1d20941b2eb",
+  "head": "8ceb67f8f08b7db3dd816fc9ca38bf7190a69f75",
+  "diff_sha256": "760fde698a0988f6e3bbb62a0547c068242f240f607ac14ec4381429a8a78a14",
+  "sweep": "8ceb67f8f08b-1.sweep.json",
+  "commit": null,
+  "candidates": [
+    {
+      "candidate": "T1 name: TestAnUnavailableEngramNamesTheEngramToolsAndSparesMemorycard",
+      "disposition": "live",
+      "evidence": "rg outside odd/review-results finds it only in odd/tasks/labdrian-orchestrator-opencode.md L100 (T58 history) and L106 (T64 design naming the rename); no Go or doc reference remains; replaced on purpose by TestAnUnavailableEngramSourceNamesTheMemorycardTools; feature-document history kept"
+    },
+    {
+      "candidate": "T2 errcheck engine: cmd/live_guard_test.go: unchecked error: os.Setenv(\"MEMORYCARD_DB\", filepath.Join(home, \"memorycard\", \"memory.db\"))",
+      "disposition": "live",
+      "evidence": "not dead code: a TestMain guard line that pins MEMORYCARD_DB, written like the os.Setenv lines beside it (cmd/live_guard_test.go:34-35,41-42), which are unchecked the same way; removing it would let tests reach the live store; removal-only sweep leaves it"
+    },
+    {
+      "candidate": "T2 errcheck engine: runtime/live_guard_test.go: unchecked error: os.Setenv(\"MEMORYCARD_DB\", filepath.Join(home, \"memorycard\", \"memory.db\"))",
+      "disposition": "live",
+      "evidence": "not dead code: TestMain guard line beside the unchecked os.Setenv lines at runtime/live_guard_test.go:32-33; removing it would let tests reach the live store"
+    },
+    {
+      "candidate": "T3: ?? CLAUDE.md",
+      "disposition": "live",
+      "evidence": "owner, verbatim, L160: se quedan los files de wiki; never deleted"
+    },
+    {
+      "candidate": "T3: ?? docs/wiki/.format",
+      "disposition": "live",
+      "evidence": "owner, verbatim, L160: se quedan los files de wiki; never deleted"
+    },
+    {
+      "candidate": "T3: ?? docs/wiki/README.md",
+      "disposition": "live",
+      "evidence": "owner, verbatim, L160: se quedan los files de wiki; never deleted"
+    }
+  ]
+}

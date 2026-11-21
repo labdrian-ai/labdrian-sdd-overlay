@@ -1,0 +1,48 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "143b4b6d50d20dbee31150a172febc29989fa14a",
+    "head": "7ff8826fd115475677b53afc75a012790305b98b",
+    "diff_sha256": "e902976488b561e08c0fdb240ff224e2e33c2ac8736118b1aa539bba3f40c899",
+    "paths": [
+      "engine/agentgen/models_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "143b4b6d50d20dbee31150a172febc29989fa14a",
+      "head": "7ff8826fd115475677b53afc75a012790305b98b",
+      "diff_sha256": "e902976488b561e08c0fdb240ff224e2e33c2ac8736118b1aa539bba3f40c899"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/agentgen/models_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "engine/agentgen/models_test.go:154-161",
+        "claim": "The test asserts that Generate returns an error naming both the missing builder source and the malformed table, but its comment and the commit title speak only of Check reporting both. If Generate legitimately stops at the first failure, the test would fail on a correct implementation. This cannot be confirmed from the diff, since the production code is not shown. The substring check for 'roles/shaper' is also a weak guard, because it only holds if error paths are formatted with that exact prefix.",
+        "evidence_class": "inferential",
+        "causal_disposition": "unknown",
+        "proof_refs": [
+          "engine/agentgen/models_test.go:154",
+          "engine/agentgen/models_test.go:155",
+          "engine/agentgen/models_test.go:158"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff only adds a test to engine/agentgen/models_test.go and changes no production code.",
+      "The test iterates over a map, so the order of Generate and Check is nondeterministic. This is harmless because the cases are independent and each uses the same root, though Generate could in principle write files that change what Check sees. The error strings are only inspected for substrings.",
+      "Neither a runtime defect nor a regression is demonstrable from the diff alone."
+    ]
+  }
+}

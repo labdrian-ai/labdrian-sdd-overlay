@@ -1,0 +1,61 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "4eb00fb93259d9dac9d8340ecd024ef8358f587f",
+    "head": "8510c7b69ea5319c956c1d8935507da62b73ae11",
+    "diff_sha256": "c9e9a87ac2919a30acc0ab3d1a39fab1850dbd981db6625ddf8836abfc05dd57",
+    "paths": [
+      "README.md",
+      "engine/cmd/review_stop_hook_docs_test.go",
+      "engine/cmd/review_stop_hook_test.go",
+      "engine/cmd/usage.go",
+      "engine/review/app/app.go",
+      "engine/review/gitexec/gitexec.go",
+      "engine/review/gitexec/standing_test.go",
+      "skills/chained-pr/references/chaining-details.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "4eb00fb93259d9dac9d8340ecd024ef8358f587f",
+      "head": "8510c7b69ea5319c956c1d8935507da62b73ae11",
+      "diff_sha256": "c9e9a87ac2919a30acc0ab3d1a39fab1850dbd981db6625ddf8836abfc05dd57"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "README.md",
+        "engine/cmd/review_stop_hook_docs_test.go",
+        "engine/cmd/review_stop_hook_test.go",
+        "engine/cmd/usage.go",
+        "engine/review/app/app.go",
+        "engine/review/gitexec/gitexec.go",
+        "engine/review/gitexec/standing_test.go",
+        "skills/chained-pr/references/chaining-details.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "engine/review/gitexec/gitexec.go:441-443",
+        "claim": "Every commit reachable from the tip of the tracked branch of another name is dropped from the range, not only the commits inherited from the parent. If the child's own commits are also in that upstream, for example after the child was merged or fast-forwarded into its parent (chaining-details step 5 integrates children in order) or after a push to a differently named upstream, the hook asks nothing for them. A branch that was valid before the change can then stop being asked for commits that were never reviewed.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/review/gitexec/gitexec.go:441-443 appends ^<upstream tip> unconditionally when the upstream has another name",
+          "engine/review/gitexec/gitexec.go:1044-1076 upstreamTip checks only the upstream's name, never whether the upstream contains the branch's own commits"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff adds one extra ^<tip> exclusion to the rev-list in Standing. The upstream is found through branch.<b>.merge and for-each-ref %(upstream), and every failed read falls back to the old range.",
+      "The stacked-branch cases, the same-name upstream case, the nonexistent upstream and the parent that moved on are all covered by tests. The one case not covered is an upstream that contains the child's own commits."
+    ]
+  }
+}

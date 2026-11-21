@@ -1,0 +1,99 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "3d93b7c5fecfdee0b9c6ff462557fcda3574a825",
+    "head": "bcd6b4b80032c925cc6401ec8de55f680c402e78",
+    "diff_sha256": "af4dccd537f50c0ab85fa6c5cf8256d8e033fc35768022d874af0007bf69cefd",
+    "paths": [
+      "CHANGELOG.md",
+      "bin/lib/usage.sh",
+      "engine/cmd/review.go",
+      "engine/cmd/review_check_chain_test.go",
+      "engine/cmd/review_verbs_docs_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability",
+    "hunt"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "3d93b7c5fecfdee0b9c6ff462557fcda3574a825",
+      "head": "bcd6b4b80032c925cc6401ec8de55f680c402e78",
+      "diff_sha256": "af4dccd537f50c0ab85fa6c5cf8256d8e033fc35768022d874af0007bf69cefd"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "bin/lib/usage.sh",
+        "engine/cmd/review.go",
+        "engine/cmd/review_check_chain_test.go",
+        "engine/cmd/review_verbs_docs_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "engine/cmd/review_verbs_docs_test.go:65-67",
+        "severity": "SUGGESTION",
+        "claim": "The minimum of 13 verbs is an unexplained constant equal to the current number of verbs. If a verb is removed on purpose, runReview routes 12 verbs and the test fails with the message 'the parse found nothing it should'. That message is wrong in that case: the parse worked and a verb was removed. The check is meant to catch a parse that found nothing, and a minimum of 1, or a comment that says the number tracks the current verb count, would state that intent without misleading the next maintainer.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/cmd/review.go:75-101 has 13 case values (12 string literals plus reviewStopVerb)",
+          "engine/cmd/review_verbs_docs_test.go:65-66 if len(verbs) < 13 { t.Fatalf(\"... fewer than 13: the parse found nothing it should\") }"
+        ]
+      },
+      {
+        "id": "F2",
+        "location": "engine/cmd/review_verbs_docs_test.go:130-131",
+        "severity": "SUGGESTION",
+        "claim": "The CHANGELOG part of the check only looks for the words 'review <verb>' anywhere in the whole file. Because of this, a new verb whose name already appears after 'review ' somewhere in CHANGELOG.md (in any entry, any section, including Removed or released sections) passes even though it has no entry of its own. The same mistake that put review findings out of the CHANGELOG could then reach a PR unseen. Checking only the '## Unreleased' section, or only entry-leading forms like 'labdrian review <verb>', would make the check tighter. The design records this as accepted risk R2, but the gap still exists in the CHANGELOG part.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/cmd/review_verbs_docs_test.go:114 changelog := readRepositoryFile(t, \"CHANGELOG.md\") with no section cut",
+          "engine/cmd/review_verbs_docs_test.go:130 regexp `review ` + quoted + `([^A-Za-z0-9-]|$)` against the whole file"
+        ]
+      },
+      {
+        "id": "F3",
+        "location": "engine/cmd/review_verbs_docs_test.go:116-133",
+        "severity": "SUGGESTION",
+        "claim": "There are two more places that list the review verbs, and the class check covers neither: the 'review requires a verb: ...' message and the 'unknown verb ... (expected ...)' message in runReview. If someone adds a new case \"x\" with its docs in all five documented places but leaves it out of these two messages, every test still passes, and the CLI's own refusal text no longer names a routed verb. This is the same class of error the commit is meant to close: a verb missing from a place that lists the verbs. The design rejected these messages as the source of the verb list, but not as places to check.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "unknown",
+        "proof_refs": [
+          "engine/cmd/review.go:71 and engine/cmd/review.go:103 hard-code verb lists",
+          "engine/cmd/review_verbs_docs_test.go:116-133 checks only usage(), bin/lib/usage.sh, README.md, the package comment and CHANGELOG.md"
+        ]
+      },
+      {
+        "id": "F4",
+        "location": "engine/cmd/review_verbs_docs_test.go:35-41",
+        "severity": "SUGGESTION",
+        "claim": "To find the routed switch, the code accepts any switch on an index of 'args' (args[i] for any i) inside runReview, and stops looking inside that switch once it matches. It does not check that the index is the literal 0. If a later edit adds a switch on args[1] or args[len(args)-1] earlier in runReview, for example to check flags, the cases of that switch are collected as routed verbs. The test then demands docs for strings like '--base', while still passing the 13-verb minimum. The failure is loud, so it is not a false pass.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/cmd/review_verbs_docs_test.go:35-41 checks tag.X is the Ident args but never tag.Index"
+        ]
+      }
+    ],
+    "evidence": [
+      "The changed hunks were found from the exact texts L196 gives for each file (odd/tasks/labdrian-orchestrator-opencode.md:1151-1163) and checked against the head files in /home/labdrian/labdrian-sdd-overlay-worktrees/review-bcd6b4b80032.",
+      "Read all of engine/cmd/review_verbs_docs_test.go (201 lines).",
+      "Read engine/cmd/review.go:1-45 (the package comment, including the new 'review ci' sentence at lines 28-29) and 66-105 (runReview: 13 case values, reviewStopVerb at line 100, the verb lists in the error messages at lines 71 and 103).",
+      "Read bin/lib/usage.sh:270-454. The new ci entry is at lines 408-422: the verb is at column 35 and the text matches L196 item 1.",
+      "Read engine/cmd/usage.go:233-238 (engine review ci). Each fact in the wrapper ci entry matches it.",
+      "Read CHANGELOG.md:1-35 and 148-151. The new findings item at line 31 matches L196 item 5 and is accurate against review.go:71 and :103. The #6179 item at line 150 now says 'the oldest commit the range covers, the one whose first parent is that start', accurate against startsInBase (engine/review/app/chain.go:103-120).",
+      "Read engine/cmd/review_check_chain_test.go:340-359. The doc comment now names the four return values (m, first, merged, tip).",
+      "Focus answer: routedReviewVerbs parses review.go with go/parser and reads the case values of runReview's switch on args[...]. A new case \"x\" is collected and checked in all five places. A missing runReview, a switch moved elsewhere, or a parse that finds fewer than 13 verbs calls t.Fatalf. Non-literal case values other than reviewStopVerb call t.Fatalf. Parse errors are fatal. There is no silent-pass path.",
+      "Risk line 'Risk: none': the new test only reads repository files through relative paths. It does no exec, no network access and no writes.",
+      "Nothing was run: no go test, gofmt, shellcheck or bash -n."
+    ]
+  }
+}

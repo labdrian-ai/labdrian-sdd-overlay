@@ -16,7 +16,7 @@ exit: 1
 $ runtime status --target codex
 exit: 1
 --- stdout ---
-[codex] status: partial — Codex lifecycle manifest not found at <WORLD>/home/.codex/labdrian-runtime-lifecycle.json
+[codex] status: partial — Codex lifecycle manifest not found at <WORLD>/home/.codex/labdrian-runtime-lifecycle.json — reasons: owner rules not checked: no overlay checkout found; set LABDRIAN_OVERLAY_DIR
 --- stderr ---
 
 # status opencode
@@ -39,7 +39,7 @@ exit: 1
 --- stdout ---
 [claude] status: unsupported — Claude settings file not found at <WORLD>/home/.claude/settings.json
 [opencode] status: unsupported — OpenCode plugin not installed
-[codex] status: partial — Codex lifecycle manifest not found at <WORLD>/home/.codex/labdrian-runtime-lifecycle.json
+[codex] status: partial — Codex lifecycle manifest not found at <WORLD>/home/.codex/labdrian-runtime-lifecycle.json — reasons: owner rules not checked: no overlay checkout found; set LABDRIAN_OVERLAY_DIR
 [pi] status: unsupported — labdrian-pi package is not built at <WORLD>/home/.labdrian-overlay/pi/labdrian-pi (run: labdrian-overlay apply --target pi). 'pi --no-extensions' disables the before_agent_start contract-gate extension for that session, and 'pi --no-skills' disables skill discovery, for that session only; neither flag's use is detected at runtime (short aliases: -ne and -ns)
 --- stderr ---
 

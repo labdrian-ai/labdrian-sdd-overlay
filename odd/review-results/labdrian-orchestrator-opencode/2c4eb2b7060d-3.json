@@ -1,0 +1,101 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "0d30f1b8a07ced6b2454d312764eafd060618a11",
+    "head": "2c4eb2b7060d8c3f44d12c20faf9764996a2cfd0",
+    "diff_sha256": "576e9aa313b986be102a6ac2b508a64625b42259ea2d267c67e4b50f40ab7c91",
+    "paths": [
+      "CHANGELOG.md",
+      "engine/runtime/longtermmem.go",
+      "engine/runtime/longtermmem_config.go",
+      "engine/runtime/longtermmem_status.go",
+      "engine/runtime/longtermmem_test.go",
+      "longterm-mem/README.md",
+      "longterm-mem/cmd/longterm-mem/cmd_register.go",
+      "longterm-mem/cmd/longterm-mem/register_golden_test.go",
+      "longterm-mem/cmd/longterm-mem/testdata/register-golden/42-register-migrates-an-owned-opencode-1x-entry.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/register-golden/43-register-over-an-opencode-1x-entry-that-is-not-ours.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/register-golden/44-unregister-an-owned-opencode-1x-entry.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/register-golden/45-unregister-an-opencode-1x-entry-that-is-not-ours.golden",
+      "longterm-mem/internal/register/emptyconfig_test.go",
+      "longterm-mem/internal/register/jsonnested.go",
+      "longterm-mem/internal/register/jsonwrite.go",
+      "longterm-mem/internal/register/opencode.go",
+      "longterm-mem/internal/register/opencode_v2_test.go",
+      "longterm-mem/internal/register/unregister.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "0d30f1b8a07ced6b2454d312764eafd060618a11",
+      "head": "2c4eb2b7060d8c3f44d12c20faf9764996a2cfd0",
+      "diff_sha256": "576e9aa313b986be102a6ac2b508a64625b42259ea2d267c67e4b50f40ab7c91"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "engine/runtime/longtermmem.go",
+        "engine/runtime/longtermmem_config.go",
+        "engine/runtime/longtermmem_status.go",
+        "engine/runtime/longtermmem_test.go",
+        "longterm-mem/README.md",
+        "longterm-mem/cmd/longterm-mem/cmd_register.go",
+        "longterm-mem/cmd/longterm-mem/register_golden_test.go",
+        "longterm-mem/cmd/longterm-mem/testdata/register-golden/42-register-migrates-an-owned-opencode-1x-entry.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/register-golden/43-register-over-an-opencode-1x-entry-that-is-not-ours.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/register-golden/44-unregister-an-owned-opencode-1x-entry.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/register-golden/45-unregister-an-opencode-1x-entry-that-is-not-ours.golden",
+        "longterm-mem/internal/register/emptyconfig_test.go",
+        "longterm-mem/internal/register/jsonnested.go",
+        "longterm-mem/internal/register/jsonwrite.go",
+        "longterm-mem/internal/register/opencode.go",
+        "longterm-mem/internal/register/opencode_v2_test.go",
+        "longterm-mem/internal/register/unregister.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/cmd/longterm-mem/cmd_register.go:38-39",
+        "claim": "cmdRegister no longer uses machineRuntimes(); it builds its own Writer and Runtimes, so any wiring machineRuntimes adds later (or already has beyond State) is silently bypassed on the register path while unregister still uses it.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/cmd/longterm-mem/cmd_register.go:38-39"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "engine/runtime/longtermmem.go:307-309",
+        "claim": "The legacy-owned override replaces whatever status and reason the matrix computed (for example fingerprint drift or a record without an entry) with partial/1.x, which can hide a more specific state.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/runtime/longtermmem.go:307-309"
+        ]
+      },
+      {
+        "id": "F3",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/internal/register/jsonnested.go:76-78",
+        "claim": "removeNested's added pre-check ignores a locate error (locErr) and falls through to Remove, so a locate failure yields a different, less specific error than the not-found message.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/internal/register/jsonnested.go:76-78"
+        ]
+      }
+    ],
+    "evidence": [
+      "Reviewed the diff only; conflict decisions, single-write apply and the unregister decision flow in opencode.go read consistently with the stated claims.",
+      "No deterministic regression was shown from the diff alone."
+    ]
+  }
+}

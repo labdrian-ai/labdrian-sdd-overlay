@@ -1,0 +1,36 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "5d4537478b4485233c5641a43ca0af852943148e",
+    "head": "148ac54824d97a14f653df97cc902c155acdd0ab",
+    "diff_sha256": "caea09626d3f1ca79b30dca3bd9c245603a919ed9d0494c1fbf9f6be55a4527a",
+    "paths": [
+      "longterm-mem/cmd/longterm-mem/cmd_register.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "5d4537478b4485233c5641a43ca0af852943148e",
+      "head": "148ac54824d97a14f653df97cc902c155acdd0ab",
+      "diff_sha256": "caea09626d3f1ca79b30dca3bd9c245603a919ed9d0494c1fbf9f6be55a4527a"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/cmd/longterm-mem/cmd_register.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The diff replaces rt.Registrar.(register.Writer) with machineWriter(), which returns the same value register.Writer{State: register.FileInstallState{}} that machineRuntimes previously placed in Registrar, so behavior is unchanged.",
+      "machineRuntimes now calls machineWriter(), so both call sites build the writer from one source and cannot drift apart.",
+      "The unchecked type assertion is gone, so the register command no longer panics if machineRuntimes later wraps the Registrar.",
+      "No defect was found that this change introduced, activated or worsened."
+    ]
+  }
+}

@@ -1,0 +1,51 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "4ff6d38b943f4845c843398f846b02d8a51c1ed5",
+    "head": "c049bca8c4da8029a16fa99b2e72c401fef047ac",
+    "diff_sha256": "d7026ec1e439f74931adf96df22790667f2c459aa5b069db0e79f77a3412a324",
+    "paths": [
+      "odd/review-results/labdrian-orchestrator-opencode/4ff6d38b943f-1.sweep.json",
+      "odd/review-results/labdrian-orchestrator-opencode/4ff6d38b943f-2.sweeper.json",
+      "odd/review-results/labdrian-orchestrator-opencode/4ff6d38b943f-3.polisher.json",
+      "odd/review-results/labdrian-orchestrator-opencode/4ff6d38b943f-4.json",
+      "odd/review-results/labdrian-orchestrator-opencode/4ff6d38b943f-4.verifier.json",
+      "odd/review-results/labdrian-orchestrator-opencode/4ff6d38b943f-5.json",
+      "odd/review-results/labdrian-orchestrator-opencode/4ff6d38b943f-5.verifier.json",
+      "odd/review-results/labdrian-orchestrator-opencode/aff03c90d71b-1.sweep.json",
+      "odd/review-results/labdrian-orchestrator-opencode/aff03c90d71b-2.sweeper.json",
+      "odd/review-results/labdrian-orchestrator-opencode/aff03c90d71b-3.exempt.json",
+      "odd/tasks/labdrian-orchestrator-opencode.md"
+    ]
+  },
+  "risk": "none",
+  "report": {
+    "checks": [
+      {
+        "command": "git -C /home/labdrian/labdrian-sdd-overlay-worktrees/labdrian-orchestrator-opencode diff --name-only 4ff6d38b c049bca8",
+        "result": "pass",
+        "output": "11 paths. 10 are under odd/review-results/labdrian-orchestrator-opencode/: 4ff6d38b943f-1.sweep.json, 4ff6d38b943f-2.sweeper.json, 4ff6d38b943f-3.polisher.json, 4ff6d38b943f-4.json, 4ff6d38b943f-4.verifier.json, 4ff6d38b943f-5.json, 4ff6d38b943f-5.verifier.json, aff03c90d71b-1.sweep.json, aff03c90d71b-2.sweeper.json, aff03c90d71b-3.exempt.json. The 11th is odd/tasks/labdrian-orchestrator-opencode.md. No source, test or config path."
+      },
+      {
+        "command": "git -C /home/labdrian/labdrian-sdd-overlay-worktrees/labdrian-orchestrator-opencode log -1 --format=%B c049bca8",
+        "result": "pass",
+        "output": "Subject 'docs(odd): record T69 and its review', then one body paragraph. The last non-empty line is 'Risk: none'. There is no Co-Authored-By line."
+      },
+      {
+        "command": "git -C /home/labdrian/labdrian-sdd-overlay-worktrees/labdrian-orchestrator-opencode rev-list --parents -n 1 c049bca8; git -C /home/labdrian/labdrian-sdd-overlay-worktrees/labdrian-orchestrator-opencode rev-parse 4ff6d38b",
+        "result": "pass",
+        "output": "c049bca8c4da8029a16fa99b2e72c401fef047ac 4ff6d38b943f4845c843398f846b02d8a51c1ed5 / rev-parse: 4ff6d38b943f4845c843398f846b02d8a51c1ed5. One parent, equal to the full name of 4ff6d38b."
+      },
+      {
+        "command": "for p in $(git -C $W diff --name-only --diff-filter=A 4ff6d38b c049bca8 -- 'odd/review-results/labdrian-orchestrator-opencode/*.json'); do git -C $W show c049bca8:$p | jq -e . >/dev/null; echo \"$p exit=$?\"; done",
+        "result": "pass",
+        "output": "All 10 added .json files printed exit=0."
+      },
+      {
+        "command": "git -C /home/labdrian/labdrian-sdd-overlay-worktrees/labdrian-orchestrator-opencode diff 4ff6d38b c049bca8 -- odd/tasks/labdrian-orchestrator-opencode.md",
+        "result": "pass",
+        "output": "Two hunks. One replaces the T69 task line with the same line with '[x]' and 'commit: 4ff6d38b'. The other removes nothing and adds 6 lines: the L195 entry and its 5 sub-bullets. No other line is removed."
+      }
+    ]
+  }
+}

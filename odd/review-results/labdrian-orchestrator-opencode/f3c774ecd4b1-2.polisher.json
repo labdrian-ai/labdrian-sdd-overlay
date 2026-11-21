@@ -1,0 +1,18 @@
+{
+  "kind": "polisher",
+  "base": "747e3231c9a7e21c89fc213c37b72a2ae40d9d1c",
+  "head": "f3c774ecd4b1d88f869be66b4cf4ee615c757b5d",
+  "diff_sha256": "cf3a55c99657c3c93d12e598c19b6490b7aff26d27cc8dc4f51950b06b5f17dd",
+  "findings": {
+    "findings": [],
+    "evidence": [
+      "Read the full diff t57.diff (commit f3c774ec against 747e3231) and the T57 spec at line 99 of the tasks file.",
+      "Rule: FeatureEntryRefusal in engine/roles/bound.go does no I/O. hasFeatureDocument in engine/cmd/roles_bound.go reads through fsdoc.Reader{Root: worktreeRoot}, the same port and root function the spec names. It returns false for seq other than 1, an invalid feature name, a nil or failing cwd, and any read error.",
+      "Refused-document choice: fsdoc.Reader.Read returns an error for a missing root (no repository), an Lstat failure, or a symlink or oversized file (refusalOf). Treating those as 'no document' leaves append as it is today. This is consistent with the spec's 'as today' clauses and is guidance rather than a security gate, so I do not count it as a defect.",
+      "Spec message: the test constant matches the spec text exactly. It is 'error: roles append: odd/tasks/<G>.md is a feature document, so its role chain starts with labdrian workflow open --feature <G> --task <T>, which writes its first two records; run it, then append the next hops with the --chain it prints'. The rule sits after T56's bound refusal in runRolesAppend, as the spec places it.",
+      "Tests: the diff adds seq 1 refused with the store unchanged, seq 1 with no document stored, a later record of a goal with a document stored, and workflow open still writing 2 records. The f to g goal move is confined to tests whose goal had no reason to be f. The symlink tests pin the exact Detail strings for the binding file and the workflow log, and neither can skip.",
+      "The unreadable helper was removed. A grep for unreadable( found only a different method (targetsWorld.unreadable) and unrelated test-local functions, so no caller of the removed helper remains.",
+      "Not run: go test, the RED/GREEN failure lines, and the mutation check that removes the two ClassificationUnavailable branches of boundWorkflowHere. I had no shell tool, so this review is static."
+    ]
+  }
+}

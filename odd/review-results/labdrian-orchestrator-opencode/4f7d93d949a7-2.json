@@ -1,0 +1,88 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "9916944454b0427eb16da95defa47d2a5d4c4032",
+    "head": "4f7d93d949a7ff1786622903c5f5f7c8716d206d",
+    "diff_sha256": "8fef6158ce525638b3fa774aa7a84da06f9e3011228235b020aedfee71ea4b25",
+    "paths": [
+      "engine/cmd/inception_chain_entry_test.go",
+      "engine/skills/foreman_skills_test.go",
+      "engine/skills/odd_role_skills_artifact_test.go",
+      "skills/odd-feature-doc/SKILL.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "9916944454b0427eb16da95defa47d2a5d4c4032",
+      "head": "4f7d93d949a7ff1786622903c5f5f7c8716d206d",
+      "diff_sha256": "8fef6158ce525638b3fa774aa7a84da06f9e3011228235b020aedfee71ea4b25"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/cmd/inception_chain_entry_test.go",
+        "engine/skills/foreman_skills_test.go",
+        "engine/skills/odd_role_skills_artifact_test.go",
+        "skills/odd-feature-doc/SKILL.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "skills/odd-feature-doc/SKILL.md:23",
+        "claim": "The shortened shaped line no longer says what `L<n>` refers to. The base text said `L<n>` is the shaper's Log entry; the head says only 'marks a designed task'. The rule 'holds only while the Log has exactly one such entry' now has no antecedent for 'such entry', so a reader cannot tell which entry is meant. The test fragment 'its shaper Log entry' was replaced by an assertion on the 'exactly one such entry' wording, so nothing checks that the definition survives. The shaper row at line 34 partly restores the pointer, but only by implication.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "skills/odd-feature-doc/SKILL.md:23",
+          "engine/skills/odd_role_skills_artifact_test.go:143"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "skills/odd-feature-doc/SKILL.md:22",
+        "claim": "The task-line format was reworded: 'commit `-` until the task is committed' became '`-` until the task is committed', which no longer names the commit field it applies to. In the new wording, `-` after the template's `commit: -` reads as the box or the status. The line is more ambiguous than before.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "skills/odd-feature-doc/SKILL.md:22"
+        ]
+      },
+      {
+        "id": "F3",
+        "severity": "SUGGESTION",
+        "location": "engine/skills/foreman_skills_test.go:29",
+        "claim": "The fragment 'memorycard mirror `odd/<feature>/tasks`' was weakened to 'mirror `odd/<feature>/tasks`'. The test no longer requires the doc to say the mirror is the memorycard one, and the SKILL.md wording dropped the term. The foreman row no longer ties the mirror to the memorycard, which was the rule the base stated.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/skills/foreman_skills_test.go:29",
+          "skills/odd-feature-doc/SKILL.md:37"
+        ]
+      },
+      {
+        "id": "F4",
+        "severity": "SUGGESTION",
+        "location": "engine/cmd/inception_chain_entry_test.go:149-153",
+        "claim": "The closing-fence search accepts any line starting with three backticks, including a line like ```json or ```text, as the closer. An unclosed json block followed by another fenced block is therefore reported as closed and returned with the wrong content. The base looked for the next three-backtick string anywhere and had the same weakness, but the new line-based version claims to be hardened without handling it. The added tests do not cover it.",
+        "evidence_class": "inferential",
+        "causal_disposition": "worsened",
+        "proof_refs": [
+          "engine/cmd/inception_chain_entry_test.go:149-153"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the diff of all four changed paths.",
+      "The Go change counts every line starting with ```json as an opener and normalizes CRLF. The new tests cover jsonc, trailing characters and a carriage return, which matches the commit claim.",
+      "The SKILL.md edits shorten the task-line and shaped rows and add the shaper Log-entry duty, as claimed, but they drop the definition of `L<n>` (F1)."
+    ]
+  }
+}

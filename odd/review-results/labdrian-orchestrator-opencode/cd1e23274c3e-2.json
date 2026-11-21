@@ -1,0 +1,82 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "16825fd3c345f8f0c10c4f96a10e5512f59fdc19",
+    "head": "cd1e23274c3ed77433c31b34b767c728e1ae44f2",
+    "diff_sha256": "36dc3cf54706093874ec9b037372f4df9d57d5672037e358cdfe61ce2c6d94c2",
+    "paths": [
+      "CHANGELOG.md",
+      "engine/cmd/runtime_test.go",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-context-lists-quotes-and-case.golden",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-minimalism-context-metadata-accepted-today.golden",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-phases-quoted-items-accepted-today.golden",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-reads-the-contracts-of-the-overlay.golden",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-without-the-oo-contract.golden",
+      "engine/cmd/testdata/runtime-golden/runtime-opencode-and-pi-with-an-overlay.golden",
+      "engine/runtime/labdrian-runtime-parity-plugin.mjs",
+      "engine/runtime/opencode.go",
+      "engine/runtime/opencode_plugin.go",
+      "engine/runtime/opencode_plugin_test.go",
+      "engine/runtime/opencode_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "16825fd3c345f8f0c10c4f96a10e5512f59fdc19",
+      "head": "cd1e23274c3ed77433c31b34b767c728e1ae44f2",
+      "diff_sha256": "36dc3cf54706093874ec9b037372f4df9d57d5672037e358cdfe61ce2c6d94c2"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "engine/cmd/runtime_test.go",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-context-lists-quotes-and-case.golden",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-minimalism-context-metadata-accepted-today.golden",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-phases-quoted-items-accepted-today.golden",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-reads-the-contracts-of-the-overlay.golden",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-without-the-oo-contract.golden",
+        "engine/cmd/testdata/runtime-golden/runtime-opencode-and-pi-with-an-overlay.golden",
+        "engine/runtime/labdrian-runtime-parity-plugin.mjs",
+        "engine/runtime/opencode.go",
+        "engine/runtime/opencode_plugin.go",
+        "engine/runtime/opencode_plugin_test.go",
+        "engine/runtime/opencode_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "engine/runtime/opencode.go:50-55",
+        "claim": "Uninstall removes the plugin directory only when removing index.js succeeded. If index.js is already gone and an empty plugin directory remains (for example after a partial uninstall or a manual delete), the empty directory is left and OpenCode loads it as a plugin with no index.js, which is the failure the comment says the code prevents. The old flat plugins/labdrian-runtime-parity.js left by a pre-upgrade install is also never removed by uninstall, so an upgraded install leaves an orphan file the overlay no longer tracks.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/runtime/opencode.go:50-55",
+          "CHANGELOG.md:7"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "engine/runtime/labdrian-runtime-parity-plugin.mjs:7",
+        "claim": "`Tool` is imported from @opencode/plugin/promise/tool but never used in this commit. The unused import adds a hard load-time dependency on that module path: if it does not resolve, the plugin fails to load even though nothing uses it. The only justification is a comment about a later slice.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/runtime/labdrian-runtime-parity-plugin.mjs:5-7"
+        ]
+      }
+    ],
+    "evidence": [
+      "The config root is three dirname calls above plugins/labdrian-runtime-parity/index.js, which is correct for the new layout.",
+      "The unit tests exercise the plugin only against a stub @opencode/plugin package, so the real v2 API shape (ctx.tool.hook and the execute.before call shape) is unverified in this diff."
+    ]
+  }
+}

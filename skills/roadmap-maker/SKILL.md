@@ -3,7 +3,7 @@ name: roadmap-maker
 description: "Build an SDD roadmap or insert one requirement: roadmap, SDD roadmap, sequence SDDs, roadmap maker, ordenar SDDs, secuenciar cambios, planificá los sprints. Requires manifest and architecture."
 license: MIT
 metadata:
-  author: gentleman-programming
+  author: labdrian
   version: "1.0"
 ---
 

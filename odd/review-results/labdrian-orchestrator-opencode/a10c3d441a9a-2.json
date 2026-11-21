@@ -1,0 +1,61 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "a6e520a0751d14be30c04d1d522d51c4047ec861",
+    "head": "a10c3d441a9aea56c22947abaefe3b6a5bcdf585",
+    "diff_sha256": "adf0806e4061bd360eb260348a829a810ab069c804d52e920ec39101db95c8cc",
+    "paths": [
+      "README.md",
+      "engine/capability/declarations.go",
+      "engine/runtime/opencode_json.go",
+      "engine/runtime/opencode_json_style_test.go",
+      "engine/runtime/opencode_json_write.go",
+      "engine/runtime/opencode_plugin_live_test.go",
+      "engine/runtime/opencode_servers_test.go",
+      "engine/runtime/opencode_splice.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "a6e520a0751d14be30c04d1d522d51c4047ec861",
+      "head": "a10c3d441a9aea56c22947abaefe3b6a5bcdf585",
+      "diff_sha256": "adf0806e4061bd360eb260348a829a810ab069c804d52e920ec39101db95c8cc"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "README.md",
+        "engine/capability/declarations.go",
+        "engine/runtime/opencode_json.go",
+        "engine/runtime/opencode_json_style_test.go",
+        "engine/runtime/opencode_json_write.go",
+        "engine/runtime/opencode_plugin_live_test.go",
+        "engine/runtime/opencode_servers_test.go",
+        "engine/runtime/opencode_splice.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "engine/runtime/opencode_splice.go:180-185",
+        "claim": "When the object being filled is empty and sits at column 0 (for example a tab-indented file whose root is `{}`), `indentUnit(\"\")` returns two spaces. The inserted members are then space-indented in a file the caller expects to stay tab-indented. The tab style is only detected from the object's own indentation, not from the rest of the file.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/runtime/opencode_splice.go:180-185"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the whole diff. The bare-entry upgrade logic in bareEntryToUpgrade and replaceOpenCodeMember is consistent with the new tests.",
+      "The rootObject predicate `!isJSONSpace(byte(r)) || r > 0x7f` correctly treats non-ASCII runes as non-whitespace.",
+      "The removal code is not in the diff, so I could not check the 'no blank line' claim for uninstall beyond the new test."
+    ]
+  }
+}

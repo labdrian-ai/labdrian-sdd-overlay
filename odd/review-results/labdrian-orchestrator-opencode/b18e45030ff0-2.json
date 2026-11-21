@@ -1,0 +1,46 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "e0d3ee9a97ec16809b2864f6b943e130d5a51514",
+    "head": "b18e45030ff0a9d0afb1fa315d603d300318a9b6",
+    "diff_sha256": "29e253332cd776885ccd00b9fdd4f7c02e751e0c202b566f2514e575cbde987d",
+    "paths": [
+      "odd/tasks/labdrian-orchestrator-opencode.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "e0d3ee9a97ec16809b2864f6b943e130d5a51514",
+      "head": "b18e45030ff0a9d0afb1fa315d603d300318a9b6",
+      "diff_sha256": "29e253332cd776885ccd00b9fdd4f7c02e751e0c202b566f2514e575cbde987d"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/labdrian-orchestrator-opencode.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "odd/tasks/labdrian-orchestrator-opencode.md:34",
+        "claim": "The check now has two patterns, but the sentence that follows is unchanged: \"Read each match: it counts only when that value runs the binary.\" A match on `Gentleman-Programming/engram` (the plugin source or `enabledPlugins` key) never runs the binary, so under that rule it would never count. Yet the Acceptance clause says no plugin source may name it. The reader is told to discard exactly the matches the new pattern was added to find. The sentence needs an exception for the second pattern. The following sentence, about what the pattern matches (a wrapped call, never `gentle-ai-overlay`), also still describes only the first pattern.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/labdrian-orchestrator-opencode.md:34 (added `-e 'Gentleman-Programming/engram'` next to the unchanged \"it counts only when that value runs the binary\")"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff changes only the S17 check command and appends the L32 log entry.",
+      "L32's claim that the check was run end to end cannot be verified from the diff."
+    ]
+  }
+}

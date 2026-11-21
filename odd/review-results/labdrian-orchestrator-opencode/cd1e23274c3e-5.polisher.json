@@ -1,0 +1,40 @@
+{
+  "kind": "polisher",
+  "base": "16825fd3c345f8f0c10c4f96a10e5512f59fdc19",
+  "head": "cd1e23274c3ed77433c31b34b767c728e1ae44f2",
+  "diff_sha256": "36dc3cf54706093874ec9b037372f4df9d57d5672037e358cdfe61ce2c6d94c2",
+  "findings": {
+    "findings": [
+      {
+        "id": "R1",
+        "severity": "WARNING",
+        "location": "engine/runtime/opencode.go uninstall",
+        "claim": "Uninstall removed the empty plugin directory only when index.js was removed in the same run. Fixed in 2358cf21.",
+        "evidence": [
+          "series review of cd1e2327; TestOpenCodeUninstallRemovesAnEmptyPluginDirectory."
+        ]
+      },
+      {
+        "id": "R2",
+        "severity": "WARNING",
+        "location": "engine/runtime/opencode_plugin.go",
+        "claim": "The owned 1.x file plugins/labdrian-runtime-parity.js was never removed. Fixed in 2358cf21 and tightened in 558d9a72 (ownership by the 1.x export plus the active-marker name, real 1.x bytes in testdata; every historical version 131dd2f2 and 30a3282a holds both).",
+        "evidence": [
+          "series review of cd1e2327; judges A J3 and B F2; bounded recheck clean."
+        ]
+      },
+      {
+        "id": "R3",
+        "severity": "SUGGESTION",
+        "location": "engine/runtime/labdrian-runtime-parity-plugin.mjs:7",
+        "claim": "Unused Tool import. Removed in 2358cf21; T11 adds it when it uses it.",
+        "evidence": [
+          "series review of cd1e2327; recheck B item 3."
+        ]
+      }
+    ],
+    "evidence": [
+      "Blind judges A and B on 2358cf21, bounded recheck on 558d9a72 clean; independent verifier on 2358cf21: suite 85 ok, vet, gofmt, sandbox probes of five states against 16825fd3: foreign files byte-identical, owned 1.x file removed, only the plugin path and version differ."
+    ]
+  }
+}

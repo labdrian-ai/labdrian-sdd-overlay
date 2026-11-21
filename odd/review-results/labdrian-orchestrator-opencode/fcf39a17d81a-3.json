@@ -1,0 +1,46 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "bd6a9526b4ae0004272207bbce467e1d2022431b",
+    "head": "fcf39a17d81a813ee8db35ad47b09b2b72138496",
+    "diff_sha256": "6f1ce2290222341f104ed7e5d2de9ce4ee22f6d919db17b3cd844e6becd7fadf",
+    "paths": [
+      "engine/hookwire/source_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "bd6a9526b4ae0004272207bbce467e1d2022431b",
+      "head": "fcf39a17d81a813ee8db35ad47b09b2b72138496",
+      "diff_sha256": "6f1ce2290222341f104ed7e5d2de9ce4ee22f6d919db17b3cd844e6becd7fadf"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/hookwire/source_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "engine/hookwire/source_test.go:53",
+        "claim": "The new case 'a tool name keeps its own underscores' uses input memorycard_mem_search and expected mcp__memorycard__mem_search, identical to the existing case on the previous lines (the 'server_tool is an mcp name' case). It adds no coverage and its name claims a distinct behavior, so the duplicate pins nothing new.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/hookwire/source_test.go:50-53"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff only adds two table-test rows in source_test.go; there is no production change.",
+      "The first new row (long_term_query to mcp__long__term_query) is a distinct case that pins first-underscore splitting.",
+      "The second new row duplicates an existing row exactly (same input and expected output)."
+    ]
+  }
+}

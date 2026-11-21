@@ -1,0 +1,60 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "fbd629c6d6fcabc70af3f6ec4ab8e1d10e3db93c",
+    "head": "7764d094708e8ce5c73125956a69aa23fb8214dc",
+    "diff_sha256": "03f769b22be2e8f1cb1e7a080c75ab8fae3caca1161c1dd01e0ced26b48641cf",
+    "paths": [
+      "CHANGELOG.md",
+      "engine/cmd/codegraph_prompt_hook.go",
+      "engine/cmd/codegraph_prompt_hook_test.go",
+      "engine/cmd/settings_hooks.go",
+      "engine/cmd/usage.go",
+      "engine/hookwire/prompt.go",
+      "engine/hookwire/prompt_test.go",
+      "engine/settings/codegraph_prompt.go",
+      "engine/settings/codegraph_prompt_shape_test.go",
+      "engine/settings/codegraph_prompt_test.go",
+      "engine/settings/merge.go",
+      "engine/status/codegraph_prompt_test.go",
+      "engine/status/status.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "fbd629c6d6fcabc70af3f6ec4ab8e1d10e3db93c",
+      "head": "7764d094708e8ce5c73125956a69aa23fb8214dc",
+      "diff_sha256": "03f769b22be2e8f1cb1e7a080c75ab8fae3caca1161c1dd01e0ced26b48641cf"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "engine/cmd/codegraph_prompt_hook.go",
+        "engine/cmd/codegraph_prompt_hook_test.go",
+        "engine/cmd/settings_hooks.go",
+        "engine/cmd/usage.go",
+        "engine/hookwire/prompt.go",
+        "engine/hookwire/prompt_test.go",
+        "engine/settings/codegraph_prompt.go",
+        "engine/settings/codegraph_prompt_shape_test.go",
+        "engine/settings/codegraph_prompt_test.go",
+        "engine/settings/merge.go",
+        "engine/status/codegraph_prompt_test.go",
+        "engine/status/status.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "Read the whole diff. The wrapper shape parser (shellWord and isCodegraphPromptWrapper) matches the quoting that shellQuote writes, including the quote-backslash-quote-quote escape, and the operator precedence in the final comparison is correct.",
+      "shellExitCode returns 128 plus the signal only when the exit code is negative and the error exposes a WaitStatus; the too-much-output case is now checked before the exit code, as the commit states.",
+      "IsTaskNotification now skips only a prompt that starts with the task-notification tag, or starts with the system-reminder tag whose first non-empty line is the mark. This narrowing is the requested behavior, and tests cover it.",
+      "The rewrite and restore paths accept any wrapper shape and leave mismatched or extended commands alone, which the new shape tests exercise.",
+      "No defect found that this change introduced."
+    ]
+  }
+}

@@ -1,0 +1,63 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "6d7c04f737593a3ed5af9c9e41c1f3737cdc6744",
+    "head": "4f1cfd61d4505c1db572199b8cf0b8dd5025fd73",
+    "diff_sha256": "f347761eb11f1c2951b74239844b7effd4a6b63066466dd5df3a3768a2bf4505",
+    "paths": [
+      "bin/lib/apply.sh",
+      "bin/lib/deploy_state.sh",
+      "engine/shelltest/apply_opencode_runtime_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "6d7c04f737593a3ed5af9c9e41c1f3737cdc6744",
+      "head": "4f1cfd61d4505c1db572199b8cf0b8dd5025fd73",
+      "diff_sha256": "f347761eb11f1c2951b74239844b7effd4a6b63066466dd5df3a3768a2bf4505"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "bin/lib/apply.sh",
+        "bin/lib/deploy_state.sh",
+        "engine/shelltest/apply_opencode_runtime_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "bin/lib/deploy_state.sh:103",
+        "claim": "state_write_target now delegates to state_rewrite_target, where an empty version means 'delete the entry'. A caller that passes an empty version (for example an unset variable) used to record a row with an empty version. It now silently erases that target's row and still reports success. The delete semantics are hidden behind an empty-string sentinel instead of an explicit parameter, and state_write_target does not guard against it.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "bin/lib/deploy_state.sh:103",
+          "bin/lib/deploy_state.sh:137-139"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "bin/lib/deploy_state.sh:117-119",
+        "claim": "The comment block describing the corrupt-state recovery ('a clean one containing only what this call knows') still sits above the thin state_write_target wrapper. The logic it describes now lives in state_rewrite_target, so the comment is detached from the code it explains.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "bin/lib/deploy_state.sh:100-104",
+          "bin/lib/deploy_state.sh:115-120"
+        ]
+      }
+    ],
+    "evidence": [
+      "Reviewed all three changed paths from the diff only; I did not run any code.",
+      "The forget path in apply.sh:211 and the new test look correct for the stated case: the row is dropped and every other target is kept."
+    ]
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "kind": "polisher",
+  "base": "247f7f4fe50444219531e9c7fd3c676ce060d138",
+  "head": "1fd4e01adb4cd8c0f09204655a5c0c0795c82bcc",
+  "diff_sha256": "d134c36ac337930f4e602e99c89ea82d5d80a13a485b35fed1623c5e8eed70d2",
+  "findings": {
+    "findings": [
+      {
+        "id": "P1",
+        "severity": "SUGGESTION",
+        "location": "engine/cmd/projection_hook.go:249-256",
+        "claim": "A Codex prompt still names Claude Code's capability limits, and the new test pins that as expected: projectionRuntime maps only opencode to its own target and sends codex to Claude's, while the capability package declares a separate TargetCodex.",
+        "evidence": [
+          "The diff adds the case {[]string{\"--source\", \"codex\"}, capability.TargetClaude} in projection_hook_capability_test.go.",
+          "capability.go:104 declares targetOrder = {TargetClaude, TargetCodex, TargetPi, TargetOpenCode}.",
+          "The behavior predates the commit (comment: Claude and Codex keep Claude's limits as before)."
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full diff of 1fd4e01a.",
+      "render.go:232 is the single place the capability line is built; projection_hook.go:230 is the only PromptRequest construction.",
+      "Claude-targeted tests asserting `capability limits (claude):` are untouched.",
+      "Not run: read-only static judgment."
+    ]
+  }
+}

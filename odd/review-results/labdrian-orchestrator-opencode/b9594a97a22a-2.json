@@ -1,0 +1,78 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "2bb6d495baab709cc0c8fe4e0264fe0018c8f47e",
+    "head": "b9594a97a22a7baf3a4fd7d622d0476ae65bda00",
+    "diff_sha256": "fd22c5f7caa142c1c7f027645948e2bebfbc6b6597f256225cc34af532302563",
+    "paths": [
+      "CHANGELOG.md",
+      "README.md",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-context-lists-quotes-and-case.golden",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-minimalism-context-metadata-accepted-today.golden",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-phases-quoted-items-accepted-today.golden",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-reads-the-contracts-of-the-overlay.golden",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-without-the-oo-contract.golden",
+      "engine/cmd/testdata/runtime-golden/runtime-opencode-and-pi-with-an-overlay.golden",
+      "engine/runtime/memorycard-opencode-plugin.mjs",
+      "engine/runtime/opencode_memorycard.go",
+      "engine/runtime/opencode_memorycard_plugin_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "2bb6d495baab709cc0c8fe4e0264fe0018c8f47e",
+      "head": "b9594a97a22a7baf3a4fd7d622d0476ae65bda00",
+      "diff_sha256": "fd22c5f7caa142c1c7f027645948e2bebfbc6b6597f256225cc34af532302563"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "README.md",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-context-lists-quotes-and-case.golden",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-minimalism-context-metadata-accepted-today.golden",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-phases-quoted-items-accepted-today.golden",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-reads-the-contracts-of-the-overlay.golden",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-without-the-oo-contract.golden",
+        "engine/cmd/testdata/runtime-golden/runtime-opencode-and-pi-with-an-overlay.golden",
+        "engine/runtime/memorycard-opencode-plugin.mjs",
+        "engine/runtime/opencode_memorycard.go",
+        "engine/runtime/opencode_memorycard_plugin_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "engine/runtime/memorycard-opencode-plugin.mjs:204-212",
+        "claim": "The 128-session bound evicts in insertion order, and child sessions (which are also recorded, with empty text) count toward it. A main session that outlives 128 other sessions, which subagent-heavy work can produce, is forgotten. Its next model call asks memorycard again. That can change the system prompt mid-session, or insert the block mid-session after a failed first ask. This is the cache instability the commit set out to remove. An eviction while an ask is in flight also writes the result to an orphaned entry.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/runtime/memorycard-opencode-plugin.mjs:204-212",
+          "engine/runtime/opencode_memorycard_plugin_test.go:462-471"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "engine/runtime/memorycard-opencode-plugin.mjs:253-260",
+        "claim": "While captures are paused for 60 seconds after a failure, completed subagent results are dropped without any log line. Learnings are lost silently. No limit bounds how many detached captures can run at once.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/runtime/memorycard-opencode-plugin.mjs:253-260"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read from the diff only; line numbers are estimates from the hunk headers.",
+      "The eviction test covers only sequential, non-child sessions and does not exercise the cache-stability promise for an evicted session."
+    ]
+  }
+}

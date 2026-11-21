@@ -1,0 +1,60 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "402f1f0f3b7c9bc62dbc437975ebfd49f8cf593b",
+    "head": "e5ffe5ee1d8cd07aa3b151e0765c89f1324a7bb6",
+    "diff_sha256": "1d0031324fe387f6f6ff861ae526169351b8f9e0e6981f7a577d2da428c6a0bc",
+    "paths": [
+      "engine/review/risk.go",
+      "engine/review/risk_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "402f1f0f3b7c9bc62dbc437975ebfd49f8cf593b",
+      "head": "e5ffe5ee1d8cd07aa3b151e0765c89f1324a7bb6",
+      "diff_sha256": "1d0031324fe387f6f6ff861ae526169351b8f9e0e6981f7a577d2da428c6a0bc"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/review/risk.go",
+        "engine/review/risk_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "engine/review/risk.go:106-110",
+        "claim": "riskWithoutReason cuts at the first \" (\" and only checks that the remainder ends with \")\". A value such as \"3 (why) more (x)\" or \"3 (a) (b)\" is therefore accepted as item 3, although the commit states that text after the reason is refused. The reason is not verified to be a single balanced parenthesized group. The tests cover only \"3 (why) more\", which has no second \" (\", so this gap is untested.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/review/risk.go:106-110",
+          "engine/review/risk_test.go:121-122"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "engine/review/risk.go:107",
+        "claim": "The check len(reason) < 2 accepts a whitespace-only reason such as \"3 ( )\", although the commit says the reason must not be empty. The check does not match the stated intent.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/review/risk.go:107"
+        ]
+      }
+    ],
+    "evidence": [
+      "Traced strings.Cut(value, \" (\") for \"3 (why) more (x)\": head is \"3\", reason is \"why) more (x)\", which ends with \")\", so the value is accepted as \"3\".",
+      "Traced \"3 ( )\": reason is \" )\", length 2, ends with \")\", so it is accepted."
+    ]
+  }
+}

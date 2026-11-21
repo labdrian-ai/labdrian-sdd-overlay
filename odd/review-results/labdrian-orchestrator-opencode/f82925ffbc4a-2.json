@@ -1,0 +1,58 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "4ee2cccbec59217fa63581813568192e62737c01",
+    "head": "f82925ffbc4ac9ce858fc0fca93411d100937352",
+    "diff_sha256": "bdd5057879a6a955632abcba6590fbdc70ebe7a958f242efccc6504dfc3a3c99",
+    "paths": [
+      "CHANGELOG.md",
+      "README.md",
+      "engine/cmd/projection_hook.go",
+      "engine/cmd/projection_prompt_once_test.go",
+      "engine/cmd/usage.go",
+      "engine/statestore/lastline.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "4ee2cccbec59217fa63581813568192e62737c01",
+      "head": "f82925ffbc4ac9ce858fc0fca93411d100937352",
+      "diff_sha256": "bdd5057879a6a955632abcba6590fbdc70ebe7a958f242efccc6504dfc3a3c99"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "README.md",
+        "engine/cmd/projection_hook.go",
+        "engine/cmd/projection_prompt_once_test.go",
+        "engine/cmd/usage.go",
+        "engine/statestore/lastline.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "engine/cmd/projection_hook.go:238-239",
+        "claim": "userPromptSubmit now has named results (out, written), but the PromptProjection case redeclares `out, err :=` and so shadows the named result `out`. It compiles because every return is explicit, but a reader can take the inner `out` for the result, and a later bare `return` in that scope would fail to compile. Name the inner variable `reply`.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/cmd/projection_hook.go:238-239"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff shows the record call moved into a closure that runs only after stdout.Write returns no error, which matches the commit's claim.",
+      "The session key is source plus NUL plus session id and is used for both the prompt and SessionStart paths, so the two sources are kept apart.",
+      "The new tests cover a failed write and the same session id under two sources. brokenStdout and the other helpers are not in the diff, so I assumed they exist in the package.",
+      "I found no regression in the diff. Records written under the old session-only key are orphaned, so the first prompt after upgrade prints the block once more, which is harmless."
+    ]
+  }
+}

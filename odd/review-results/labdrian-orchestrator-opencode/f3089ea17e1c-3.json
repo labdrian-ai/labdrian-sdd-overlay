@@ -1,0 +1,34 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "4e6ff27f7e086b6c62ac187dc7ccd57f044ca5e1",
+    "head": "f3089ea17e1c788170b77c2ec8402590db06653a",
+    "diff_sha256": "b205091ef6e216dcdbe01bbdbbc02ce9fae822910305976df9970e1aa891d10b",
+    "paths": [
+      "odd/tasks/labdrian-orchestrator-opencode.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "4e6ff27f7e086b6c62ac187dc7ccd57f044ca5e1",
+      "head": "f3089ea17e1c788170b77c2ec8402590db06653a",
+      "diff_sha256": "b205091ef6e216dcdbe01bbdbbc02ce9fae822910305976df9970e1aa891d10b"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/labdrian-orchestrator-opencode.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The diff adds only one append-only Log entry (L40) to odd/tasks/labdrian-orchestrator-opencode.md; no code, no existing rows changed.",
+      "L40 states the row already says commit (b) holds the Engram wording of skills_candidates_cli.go:15, which is consistent with L39's description of T25b's row; the diff cannot show the row itself, so no contradiction is provable.",
+      "The claim 'Risk: none' matches a docs-only change."
+    ]
+  }
+}

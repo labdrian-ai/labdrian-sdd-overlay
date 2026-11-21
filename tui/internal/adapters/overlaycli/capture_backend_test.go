@@ -80,14 +80,14 @@ func pushUpstreamBranchCommit(t *testing.T, origin, filename, content, message s
 // whatever happens to be on the machine running it. Combined with the empty
 // manifest, managed_files() yields nothing, so this run's only possible
 // effect on the 'upstream' branch is the reconcile step under test.
-func runCapture(t *testing.T, overlayDir string) (string, int) {
+func runCapture(t *testing.T, overlayDir string, extraEnv ...string) (string, int) {
 	t.Helper()
 	bin := realBackendBin(t)
 	fakeHome := t.TempDir()
 	provisionEngine(t, fakeHome)
 	cmd := exec.Command(bin, "capture", "--target", "claude")
 	cmd.Dir = overlayDir
-	cmd.Env = append(gitTestEnv(), "OVERLAY_DIR="+overlayDir, "HOME="+fakeHome)
+	cmd.Env = append(append(gitTestEnv(), "OVERLAY_DIR="+overlayDir, "HOME="+fakeHome), extraEnv...)
 	out, err := cmd.CombinedOutput()
 	if err == nil {
 		return string(out), 0
@@ -97,6 +97,24 @@ func runCapture(t *testing.T, overlayDir string) (string, int) {
 		t.Fatalf("running %s capture: %v\n%s", bin, err, out)
 	}
 	return string(out), ee.ExitCode()
+}
+
+// reachOriginOverTheNetwork gives the clone an ssh URL for origin, which capture pushes to (it skips
+// an origin that is a path on this machine, origin_is_network_remote in bin/lib/common.sh), and an
+// ssh command, set in the clone's config, that runs git's remote command locally against origin. It
+// returns the environment that lets git use ssh in that one capture run; testhome pins every other git in
+// the tests to file transport, and the shim keeps this one on this machine.
+func reachOriginOverTheNetwork(t *testing.T, clone, origin string) []string {
+	t.Helper()
+	shim := filepath.Join(t.TempDir(), "local-ssh")
+	// With ssh.variant simple, git calls the command as: <host> <remote command>.
+	if err := os.WriteFile(shim, []byte("#!/bin/sh\nshift\nexec sh -c \"$1\"\n"), 0o755); err != nil {
+		t.Fatalf("write the ssh shim: %v", err)
+	}
+	runGit(t, clone, "config", "core.sshCommand", shim)
+	runGit(t, clone, "config", "ssh.variant", "simple")
+	runGit(t, clone, "remote", "set-url", "origin", "ssh://scratch.invalid"+origin)
+	return []string{"GIT_ALLOW_PROTOCOL=file:ssh"}
 }
 
 // TestCaptureBackend_ReconcilesStaleUpstreamBeforePush is the RED case: a
@@ -109,6 +127,7 @@ func runCapture(t *testing.T, overlayDir string) (string, int) {
 // content survive and the command exits 0.
 func TestCaptureBackend_ReconcilesStaleUpstreamBeforePush(t *testing.T) {
 	origin, clone := newScratchRepoWithUpstream(t)
+	sshEnv := reachOriginOverTheNetwork(t, clone, origin)
 
 	// Simulate a prior capture that committed locally but was never pushed.
 	runGit(t, clone, "checkout", "upstream")
@@ -121,7 +140,7 @@ func TestCaptureBackend_ReconcilesStaleUpstreamBeforePush(t *testing.T) {
 	// meantime — this clone's local 'upstream' is now behind AND ahead.
 	pushUpstreamBranchCommit(t, origin, "remote-only.txt", "another machine's capture\n", "upstream: sync from gentle-ai (remote)")
 
-	out, code := runCapture(t, clone)
+	out, code := runCapture(t, clone, sshEnv...)
 	if code != 0 {
 		t.Fatalf("capture exit=%d, want 0 (reconcile must recover a stale-but-mergeable upstream)\noutput:\n%s", code, out)
 	}
@@ -130,6 +149,7 @@ func TestCaptureBackend_ReconcilesStaleUpstreamBeforePush(t *testing.T) {
 		t.Errorf("current branch = %q, want restored to feature-x", got)
 	}
 
+	runGit(t, clone, "remote", "set-url", "origin", origin)
 	runGit(t, clone, "fetch", "origin", "upstream")
 	localUpstream := headRev(t, clone, "upstream")
 	remoteUpstream := headRev(t, clone, "origin/upstream")

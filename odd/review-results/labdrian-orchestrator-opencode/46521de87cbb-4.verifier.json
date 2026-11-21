@@ -1,0 +1,39 @@
+{
+  "verdicts": [
+    {
+      "id": "F1",
+      "result": "reproduced",
+      "command": "scratch git archive of 46521de8, isolated HOME/XDG; go test ./runtime/ -run TestOpenCodeBridgeLaunchesABuilderWithTheSkillItsProseNames -count=1 -v, unmodified and after appending a comment line to labdrian-runtime-parity-plugin.mjs",
+      "output": "Unmodified PASS; after the harmless edit FAIL only at opencode_bridge_test.go:623 'the plugin changed: sha256 0b846a7f..., want 1f4d76a9...'. The test does not exist at 62828131.",
+      "base_result": "not-reproduced"
+    },
+    {
+      "id": "F2",
+      "result": "not-run",
+      "command": "none",
+      "output": "SUGGESTION (negative stat cache): folded into the T60 correction design.",
+      "base_result": "not-run"
+    },
+    {
+      "id": "F3",
+      "result": "reproduced",
+      "command": "printf 'Use test-first.\\r\\n' | engine roles skill-paths --skills-root <dir> | od -c, head and base",
+      "output": "Head: '...first.\\r\\n\\n## Skills to load before work\\n<path>\\n' (mixed endings); base: input unchanged.",
+      "base_result": "not-reproduced"
+    },
+    {
+      "id": "F4",
+      "result": "not-run",
+      "command": "none",
+      "output": "SUGGESTION (fence detection): folded into the T60 correction design.",
+      "base_result": "not-run"
+    },
+    {
+      "id": "F5",
+      "result": "not-run",
+      "command": "none",
+      "output": "SUGGESTION (unquoted wrapper path, no go skip): folded into the T60 correction design.",
+      "base_result": "not-run"
+    }
+  ]
+}

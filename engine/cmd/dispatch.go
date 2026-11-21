@@ -1,6 +1,10 @@
 package main
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/execrunner"
+)
 
 // run routes a command line to its subcommand. args are the arguments after the program's name:
 // the subcommand, then its own. A command line that names none, or one that is not known, is a
@@ -39,7 +43,7 @@ func run(p process, d deps, args []string) {
 	case "manifest":
 		runManifest(p, rest)
 	case "registry":
-		runRegistry(p, rest)
+		runRegistry(p, d, rest)
 	case "installed-targets":
 		runInstalledTargets(p, rest)
 	case "sync-trigger":
@@ -58,6 +62,8 @@ func run(p process, d deps, args []string) {
 		runWorkflow(p, d, rest)
 	case "projection":
 		runProjection(p, d, rest)
+	case "codegraph-prompt-hook":
+		runCodegraphPromptHook(p, execrunner.New().WithMaxOutput(codegraphHookMaxOutput), rest)
 	default:
 		fmt.Fprintf(p.stderr, "error: unknown subcommand %q\n", args[0])
 		usage(p.stderr)

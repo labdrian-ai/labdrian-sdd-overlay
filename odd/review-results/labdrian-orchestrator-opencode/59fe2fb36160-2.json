@@ -1,0 +1,80 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "451cd0da31cfa9369b9ed25b35f71c1748a46f8b",
+    "head": "59fe2fb3616080da43d442f7ea59bad0025da04c",
+    "diff_sha256": "ed5f4cf8cf799ce2f498cac90986b0ab7bd3ca18caa3080806c4a8a89fb998ef",
+    "paths": [
+      "CHANGELOG.md",
+      "engine/capability/declarations.go",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-context-lists-quotes-and-case.golden",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-minimalism-context-metadata-accepted-today.golden",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-phases-quoted-items-accepted-today.golden",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-reads-the-contracts-of-the-overlay.golden",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-without-the-oo-contract.golden",
+      "engine/cmd/testdata/runtime-golden/runtime-opencode-and-pi-with-an-overlay.golden",
+      "engine/cmd/usage.go",
+      "engine/runtime/opencode.go",
+      "engine/runtime/opencode_json.go",
+      "engine/runtime/opencode_json_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "451cd0da31cfa9369b9ed25b35f71c1748a46f8b",
+      "head": "59fe2fb3616080da43d442f7ea59bad0025da04c",
+      "diff_sha256": "ed5f4cf8cf799ce2f498cac90986b0ab7bd3ca18caa3080806c4a8a89fb998ef"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "engine/capability/declarations.go",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-context-lists-quotes-and-case.golden",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-minimalism-context-metadata-accepted-today.golden",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-phases-quoted-items-accepted-today.golden",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-reads-the-contracts-of-the-overlay.golden",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-without-the-oo-contract.golden",
+        "engine/cmd/testdata/runtime-golden/runtime-opencode-and-pi-with-an-overlay.golden",
+        "engine/cmd/usage.go",
+        "engine/runtime/opencode.go",
+        "engine/runtime/opencode_json.go",
+        "engine/runtime/opencode_json_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "engine/runtime/opencode_json.go:86",
+        "claim": "The trailing-content check only refuses when decoder.Token() succeeds. For trailing non-JSON text after the object (e.g. `{...} garbage`), Token returns a syntax error, so the check passes and the file is treated as valid. Install then rewrites the file and silently drops the trailing text. The claim that a file that is not one JSON object is left as it is does not hold for this input. A backup is written, but no refusal is reported.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/runtime/opencode_json.go:86-88"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "engine/runtime/opencode_json.go:182-188",
+        "claim": "When an owned entry is removed and mcp.servers is left empty, removeOpenCodeJSON deletes the servers container (and mcp if empty) even if the owner's file already held an empty `servers: {}`. Deleting that container is outside the owned entries. Separately, uninstall rewrites and reformats the file without keepOnce, so a file that uninstall changes gets no backup.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/runtime/opencode_json.go:182-188",
+          "engine/runtime/opencode_json.go:271-274"
+        ]
+      }
+    ],
+    "evidence": [
+      "Reviewed the diff only. The Token() check at opencode_json.go:86 returns an error for non-JSON trailing bytes, so the guard is bypassed in that case.",
+      "The tests cover `{}{}`-style multi-value input only indirectly. No test covers trailing garbage."
+    ]
+  }
+}

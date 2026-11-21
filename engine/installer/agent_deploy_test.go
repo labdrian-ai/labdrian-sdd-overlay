@@ -16,6 +16,42 @@ import (
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/overlaytest"
 )
 
+// TestSyncCheck_OpenCodeChecksItsAgentsWithNoSkillsDirectory pins that sync-check of opencode, which
+// has no skills directory any more (S13: it reads ~/.claude/skills), still looks at its agents: an
+// agent that is deployed is in sync, and one that is gone is reported as not deployed.
+func TestSyncCheck_OpenCodeChecksItsAgentsWithNoSkillsDirectory(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test in -short mode")
+	}
+
+	overlay := overlaytest.Script(t)
+	home := t.TempDir()
+	_, env := setupSandboxOverlay(t, home)
+	runApplyAllTolerantOfPi(t, overlay, env)
+	if _, err := os.Stat(filepath.Join(home, ".config", "opencode", "skills")); !os.IsNotExist(err) {
+		t.Fatalf("the premise of the test is no OpenCode skills directory; stat err: %v", err)
+	}
+
+	synced, err := overlaytest.Combined(t, overlay, env, "", "sync-check", "--target", "opencode")
+	if err != nil {
+		t.Fatalf("sync-check: %v\noutput:\n%s", err, synced)
+	}
+	if strings.Contains(synced, "target dir not found") || !strings.Contains(synced, "IN_SYNC: opencode/agents/GADU.md") {
+		t.Errorf("sync-check skipped the agents of opencode or did not find GADU.md in sync\noutput:\n%s", synced)
+	}
+
+	if err := os.Remove(filepath.Join(home, ".config", "opencode", "agents", "GADU.md")); err != nil {
+		t.Fatal(err)
+	}
+	gone, err := overlaytest.Combined(t, overlay, env, "", "sync-check", "--target", "opencode")
+	if err != nil {
+		t.Fatalf("sync-check: %v\noutput:\n%s", err, gone)
+	}
+	if !strings.Contains(gone, "OVERLAY_NOT_DEPLOYED: opencode/agents/GADU.md") {
+		t.Errorf("sync-check did not report the removed agent as not deployed\noutput:\n%s", gone)
+	}
+}
+
 // TestApply_AgentsLandInNativeAgentDirs asserts that after overlay apply:
 // - agents/GADU.md lands at $HOME/.claude/agents/GADU.md (not .claude/skills)
 // - opencode/agents/GADU.md lands at $HOME/.config/opencode/agents/GADU.md
@@ -43,13 +79,16 @@ func TestApply_AgentsLandInNativeAgentDirs(t *testing.T) {
 
 	skillDests := []string{
 		filepath.Join(home, ".claude", "skills", "test-skill", "SKILL.md"),
-		filepath.Join(home, ".config", "opencode", "skills", "test-skill", "SKILL.md"),
 		filepath.Join(home, ".codex", "skills", "test-skill", "SKILL.md"),
 	}
 	for _, p := range skillDests {
 		if _, err := os.Stat(p); err != nil {
 			t.Errorf("skill not deployed at %s: %v", p, err)
 		}
+	}
+	// OpenCode reads ~/.claude/skills; a copy in its own directory would shadow it (S13).
+	if _, err := os.Stat(filepath.Join(home, ".config", "opencode", "skills")); !os.IsNotExist(err) {
+		t.Errorf("apply created the OpenCode skills directory (stat err: %v)", err)
 	}
 
 	// No skill file should be in .claude/agents (only GADU.md)
@@ -344,7 +383,6 @@ func TestUnrelatedSkillUnchanged(t *testing.T) {
 
 	dests := []string{
 		filepath.Join(home, ".claude", "skills", "test-skill", "SKILL.md"),
-		filepath.Join(home, ".config", "opencode", "skills", "test-skill", "SKILL.md"),
 		filepath.Join(home, ".codex", "skills", "test-skill", "SKILL.md"),
 	}
 	for _, p := range dests {
@@ -378,7 +416,6 @@ func TestEntryContractBundlePropagatesAndReportsIntegrityDrift(t *testing.T) {
 	}
 	targetRoots := []string{
 		filepath.Join(home, ".claude", "skills"),
-		filepath.Join(home, ".config", "opencode", "skills"),
 		filepath.Join(home, ".codex", "skills"),
 	}
 	for _, rel := range assets {
@@ -400,15 +437,15 @@ func TestEntryContractBundlePropagatesAndReportsIntegrityDrift(t *testing.T) {
 
 	missingRel := "_shared/entry-contract.schema.json"
 	driftedRel := "_shared/pre-sdd-contracts.md"
-	opencodeRoot := filepath.Join(home, ".config", "opencode", "skills")
-	if err := os.Remove(filepath.Join(opencodeRoot, missingRel)); err != nil {
+	claudeRoot := filepath.Join(home, ".claude", "skills")
+	if err := os.Remove(filepath.Join(claudeRoot, missingRel)); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(opencodeRoot, driftedRel), []byte("drifted\n"), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(claudeRoot, driftedRel), []byte("drifted\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
-	statusOut, err := overlaytest.Combined(t, overlay, env, "", "status", "--target", "opencode")
+	statusOut, err := overlaytest.Combined(t, overlay, env, "", "status", "--target", "claude")
 	if err != nil {
 		t.Fatalf("overlay status: %v\noutput:\n%s", err, statusOut)
 	}
@@ -419,7 +456,7 @@ func TestEntryContractBundlePropagatesAndReportsIntegrityDrift(t *testing.T) {
 		t.Errorf("status did not report drifted shared asset\noutput:\n%s", statusOut)
 	}
 
-	syncOut, err := overlaytest.Combined(t, overlay, env, "", "sync-check", "--target", "opencode")
+	syncOut, err := overlaytest.Combined(t, overlay, env, "", "sync-check", "--target", "claude")
 	if err != nil {
 		t.Fatalf("overlay sync-check: %v\noutput:\n%s", err, syncOut)
 	}

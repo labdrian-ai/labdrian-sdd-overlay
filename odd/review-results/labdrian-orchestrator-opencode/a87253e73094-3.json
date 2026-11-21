@@ -1,0 +1,57 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "09c38855faca14b83bdb5e07db6d057c1e80b544",
+    "head": "a87253e73094f58d8de877527b39aea320f0c485",
+    "diff_sha256": "3174de6e282e847667ea37669e642afaa09c8870f8056397aae591579a3b70ef",
+    "paths": [
+      "odd/tasks/labdrian-orchestrator-opencode.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "09c38855faca14b83bdb5e07db6d057c1e80b544",
+      "head": "a87253e73094f58d8de877527b39aea320f0c485",
+      "diff_sha256": "3174de6e282e847667ea37669e642afaa09c8870f8056397aae591579a3b70ef"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/labdrian-orchestrator-opencode.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/labdrian-orchestrator-opencode.md:470",
+        "claim": "L50 is a single very long paragraph that packs many nested finding IDs (F1/F2/F3, '2nd', A-F1, B-F2) across several commits, and uses ambiguous repeated labels such as 'F2 and F2 (2nd)' and 'F2 and F1 (2nd)'. It is hard to tell which review round each answer belongs to. Separate bullets per commit would be easier to read.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/labdrian-orchestrator-opencode.md:470"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/labdrian-orchestrator-opencode.md:470",
+        "claim": "L50 says the polisher finding A-F3 'is the pending re-approval' and that T18 is ticked 'once the owner re-records the three approvals', yet it also states the review check is clear. It does not say where the pending re-approval is tracked or that the engine test TestRegistryLockE2E_ValidateLeavesTheRealTreeUntouched keeps failing (APPROVAL_STALE) until then. A reader of L50 alone cannot see that the suite is still red, since only L49 mentions it.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/labdrian-orchestrator-opencode.md:470"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff adds one Log line (L50) to the feature document and touches no code.",
+      "The L50 text was read in full; the findings concern only its readability and the completeness of its status record."
+    ]
+  }
+}

@@ -1,0 +1,75 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "c1a92bb67cde655b0c9985e4a0c015c954f58286",
+    "head": "a6e520a0751d14be30c04d1d522d51c4047ec861",
+    "diff_sha256": "b231e95a2d195317c413affda2a70df5bccf36c22f0e9fa2650aa741fe88db01",
+    "paths": [
+      "bin/lib/apply.sh",
+      "bin/lib/capture.sh",
+      "bin/lib/common.sh",
+      "engine/shelltest/capture_push_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "c1a92bb67cde655b0c9985e4a0c015c954f58286",
+      "head": "a6e520a0751d14be30c04d1d522d51c4047ec861",
+      "diff_sha256": "b231e95a2d195317c413affda2a70df5bccf36c22f0e9fa2650aa741fe88db01"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "bin/lib/apply.sh",
+        "bin/lib/capture.sh",
+        "bin/lib/common.sh",
+        "engine/shelltest/capture_push_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "engine/shelltest/capture_push_test.go:26",
+        "claim": "The test replaces git with a shell function that records pushes, so it never exercises a real `git push` or the `-u` flag. A regression in the push arguments (for example dropping `-u` on a new branch) would not be caught. The assertions only check the count of pushes and the info message.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/shelltest/capture_push_test.go:21-26"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "bin/lib/common.sh:98-109",
+        "claim": "origin_is_network_remote reads `git remote get-url origin`, which applies url.<base>.insteadOf rewrites. A path-valued origin rewritten to a network URL (or the reverse) is classified by the rewritten URL. This is the same behavior apply.sh already had. Moving the function to common.sh now extends it to capture, so capture's push decision depends on the user's insteadOf config.",
+        "evidence_class": "inferential",
+        "causal_disposition": "behavior-activated",
+        "proof_refs": [
+          "bin/lib/common.sh:98-109",
+          "bin/lib/capture.sh:162-166"
+        ]
+      },
+      {
+        "id": "F3",
+        "severity": "WARNING",
+        "location": "bin/lib/capture.sh:163-170",
+        "claim": "Capture now skips the upstream push for an origin that is a local path or a file:// URL. Previously it pushed to these origins. A user whose origin is a local bare repository, which is a valid configuration, no longer gets upstream pushed. The skip is announced only by an info line, and capture still exits successfully. This is the requested behavior, but the old flush of unpushed upstream commits no longer happens for those setups.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "bin/lib/capture.sh:163-166"
+        ]
+      }
+    ],
+    "evidence": [
+      "The function body moved from apply.sh to common.sh unchanged. apply.sh's callers resolve it through common.sh, assuming common.sh is sourced before apply.sh runs. The diff cannot confirm that sourcing order.",
+      "The capture.sh push logic moved into push_upstream_to_origin with the same branches plus the new network check. The code that follows (checkout, trap clear) is unchanged apart from now sitting before the helper definition. The EXIT trap is still cleared after the push step.",
+      "push_upstream_to_origin is defined after cmd_capture in the file. That is fine, because the call happens at runtime after the whole file has been sourced."
+    ]
+  }
+}

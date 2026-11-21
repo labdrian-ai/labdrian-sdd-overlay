@@ -1,0 +1,40 @@
+{
+  "kind": "polisher",
+  "base": "8fe396698cfa91873f30322c081637fbc4ae0cf0",
+  "head": "8f485b3d54b2cf2740433b20215f5e89ff4a77e2",
+  "diff_sha256": "e1f2cb54d1266d228cb86b6ceb6501238f0372160d780c3f6a98eff7738340d7",
+  "findings": {
+    "findings": [
+      {
+        "id": "C-W1",
+        "severity": "WARNING",
+        "location": "bin/lib/skill_registry.sh:146-151",
+        "claim": "Repair ran after a skipped refresh and wrote a registry in a non-project dir. Changed in 34028c8e: repair runs only when the registry exists. The parent premise that gentle-ai never wrote there was wrong (it did); kept as an improvement, logged in L92.",
+        "evidence": [
+          "series 8f485b3d; RED/GREEN refresh/without-gentle-ai pins."
+        ]
+      },
+      {
+        "id": "C-S1",
+        "severity": "SUGGESTION",
+        "location": "README.md:1030",
+        "claim": "Dangling (below) reference. Answered: the section exists (README ~1046); made explicit in 34028c8e.",
+        "evidence": [
+          "34028c8e."
+        ]
+      },
+      {
+        "id": "V-A1",
+        "severity": "SUGGESTION",
+        "location": "engine/skillregistry/compose.go",
+        "claim": "A refresh after repair-sdd rewrote the file because repair adds blank lines. Fixed in 34028c8e: refresh keeps head blank lines byte for byte; repair-sdd itself still adds a blank line per run (pre-existing, follow-up in L92).",
+        "evidence": [
+          "verifier advisory A1; RED/GREEN TestRegistryRefreshAfterARepairWritesNothing."
+        ]
+      }
+    ],
+    "evidence": [
+      "verifier probes 1-8 pass, no blockers: rows equal gentle-ai 4.2.0 but the requested multi-line quoted descriptions, preserved content byte-identical, lock honoured under 60 concurrent processes, hook exits 0 silently."
+    ]
+  }
+}

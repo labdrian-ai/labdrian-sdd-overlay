@@ -1,0 +1,50 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "e4ed0244bad085e8b7fcd8519035ee66e691ca8d",
+    "head": "caa0f5234cc43fb04f060043d1087ee8ff6ccdac",
+    "diff_sha256": "211caf0de31d1715fa94991f42fff4d61e1bb0de0a741763e8889afb05109a9a",
+    "paths": [
+      "engine/runtime/codex_ownerrules.go",
+      "engine/runtime/codex_ownerrules_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "e4ed0244bad085e8b7fcd8519035ee66e691ca8d",
+      "head": "caa0f5234cc43fb04f060043d1087ee8ff6ccdac",
+      "diff_sha256": "211caf0de31d1715fa94991f42fff4d61e1bb0de0a741763e8889afb05109a9a"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/runtime/codex_ownerrules.go",
+        "engine/runtime/codex_ownerrules_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "engine/runtime/codex_ownerrules_test.go:430",
+        "claim": "The new test asserts the link path is absent from the message via strings.Contains(uninstall.Message, s.files[1]). If s.files[0] is a prefix of or shares a substring with s.files[1], or the message embeds a shared directory, the check is fine; but the assertion combines the Partial status and the absence check in one condition, so a failure message cannot tell which condition failed. Minor diagnostic weakness only.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/runtime/codex_ownerrules_test.go:429-431"
+        ]
+      }
+    ],
+    "evidence": [
+      "The change in removeOwnerRules splits dedup and removal into two passes, so same-file detection via os.Stat runs while every file still exists; this matches the stated fix.",
+      "handled.has is only called in the first loop, before any removal, so the dangling-link case no longer reaches it.",
+      "The unique slice mirrors handled exactly, so the second loop removes each distinct path once and reports it once; behavior for the non-alias case is unchanged.",
+      "The sameFiles comment rewrap preserves its meaning and is comment-only."
+    ]
+  }
+}

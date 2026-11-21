@@ -1,0 +1,73 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "4c4a682a93fc1588abba726b39998439b9b0dfbd",
+    "head": "f3cbdc308e5698d3c15f6d4ca97703e5f52f623e",
+    "diff_sha256": "47d5248a5eb371b81cd72ddd62982b81acf6d3bf60267d5801499383da8e354c",
+    "paths": [
+      "odd/tasks/labdrian-orchestrator-opencode.md",
+      "odd/tasks/phase9-store-agnostic-promotion.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "4c4a682a93fc1588abba726b39998439b9b0dfbd",
+      "head": "f3cbdc308e5698d3c15f6d4ca97703e5f52f623e",
+      "diff_sha256": "47d5248a5eb371b81cd72ddd62982b81acf6d3bf60267d5801499383da8e354c"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/labdrian-orchestrator-opencode.md",
+        "odd/tasks/phase9-store-agnostic-promotion.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/labdrian-orchestrator-opencode.md:478",
+        "claim": "L56 states that the memory plan source, the projected instructions line and the gate's Engram tools are owned by S14 (T18) and S15 (T19), but it does not say which of the three belongs to which task. The `skills/memory-plan/SKILL.md` Engram topic keys and `mem_session_summary` are also not clearly assigned: L55 listed them as outside T23, and L56 only says 'memory plan source'. A reader cannot tell whether the SKILL.md text is covered by S14 or left unowned.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/labdrian-orchestrator-opencode.md:478"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/phase9-store-agnostic-promotion.md:847",
+        "claim": "L91 repeats the routing already written in L56 of the other document (S16 delivery split, L52 decision, linter lines, S14/S15 untouched). The two entries carry the same facts with different wording, so they can drift apart; L91 could point to L56 instead of restating it.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/phase9-store-agnostic-promotion.md:847",
+          "odd/tasks/labdrian-orchestrator-opencode.md:478"
+        ]
+      },
+      {
+        "id": "F3",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/labdrian-orchestrator-opencode.md:477",
+        "claim": "The commit claims to route 'the remaining Engram instructions', but L56 sends the sdd-* skills and their _shared files to S17's inventory (T21) only as 'adopt and rewrite or drop'. No task is made responsible for the stale `mem_get_observation` and Engram-save text in the meantime, and L91 in the other document does not mention S17 at all, so the routing is one-sided and the second file never learns of T21's new scope.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/labdrian-orchestrator-opencode.md:478",
+          "odd/tasks/phase9-store-agnostic-promotion.md:847"
+        ]
+      }
+    ],
+    "evidence": [
+      "Diff adds only log entries L56 and L91 to two odd/tasks documents; no code changed.",
+      "L56 cites L55's verifier check 4 items and maps them to S14, S15, S16 and S17; the mapping of the memory-plan skill text to a specific task is not explicit.",
+      "L91 does not mention S17/T21 though L56 hands it the sdd-* skills fate."
+    ]
+  }
+}

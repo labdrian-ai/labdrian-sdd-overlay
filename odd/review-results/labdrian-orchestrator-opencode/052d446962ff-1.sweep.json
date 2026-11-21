@@ -1,0 +1,25 @@
+{
+  "kind": "sweep",
+  "base": "f98917e97b0b3e1662c8fddcab6dcbcd2e155fab",
+  "head": "052d446962ff288ead60e8e4357035d3ed0b42f3",
+  "diff_sha256": "c10e6053e504445f0ef9211bcce78aef2bd5e2ca5b7d63bd2d620622a892c179",
+  "outcome": "fired",
+  "t1": {
+    "deleted_or_renamed": [],
+    "removed_names": []
+  },
+  "t2": [
+    {
+      "tool": "errcheck",
+      "module": "engine",
+      "new": [
+        "runtime/ownerrules_block.go: unchecked error: tmp.Close()"
+      ]
+    }
+  ],
+  "t3": [],
+  "t4": {
+    "leftovers": [],
+    "orphaned_fixtures": []
+  }
+}

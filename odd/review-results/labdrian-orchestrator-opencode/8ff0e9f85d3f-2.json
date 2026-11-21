@@ -1,0 +1,89 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "41f4f3a1a8b88793e250f4c2a0724e26c1502ca8",
+    "head": "8ff0e9f85d3f6f4d0c7580d57862345b28743488",
+    "diff_sha256": "b21f797ae381e29b52b7baa513ab9b2b14e39cd6873037579b2b16a957cbe367",
+    "paths": [
+      "CHANGELOG.md",
+      "README.md",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-context-lists-quotes-and-case.golden",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-minimalism-context-metadata-accepted-today.golden",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-phases-quoted-items-accepted-today.golden",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-reads-the-contracts-of-the-overlay.golden",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-without-the-oo-contract.golden",
+      "engine/cmd/testdata/runtime-golden/runtime-opencode-and-pi-with-an-overlay.golden",
+      "engine/runtime/labdrian-runtime-parity-plugin.mjs",
+      "engine/runtime/opencode.go",
+      "engine/runtime/opencode_bridge_skills_test.go",
+      "engine/runtime/opencode_bridge_test.go",
+      "engine/runtime/opencode_contracts.go",
+      "engine/runtime/opencode_contracts_test.go",
+      "engine/runtime/opencode_plugin.go",
+      "engine/runtime/opencode_records.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "41f4f3a1a8b88793e250f4c2a0724e26c1502ca8",
+      "head": "8ff0e9f85d3f6f4d0c7580d57862345b28743488",
+      "diff_sha256": "b21f797ae381e29b52b7baa513ab9b2b14e39cd6873037579b2b16a957cbe367"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "README.md",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-context-lists-quotes-and-case.golden",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-minimalism-context-metadata-accepted-today.golden",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-phases-quoted-items-accepted-today.golden",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-reads-the-contracts-of-the-overlay.golden",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-without-the-oo-contract.golden",
+        "engine/cmd/testdata/runtime-golden/runtime-opencode-and-pi-with-an-overlay.golden",
+        "engine/runtime/labdrian-runtime-parity-plugin.mjs",
+        "engine/runtime/opencode.go",
+        "engine/runtime/opencode_bridge_skills_test.go",
+        "engine/runtime/opencode_bridge_test.go",
+        "engine/runtime/opencode_contracts.go",
+        "engine/runtime/opencode_contracts_test.go",
+        "engine/runtime/opencode_plugin.go",
+        "engine/runtime/opencode_records.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "engine/runtime/opencode.go:107-110",
+        "claim": "install now has a second, separate overlay lookup (skillsRoot calls locateOverlay again) that aborts the whole install as partial on failure. The install otherwise tolerates a missing overlay checkout (AGENTS.md is reported as not written), so an install that previously succeeded could now fail whenever this lookup errors; the diff does not show that promptConfig's lookup cannot succeed where this one fails.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/runtime/opencode.go:107-110",
+          "engine/runtime/opencode_contracts.go:30-38"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "engine/runtime/labdrian-runtime-parity-plugin.mjs:427-437",
+        "claim": "skills_root is stored as an absolute path at install time. If the overlay directory later moves or is removed, every subagent launch is denied with 'skill list could not be checked' or an unknown-id refusal, even for prompts with no skill header, until the install is re-run. There is no fallback and no hint to reinstall.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/runtime/labdrian-runtime-parity-plugin.mjs:433-436"
+        ]
+      }
+    ],
+    "evidence": [
+      "Reviewed the plugin hook order (gate, skill paths, frozen context, contract injection) and the install config change.",
+      "The refusal passthrough keys on the 'error: roles skill-paths:' prefix; other failures are wrapped in the 'skill list could not be checked' sentence, as the tests expect.",
+      "The reviewer diff is appended after skill-path resolution, so it is not read as a skill list."
+    ]
+  }
+}

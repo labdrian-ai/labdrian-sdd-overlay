@@ -311,7 +311,7 @@ exit "$CLI_CODE"
 			plan := exec.CommandContext(ctx, enginetest.Binary(t), "memory", "plan", "--instructions")
 			plan.Dir, plan.Env = repo, append(cmd.Env, "XDG_STATE_HOME="+filepath.Join(scratch, "state"))
 			out, err := plan.CombinedOutput()
-			if err != nil || !strings.Contains(string(out), "workflow wf-1, scope goal") || !strings.Contains(string(out), "Read memory only from: engram, procedural-skills.") || !strings.Contains(string(out), `name project "proj-1"`) || !strings.Contains(string(out), `- Under goal "`+goalID+`": pass goal "`+goalID+`"`) || !strings.Contains(string(out), `topic_key that begins with "goal:`+goalID+`/"`) {
+			if err != nil || !strings.Contains(string(out), "workflow wf-1, scope goal") || !strings.Contains(string(out), "Read memory only from: engram, procedural-skills.") || !strings.Contains(string(out), "- memorycard is the source engram: its reads (mem_search, mem_context, mem_get) go ahead while engram is listed, and a memorycard record you write may be read back.") || !strings.Contains(string(out), `name project "proj-1"`) || !strings.Contains(string(out), `- Under goal "`+goalID+`": pass goal "`+goalID+`"`) || !strings.Contains(string(out), `topic_key that begins with "goal:`+goalID+`/"`) {
 				t.Errorf("bound plan: %s (%v)", out, err)
 			}
 			setupOutput, err := os.ReadFile(filepath.Join(scratch, "setup.out"))

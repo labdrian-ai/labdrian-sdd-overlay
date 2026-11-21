@@ -1,0 +1,29 @@
+# Worked examples of the feature document
+
+## Who works on the document
+
+The shaper writes it, the builder works from it, delivery closes it, the foreman tracks it.
+
+## The header
+
+Two or three lines: the objective, the branch, the delivery strategy, the test runner.
+
+## A task line
+
+The box is the status, the route is `inline` or `delegated`, and the commit is `-` until the task is committed.
+
+`- [ ] T1 — S1-S2 — inline — what it delivers — commit: -`
+
+## The `shaped:` segment
+
+A task the shaper designed carries the segment just before `commit:`:
+
+`- [ ] T1 — S1 — delegated — what it delivers — shaped: L2 — commit: -`
+
+The mark holds only while the Log has exactly one entry `- **L<n>** (<date>, shaper)` for that `L<n>`.
+
+## A Log entry
+
+Each entry after `L1` holds a user correction verbatim, a decision or evidence. The foreman numbers its entries after the last entry of the Log and marks them with its role like the others:
+
+`- **L7** (2026-11-16, foreman): the owner's words, verbatim, or the evidence observed.`

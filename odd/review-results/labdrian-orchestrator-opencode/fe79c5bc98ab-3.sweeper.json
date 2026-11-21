@@ -1,0 +1,560 @@
+{
+  "kind": "sweeper",
+  "base": "87cb2e93333e388ee9441419b21b4b3b4d60dc41",
+  "head": "fe79c5bc98ab121beb00c8ba92101d1f4b03cedd",
+  "diff_sha256": "765c47ad652185a3a73ca4eb18c0428ad46e65a98e9e7045fd19b978191c88d7",
+  "sweep": "fe79c5bc98ab-1.sweep.json",
+  "commit": null,
+  "candidates": [
+    {
+      "candidate": "T1 name: --all",
+      "disposition": "live",
+      "evidence": "Brought in by origin/main through the merge, not written on this branch: main reviewed it there; the merge itself only resolved one conflict in odd/tasks/phase9-store-agnostic-promotion.md (exemption fe79c5bc98ab-2, tree reproduced)."
+    },
+    {
+      "candidate": "T1 name: --allow-empty",
+      "disposition": "live",
+      "evidence": "Brought in by origin/main through the merge, not written on this branch: main reviewed it there; the merge itself only resolved one conflict in odd/tasks/phase9-store-agnostic-promotion.md (exemption fe79c5bc98ab-2, tree reproduced)."
+    },
+    {
+      "candidate": "T1 name: --apply",
+      "disposition": "live",
+      "evidence": "Brought in by origin/main through the merge, not written on this branch: main reviewed it there; the merge itself only resolved one conflict in odd/tasks/phase9-store-agnostic-promotion.md (exemption fe79c5bc98ab-2, tree reproduced)."
+    },
+    {
+      "candidate": "T1 name: --json",
+      "disposition": "live",
+      "evidence": "Brought in by origin/main through the merge, not written on this branch: main reviewed it there; the merge itself only resolved one conflict in odd/tasks/phase9-store-agnostic-promotion.md (exemption fe79c5bc98ab-2, tree reproduced)."
+    },
+    {
+      "candidate": "T1 name: --no-llm",
+      "disposition": "live",
+      "evidence": "Brought in by origin/main through the merge, not written on this branch: main reviewed it there; the merge itself only resolved one conflict in odd/tasks/phase9-store-agnostic-promotion.md (exemption fe79c5bc98ab-2, tree reproduced)."
+    },
+    {
+      "candidate": "T1 name: --no-verify",
+      "disposition": "live",
+      "evidence": "Brought in by origin/main through the merge, not written on this branch: main reviewed it there; the merge itself only resolved one conflict in odd/tasks/phase9-store-agnostic-promotion.md (exemption fe79c5bc98ab-2, tree reproduced)."
+    },
+    {
+      "candidate": "T1 name: --short",
+      "disposition": "live",
+      "evidence": "Brought in by origin/main through the merge, not written on this branch: main reviewed it there; the merge itself only resolved one conflict in odd/tasks/phase9-store-agnostic-promotion.md (exemption fe79c5bc98ab-2, tree reproduced)."
+    },
+    {
+      "candidate": "T1 name: --stat",
+      "disposition": "live",
+      "evidence": "Brought in by origin/main through the merge, not written on this branch: main reviewed it there; the merge itself only resolved one conflict in odd/tasks/phase9-store-agnostic-promotion.md (exemption fe79c5bc98ab-2, tree reproduced)."
+    },
+    {
+      "candidate": "T1 name: --vault",
+      "disposition": "live",
+      "evidence": "Brought in by origin/main through the merge, not written on this branch: main reviewed it there; the merge itself only resolved one conflict in odd/tasks/phase9-store-agnostic-promotion.md (exemption fe79c5bc98ab-2, tree reproduced)."
+    },
+    {
+      "candidate": "T1 name: BackUp",
+      "disposition": "live",
+      "evidence": "Brought in by origin/main through the merge, not written on this branch: main reviewed it there; the merge itself only resolved one conflict in odd/tasks/phase9-store-agnostic-promotion.md (exemption fe79c5bc98ab-2, tree reproduced)."
+    },
+    {
+      "candidate": "T1 name: CardBridges",
+      "disposition": "live",
+      "evidence": "Brought in by origin/main through the merge, not written on this branch: main reviewed it there; the merge itself only resolved one conflict in odd/tasks/phase9-store-agnostic-promotion.md (exemption fe79c5bc98ab-2, tree reproduced)."
+    },
+    {
+      "candidate": "T1 name: CardMigrationReport",
+      "disposition": "live",
+      "evidence": "Brought in by origin/main through the merge, not written on this branch: main reviewed it there; the merge itself only resolved one conflict in odd/tasks/phase9-store-agnostic-promotion.md (exemption fe79c5bc98ab-2, tree reproduced)."
+    },
+    {
+      "candidate": "T1 name: EngramMemory",
+      "disposition": "live",
+      "evidence": "Brought in by origin/main through the merge, not written on this branch: main reviewed it there; the merge itself only resolved one conflict in odd/tasks/phase9-store-agnostic-promotion.md (exemption fe79c5bc98ab-2, tree reproduced)."
+    },
+    {
+      "candidate": "T1 name: MemoryByEngramID",
+      "disposition": "live",
+      "evidence": "Brought in by origin/main through the merge, not written on this branch: main reviewed it there; the merge itself only resolved one conflict in odd/tasks/phase9-store-agnostic-promotion.md (exemption fe79c5bc98ab-2, tree reproduced)."
+    },
+    {
+      "candidate": "T1 name: MemoryByID",
+      "disposition": "live",
+      "evidence": "Brought in by origin/main through the merge, not written on this branch: main reviewed it there; the merge itself only resolved one conflict in odd/tasks/phase9-store-agnostic-promotion.md (exemption fe79c5bc98ab-2, tree reproduced)."
+    },
+    {
+      "candidate": "T1 name: MigrateCardPages",
+      "disposition": "live",
+      "evidence": "Brought in by origin/main through the merge, not written on this branch: main reviewed it there; the merge itself only resolved one conflict in odd/tasks/phase9-store-agnostic-promotion.md (exemption fe79c5bc98ab-2, tree reproduced)."
+    },
+    {
+      "candidate": "T1 name: MigrationBackup",
+      "disposition": "live",
+      "evidence": "Brought in by origin/main through the merge, not written on this branch: main reviewed it there; the merge itself only resolved one conflict in odd/tasks/phase9-store-agnostic-promotion.md (exemption fe79c5bc98ab-2, tree reproduced)."
+    },
+    {
+      "candidate": "T1 name: PageObservationID",
+      "disposition": "live",
+      "evidence": "Brought in by origin/main through the merge, not written on this branch: main reviewed it there; the merge itself only resolved one conflict in odd/tasks/phase9-store-agnostic-promotion.md (exemption fe79c5bc98ab-2, tree reproduced)."
+    },
+    {
+      "candidate": "T1 name: RefusalCounts",
+      "disposition": "live",
+      "evidence": "Brought in by origin/main through the merge, not written on this branch: main reviewed it there; the merge itself only resolved one conflict in odd/tasks/phase9-store-agnostic-promotion.md (exemption fe79c5bc98ab-2, tree reproduced)."
+    },
+    {
+      "candidate": "T1 name: RefusalKind",
+      "disposition": "live",
+      "evidence": "Brought in by origin/main through the merge, not written on this branch: main reviewed it there; the merge itself only resolved one conflict in odd/tasks/phase9-store-agnostic-promotion.md (exemption fe79c5bc98ab-2, tree reproduced)."
+    },
+    {
+      "candidate": "T1 name: Render",
+      "disposition": "live",
+      "evidence": "Brought in by origin/main through the merge, not written on this branch: main reviewed it there; the merge itself only resolved one conflict in odd/tasks/phase9-store-agnostic-promotion.md (exemption fe79c5bc98ab-2, tree reproduced)."
+    },
+    {
+      "candidate": "T1 name: String",
+      "disposition": "live",
+      "evidence": "Brought in by origin/main through the merge, not written on this branch: main reviewed it there; the merge itself only resolved one conflict in odd/tasks/phase9-store-agnostic-promotion.md (exemption fe79c5bc98ab-2, tree reproduced)."
+    },
+    {
+      "candidate": "T1 name: TestALegacyCardPageWhoseStatusAlreadyMatchesIsNotAPatchTarget",
+      "disposition": "live",
+      "evidence": "Brought in by origin/main through the merge, not written on this branch: main reviewed it there; the merge itself only resolved one conflict in odd/tasks/phase9-store-agnostic-promotion.md (exemption fe79c5bc98ab-2, tree reproduced)."
+    },
+    {
+      "candidate": "T1 name: TestALegacyCardPageWhoseStatusIsPatchedKeepsItsIdentityLines",
+      "disposition": "live",
+      "evidence": "Brought in by origin/main through the merge, not written on this branch: main reviewed it there; the merge itself only resolved one conflict in odd/tasks/phase9-store-agnostic-promotion.md (exemption fe79c5bc98ab-2, tree reproduced)."
+    },
+    {
+      "candidate": "T1 name: TestDoctorJudgesAPageByTheLiveMemoriesOfItsObservation",
+      "disposition": "live",
+      "evidence": "Brought in by origin/main through the merge, not written on this branch: main reviewed it there; the merge itself only resolved one conflict in odd/tasks/phase9-store-agnostic-promotion.md (exemption fe79c5bc98ab-2, tree reproduced)."
+    },
+    {
+      "candidate": "T1 name: TestMigrateCardPages_AFailedPageWriteIsFinishedByARerun",
+      "disposition": "live",
+      "evidence": "Brought in by origin/main through the merge, not written on this branch: main reviewed it there; the merge itself only resolved one conflict in odd/tasks/phase9-store-agnostic-promotion.md (exemption fe79c5bc98ab-2, tree reproduced)."
+    },
+    {
+      "candidate": "T1 name: TestMigrateCardPages_AMemoryTypeEndingInRulesMakesARefusalAndNoWrite",
+      "disposition": "live",
+      "evidence": "Brought in by origin/main through the merge, not written on this branch: main reviewed it there; the merge itself only resolved one conflict in odd/tasks/phase9-store-agnostic-promotion.md (exemption fe79c5bc98ab-2, tree reproduced)."
+    },
+    {
+      "candidate": "T1 name: TestMigrateCardPages_ARecordedEntryDoesNotAdoptAPageThatIsNotTheOneItRecorded",
+      "disposition": "live",
+      "evidence": "Brought in by origin/main through the merge, not written on this branch: main reviewed it there; the merge itself only resolved one conflict in odd/tasks/phase9-store-agnostic-promotion.md (exemption fe79c5bc98ab-2, tree reproduced)."
+    },
+    {
+      "candidate": "T1 name: TestMigrateCardPages_AStoppedPageWithAnEditedFrontmatterLineIsRefusedAsHalfMigrated",
+      "disposition": "live",
+      "evidence": "Brought in by origin/main through the merge, not written on this branch: main reviewed it there; the merge itself only resolved one conflict in odd/tasks/phase9-store-agnostic-promotion.md (exemption fe79c5bc98ab-2, tree reproduced)."
+    },
+    {
+      "candidate": "T1 name: TestPageObservationIDNamesOnlyAPositiveID",
+      "disposition": "live",
+      "evidence": "Brought in by origin/main through the merge, not written on this branch: main reviewed it there; the merge itself only resolved one conflict in odd/tasks/phase9-store-agnostic-promotion.md (exemption fe79c5bc98ab-2, tree reproduced)."
+    },
+    {
+      "candidate": "T1 name: TestRewrittenIdentity",
+      "disposition": "live",
+      "evidence": "Brought in by origin/main through the merge, not written on this branch: main reviewed it there; the merge itself only resolved one conflict in odd/tasks/phase9-store-agnostic-promotion.md (exemption fe79c5bc98ab-2, tree reproduced)."
+    },
+    {
+      "candidate": "T1 name: TestVaultBackup_AFailedCopyLeavesNoPartialDirectory",
+      "disposition": "live",
+      "evidence": "Brought in by origin/main through the merge, not written on this branch: main reviewed it there; the merge itself only resolved one conflict in odd/tasks/phase9-store-agnostic-promotion.md (exemption fe79c5bc98ab-2, tree reproduced)."
+    },
+    {
+      "candidate": "T1 name: TestVaultBackup_TwoBackupsAtOneInstantDoNotCollide",
+      "disposition": "live",
+      "evidence": "Brought in by origin/main through the merge, not written on this branch: main reviewed it there; the merge itself only resolved one conflict in odd/tasks/phase9-store-agnostic-promotion.md (exemption fe79c5bc98ab-2, tree reproduced)."
+    },
+    {
+      "candidate": "T1 name: applyMigration",
+      "disposition": "live",
+      "evidence": "Brought in by origin/main through the merge, not written on this branch: main reviewed it there; the merge itself only resolved one conflict in odd/tasks/phase9-store-agnostic-promotion.md (exemption fe79c5bc98ab-2, tree reproduced)."
+    },
+    {
+      "candidate": "T1 name: carriesLegacyKeys",
+      "disposition": "live",
+      "evidence": "Brought in by origin/main through the merge, not written on this branch: main reviewed it there; the merge itself only resolved one conflict in odd/tasks/phase9-store-agnostic-promotion.md (exemption fe79c5bc98ab-2, tree reproduced)."
+    },
+    {
+      "candidate": "T1 name: changedPaths",
+      "disposition": "live",
+      "evidence": "Brought in by origin/main through the merge, not written on this branch: main reviewed it there; the merge itself only resolved one conflict in odd/tasks/phase9-store-agnostic-promotion.md (exemption fe79c5bc98ab-2, tree reproduced)."
+    },
+    {
+      "candidate": "T1 name: copyInto",
+      "disposition": "live",
+      "evidence": "Brought in by origin/main through the merge, not written on this branch: main reviewed it there; the merge itself only resolved one conflict in odd/tasks/phase9-store-agnostic-promotion.md (exemption fe79c5bc98ab-2, tree reproduced)."
+    },
+    {
+      "candidate": "T1 name: copy_db",
+      "disposition": "live",
+      "evidence": "Brought in by origin/main through the merge, not written on this branch: main reviewed it there; the merge itself only resolved one conflict in odd/tasks/phase9-store-agnostic-promotion.md (exemption fe79c5bc98ab-2, tree reproduced)."
+    },
+    {
+      "candidate": "T1 name: corroboratingFrontmatter",
+      "disposition": "live",
+      "evidence": "Brought in by origin/main through the merge, not written on this branch: main reviewed it there; the merge itself only resolved one conflict in odd/tasks/phase9-store-agnostic-promotion.md (exemption fe79c5bc98ab-2, tree reproduced)."
+    },
+    {
+      "candidate": "T1 name: die",
+      "disposition": "live",
+      "evidence": "Brought in by origin/main through the merge, not written on this branch: main reviewed it there; the merge itself only resolved one conflict in odd/tasks/phase9-store-agnostic-promotion.md (exemption fe79c5bc98ab-2, tree reproduced)."
+    },
+    {
+      "candidate": "T1 name: emitEngramPage",
+      "disposition": "live",
+      "evidence": "Brought in by origin/main through the merge, not written on this branch: main reviewed it there; the merge itself only resolved one conflict in odd/tasks/phase9-store-agnostic-promotion.md (exemption fe79c5bc98ab-2, tree reproduced)."
+    },
+    {
+      "candidate": "T1 name: engramIdentity",
+      "disposition": "live",
+      "evidence": "Brought in by origin/main through the merge, not written on this branch: main reviewed it there; the merge itself only resolved one conflict in odd/tasks/phase9-store-agnostic-promotion.md (exemption fe79c5bc98ab-2, tree reproduced)."
+    },
+    {
+      "candidate": "T1 name: engramObservation",
+      "disposition": "live",
+      "evidence": "Brought in by origin/main through the merge, not written on this branch: main reviewed it there; the merge itself only resolved one conflict in odd/tasks/phase9-store-agnostic-promotion.md (exemption fe79c5bc98ab-2, tree reproduced)."
+    },
+    {
+      "candidate": "T1 name: engramSource",
+      "disposition": "live",
+      "evidence": "Brought in by origin/main through the merge, not written on this branch: main reviewed it there; the merge itself only resolved one conflict in odd/tasks/phase9-store-agnostic-promotion.md (exemption fe79c5bc98ab-2, tree reproduced)."
+    },
+    {
+      "candidate": "T1 name: findings",
+      "disposition": "live",
+      "evidence": "Brought in by origin/main through the merge, not written on this branch: main reviewed it there; the merge itself only resolved one conflict in odd/tasks/phase9-store-agnostic-promotion.md (exemption fe79c5bc98ab-2, tree reproduced)."
+    },
+    {
+      "candidate": "T1 name: frontmatter",
+      "disposition": "live",
+      "evidence": "Brought in by origin/main through the merge, not written on this branch: main reviewed it there; the merge itself only resolved one conflict in odd/tasks/phase9-store-agnostic-promotion.md (exemption fe79c5bc98ab-2, tree reproduced)."
+    },
+    {
+      "candidate": "T1 name: frontmatterEngramID",
+      "disposition": "live",
+      "evidence": "Brought in by origin/main through the merge, not written on this branch: main reviewed it there; the merge itself only resolved one conflict in odd/tasks/phase9-store-agnostic-promotion.md (exemption fe79c5bc98ab-2, tree reproduced)."
+    },
+    {
+      "candidate": "T1 name: frontmatterRevision",
+      "disposition": "live",
+      "evidence": "Brought in by origin/main through the merge, not written on this branch: main reviewed it there; the merge itself only resolved one conflict in odd/tasks/phase9-store-agnostic-promotion.md (exemption fe79c5bc98ab-2, tree reproduced)."
+    },
+    {
+      "candidate": "T1 name: guard",
+      "disposition": "live",
+      "evidence": "Brought in by origin/main through the merge, not written on this branch: main reviewed it there; the merge itself only resolved one conflict in odd/tasks/phase9-store-agnostic-promotion.md (exemption fe79c5bc98ab-2, tree reproduced)."
+    },
+    {
+      "candidate": "T1 name: isOwnUnrecordedUpdate",
+      "disposition": "live",
+      "evidence": "Brought in by origin/main through the merge, not written on this branch: main reviewed it there; the merge itself only resolved one conflict in odd/tasks/phase9-store-agnostic-promotion.md (exemption fe79c5bc98ab-2, tree reproduced)."
+    },
+    {
+      "candidate": "T1 name: legacyPagesOf",
+      "disposition": "live",
+      "evidence": "Brought in by origin/main through the merge, not written on this branch: main reviewed it there; the merge itself only resolved one conflict in odd/tasks/phase9-store-agnostic-promotion.md (exemption fe79c5bc98ab-2, tree reproduced)."
+    },
+    {
+      "candidate": "T1 name: legacy_counts",
+      "disposition": "live",
+      "evidence": "Brought in by origin/main through the merge, not written on this branch: main reviewed it there; the merge itself only resolved one conflict in odd/tasks/phase9-store-agnostic-promotion.md (exemption fe79c5bc98ab-2, tree reproduced)."
+    },
+    {
+      "candidate": "T1 name: legacy_pages",
+      "disposition": "live",
+      "evidence": "Brought in by origin/main through the merge, not written on this branch: main reviewed it there; the merge itself only resolved one conflict in odd/tasks/phase9-store-agnostic-promotion.md (exemption fe79c5bc98ab-2, tree reproduced)."
+    },
+    {
+      "candidate": "T1 name: live_digest",
+      "disposition": "live",
+      "evidence": "Brought in by origin/main through the merge, not written on this branch: main reviewed it there; the merge itself only resolved one conflict in odd/tasks/phase9-store-agnostic-promotion.md (exemption fe79c5bc98ab-2, tree reproduced)."
+    },
+    {
+      "candidate": "T1 name: lm",
+      "disposition": "live",
+      "evidence": "Brought in by origin/main through the merge, not written on this branch: main reviewed it there; the merge itself only resolved one conflict in odd/tasks/phase9-store-agnostic-promotion.md (exemption fe79c5bc98ab-2, tree reproduced)."
+    },
+    {
+      "candidate": "T1 name: mapPage",
+      "disposition": "live",
+      "evidence": "Brought in by origin/main through the merge, not written on this branch: main reviewed it there; the merge itself only resolved one conflict in odd/tasks/phase9-store-agnostic-promotion.md (exemption fe79c5bc98ab-2, tree reproduced)."
+    },
+    {
+      "candidate": "T1 name: memory",
+      "disposition": "live",
+      "evidence": "Brought in by origin/main through the merge, not written on this branch: main reviewed it there; the merge itself only resolved one conflict in odd/tasks/phase9-store-agnostic-promotion.md (exemption fe79c5bc98ab-2, tree reproduced)."
+    },
+    {
+      "candidate": "T1 name: mustJSON",
+      "disposition": "live",
+      "evidence": "Brought in by origin/main through the merge, not written on this branch: main reviewed it there; the merge itself only resolved one conflict in odd/tasks/phase9-store-agnostic-promotion.md (exemption fe79c5bc98ab-2, tree reproduced)."
+    },
+    {
+      "candidate": "T1 name: newDirectory",
+      "disposition": "live",
+      "evidence": "Brought in by origin/main through the merge, not written on this branch: main reviewed it there; the merge itself only resolved one conflict in odd/tasks/phase9-store-agnostic-promotion.md (exemption fe79c5bc98ab-2, tree reproduced)."
+    },
+    {
+      "candidate": "T1 name: ownership",
+      "disposition": "live",
+      "evidence": "Brought in by origin/main through the merge, not written on this branch: main reviewed it there; the merge itself only resolved one conflict in odd/tasks/phase9-store-agnostic-promotion.md (exemption fe79c5bc98ab-2, tree reproduced)."
+    },
+    {
+      "candidate": "T1 name: printNoProjectNote",
+      "disposition": "live",
+      "evidence": "Brought in by origin/main through the merge, not written on this branch: main reviewed it there; the merge itself only resolved one conflict in odd/tasks/phase9-store-agnostic-promotion.md (exemption fe79c5bc98ab-2, tree reproduced)."
+    },
+    {
+      "candidate": "T1 name: projects_of",
+      "disposition": "live",
+      "evidence": "Brought in by origin/main through the merge, not written on this branch: main reviewed it there; the merge itself only resolved one conflict in odd/tasks/phase9-store-agnostic-promotion.md (exemption fe79c5bc98ab-2, tree reproduced)."
+    },
+    {
+      "candidate": "T1 name: promotionFooter",
+      "disposition": "live",
+      "evidence": "Brought in by origin/main through the merge, not written on this branch: main reviewed it there; the merge itself only resolved one conflict in odd/tasks/phase9-store-agnostic-promotion.md (exemption fe79c5bc98ab-2, tree reproduced)."
+    },
+    {
+      "candidate": "T1 name: promotions",
+      "disposition": "live",
+      "evidence": "Brought in by origin/main through the merge, not written on this branch: main reviewed it there; the merge itself only resolved one conflict in odd/tasks/phase9-store-agnostic-promotion.md (exemption fe79c5bc98ab-2, tree reproduced)."
+    },
+    {
+      "candidate": "T1 name: put",
+      "disposition": "live",
+      "evidence": "Brought in by origin/main through the merge, not written on this branch: main reviewed it there; the merge itself only resolved one conflict in odd/tasks/phase9-store-agnostic-promotion.md (exemption fe79c5bc98ab-2, tree reproduced)."
+    },
+    {
+      "candidate": "T1 name: readWithMode",
+      "disposition": "live",
+      "evidence": "Brought in by origin/main through the merge, not written on this branch: main reviewed it there; the merge itself only resolved one conflict in odd/tasks/phase9-store-agnostic-promotion.md (exemption fe79c5bc98ab-2, tree reproduced)."
+    },
+    {
+      "candidate": "T1 name: recordedRewrite",
+      "disposition": "live",
+      "evidence": "Brought in by origin/main through the merge, not written on this branch: main reviewed it there; the merge itself only resolved one conflict in odd/tasks/phase9-store-agnostic-promotion.md (exemption fe79c5bc98ab-2, tree reproduced)."
+    },
+    {
+      "candidate": "T1 name: refusalOf",
+      "disposition": "live",
+      "evidence": "Brought in by origin/main through the merge, not written on this branch: main reviewed it there; the merge itself only resolved one conflict in odd/tasks/phase9-store-agnostic-promotion.md (exemption fe79c5bc98ab-2, tree reproduced)."
+    },
+    {
+      "candidate": "T1 name: refusalReason",
+      "disposition": "live",
+      "evidence": "Brought in by origin/main through the merge, not written on this branch: main reviewed it there; the merge itself only resolved one conflict in odd/tasks/phase9-store-agnostic-promotion.md (exemption fe79c5bc98ab-2, tree reproduced)."
+    },
+    {
+      "candidate": "T1 name: renderBody",
+      "disposition": "live",
+      "evidence": "Brought in by origin/main through the merge, not written on this branch: main reviewed it there; the merge itself only resolved one conflict in odd/tasks/phase9-store-agnostic-promotion.md (exemption fe79c5bc98ab-2, tree reproduced)."
+    },
+    {
+      "candidate": "T1 name: reportMigration",
+      "disposition": "live",
+      "evidence": "Brought in by origin/main through the merge, not written on this branch: main reviewed it there; the merge itself only resolved one conflict in odd/tasks/phase9-store-agnostic-promotion.md (exemption fe79c5bc98ab-2, tree reproduced)."
+    },
+    {
+      "candidate": "T1 name: rewrittenIdentity",
+      "disposition": "live",
+      "evidence": "Brought in by origin/main through the merge, not written on this branch: main reviewed it there; the merge itself only resolved one conflict in odd/tasks/phase9-store-agnostic-promotion.md (exemption fe79c5bc98ab-2, tree reproduced)."
+    },
+    {
+      "candidate": "T1 name: run",
+      "disposition": "live",
+      "evidence": "Brought in by origin/main through the merge, not written on this branch: main reviewed it there; the merge itself only resolved one conflict in odd/tasks/phase9-store-agnostic-promotion.md (exemption fe79c5bc98ab-2, tree reproduced)."
+    },
+    {
+      "candidate": "T1 name: runMigrate",
+      "disposition": "live",
+      "evidence": "Brought in by origin/main through the merge, not written on this branch: main reviewed it there; the merge itself only resolved one conflict in odd/tasks/phase9-store-agnostic-promotion.md (exemption fe79c5bc98ab-2, tree reproduced)."
+    },
+    {
+      "candidate": "T1 name: sha",
+      "disposition": "live",
+      "evidence": "Brought in by origin/main through the merge, not written on this branch: main reviewed it there; the merge itself only resolved one conflict in odd/tasks/phase9-store-agnostic-promotion.md (exemption fe79c5bc98ab-2, tree reproduced)."
+    },
+    {
+      "candidate": "T1 name: shapeOf",
+      "disposition": "live",
+      "evidence": "Brought in by origin/main through the merge, not written on this branch: main reviewed it there; the merge itself only resolved one conflict in odd/tasks/phase9-store-agnostic-promotion.md (exemption fe79c5bc98ab-2, tree reproduced)."
+    },
+    {
+      "candidate": "T1 name: show",
+      "disposition": "live",
+      "evidence": "Brought in by origin/main through the merge, not written on this branch: main reviewed it there; the merge itself only resolved one conflict in odd/tasks/phase9-store-agnostic-promotion.md (exemption fe79c5bc98ab-2, tree reproduced)."
+    },
+    {
+      "candidate": "T1 name: simpleIdentityLines",
+      "disposition": "live",
+      "evidence": "Brought in by origin/main through the merge, not written on this branch: main reviewed it there; the merge itself only resolved one conflict in odd/tasks/phase9-store-agnostic-promotion.md (exemption fe79c5bc98ab-2, tree reproduced)."
+    },
+    {
+      "candidate": "T1 name: slug",
+      "disposition": "live",
+      "evidence": "Brought in by origin/main through the merge, not written on this branch: main reviewed it there; the merge itself only resolved one conflict in odd/tasks/phase9-store-agnostic-promotion.md (exemption fe79c5bc98ab-2, tree reproduced)."
+    },
+    {
+      "candidate": "T1 name: spellings",
+      "disposition": "live",
+      "evidence": "Brought in by origin/main through the merge, not written on this branch: main reviewed it there; the merge itself only resolved one conflict in odd/tasks/phase9-store-agnostic-promotion.md (exemption fe79c5bc98ab-2, tree reproduced)."
+    },
+    {
+      "candidate": "T1 name: syncDirectories",
+      "disposition": "live",
+      "evidence": "Brought in by origin/main through the merge, not written on this branch: main reviewed it there; the merge itself only resolved one conflict in odd/tasks/phase9-store-agnostic-promotion.md (exemption fe79c5bc98ab-2, tree reproduced)."
+    },
+    {
+      "candidate": "T1 name: syncDirectory",
+      "disposition": "live",
+      "evidence": "Brought in by origin/main through the merge, not written on this branch: main reviewed it there; the merge itself only resolved one conflict in odd/tasks/phase9-store-agnostic-promotion.md (exemption fe79c5bc98ab-2, tree reproduced)."
+    },
+    {
+      "candidate": "T1 name: toleratedDirectorySyncError",
+      "disposition": "live",
+      "evidence": "Brought in by origin/main through the merge, not written on this branch: main reviewed it there; the merge itself only resolved one conflict in odd/tasks/phase9-store-agnostic-promotion.md (exemption fe79c5bc98ab-2, tree reproduced)."
+    },
+    {
+      "candidate": "T1 name: topLevelFields",
+      "disposition": "live",
+      "evidence": "Brought in by origin/main through the merge, not written on this branch: main reviewed it there; the merge itself only resolved one conflict in odd/tasks/phase9-store-agnostic-promotion.md (exemption fe79c5bc98ab-2, tree reproduced)."
+    },
+    {
+      "candidate": "T1 name: under",
+      "disposition": "live",
+      "evidence": "Brought in by origin/main through the merge, not written on this branch: main reviewed it there; the merge itself only resolved one conflict in odd/tasks/phase9-store-agnostic-promotion.md (exemption fe79c5bc98ab-2, tree reproduced)."
+    },
+    {
+      "candidate": "T1 name: unreadableCauses",
+      "disposition": "live",
+      "evidence": "Brought in by origin/main through the merge, not written on this branch: main reviewed it there; the merge itself only resolved one conflict in odd/tasks/phase9-store-agnostic-promotion.md (exemption fe79c5bc98ab-2, tree reproduced)."
+    },
+    {
+      "candidate": "T1 name: vaultBackup",
+      "disposition": "live",
+      "evidence": "Brought in by origin/main through the merge, not written on this branch: main reviewed it there; the merge itself only resolved one conflict in odd/tasks/phase9-store-agnostic-promotion.md (exemption fe79c5bc98ab-2, tree reproduced)."
+    },
+    {
+      "candidate": "T1 name: viaEngram",
+      "disposition": "live",
+      "evidence": "Brought in by origin/main through the merge, not written on this branch: main reviewed it there; the merge itself only resolved one conflict in odd/tasks/phase9-store-agnostic-promotion.md (exemption fe79c5bc98ab-2, tree reproduced)."
+    },
+    {
+      "candidate": "T1 name: viaMemorycard",
+      "disposition": "live",
+      "evidence": "Brought in by origin/main through the merge, not written on this branch: main reviewed it there; the merge itself only resolved one conflict in odd/tasks/phase9-store-agnostic-promotion.md (exemption fe79c5bc98ab-2, tree reproduced)."
+    },
+    {
+      "candidate": "T1 path: longterm-mem/cmd/longterm-mem/cmd_migrate_card_pages.go",
+      "disposition": "live",
+      "evidence": "Brought in by origin/main through the merge, not written on this branch: main reviewed it there; the merge itself only resolved one conflict in odd/tasks/phase9-store-agnostic-promotion.md (exemption fe79c5bc98ab-2, tree reproduced)."
+    },
+    {
+      "candidate": "T1 path: longterm-mem/cmd/longterm-mem/migrate_card_pages_backup_durable_test.go",
+      "disposition": "live",
+      "evidence": "Brought in by origin/main through the merge, not written on this branch: main reviewed it there; the merge itself only resolved one conflict in odd/tasks/phase9-store-agnostic-promotion.md (exemption fe79c5bc98ab-2, tree reproduced)."
+    },
+    {
+      "candidate": "T1 path: longterm-mem/cmd/longterm-mem/migrate_card_pages_backup_more_test.go",
+      "disposition": "live",
+      "evidence": "Brought in by origin/main through the merge, not written on this branch: main reviewed it there; the merge itself only resolved one conflict in odd/tasks/phase9-store-agnostic-promotion.md (exemption fe79c5bc98ab-2, tree reproduced)."
+    },
+    {
+      "candidate": "T1 path: longterm-mem/cmd/longterm-mem/migrate_card_pages_backup_sync_test.go",
+      "disposition": "live",
+      "evidence": "Brought in by origin/main through the merge, not written on this branch: main reviewed it there; the merge itself only resolved one conflict in odd/tasks/phase9-store-agnostic-promotion.md (exemption fe79c5bc98ab-2, tree reproduced)."
+    },
+    {
+      "candidate": "T1 path: longterm-mem/cmd/longterm-mem/migrate_card_pages_backup_test.go",
+      "disposition": "live",
+      "evidence": "Brought in by origin/main through the merge, not written on this branch: main reviewed it there; the merge itself only resolved one conflict in odd/tasks/phase9-store-agnostic-promotion.md (exemption fe79c5bc98ab-2, tree reproduced)."
+    },
+    {
+      "candidate": "T1 path: longterm-mem/cmd/longterm-mem/migrate_card_pages_halfmigrated_test.go",
+      "disposition": "live",
+      "evidence": "Brought in by origin/main through the merge, not written on this branch: main reviewed it there; the merge itself only resolved one conflict in odd/tasks/phase9-store-agnostic-promotion.md (exemption fe79c5bc98ab-2, tree reproduced)."
+    },
+    {
+      "candidate": "T1 path: longterm-mem/cmd/longterm-mem/migrate_card_pages_scan_test.go",
+      "disposition": "live",
+      "evidence": "Brought in by origin/main through the merge, not written on this branch: main reviewed it there; the merge itself only resolved one conflict in odd/tasks/phase9-store-agnostic-promotion.md (exemption fe79c5bc98ab-2, tree reproduced)."
+    },
+    {
+      "candidate": "T1 path: longterm-mem/cmd/longterm-mem/migrate_card_pages_test.go",
+      "disposition": "live",
+      "evidence": "Brought in by origin/main through the merge, not written on this branch: main reviewed it there; the merge itself only resolved one conflict in odd/tasks/phase9-store-agnostic-promotion.md (exemption fe79c5bc98ab-2, tree reproduced)."
+    },
+    {
+      "candidate": "T1 path: longterm-mem/cmd/longterm-mem/testdata/legacy-promoted-vault/.allocator-counter",
+      "disposition": "live",
+      "evidence": "Brought in by origin/main through the merge, not written on this branch: main reviewed it there; the merge itself only resolved one conflict in odd/tasks/phase9-store-agnostic-promotion.md (exemption fe79c5bc98ab-2, tree reproduced)."
+    },
+    {
+      "candidate": "T1 path: longterm-mem/cmd/longterm-mem/testdata/legacy-promoted-vault/.raw/.longterm-mem-manifest.json",
+      "disposition": "live",
+      "evidence": "Brought in by origin/main through the merge, not written on this branch: main reviewed it there; the merge itself only resolved one conflict in odd/tasks/phase9-store-agnostic-promotion.md (exemption fe79c5bc98ab-2, tree reproduced)."
+    },
+    {
+      "candidate": "T1 path: longterm-mem/cmd/longterm-mem/testdata/legacy-promoted-vault/.raw/.manifest.json",
+      "disposition": "live",
+      "evidence": "Brought in by origin/main through the merge, not written on this branch: main reviewed it there; the merge itself only resolved one conflict in odd/tasks/phase9-store-agnostic-promotion.md (exemption fe79c5bc98ab-2, tree reproduced)."
+    },
+    {
+      "candidate": "T1 path: longterm-mem/cmd/longterm-mem/testdata/legacy-promoted-vault/wiki/index.md",
+      "disposition": "live",
+      "evidence": "Brought in by origin/main through the merge, not written on this branch: main reviewed it there; the merge itself only resolved one conflict in odd/tasks/phase9-store-agnostic-promotion.md (exemption fe79c5bc98ab-2, tree reproduced)."
+    },
+    {
+      "candidate": "T1 path: longterm-mem/cmd/longterm-mem/testdata/legacy-promoted-vault/wiki/log.md",
+      "disposition": "live",
+      "evidence": "Brought in by origin/main through the merge, not written on this branch: main reviewed it there; the merge itself only resolved one conflict in odd/tasks/phase9-store-agnostic-promotion.md (exemption fe79c5bc98ab-2, tree reproduced)."
+    },
+    {
+      "candidate": "T1 path: longterm-mem/cmd/longterm-mem/testdata/legacy-promoted-vault/wiki/memory/c-000901.md",
+      "disposition": "live",
+      "evidence": "Brought in by origin/main through the merge, not written on this branch: main reviewed it there; the merge itself only resolved one conflict in odd/tasks/phase9-store-agnostic-promotion.md (exemption fe79c5bc98ab-2, tree reproduced)."
+    },
+    {
+      "candidate": "T1 path: longterm-mem/internal/promote/migrate_cards.go",
+      "disposition": "live",
+      "evidence": "Brought in by origin/main through the merge, not written on this branch: main reviewed it there; the merge itself only resolved one conflict in odd/tasks/phase9-store-agnostic-promotion.md (exemption fe79c5bc98ab-2, tree reproduced)."
+    },
+    {
+      "candidate": "T1 path: longterm-mem/internal/promote/migrate_cards_recovery_test.go",
+      "disposition": "live",
+      "evidence": "Brought in by origin/main through the merge, not written on this branch: main reviewed it there; the merge itself only resolved one conflict in odd/tasks/phase9-store-agnostic-promotion.md (exemption fe79c5bc98ab-2, tree reproduced)."
+    },
+    {
+      "candidate": "T1 path: longterm-mem/internal/promote/migrate_cards_safety_test.go",
+      "disposition": "live",
+      "evidence": "Brought in by origin/main through the merge, not written on this branch: main reviewed it there; the merge itself only resolved one conflict in odd/tasks/phase9-store-agnostic-promotion.md (exemption fe79c5bc98ab-2, tree reproduced)."
+    },
+    {
+      "candidate": "T1 path: longterm-mem/internal/promote/migrate_cards_test.go",
+      "disposition": "live",
+      "evidence": "Brought in by origin/main through the merge, not written on this branch: main reviewed it there; the merge itself only resolved one conflict in odd/tasks/phase9-store-agnostic-promotion.md (exemption fe79c5bc98ab-2, tree reproduced)."
+    },
+    {
+      "candidate": "T1 path: longterm-mem/internal/promote/migrate_cards_unreadable_test.go",
+      "disposition": "live",
+      "evidence": "Brought in by origin/main through the merge, not written on this branch: main reviewed it there; the merge itself only resolved one conflict in odd/tasks/phase9-store-agnostic-promotion.md (exemption fe79c5bc98ab-2, tree reproduced)."
+    },
+    {
+      "candidate": "T1 path: scripts/rehearse-card-page-migration.sh",
+      "disposition": "live",
+      "evidence": "Brought in by origin/main through the merge, not written on this branch: main reviewed it there; the merge itself only resolved one conflict in odd/tasks/phase9-store-agnostic-promotion.md (exemption fe79c5bc98ab-2, tree reproduced)."
+    },
+    {
+      "candidate": "T2 errcheck longterm-mem: cmd/longterm-mem/promote_memorycard_test.go: unchecked error: defer db.Close()",
+      "disposition": "live",
+      "evidence": "Brought in by origin/main through the merge, not written on this branch: main reviewed it there; the merge itself only resolved one conflict in odd/tasks/phase9-store-agnostic-promotion.md (exemption fe79c5bc98ab-2, tree reproduced)."
+    }
+  ]
+}

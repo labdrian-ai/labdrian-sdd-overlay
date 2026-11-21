@@ -1,0 +1,91 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "59fe2fb3616080da43d442f7ea59bad0025da04c",
+    "head": "9ef28e097083b2ac1ec6366b629b94b4fa17f7f9",
+    "diff_sha256": "c71040c4336cc893456b74cba3003538fe0d965806784c3acbf3189797c71e98",
+    "paths": [
+      "CHANGELOG.md",
+      "engine/capability/declarations.go",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-context-lists-quotes-and-case.golden",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-minimalism-context-metadata-accepted-today.golden",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-phases-quoted-items-accepted-today.golden",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-reads-the-contracts-of-the-overlay.golden",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-without-the-oo-contract.golden",
+      "engine/cmd/testdata/runtime-golden/runtime-opencode-and-pi-with-an-overlay.golden",
+      "engine/cmd/usage.go",
+      "engine/runtime/opencode.go",
+      "engine/runtime/opencode_agents.go",
+      "engine/runtime/opencode_agents_test.go",
+      "engine/runtime/register.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "59fe2fb3616080da43d442f7ea59bad0025da04c",
+      "head": "9ef28e097083b2ac1ec6366b629b94b4fa17f7f9",
+      "diff_sha256": "c71040c4336cc893456b74cba3003538fe0d965806784c3acbf3189797c71e98"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "engine/capability/declarations.go",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-context-lists-quotes-and-case.golden",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-minimalism-context-metadata-accepted-today.golden",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-phases-quoted-items-accepted-today.golden",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-reads-the-contracts-of-the-overlay.golden",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-without-the-oo-contract.golden",
+        "engine/cmd/testdata/runtime-golden/runtime-opencode-and-pi-with-an-overlay.golden",
+        "engine/cmd/usage.go",
+        "engine/runtime/opencode.go",
+        "engine/runtime/opencode_agents.go",
+        "engine/runtime/opencode_agents_test.go",
+        "engine/runtime/register.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "engine/runtime/opencode.go:73-78",
+        "claim": "Uninstall reports only the opencode.json error when both the JSON cleanup and the AGENTS.md block removal fail. The AGENTS.md failure (for example broken markers) is silently dropped from the message, so the owner is not told the block stayed.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/runtime/opencode.go:53-78: agentsErr is checked only after the early return on jsonErr"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "engine/runtime/opencode_agents.go:84-93",
+        "claim": "styleBody does not strip an empty frontmatter (\"---\\n---\\n\") or a closing \"---\" at end of file without a trailing newline, because it searches only for \"\\n---\\n\" after the opening line. The frontmatter then leaks into AGENTS.md.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/runtime/opencode_agents.go:84-93: strings.Index(text[len(\"---\\n\"):], \"\\n---\\n\")"
+        ]
+      },
+      {
+        "id": "F3",
+        "severity": "SUGGESTION",
+        "location": "engine/runtime/opencode.go:161-166",
+        "claim": "The shadowing-skills note is appended only to the supported status result. A partial or restart_required status (for example a stale AGENTS.md) omits it, so the report is inconsistent across status outcomes.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/runtime/opencode.go:161-166 and 189: the note is added only on the final supported return"
+        ]
+      }
+    ],
+    "evidence": [
+      "Reviewed the whole diff; no tools were available to run the tests.",
+      "The block logic reuses MarkedBlock, and the no-source path returns the previous result with a note, matching the commit's claim."
+    ]
+  }
+}

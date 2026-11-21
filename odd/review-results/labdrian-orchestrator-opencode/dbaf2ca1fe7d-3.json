@@ -1,0 +1,57 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "32f1f7cc6a000820fe5506b7d9757e0373e67948",
+    "head": "dbaf2ca1fe7d0144b8066ce51f3be06d40696c51",
+    "diff_sha256": "bf96b22193a4a3575f15255b519183d291921883f8b8300a22727026a707bef3",
+    "paths": [
+      "agents/shaper.md",
+      "codex/agents/shaper.toml",
+      "engine/cmd/roles_builder_guard_docs_test.go",
+      "opencode/agents/shaper.md",
+      "pi/agents/shaper.md",
+      "roles/shaper/body.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "32f1f7cc6a000820fe5506b7d9757e0373e67948",
+      "head": "dbaf2ca1fe7d0144b8066ce51f3be06d40696c51",
+      "diff_sha256": "bf96b22193a4a3575f15255b519183d291921883f8b8300a22727026a707bef3"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "agents/shaper.md",
+        "codex/agents/shaper.toml",
+        "engine/cmd/roles_builder_guard_docs_test.go",
+        "opencode/agents/shaper.md",
+        "pi/agents/shaper.md",
+        "roles/shaper/body.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "agents/shaper.md:16",
+        "claim": "The new clause lists every goal key except the copied ones, then continues 'every other string is non-blank'. 'Every other string' now reads as the strings not named in the type clause, so it can be taken to drop the non-blank rule for objective, scope, runtime_scope and delivery_boundary, which the old sentence covered. It also leaves it unclear whether the array elements must be non-blank. This could weaken the non-blank requirement for the shaper. The same wording is in all five role files.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "agents/shaper.md:16",
+          "roles/shaper/body.md:9"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff only changes the shaper sentence, replicated in five role files, plus one test assertion. The test asserts the exact new substring, so the copies stay in sync.",
+      "I could not check the runtime_scope and delivery_boundary types against the Goal struct from the diff alone; the claim that they are strings is unverified."
+    ]
+  }
+}

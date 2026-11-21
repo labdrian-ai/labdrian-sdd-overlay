@@ -1,0 +1,97 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "537bb26475b2db7b216246a8878bb5e61484ea00",
+    "head": "e001d5accdb5e3b60c93ff021dffd8bebc079891",
+    "diff_sha256": "a334f9853effc8e2bd88a74627f393b1b35491b4bf41535b4cb768e801e2d4fb",
+    "paths": [
+      "agents/foreman.md",
+      "engine/agentgen/agentgen.go",
+      "engine/agentgen/artifacts_test.go",
+      "engine/agentgen/foreman_test.go",
+      "engine/agentgen/messages_pin_test.go",
+      "engine/agentgen/roles.go",
+      "engine/cmd/agentgen_test.go",
+      "overlay.manifest",
+      "roles/foreman/body.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "537bb26475b2db7b216246a8878bb5e61484ea00",
+      "head": "e001d5accdb5e3b60c93ff021dffd8bebc079891",
+      "diff_sha256": "a334f9853effc8e2bd88a74627f393b1b35491b4bf41535b4cb768e801e2d4fb"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "agents/foreman.md",
+        "engine/agentgen/agentgen.go",
+        "engine/agentgen/artifacts_test.go",
+        "engine/agentgen/foreman_test.go",
+        "engine/agentgen/messages_pin_test.go",
+        "engine/agentgen/roles.go",
+        "engine/cmd/agentgen_test.go",
+        "overlay.manifest",
+        "roles/foreman/body.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "engine/agentgen/roles.go:148-165",
+        "claim": "The foreman role sets effort: \"medium\" which is never used, since projectClaude emits no thinking/effort field. Dead configuration that suggests an effect it does not have.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/agentgen/roles.go:155-165",
+          "engine/agentgen/roles.go:298-316"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "WARNING",
+        "location": "engine/cmd/agentgen_test.go:119-140",
+        "claim": "The skill-existence test treats every single-word kebab backticked token in the body as a skill, with only `success` exempted. Any future backticked lowercase word (e.g. a status or a flag-free word) in the body fails the test spuriously; conversely, skills named only in non-backtick prose (closure-feedback) are unchecked. Brittle coupling of the test to body formatting.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/cmd/agentgen_test.go:125-132"
+        ]
+      },
+      {
+        "id": "F3",
+        "severity": "WARNING",
+        "location": "roles/foreman/body.md:2",
+        "claim": "The body tells the foreman to read memorycard via mem_search/mem_get, and the foreman holds Edit and Write plus Bash with only an instruction-level limit to the feature document. The description says 'writes only the feature document' but nothing enforces it; the tool list grants full write ability, so the claim in the agent description is unenforced.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "agents/foreman.md:4",
+          "agents/foreman.md:5"
+        ]
+      },
+      {
+        "id": "F4",
+        "severity": "SUGGESTION",
+        "location": "engine/agentgen/foreman_test.go:128-131",
+        "claim": "The line-count test and banned-word test (e.g. \"consent\", \"Engram\") pin incidental body wording; the 35-55 line range makes unrelated body edits fail. Also the Never section's line 'gentle-ai review' is fine but the banned list is arbitrary.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/agentgen/foreman_test.go:158-171"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full diff; agentgen.go builds the foreman after the eight roles and only when models table read succeeds, matching the tests' expected ordering and missing-source message.",
+      "claudeFile refactor preserves the exact prior string for the eight roles.",
+      "Manifest row added for foreman.md alongside other agents."
+    ]
+  }
+}

@@ -158,3 +158,54 @@ func TestIsAncestorIsTrueForAMergedCommitFalseForAnUnmergedOneAndAnErrorForAnObj
 		t.Errorf("IsAncestor() of a name that is not a full object name = %v, nil; want an error", got)
 	}
 }
+
+func TestRemotesListsTheNamesOfTheRemotesOneEachAndNoneForNone(t *testing.T) {
+	f := newFixture(t, "sha1")
+	f.write("a.txt", "one\n")
+	f.stage()
+	f.snapshot("first")
+	g := f.adapter()
+
+	got, err := g.Remotes(f.repo())
+	if err != nil || len(got) != 0 {
+		t.Errorf("Remotes() of a repository with no remote = %q, %v; want none, nil", got, err)
+	}
+
+	f.git("remote", "add", "origin", "https://example.invalid/one.git")
+	got, err = g.Remotes(f.repo())
+	if want := []string{"origin"}; err != nil || !reflect.DeepEqual(got, want) {
+		t.Errorf("Remotes() of one remote = %q, %v; want %q, nil", got, err, want)
+	}
+
+	f.git("remote", "add", "backup", "../elsewhere")
+	got, err = g.Remotes(f.repo())
+	if want := []string{"backup", "origin"}; err != nil || !reflect.DeepEqual(got, want) {
+		t.Errorf("Remotes() of two remotes = %q, %v; want %q, nil (the names git lists, one each)", got, err, want)
+	}
+}
+
+func TestRemotesOfAWorktreeAreThoseOfItsMainRepository(t *testing.T) {
+	f := newFixture(t, "sha1")
+	f.write("a.txt", "one\n")
+	f.stage()
+	first := f.snapshot("first")
+	f.git("remote", "add", "origin", "https://example.invalid/one.git")
+	wt := filepath.Join(resolved(t, t.TempDir()), "wt")
+	f.git("worktree", "add", "-q", "--detach", wt, first)
+
+	got, err := f.adapter().Remotes(app.Repository{Root: wt, Main: f.root, CommonDir: filepath.Join(f.root, ".git")})
+
+	if want := []string{"origin"}; err != nil || !reflect.DeepEqual(got, want) {
+		t.Errorf("Remotes() from a worktree = %q, %v; want %q, nil", got, err, want)
+	}
+}
+
+func TestRemotesIsAnErrorWhenGitCannotAnswer(t *testing.T) {
+	f := newFixture(t, "sha1")
+
+	got, err := f.adapter().Remotes(app.Repository{Root: filepath.Join(f.root, "not-there")})
+
+	if err == nil || got != nil {
+		t.Errorf("Remotes() of a directory that is not there = %q, %v; want no answer and an error", got, err)
+	}
+}

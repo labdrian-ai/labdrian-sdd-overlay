@@ -1,0 +1,72 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "dbaf2ca1fe7d0144b8066ce51f3be06d40696c51",
+    "head": "4a844adbee39393a1be2e31b9476595007900b7d",
+    "diff_sha256": "f12a2188f368f2f41dc47703c2483a40dc24e5d1ba820e585847e465a8472bc2",
+    "paths": [
+      "engine/cmd/runtime.go",
+      "engine/cmd/runtime_options_test.go",
+      "engine/cmd/runtime_owner_rules_test.go",
+      "engine/cmd/testdata/runtime-golden/runtime-bad-command-lines.golden",
+      "engine/cmd/usage.go",
+      "engine/runtime/claude.go",
+      "engine/runtime/claude_owner_rules.go",
+      "engine/runtime/claude_owner_rules_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "dbaf2ca1fe7d0144b8066ce51f3be06d40696c51",
+      "head": "4a844adbee39393a1be2e31b9476595007900b7d",
+      "diff_sha256": "f12a2188f368f2f41dc47703c2483a40dc24e5d1ba820e585847e465a8472bc2"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/cmd/runtime.go",
+        "engine/cmd/runtime_options_test.go",
+        "engine/cmd/runtime_owner_rules_test.go",
+        "engine/cmd/testdata/runtime-golden/runtime-bad-command-lines.golden",
+        "engine/cmd/usage.go",
+        "engine/runtime/claude.go",
+        "engine/runtime/claude_owner_rules.go",
+        "engine/runtime/claude_owner_rules_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "engine/runtime/claude_owner_rules.go:32-33",
+        "claim": "With no overlay checkout, the owner-rules-only adapter's install and update return restart_required and the CLI exits 0, although nothing was written. In ClaudeAdapter the hooks were still installed, so that status was meaningful. In the standalone component the block is the whole action, so a no-op reports success and a restart prompt. The only signal is a message clause.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/runtime/claude_owner_rules.go:32-33",
+          "engine/cmd/runtime.go:150-160"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "engine/runtime/claude_owner_rules.go:117-124",
+        "claim": "Status distinguishes the no-checkout case by matching the prefix of a free-text note (strings.HasPrefix(note, \"owner rules not checked\")). If the note wording in claudeOwnerRules.status changes, the no-checkout case would silently be reported as supported.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/runtime/claude_owner_rules.go:117-124"
+        ]
+      }
+    ],
+    "evidence": [
+      "The ClaudeAdapter refactor (Uninstall, status, withOwnerRules) preserves the messages and statuses of the base code on the paths I traced.",
+      "The new component is reached only with --target claude; every other target exits 1 before anything is built or written.",
+      "I could not check from the diff that the 'errors' import is still used in claude.go."
+    ]
+  }
+}

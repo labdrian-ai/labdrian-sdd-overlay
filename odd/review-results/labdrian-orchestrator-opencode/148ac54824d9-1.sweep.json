@@ -1,0 +1,19 @@
+{
+  "kind": "sweep",
+  "base": "5d4537478b4485233c5641a43ca0af852943148e",
+  "head": "148ac54824d97a14f653df97cc902c155acdd0ab",
+  "diff_sha256": "caea09626d3f1ca79b30dca3bd9c245603a919ed9d0494c1fbf9f6be55a4527a",
+  "outcome": "fired",
+  "t1": {
+    "deleted_or_renamed": [],
+    "removed_names": []
+  },
+  "t2": [],
+  "t3": [
+    "?? longterm-mem/longterm-mem"
+  ],
+  "t4": {
+    "leftovers": [],
+    "orphaned_fixtures": []
+  }
+}

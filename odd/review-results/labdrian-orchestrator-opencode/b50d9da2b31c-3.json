@@ -1,0 +1,39 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "720b2f9ccf6b86a8a684362ab7e6c03ba4da0aec",
+    "head": "b50d9da2b31c9b73421bb5c1f0c319c2d58a44ec",
+    "diff_sha256": "382eb239cf29b86c0b38a824902cbf7fb7096d1c45ba93705f60e056ccf6c51e",
+    "paths": [
+      "CHANGELOG.md",
+      "engine/runtime/opencode_agents.go",
+      "engine/runtime/opencode_agents_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "720b2f9ccf6b86a8a684362ab7e6c03ba4da0aec",
+      "head": "b50d9da2b31c9b73421bb5c1f0c319c2d58a44ec",
+      "diff_sha256": "382eb239cf29b86c0b38a824902cbf7fb7096d1c45ba93705f60e056ccf6c51e"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "engine/runtime/opencode_agents.go",
+        "engine/runtime/opencode_agents_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The diff reads as a text-only change: the memorycard block loses its Engram sentences and the CHANGELOG is updated to match.",
+      "The updated test still checks the new phrase 'is the only memory store', which the new block text contains.",
+      "The Engram ban in the test applies only to the text from the memorycard block to the end of the file. That is consistent with the block sitting last, and the diff does not show the rest of the file.",
+      "No code path, option handling or valid input changes, so I found no regression."
+    ]
+  }
+}

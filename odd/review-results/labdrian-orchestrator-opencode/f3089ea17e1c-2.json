@@ -1,0 +1,46 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "4e6ff27f7e086b6c62ac187dc7ccd57f044ca5e1",
+    "head": "f3089ea17e1c788170b77c2ec8402590db06653a",
+    "diff_sha256": "b205091ef6e216dcdbe01bbdbbc02ce9fae822910305976df9970e1aa891d10b",
+    "paths": [
+      "odd/tasks/labdrian-orchestrator-opencode.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "4e6ff27f7e086b6c62ac187dc7ccd57f044ca5e1",
+      "head": "f3089ea17e1c788170b77c2ec8402590db06653a",
+      "diff_sha256": "b205091ef6e216dcdbe01bbdbbc02ce9fae822910305976df9970e1aa891d10b"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/labdrian-orchestrator-opencode.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/labdrian-orchestrator-opencode.md:423",
+        "claim": "L40 is hard to read and check: it says L37 already placed the Engram wording of skills_candidates_cli.go:15 in commit (b) 'which the row now says too', yet L39 described that same wording as a fix to the row. The entry does not say whether L39 changed anything for that line. It also gives the (b) range as 'its 235-250 range' and a '435-580 total' without naming which file or row these figures belong to. A reader cannot confirm them from this entry alone.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/labdrian-orchestrator-opencode.md:423"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff adds only the L40 log entry in the feature document; no code is touched.",
+      "The T25b row and the L37 text are not in the diff, so the claims in L40 about them (ranges, which commit holds which wording) cannot be checked here."
+    ]
+  }
+}

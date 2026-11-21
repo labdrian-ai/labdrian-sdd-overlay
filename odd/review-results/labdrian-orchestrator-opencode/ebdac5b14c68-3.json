@@ -1,0 +1,37 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "079981c74ed9a40e9345f6065ce71e3d976e64a0",
+    "head": "ebdac5b14c68c2ac61f72619f8eaac032d485e67",
+    "diff_sha256": "a6395b19c8758f7becb4bf4f56d82cf3853aa44bfbbc561bad106852359909fe",
+    "paths": [
+      "engine/review/analyzers/analyzers.go",
+      "engine/review/analyzers/analyzers_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "079981c74ed9a40e9345f6065ce71e3d976e64a0",
+      "head": "ebdac5b14c68c2ac61f72619f8eaac032d485e67",
+      "diff_sha256": "a6395b19c8758f7becb4bf4f56d82cf3853aa44bfbbc561bad106852359909fe"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/review/analyzers/analyzers.go",
+        "engine/review/analyzers/analyzers_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "holdsGoFile now lists the directory with os.ReadDir, so glob metacharacters in the path no longer matter. A read error returns false, as the old Glob error did.",
+      "The old Glob matched a directory named x.go; the new code skips directories, which is stricter and correct for a 'holds a .go file' check.",
+      "The diff adds no imports. It uses os and strings, so I could not check from the diff that strings is already imported in analyzers.go. This is a compile-time risk only, and a missing import would be caught at build.",
+      "The added test uses a package named a[1], which exercises the glob-metacharacter case the commit describes."
+    ]
+  }
+}

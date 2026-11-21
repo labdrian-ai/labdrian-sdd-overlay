@@ -1,0 +1,67 @@
+{
+  "kind": "polisher",
+  "base": "069c0d7309f00fa43dca3426112dc8367a253ed6",
+  "head": "afb10297085cc474b423c30bb3fa18ccaecfbb84",
+  "diff_sha256": "80e3b1a7d306769f2b2af3d33588804ef09a4dd7f7bc22e8638d28e852ffb5dd",
+  "findings": {
+    "findings": [
+      {
+        "id": "A-F1",
+        "severity": "WARNING",
+        "location": "skills/procedural-candidates/SKILL.md:21; section 3 item 6",
+        "claim": "The lifecycle exception lived only in item 2; SKILL.md step 6 and item 6 read as contradicting it. Fixed in ddced25e and 7ca4f581: item 6 says that when resolve failed nothing is rewritten and the lifecycle exception of item 2 applies, and SKILL.md step 6 states the exception.",
+        "evidence": [
+          "judge A round 2 on afb10297; parent check: TestProceduralCandidateContractCarriesTheExceptionAndTheMergeTies at 7ca4f581."
+        ]
+      },
+      {
+        "id": "A-F2",
+        "severity": "SUGGESTION",
+        "location": "skills/_shared/procedural-candidate-detection.md emission table",
+        "claim": "The table had no row for an emitted or rejected record at or below N after a merge. Fixed in ddced25e with a note after the table: it keeps its Status and is never re-emitted.",
+        "evidence": [
+          "judge A round 2; parent check: pinned in TestProceduralCandidateContractCarriesTheExceptionAndTheMergeTies."
+        ]
+      },
+      {
+        "id": "A-F3",
+        "severity": "SUGGESTION",
+        "location": "skills/_shared/procedural-candidate-detection.md section 3 item 2",
+        "claim": "Duplicate or zero-padded legacy keys were unspecified. Fixed in ddced25e/7ca4f581: one call, each distinct number once, sorted as strings, as written; a number with leading zeros is asked as written (legacyNumbers does the same).",
+        "evidence": [
+          "judge A round 2; parent check: pinned in TestProceduralCandidateContractCarriesTheExceptionAndTheMergeTies."
+        ]
+      },
+      {
+        "id": "A-F4",
+        "severity": "SUGGESTION",
+        "location": "skills/_shared/procedural-candidate-detection.md section 3 item 6",
+        "claim": "No tie rule for equal timestamps and no rule for merged entries straddling the Registered/Promoted baseline. Fixed in ddced25e: ties keep the entry listed first; such entries count once, before the baseline, as one observation (L48).",
+        "evidence": [
+          "judge A round 2; parent check: pinned in TestProceduralCandidateContractCarriesTheExceptionAndTheMergeTies."
+        ]
+      },
+      {
+        "id": "B-F1",
+        "severity": "SUGGESTION",
+        "location": "skills/_shared/procedural-candidate-detection.md section 3 item 2",
+        "claim": "Resolve should be asked with each distinct number once, as the engine does. Fixed in ddced25e/7ca4f581.",
+        "evidence": [
+          "judge B round 2; parent check as A-F3."
+        ]
+      },
+      {
+        "id": "B-F2",
+        "severity": "SUGGESTION",
+        "location": "skills/procedural-candidates/SKILL.md:21; section 3 item 6",
+        "claim": "Same as A-F1. Fixed in ddced25e/7ca4f581.",
+        "evidence": [
+          "judge B round 2; parent check as A-F1."
+        ]
+      }
+    ],
+    "evidence": [
+      "Two blind polisher judges read the afb10297 tree on a detached worktree. Judge A read the shared contract and SKILL.md in full; judge B also read candidate_record.go, resolver.go and list_candidates.go and found the legacy-id shape, envelope, refusals, merged-id counting, unknown ids and failure handling matching the engine. Neither ran tests; the builder observed RED for five new or changed pins against 069c0d73 and GREEN after."
+    ]
+  }
+}

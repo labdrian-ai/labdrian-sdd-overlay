@@ -1,0 +1,64 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "d0442fec62d4b7f4ac7562f89d8886df310afa12",
+    "head": "a610792c389d10edd5916c56c445c081b9b0ac62",
+    "diff_sha256": "13eecfe4cb496ee60e9fb92b52f8ac51235de69016eae1714f79dcd7bfe38aff",
+    "paths": [
+      "CHANGELOG.md",
+      "engine/skills/issue_creation_artifact_test.go",
+      "overlay.manifest",
+      "skills/issue-creation/SKILL.md",
+      "skills/issue-creation/references/procedure.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "d0442fec62d4b7f4ac7562f89d8886df310afa12",
+      "head": "a610792c389d10edd5916c56c445c081b9b0ac62",
+      "diff_sha256": "13eecfe4cb496ee60e9fb92b52f8ac51235de69016eae1714f79dcd7bfe38aff"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "engine/skills/issue_creation_artifact_test.go",
+        "overlay.manifest",
+        "skills/issue-creation/SKILL.md",
+        "skills/issue-creation/references/procedure.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "skills/issue-creation/references/procedure.md:10",
+        "claim": "Step 2 says to read each candidate, while SKILL.md bounds the read to title-matching candidates, at most 10. An agent that follows only the procedure file may read every result of a search with up to 1000 hits, which loosens the bound the commit sets.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "skills/issue-creation/references/procedure.md:10",
+          "skills/issue-creation/SKILL.md:21"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "skills/issue-creation/references/procedure.md:18",
+        "claim": "The read-back requires the body to equal the submitted file but gives no normalization rule (line endings, trailing newline). GitHub may normalize a body, so a correct write could be reported as unknown and stop all later writes. The failure is safe but may be spurious.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "skills/issue-creation/references/procedure.md:18"
+        ]
+      }
+    ],
+    "evidence": [
+      "Reviewed all five changed paths in the diff. The guardrails and the read-back definition are present and pinned by tests. No requested behavior is violated and no previously valid input regresses."
+    ]
+  }
+}

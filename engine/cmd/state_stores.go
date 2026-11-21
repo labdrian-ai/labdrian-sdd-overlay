@@ -1,7 +1,12 @@
 package main
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
+	"errors"
 	"fmt"
+	"io/fs"
+	"path/filepath"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/gitfs"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/gitprov"
@@ -95,6 +100,114 @@ func newBindingStore() (projection.BindingStore, error) {
 		return nil, err
 	}
 	return store, nil
+}
+
+// promptStore keeps, for each session, the SHA-256 of the last block the UserPromptSubmit projection hook added to
+// it (S19), so that the hook adds a block only when it differs from the last one. It is shaped as the review
+// stop-hook's store (review/fsstore.Asked): <state home>/labdrian/projection-prompt/<sha256 of the session>/last,
+// the session hashed because it is a name Claude Code (or the OpenCode bridge) gives and not a path, the
+// directories made 0700 and refused when one is a link (statestore.EnsureDirs, CheckDirs), the file opened
+// without following a link (statestore.AppendLine, LastLine). The file is append-only, because
+// statestore.Publish never replaces a record: one line for each change, and the last line is the last block. A
+// line is the 64 hex digits of a hash, or "reset", which says the session's context was cut (start, resume,
+// clear, compact) and the block must be added again. A last line that is neither is no block, and the next one
+// is added. No cleanup: one small directory for each session, as the review stop-hook keeps.
+type promptStore struct{ home string }
+
+const (
+	promptStoreName   = "projection prompt store"
+	promptStoreFile   = "last"
+	promptResetLine   = "reset"
+	promptHashLen     = 2 * sha256.Size
+	promptStoreWindow = 2 * (promptHashLen + 1) // a little over the longest two lines the file holds
+)
+
+var errPromptStoreUnsupported = errors.New(promptStoreName + ": unsupported platform")
+
+// newPromptStore builds the store over the state home, on a platform that has a no-follow open (linux, darwin).
+func newPromptStore() (promptStore, error) {
+	stateHome, err := resolveStateHome(promptStoreName)
+	if err != nil {
+		return promptStore{}, err
+	}
+	if err := statestore.RequireStore(promptStoreName, errPromptStoreUnsupported, stateHome); err != nil {
+		return promptStore{}, err
+	}
+	return promptStore{home: stateHome}, nil
+}
+
+func (s promptStore) directory(session string) []string {
+	sum := sha256.Sum256([]byte(session))
+	return []string{s.home, "labdrian", "projection-prompt", hex.EncodeToString(sum[:])}
+}
+
+// last is the hash of the last block added to the session, or "" when none was, the session was reset since, or
+// the last line is not a hash. It makes nothing: a store nobody wrote to is absent, not broken.
+func (s promptStore) last(session string) (string, error) {
+	parts := s.directory(session)
+	if err := statestore.CheckDirs(parts); err != nil {
+		if errors.Is(err, fs.ErrNotExist) {
+			return "", nil
+		}
+		return "", fmt.Errorf("%s: %w", promptStoreName, err)
+	}
+	line, err := statestore.LastLine(filepath.Join(filepath.Join(parts...), promptStoreFile), promptStoreWindow)
+	if errors.Is(err, fs.ErrNotExist) {
+		return "", nil
+	}
+	if err != nil {
+		return "", fmt.Errorf("%s: %w", promptStoreName, err)
+	}
+	if !isHexHash(line) {
+		return "", nil
+	}
+	return line, nil
+}
+
+// record says the block whose hash is hash was added to the session. Recording the last block again changes
+// nothing.
+func (s promptStore) record(session, hash string) error {
+	last, err := s.last(session)
+	if err != nil {
+		return err
+	}
+	if last == hash {
+		return nil
+	}
+	return s.append(session, hash)
+}
+
+// reset says the session's context was cut, so the next block is added whatever it is. A session with no block
+// to forget is left as it is.
+func (s promptStore) reset(session string) error {
+	last, err := s.last(session)
+	if err != nil {
+		return err
+	}
+	if last == "" {
+		return nil
+	}
+	return s.append(session, promptResetLine)
+}
+
+func (s promptStore) append(session, line string) error {
+	if err := statestore.AppendLine(s.directory(session), promptStoreFile, line); err != nil {
+		return fmt.Errorf("%s: %w", promptStoreName, err)
+	}
+	return nil
+}
+
+func isHexHash(s string) bool {
+	if len(s) != promptHashLen {
+		return false
+	}
+	for i := 0; i < len(s); i++ {
+		c := s[i]
+		if !(c >= '0' && c <= '9' || c >= 'a' && c <= 'f') {
+			return false
+		}
+	}
+	return true
 }
 
 // newClearanceStore builds the shaper's clearance store: the file-backed adapter over the

@@ -1,0 +1,30 @@
+{
+  "kind": "polisher",
+  "base": "37d8726ab95fa57b7bb1fd9e18bb35173cac7546",
+  "head": "ced4dcfea11d9eb65fa85db58ef2821ed9a3f9eb",
+  "diff_sha256": "75aab2509aa3c7de79a6593ab525b2c55d7bd2112abd34e897026dcf7362c4d4",
+  "findings": {
+    "findings": [
+      {
+        "location": "README.md:1389-1390",
+        "severity": "SUGGESTION",
+        "claim": "The README and the `labdrian hook` usage text still describe the degradation line as 'Do not read <source>: it is unavailable in this session (<reason>).' for every source. The commit changed the engram line to 'Do not call the Engram tools: Engram is unavailable ...; this does not apply to memorycard.' but did not update these two descriptions.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "evidence": [
+          "README.md:1389-1390 and engine/cmd/usage.go:441 still give only the generic 'Do not read <source>' form.",
+          "engine/projection/availability.go:48-50 now emits a different line for source engram.",
+          "The commit's diff touches neither README.md nor usage.go. The longterm-mem and procedural-skills lines are unchanged, so the description stays right for them."
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full 27 KB diff.",
+      "Confirmed in engine/projection/gate.go:22-28 and :281 that the gate checks memorycard mem_search and mem_context against the Engram project name; the new project line and render.go comments are accurate.",
+      "The degradation line change is confined to source engram in availability.go; the updated test pins match the new strings.",
+      "TestTheADRSampleIsTheScopeGoalBlock: the placeholder replacer order is correct; the ADR sample lines match the renderer output.",
+      "Not run: the Go tests. Not read: the spec lines 100 and L180 (over the read limit); spec checks rest on the builder's summary and the diff.",
+      "Foreman note: the polisher gave the location as an absolute path in the review worktree; recorded as the repository path README.md:1389-1390."
+    ]
+  }
+}

@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "6aecffd5bc902265ba82eab0dd539c40c2733193",
+    "head": "d8d7bb766e021be91e05b48ba06960b7d011a58d",
+    "diff_sha256": "a274d1d1ee5247cfce3b0b5b206ae9bd16a9b58a976441dfc544c7420cbd0ade",
+    "paths": [
+      "odd/tasks/labdrian-orchestrator-opencode.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "6aecffd5bc902265ba82eab0dd539c40c2733193",
+      "head": "d8d7bb766e021be91e05b48ba06960b7d011a58d",
+      "diff_sha256": "a274d1d1ee5247cfce3b0b5b206ae9bd16a9b58a976441dfc544c7420cbd0ade"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/labdrian-orchestrator-opencode.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/labdrian-orchestrator-opencode.md:34",
+        "claim": "The new acceptance regex `(^|[^\\w-])gentle-ai([^\\w-]|$)` matches the word `gentle-ai` in any position of a hook command, including as a path segment or argument (for example `~/.gentle-ai/x` or `--home /opt/gentle-ai/`). A labdrian-owned `gentle-ai-overlay` hook command that carries such a path would be reported as invoking the binary, which makes the acceptance check fail with a false positive. The earlier wording (first token's basename) did not have this problem. The text names only the `-overlay` suffix as the exclusion, and the regex was tested on seven samples that contain no such path.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/labdrian-orchestrator-opencode.md:34"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff changes S17 acceptance (line 34) and appends L24; the L24 claim of five matches and two non-matches is consistent with the regex as written (5+2=7).",
+      "Regex semantics: `/` and `.` and `|` are not word characters or `-`, so they count as boundaries. This is why the regex matches the timeout, pipe and `&&` samples, and also why it would match path segments.",
+      "The references to `2a8dae6e` and to the records under `odd/review-results/` cannot be verified from the diff alone."
+    ]
+  }
+}

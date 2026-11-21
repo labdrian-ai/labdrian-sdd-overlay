@@ -1,0 +1,66 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "58d635efdc941d227111a3d82baccc3bbda29a45",
+    "head": "d4d54d6068568a4740f4b846e949e1fac23b7a84",
+    "diff_sha256": "28a1b968e0e0b6be4b1ed5cbc21772c6ca0cc6372a54054fa5b508acc3e6f5e2",
+    "paths": [
+      "engine/cmd/roles_bound.go",
+      "engine/cmd/roles_bound_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line",
+    "recall"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "58d635efdc941d227111a3d82baccc3bbda29a45",
+      "head": "d4d54d6068568a4740f4b846e949e1fac23b7a84",
+      "diff_sha256": "28a1b968e0e0b6be4b1ed5cbc21772c6ca0cc6372a54054fa5b508acc3e6f5e2"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/cmd/roles_bound.go",
+        "engine/cmd/roles_bound_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "engine/cmd/roles_bound.go:26-29",
+        "severity": "WARNING",
+        "claim": "A working directory that cannot be determined (for example a deleted cwd, where getcwd fails) now makes `roles append` refuse with \"the binding of this checkout could not be read (getcwd: ...)\". Before this commit that case returned the zero value and the append went through. T56 does not list this case. Its refusal rule names only a binding store that cannot be read, and says a cwd outside any repository goes as today. The new behavior is pinned by TestRolesAppendRefusesWhenTheWorkingDirectoryCannotBeDetermined, so it is deliberate, but it is a contract change beyond the task text. An agent that runs from a removed worktree directory gets a binding-read error although no binding was consulted. The task text should name this case, or the case should keep going as today.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/cmd/roles_bound.go:26-29 (new `return roles.BoundWorkflow{}, err` branch, previously `return roles.BoundWorkflow{}, nil`)",
+          "odd/tasks/labdrian-orchestrator-opencode.md T56, line 98"
+        ]
+      },
+      {
+        "id": "F2",
+        "location": "engine/cmd/roles_bound_test.go:117-128",
+        "severity": "SUGGESTION",
+        "claim": "The `unreadable` helper calls t.Skip when the file is still readable at mode 000, as happens when the tests run as root. In that environment the two new unavailable-binding and unavailable-workflow-log tests skip silently. The new refusal branches at roles_bound.go:41-43 and 47-49 then have no coverage, and a green run is indistinguishable from a covered one. A fake or injected unavailable reader, or a non-permission way to make the file unavailable such as a symlinked file (which both stores classify as unavailable), would make the tests deterministic.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/cmd/roles_bound_test.go:124-127",
+          "engine/projection/fsstore/store.go:187-189 and engine/workflow/filelog/store.go:179-181 (a symlinked file is classified unavailable without needing chmod)"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full diff and the T56 criteria at line 98 of the task file",
+      "Read engine/cmd/roles_bound.go and the call sites in engine/cmd/roles.go (runRolesAppend at 317-326, boundReadRefusal used for resume and next)",
+      "Read describeBinding and boundWorkflows.Of in engine/cmd/roles_builder_guard.go: the binding reader is shared, not duplicated",
+      "Read gitfs Locator.RepoKey: it returns false for a relative or empty dir and for no repository, so no binding is read outside a repository",
+      "Read fsstore.Load, filelog.read and workflowReader.Load to confirm the unavailable classifications: absent and not-exist map to absent, malformed and foreign go as today, and permission or symlink failures map to unavailable",
+      "Confirmed resume and next swallow the error in boundReadRefusal, so they answer as before",
+      "No commands were run; no tests were executed (not run)"
+    ]
+  }
+}

@@ -1,0 +1,102 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "f95a3624fb26b61e886b3ce3aa2f7df5159b13a8",
+    "head": "8de9550a548d3e3a84e8b2bcbf10891cd412697d",
+    "diff_sha256": "1aea54b0ec7e08e7fd7aef31bd05f1429d6a860848870ea200e5be399b16cde4",
+    "paths": [
+      "CHANGELOG.md",
+      "README.md",
+      "engine/cmd/status_command_test.go",
+      "engine/cmd/testdata/status-golden/status-binary-states.golden",
+      "engine/cmd/testdata/status-golden/status-contract-states.golden",
+      "engine/cmd/testdata/status-golden/status-families-missing-or-drifted.golden",
+      "engine/cmd/testdata/status-golden/status-in-an-empty-home.golden",
+      "engine/cmd/testdata/status-golden/status-of-a-complete-install.golden",
+      "engine/cmd/testdata/status-golden/status-registry-states.golden",
+      "engine/cmd/testdata/status-golden/status-settings-that-are-not-an-object.golden",
+      "engine/cmd/testdata/status-golden/status-settings-without-the-hooks.golden",
+      "engine/cmd/testdata/status-golden/status-with-no-home.golden",
+      "engine/status/codex_test.go",
+      "engine/status/main_agent_test.go",
+      "engine/status/status.go",
+      "engine/status/status_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "f95a3624fb26b61e886b3ce3aa2f7df5159b13a8",
+      "head": "8de9550a548d3e3a84e8b2bcbf10891cd412697d",
+      "diff_sha256": "1aea54b0ec7e08e7fd7aef31bd05f1429d6a860848870ea200e5be399b16cde4"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "README.md",
+        "engine/cmd/status_command_test.go",
+        "engine/cmd/testdata/status-golden/status-binary-states.golden",
+        "engine/cmd/testdata/status-golden/status-contract-states.golden",
+        "engine/cmd/testdata/status-golden/status-families-missing-or-drifted.golden",
+        "engine/cmd/testdata/status-golden/status-in-an-empty-home.golden",
+        "engine/cmd/testdata/status-golden/status-of-a-complete-install.golden",
+        "engine/cmd/testdata/status-golden/status-registry-states.golden",
+        "engine/cmd/testdata/status-golden/status-settings-that-are-not-an-object.golden",
+        "engine/cmd/testdata/status-golden/status-settings-without-the-hooks.golden",
+        "engine/cmd/testdata/status-golden/status-with-no-home.golden",
+        "engine/status/codex_test.go",
+        "engine/status/main_agent_test.go",
+        "engine/status/status.go",
+        "engine/status/status_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "engine/status/status.go:441-443",
+        "claim": "The conflict note says to 'set it yourself or remove the key, then run install-hooks', but status-hooks only warns for a missing key whose remedy is 'uninstall-hooks then install-hooks'. After a user removes a foreign key, install-hooks is enough, but the guidance differs from the other checks and the README says 'is re-run or the key is fixed'. More importantly, a user who deliberately keeps another main agent (a legitimate choice) gets a permanent warning and exit code 2 with no way to silence it, so status-hooks never reports healthy for them.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/status/status.go:439-443",
+          "README.md status-hooks row: 'an \"agent\" key that holds another value ... is a warning'"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "WARNING",
+        "location": "engine/status/status.go:429-433",
+        "claim": "The new check is described as judged 'as the families added later are', but the missing-key note says 'run uninstall-hooks then install-hooks'. Uninstalling is not needed to add a missing key (install-hooks alone writes it), and uninstall-hooks removes every other overlay hook first, so the remedy text is heavier than necessary and copied from the drifted-entry remedy where it does apply.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/status/status.go:440-447",
+          "engine/cmd/testdata/status-golden/status-settings-without-the-hooks.golden:15"
+        ]
+      },
+      {
+        "id": "F3",
+        "severity": "SUGGESTION",
+        "location": "engine/status/status.go:449-454",
+        "claim": "quotedValue prints a non-string value (number, object, null) with %v, so a conflict note reads `\"agent\" is 5, not \"foreman\"` or `map[...]`, which is not valid JSON and is hard to read; the non-string conflict branch has no test.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/status/status.go:449-454",
+          "engine/status/main_agent_test.go:20-24"
+        ]
+      }
+    ],
+    "evidence": [
+      "Reviewed engine/status/status.go checkMainAgent: it calls settings.MainAgent, whose implementation is not in this diff, so its classification cannot be verified here.",
+      "Goldens uniformly add the new check line; the OK note 'installed; restart ... if this session started earlier' matches other families.",
+      "Tests cover present, missing and string-conflict cases only."
+    ]
+  }
+}

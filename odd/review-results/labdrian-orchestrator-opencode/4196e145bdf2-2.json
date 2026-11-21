@@ -1,0 +1,40 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "a10c3d441a9aea56c22947abaefe3b6a5bcdf585",
+    "head": "4196e145bdf2c4d2c3b5ea1ce7c0efff579c48d2",
+    "diff_sha256": "13187455bf33be75e454c79088f48c379c6405fcde75a95583f29adffe23ff5d",
+    "paths": [
+      "bin/lib/capture.sh",
+      "bin/lib/common.sh",
+      "engine/shelltest/apply_push_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "a10c3d441a9aea56c22947abaefe3b6a5bcdf585",
+      "head": "4196e145bdf2c4d2c3b5ea1ce7c0efff579c48d2",
+      "diff_sha256": "13187455bf33be75e454c79088f48c379c6405fcde75a95583f29adffe23ff5d"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "bin/lib/capture.sh",
+        "bin/lib/common.sh",
+        "engine/shelltest/apply_push_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "Traced origin_is_network_remote by hand for the URL forms the commit names (scp and ssh forms of localhost, 127.0.0.1 and [::1], with and without user and port, plus a capitalised FILE:// URL). Each is classified as local, as the commit claims.",
+      "Traced the lookalike hosts localhost.example.com (URL and scp form) and example.com:a@localhost:overlay.git. Each stays a network remote, because the user-stripping guard refuses to strip when the part before the first @ contains a colon.",
+      "The capture.sh change only moves a comment onto push_upstream_to_origin and shortens the skip message to the text the commit states. Behaviour is unchanged.",
+      "Not exercised: the ${url,,} lowercase expansion needs bash 4 or later. The diff does not show the project's bash baseline, so I raised no finding."
+    ]
+  }
+}

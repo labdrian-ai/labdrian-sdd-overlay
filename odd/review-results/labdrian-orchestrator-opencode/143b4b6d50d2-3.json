@@ -1,0 +1,63 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "e5abaf3a3a469e607504a72ddaaddec7b7b797fd",
+    "head": "143b4b6d50d20dbee31150a172febc29989fa14a",
+    "diff_sha256": "4679ee0564e129a393ce4de05394a3757f070c6b3405f3e4f51fdc0cdbdc9448",
+    "paths": [
+      "engine/agentgen/agentgen.go",
+      "engine/agentgen/models.go",
+      "engine/agentgen/models_test.go",
+      "engine/cmd/agentgen_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "e5abaf3a3a469e607504a72ddaaddec7b7b797fd",
+      "head": "143b4b6d50d20dbee31150a172febc29989fa14a",
+      "diff_sha256": "4679ee0564e129a393ce4de05394a3757f070c6b3405f3e4f51fdc0cdbdc9448"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/agentgen/agentgen.go",
+        "engine/agentgen/models.go",
+        "engine/agentgen/models_test.go",
+        "engine/cmd/agentgen_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "engine/agentgen/models.go:83",
+        "claim": "The heading is found by exact line equality (slices.Index(lines, tableHeading)). A models.md with CRLF line endings or trailing whitespace on the heading (\"## Tier table\\r\") is now refused as having no section. The old parser trimmed each row and accepted such a file.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/agentgen/models.go:83"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "WARNING",
+        "location": "engine/agentgen/models.go:37",
+        "claim": "idShape allows only [A-Za-z0-9._/:#-]. Real model ids that contain other characters, such as 'opus[1m]' or 'model@20250929', are now rejected as 'not a model id'. A table with such an id parsed before the change.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/agentgen/models.go:37"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the whole diff. The tableError wrapping and the verb selection in agentgen.go are consistent with the new test.",
+      "The slicing at lines[header+2:] is safe because header+1 < len(lines) is checked before it.",
+      "The duplicate row, duplicate column, separator and heading checks behave as the new tests expect."
+    ]
+  }
+}

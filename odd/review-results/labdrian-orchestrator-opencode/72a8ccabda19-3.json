@@ -1,0 +1,64 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "cd1e23274c3ed77433c31b34b767c728e1ae44f2",
+    "head": "72a8ccabda19d8d1d7166fd5c21354db04f0a620",
+    "diff_sha256": "1314265a8a9c3734e97ba123417d9670b13cf51a4cbd4c8edd32dbbcd31eff88",
+    "paths": [
+      "CHANGELOG.md",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-context-lists-quotes-and-case.golden",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-minimalism-context-metadata-accepted-today.golden",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-phases-quoted-items-accepted-today.golden",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-reads-the-contracts-of-the-overlay.golden",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-without-the-oo-contract.golden",
+      "engine/cmd/testdata/runtime-golden/runtime-opencode-and-pi-with-an-overlay.golden",
+      "engine/runtime/labdrian-runtime-parity-plugin.mjs",
+      "engine/runtime/opencode_plugin.go",
+      "engine/runtime/opencode_plugin_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "cd1e23274c3ed77433c31b34b767c728e1ae44f2",
+      "head": "72a8ccabda19d8d1d7166fd5c21354db04f0a620",
+      "diff_sha256": "1314265a8a9c3734e97ba123417d9670b13cf51a4cbd4c8edd32dbbcd31eff88"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-context-lists-quotes-and-case.golden",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-minimalism-context-metadata-accepted-today.golden",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-phases-quoted-items-accepted-today.golden",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-reads-the-contracts-of-the-overlay.golden",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-without-the-oo-contract.golden",
+        "engine/cmd/testdata/runtime-golden/runtime-opencode-and-pi-with-an-overlay.golden",
+        "engine/runtime/labdrian-runtime-parity-plugin.mjs",
+        "engine/runtime/opencode_plugin.go",
+        "engine/runtime/opencode_plugin_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "engine/runtime/labdrian-runtime-parity-plugin.mjs:9-12",
+        "claim": "The plugin now acts only on the v2 `subagent` tool and `agent` field; the previous `task`/`subagent_type` behavior is dropped without a fallback. An OpenCode install still running a 1.x-style `task` tool silently loses contract injection while the plugin version bump reports a normal restart. This is the stated intent of the commit, but nothing detects or warns about a runtime that still exposes the old tool name.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/runtime/labdrian-runtime-parity-plugin.mjs:9-12"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff changes only two constants in the plugin (INJECTED_TOOL, AGENT_FIELD), a version string, goldens and a test; the handler logic is not shown as altered, so the rewrite path is unchanged.",
+      "The new test covers subagent, legacy task, legacy field on subagent, non-matching tool, no-prompt and no-input cases.",
+      "Goldens and CHANGELOG consistently reflect the version bump to runtime-parity-6."
+    ]
+  }
+}

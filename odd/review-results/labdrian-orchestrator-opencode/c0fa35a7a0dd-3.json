@@ -1,0 +1,42 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "59457396a5d1b606f88086bbc410ce8805a25b9b",
+    "head": "c0fa35a7a0dd8b5945bedbf8d954cf9236cd2fbf",
+    "diff_sha256": "a51aa44f6e6a9bb6b1303ab2a05fdb19689832c274548cb46e16a6b407418188",
+    "paths": [
+      "engine/agentgen/artifacts_test.go",
+      "engine/agentgen/foreman_internal_test.go",
+      "engine/agentgen/foreman_test.go",
+      "engine/agentgen/messages_pin_test.go",
+      "engine/agentgen/roles.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "59457396a5d1b606f88086bbc410ce8805a25b9b",
+      "head": "c0fa35a7a0dd8b5945bedbf8d954cf9236cd2fbf",
+      "diff_sha256": "a51aa44f6e6a9bb6b1303ab2a05fdb19689832c274548cb46e16a6b407418188"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/agentgen/artifacts_test.go",
+        "engine/agentgen/foreman_internal_test.go",
+        "engine/agentgen/foreman_test.go",
+        "engine/agentgen/messages_pin_test.go",
+        "engine/agentgen/roles.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The diff changes only comments, a test name, and a test error message string; no executable logic or assertions are altered.",
+      "The renamed test TestTheForemanHasNoPiOrCodexFileAndItsClaudeFileFollowsTheRoles is a plain rename with an unchanged body, so no regression.",
+      "The new wording is accurate: the foreman has Claude and OpenCode files but no Pi or Codex file, consistent with the assertions retained in the tests."
+    ]
+  }
+}

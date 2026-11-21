@@ -1,0 +1,20 @@
+{
+  "kind": "sweeper",
+  "base": "2bb6d495baab709cc0c8fe4e0264fe0018c8f47e",
+  "head": "b9594a97a22a7baf3a4fd7d622d0476ae65bda00",
+  "diff_sha256": "fd22c5f7caa142c1c7f027645948e2bebfbc6b6597f256225cc34af532302563",
+  "sweep": "b9594a97a22a-1.sweep.json",
+  "commit": null,
+  "candidates": [
+    {
+      "candidate": "T2 deadcode engine: runtime/opencode_memorycard_plugin_test.go: unreachable func: memorycardFixture.waitCalls",
+      "disposition": "finding",
+      "evidence": "Fixed by the later commit 45212078 (test: drop the unused waitCalls helper), which removed the helper; the deadcode/staticcheck run on 45212078 is clean."
+    },
+    {
+      "candidate": "T2 staticcheck engine: runtime/opencode_memorycard_plugin_test.go: func memorycardFixture.waitCalls is unused (U1000)",
+      "disposition": "finding",
+      "evidence": "Fixed by the later commit 45212078 (test: drop the unused waitCalls helper), which removed the helper; the deadcode/staticcheck run on 45212078 is clean."
+    }
+  ]
+}

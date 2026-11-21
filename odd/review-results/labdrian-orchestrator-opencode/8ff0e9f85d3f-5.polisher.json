@@ -1,0 +1,17 @@
+{
+  "kind": "polisher",
+  "base": "41f4f3a1a8b88793e250f4c2a0724e26c1502ca8",
+  "head": "8ff0e9f85d3f6f4d0c7580d57862345b28743488",
+  "diff_sha256": "b21f797ae381e29b52b7baa513ab9b2b14e39cd6873037579b2b16a957cbe367",
+  "findings": {
+    "findings": [],
+    "evidence": [
+      "Read the full diff of 8ff0e9f8: the plugin's resolveSkillPaths in execute.before after the gate and before attachFrozenContext and injectContract, the install path (skillsRoot, omitempty skills_root), the golden and version bump, the new tests.",
+      "runEngine passes a string input as is and reports a failure as reply.failure; the empty-output check matches the frozen-context path.",
+      "engine/cmd/roles_skill_paths.go:55 prints the exact 'error: roles skill-paths:' prefix the plugin tests for.",
+      "Ordering: the verb reads the brief before the diff is appended; opencode_bridge_skills_test.go covers ordering, no skills_root, a gate-denied launch and a non-subagent tool.",
+      "Plugin denials covered: missing engine, timeout, empty answer, engine too old, the verb's own refusals.",
+      "Not run: read-only static judgment."
+    ]
+  }
+}

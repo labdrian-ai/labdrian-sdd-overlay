@@ -1,0 +1,99 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "c8d6f48d1fb309b904016d0c011ebcaa07ccff93",
+    "head": "c17f1a23020e015f1eb447756bdb9d6181cc6827",
+    "diff_sha256": "8e7d558abc16cfb04e2b2efd656a366a5dd14db7acf019b1845342804cd26da6",
+    "paths": [
+      "CHANGELOG.md",
+      "README.md",
+      "engine/capability/declarations.go",
+      "engine/cmd/output_style_files_test.go",
+      "engine/cmd/settings_hooks.go",
+      "engine/cmd/status_command_test.go",
+      "engine/cmd/testdata/status-golden/status-binary-states.golden",
+      "engine/cmd/testdata/status-golden/status-contract-states.golden",
+      "engine/cmd/testdata/status-golden/status-families-missing-or-drifted.golden",
+      "engine/cmd/testdata/status-golden/status-in-an-empty-home.golden",
+      "engine/cmd/testdata/status-golden/status-of-a-complete-install.golden",
+      "engine/cmd/testdata/status-golden/status-registry-states.golden",
+      "engine/cmd/testdata/status-golden/status-settings-that-are-not-an-object.golden",
+      "engine/cmd/testdata/status-golden/status-settings-without-the-hooks.golden",
+      "engine/cmd/testdata/status-golden/status-with-no-home.golden",
+      "engine/cmd/usage.go",
+      "engine/runtime/outputstyle_text_test.go",
+      "engine/skills/ondisk.go",
+      "engine/skills/ondisk_test.go",
+      "engine/skills/routes.go",
+      "engine/skills/routes_output_style_test.go",
+      "engine/skills/routes_test.go",
+      "engine/status/codex_test.go",
+      "engine/status/output_style_test.go",
+      "engine/status/status.go",
+      "engine/status/status_test.go",
+      "output-styles/labdrian.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "c8d6f48d1fb309b904016d0c011ebcaa07ccff93",
+      "head": "c17f1a23020e015f1eb447756bdb9d6181cc6827",
+      "diff_sha256": "8e7d558abc16cfb04e2b2efd656a366a5dd14db7acf019b1845342804cd26da6"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "README.md",
+        "engine/capability/declarations.go",
+        "engine/cmd/output_style_files_test.go",
+        "engine/cmd/settings_hooks.go",
+        "engine/cmd/status_command_test.go",
+        "engine/cmd/testdata/status-golden/status-binary-states.golden",
+        "engine/cmd/testdata/status-golden/status-contract-states.golden",
+        "engine/cmd/testdata/status-golden/status-families-missing-or-drifted.golden",
+        "engine/cmd/testdata/status-golden/status-in-an-empty-home.golden",
+        "engine/cmd/testdata/status-golden/status-of-a-complete-install.golden",
+        "engine/cmd/testdata/status-golden/status-registry-states.golden",
+        "engine/cmd/testdata/status-golden/status-settings-that-are-not-an-object.golden",
+        "engine/cmd/testdata/status-golden/status-settings-without-the-hooks.golden",
+        "engine/cmd/testdata/status-golden/status-with-no-home.golden",
+        "engine/cmd/usage.go",
+        "engine/runtime/outputstyle_text_test.go",
+        "engine/skills/ondisk.go",
+        "engine/skills/ondisk_test.go",
+        "engine/skills/routes.go",
+        "engine/skills/routes_output_style_test.go",
+        "engine/skills/routes_test.go",
+        "engine/status/codex_test.go",
+        "engine/status/output_style_test.go",
+        "engine/status/status.go",
+        "engine/status/status_test.go",
+        "output-styles/labdrian.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "engine/skills/ondisk.go:33-38",
+        "claim": "Adding output-style to nonSkillRoutes widens the set the on-disk check shares with the longterm-mem/ route domain. The diff does not show the on-disk check's other consumers of this map. If any treats membership as 'a valid longterm-mem/ route', a longterm-mem/ row with output-style would pass that check while ResolveRoutes still refuses it. The test edits that skip RouteOutputStyle in the domain-agreement and count tests hide this possible mismatch rather than prove it absent.",
+        "evidence_class": "inferential",
+        "causal_disposition": "unknown",
+        "proof_refs": [
+          "engine/skills/ondisk.go:33-38",
+          "engine/skills/ondisk_test.go:313-315",
+          "engine/skills/routes_test.go:47-58"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff does not show consumers of nonSkillRoutes beyond DeployableManifestPaths, so the on-disk validation path cannot be confirmed.",
+      "Reviewed settings_hooks.go notice logic, status.go checkOutputStyle, the golden files and the routes.go output style placement; no defect proven from the diff."
+    ]
+  }
+}

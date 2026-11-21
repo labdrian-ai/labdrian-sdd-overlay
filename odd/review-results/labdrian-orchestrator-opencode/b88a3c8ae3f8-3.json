@@ -1,0 +1,57 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "f6e43bf593b7352ad6100b15cf149dd899bfb31e",
+    "head": "b88a3c8ae3f8bd4de114b8bbc2b1bdd518d9828f",
+    "diff_sha256": "7863138111c351287d4632547bfd060a9b2d71f0121a12525489d57690ea4f54",
+    "paths": [
+      "odd/tasks/labdrian-orchestrator-opencode.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "f6e43bf593b7352ad6100b15cf149dd899bfb31e",
+      "head": "b88a3c8ae3f8bd4de114b8bbc2b1bdd518d9828f",
+      "diff_sha256": "7863138111c351287d4632547bfd060a9b2d71f0121a12525489d57690ea4f54"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/labdrian-orchestrator-opencode.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/labdrian-orchestrator-opencode.md:665-696",
+        "claim": "The approved style text is embedded in a four-backtick markdown fence that itself contains a YAML front-matter block. T27 (a) is to write it 'byte for byte'. The fence delimiters and any trailing whitespace are not part of the style, so the exact byte boundaries are ambiguous. The Learning section was added after the L77 summary, and the L77 description of the style (no Learning section) is only superseded by a trailing sentence. A reader of L77 alone could implement the older text.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/labdrian-orchestrator-opencode.md:696"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/labdrian-orchestrator-opencode.md:661",
+        "claim": "The owner's verbatim approval is recorded as 'aprieno' with an interpretive gloss '(read: apruebo)'. The approval is inferred from a likely typo. L77 handled the same situation for 'si me fyst' in the same way, but here the approval covers the whole style text including the new Learning section, which the owner only saw as a parent proposal. The record claims 'Approved text' on an inferred reading.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/labdrian-orchestrator-opencode.md:661"
+        ]
+      }
+    ],
+    "evidence": [
+      "The change only appends a log entry L78 to a docs file, with no code paths affected.",
+      "The Risk: none claim is consistent with a docs-only change.",
+      "The style text matches the L77 summary, plus the added Learning section, which L78 states explicitly."
+    ]
+  }
+}

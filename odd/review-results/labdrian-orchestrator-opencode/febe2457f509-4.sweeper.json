@@ -1,0 +1,15 @@
+{
+  "kind": "sweeper",
+  "base": "8f485b3d54b2cf2740433b20215f5e89ff4a77e2",
+  "head": "febe2457f509a47df424cbfae2e1e4fd0ce9d366",
+  "diff_sha256": "0fef079e78d2e9f987178a3700e029ff76d2e9fbc834853458fb0281933836fb",
+  "sweep": "febe2457f509-1.sweep.json",
+  "commit": null,
+  "candidates": [
+    {
+      "candidate": "T1 name: --event",
+      "disposition": "live",
+      "evidence": "Still used: 122 files hold it, among them README.md, bin/lib/usage.sh, docs/architecture/adr-c23-m12-codex-memory-projection.md. The flag --event of projection hook was not removed; the diff only moved a line that names it."
+    }
+  ]
+}

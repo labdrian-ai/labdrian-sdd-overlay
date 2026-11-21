@@ -3,7 +3,7 @@ name: requirements-from-transcripts
 description: "Trigger: meeting transcripts, customer stories, client conversations, user interviews, requerimientos desde meets, historias de cliente. Turn stakeholder conversations into traceable EARS requirements that seed inception."
 license: Apache-2.0
 metadata:
-  author: gentleman-programming
+  author: labdrian
   version: "2.0.0"
 ---
 

@@ -1,0 +1,42 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "d3227f9c66b1db58c5621bd2c8ffcef369e86dcd",
+    "head": "98b99970e2b26196a3d723308e7e00878bc87d5a",
+    "diff_sha256": "8521c2e320b1dbd1f23511ad4c2cd23a87a5ee65d5d74478befb0bace75a27ba",
+    "paths": [
+      "engine/skills/procedural_candidate_contract_test.go",
+      "engine/skills/procedural_candidate_memorycard_test.go",
+      "skills/_shared/procedural-candidate-detection.md",
+      "skills/procedural-candidates/SKILL.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "d3227f9c66b1db58c5621bd2c8ffcef369e86dcd",
+      "head": "98b99970e2b26196a3d723308e7e00878bc87d5a",
+      "diff_sha256": "8521c2e320b1dbd1f23511ad4c2cd23a87a5ee65d5d74478befb0bace75a27ba"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/skills/procedural_candidate_contract_test.go",
+        "engine/skills/procedural_candidate_memorycard_test.go",
+        "skills/_shared/procedural-candidate-detection.md",
+        "skills/procedural-candidates/SKILL.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The skill and shared contract text match the claim: candidates and drafts are saved with memorycard mem_save and mem_session, with no new Engram write.",
+      "Legacy engram:<n> ids are translated through memorycard resolve. Appending one while the other is listed is a no-op, and OccurrenceCount and OccurrencesSincePromotion count distinct translated ids. An unknown id stays as written and counts as itself.",
+      "Resolvable legacy ids are rewritten on every save of a record, History lines are never rewritten, and there is no bulk migration.",
+      "The new text tests and the two edited assertions in the existing contract test match the new wording in both documents.",
+      "I found no regression on previously valid input and no defect that this diff causes."
+    ]
+  }
+}

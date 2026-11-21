@@ -1,0 +1,39 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "a87253e73094f58d8de877527b39aea320f0c485",
+    "head": "88e57ea1a20eb5f8a9389458393960a3dfce92c2",
+    "diff_sha256": "8d26daf0a1d1bb5f30d72f71f99a0855a58449a3d29dfcf7ba6b6964ce0e1638",
+    "paths": [
+      "skills/inception-pipeline/.approval.json",
+      "skills/odd-feature-doc/.approval.json",
+      "skills/role-chain/.approval.json"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "a87253e73094f58d8de877527b39aea320f0c485",
+      "head": "88e57ea1a20eb5f8a9389458393960a3dfce92c2",
+      "diff_sha256": "8d26daf0a1d1bb5f30d72f71f99a0855a58449a3d29dfcf7ba6b6964ce0e1638"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "skills/inception-pipeline/.approval.json",
+        "skills/odd-feature-doc/.approval.json",
+        "skills/role-chain/.approval.json"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The diff changes only sha256 and approved_at fields in three .approval.json files; JSON structure, version and approver are unchanged and valid.",
+      "Whether the new hashes match the skill contents cannot be verified from the diff alone; no defect is demonstrable from the visible lines.",
+      "Timestamps are all 2026-11-16 and later than the prior values, consistent with the commit message."
+    ]
+  }
+}

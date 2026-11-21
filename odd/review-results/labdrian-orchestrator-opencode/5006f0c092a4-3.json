@@ -1,0 +1,34 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "21b681147c669cc525d30073fe4e89c53e17351a",
+    "head": "5006f0c092a443c787f3fb818823f4b24d788e37",
+    "diff_sha256": "1870cd030845b16a4c185c57d4d7a43165b5a0afffc21a5bf161cc1b16051ffc",
+    "paths": [
+      "odd/tasks/labdrian-orchestrator-opencode.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "21b681147c669cc525d30073fe4e89c53e17351a",
+      "head": "5006f0c092a443c787f3fb818823f4b24d788e37",
+      "diff_sha256": "1870cd030845b16a4c185c57d4d7a43165b5a0afffc21a5bf161cc1b16051ffc"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/labdrian-orchestrator-opencode.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The diff only appends a single Log entry (L45) to odd/tasks/labdrian-orchestrator-opencode.md; no code or behavior changes.",
+      "The entry is append-only, and it does not edit L43 or L44, consistent with the append-only rule it cites.",
+      "Claims in L45 about polisher judges and test case names reference external artifacts that cannot be verified from the diff; nothing in the diff contradicts them."
+    ]
+  }
+}

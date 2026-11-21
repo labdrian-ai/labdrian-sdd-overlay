@@ -1,0 +1,72 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "b243254a7632239863206aeeea669f0371a11a0b",
+    "head": "3b0cc4eef3f45440f3dd981ea70865eb0994be89",
+    "diff_sha256": "4a1137d6c27b4c87e69245ed77b1dab300a7b1a431b9479427f9d1b54beb954e",
+    "paths": [
+      "engine/cmd/runtime_opencode_cli_test.go",
+      "engine/shelltest/copies_skills_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "b243254a7632239863206aeeea669f0371a11a0b",
+      "head": "3b0cc4eef3f45440f3dd981ea70865eb0994be89",
+      "diff_sha256": "4a1137d6c27b4c87e69245ed77b1dab300a7b1a431b9479427f9d1b54beb954e"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/cmd/runtime_opencode_cli_test.go",
+        "engine/shelltest/copies_skills_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "engine/shelltest/copies_skills_test.go:21",
+        "claim": "The caller count uses `declare -f ... | grep -c copies_skills`, which counts matching lines, not functions. A function that mentions copies_skills twice, or a comment/identifier containing the string such as a helper named copies_skills_x, would change the count without changing which commands ask it. The test also hard-codes 3 and would fail on an unrelated refactor. It is brittle but does not hide a defect now.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/shelltest/copies_skills_test.go:21",
+          "engine/shelltest/copies_skills_test.go:27"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "engine/cmd/runtime_opencode_cli_test.go:96-98",
+        "claim": "The status assertion pins `statusExit != 1` for a restart_required status, a magic exit code with no explanation, so a reader cannot tell whether 1 is intended or incidental. Also, `.+: role-chain` is matched loosely (`: role-chain`) and would pass for any directory listing role-chain, so it does not prove the status reports the ~/.agents/skills directory.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/cmd/runtime_opencode_cli_test.go:96-98"
+        ]
+      },
+      {
+        "id": "F3",
+        "severity": "SUGGESTION",
+        "location": "engine/cmd/runtime_opencode_cli_test.go:21-39",
+        "claim": "The fixture writes files via a map, so iteration order is random and the `memorycard` mode is picked by comparing filepath.Base to a literal name. This is harder to read than separate explicit writes, and a future fixture file named memorycard elsewhere would silently become executable.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/cmd/runtime_opencode_cli_test.go:21-39"
+        ]
+      }
+    ],
+    "evidence": [
+      "Both changed files are new test files; no production code changed, so no behavior regression is possible from this diff.",
+      "Tests are hermetic: HOME, PATH and overlay dir are injected through d.getenv and temp dirs.",
+      "The unknown target is asserted to copy skills, pinning the default branch of copies_skills."
+    ]
+  }
+}

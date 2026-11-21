@@ -1,0 +1,78 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "b35a55b868da5d3efcc422386433f52ec6c0c29e",
+    "head": "1d0aabf772101c18bc45330574a0420340671db4",
+    "diff_sha256": "d276cef4df0b99adf408b8cb3b6aae791e1408a54a5d9aac8d0770d7d569538f",
+    "paths": [
+      "README.md",
+      "engine/agentgen/agentgen.go",
+      "engine/agentgen/artifacts_test.go",
+      "engine/agentgen/roles_test.go",
+      "engine/roles/skills.go",
+      "engine/roles/skills_test.go",
+      "engine/runtime/opencode_contracts.go",
+      "engine/runtime/opencode_contracts_test.go",
+      "engine/runtime/opencodeprompt/derive.go",
+      "engine/runtime/opencodeprompt/derive_test.go",
+      "engine/runtime/opencodeprompt/source.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "b35a55b868da5d3efcc422386433f52ec6c0c29e",
+      "head": "1d0aabf772101c18bc45330574a0420340671db4",
+      "diff_sha256": "d276cef4df0b99adf408b8cb3b6aae791e1408a54a5d9aac8d0770d7d569538f"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "README.md",
+        "engine/agentgen/agentgen.go",
+        "engine/agentgen/artifacts_test.go",
+        "engine/agentgen/roles_test.go",
+        "engine/roles/skills.go",
+        "engine/roles/skills_test.go",
+        "engine/runtime/opencode_contracts.go",
+        "engine/runtime/opencode_contracts_test.go",
+        "engine/runtime/opencodeprompt/derive.go",
+        "engine/runtime/opencodeprompt/derive_test.go",
+        "engine/runtime/opencodeprompt/source.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "engine/roles/skills.go:7",
+        "claim": "The skillMention regexp has no trailing word boundary, so a body phrase such as \"`foo` skills\" or \"`foo` skill-set\" counts as a skill mention. agentgen would then refuse the body for a missing skills/foo/SKILL.md, for all four runtimes, even though the author named no skill. Generation fails on a body that was valid before this change. The shared agentgen projection is where this check runs, so the blast radius is wide. No current body is shown to contain such a phrase, so the trigger is inferential.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/roles/skills.go:7",
+          "engine/agentgen/agentgen.go:119-129"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "engine/runtime/opencodeprompt/derive.go:68-84",
+        "claim": "Derive iterates roles.Vocabulary, while agentgen also validates the foreman body. If the foreman is not in the vocabulary, the skills its body names are checked but never injected. The injection test explicitly skips the foreman, so this gap is untested. Whether the foreman is in the vocabulary cannot be seen from the diff.",
+        "evidence_class": "inferential",
+        "causal_disposition": "unknown",
+        "proof_refs": [
+          "engine/agentgen/agentgen.go:88-96",
+          "engine/runtime/opencode_contracts_test.go:49"
+        ]
+      }
+    ],
+    "evidence": [
+      "Reviewed the diff only; I could not check how the adapter turns the relative SkillPath into the absolute contract_path that the tests expect.",
+      "Mention extraction is shared by the generator check and the adapter injection (roles.SkillsNamed), so the two stay consistent. Both inherit the loose regexp."
+    ]
+  }
+}

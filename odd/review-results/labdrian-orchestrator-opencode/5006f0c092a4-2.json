@@ -1,0 +1,36 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "21b681147c669cc525d30073fe4e89c53e17351a",
+    "head": "5006f0c092a443c787f3fb818823f4b24d788e37",
+    "diff_sha256": "1870cd030845b16a4c185c57d4d7a43165b5a0afffc21a5bf161cc1b16051ffc",
+    "paths": [
+      "odd/tasks/labdrian-orchestrator-opencode.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "21b681147c669cc525d30073fe4e89c53e17351a",
+      "head": "5006f0c092a443c787f3fb818823f4b24d788e37",
+      "diff_sha256": "1870cd030845b16a4c185c57d4d7a43165b5a0afffc21a5bf161cc1b16051ffc"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/labdrian-orchestrator-opencode.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The change appends one Log entry (L45) to a markdown feature document; no code is touched.",
+      "L45 follows the append-only convention of L43 and L44 and does not alter earlier entries.",
+      "The L45 claims about case names 'none' and 'crlf field' agree with L44's description, and the entry notes L43 is kept unchanged as its correction lies in L44.",
+      "No defect introduced, activated or worsened by the diff is visible from the diff alone."
+    ]
+  }
+}

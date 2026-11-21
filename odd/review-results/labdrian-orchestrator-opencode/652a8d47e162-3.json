@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "7764d094708e8ce5c73125956a69aa23fb8214dc",
+    "head": "652a8d47e16289b69aa8c0729214d6171dd97225",
+    "diff_sha256": "e1f206697724ec077e0a863a313833e9d0444c3ff2c5570c26db4a34c0e00a8a",
+    "paths": [
+      "engine/cmd/settings_hooks.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "7764d094708e8ce5c73125956a69aa23fb8214dc",
+      "head": "652a8d47e16289b69aa8c0729214d6171dd97225",
+      "diff_sha256": "e1f206697724ec077e0a863a313833e9d0444c3ff2c5570c26db4a34c0e00a8a"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/cmd/settings_hooks.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The diff removes the unused hookCommand parameter from codegraphPromptIsBare and noticeCodegraphPromptReplaced and updates the two call sites in runMergeSettings.",
+      "The visible body of codegraphPromptIsBare does not reference hookCommand, so behavior is unchanged there.",
+      "The truncated body of noticeCodegraphPromptReplaced is not shown, so I cannot confirm from the diff that it never used hookCommand. If it did, the build would fail at compile time, not silently change behavior.",
+      "Other callers or tests of these helpers would also fail to compile, not misbehave at runtime. The diff touches one file only, so none are visible here."
+    ]
+  }
+}

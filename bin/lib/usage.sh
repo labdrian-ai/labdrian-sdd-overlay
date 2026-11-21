@@ -20,6 +20,19 @@ Commands:
                                    Merge upstream and deploy to target(s) (default: all).
                                    Pushes 'main' to origin immediately after the merge, so a
                                    local apply never strands main ahead of origin.
+                                   For claude it then runs 'engine runtime install --target claude'
+                                   with --component owner-rules, which writes only the owner rules
+                                   block of ~/.claude/CLAUDE.md, never settings.json (install-hooks
+                                   owns it); a failed install makes apply exit non-zero.
+                                   For codex it then runs 'engine runtime install --target codex',
+                                   which keeps the owner rules block in ~/AGENTS.md,
+                                   <codex root>/AGENTS.md and <codex root>/agents.md; a failed
+                                   install makes apply exit non-zero.
+                                   For opencode it runs 'engine runtime install --target opencode' the same
+                                   way, before the longterm-mem step: the plugins, opencode.json
+                                   and the AGENTS.md block that longterm-mem register reads.
+                                   A failed opencode install records no state for it, skips its
+                                   longterm-mem register, and makes apply exit non-zero.
                                    After a merge, run 'skills validate': each global skill the
                                    merge changed needs a human approval (see skills approve
                                    below), which an agent cannot give.
@@ -71,7 +84,10 @@ Commands:
                                    misses, once for each session and commit), and the builder guard (on the Agent
                                    tool: denies launching the builder on a task the
                                    shaper did not design) into
-                                   ~/.claude/settings.json. Re-run it after an
+                                   ~/.claude/settings.json, and replaces a bare
+                                   "codegraph prompt-hook" UserPromptSubmit command with a
+                                   wrapper that skips task notifications (a codegraph
+                                   reinstall writes the bare one back; re-run to wrap it). Re-run it after an
                                    upgrade that adds a hook family, then restart Claude Code
                                    to load the hooks.
                                    If CODEX_HOME (default ~/.codex) already exists, merge
@@ -86,12 +102,14 @@ Commands:
   uninstall-hooks                  Remove our hook entries from ~/.claude/settings.json
                                    (the review stop-hook on Stop and the builder guard
                                    on Agent among them),
+                                   the bare "codegraph prompt-hook" command written back in place of its wrapper,
                                    and our Codex SessionStart hook from CODEX_HOME/hooks.json
                                    (default ~/.codex), leaving foreign bytes intact.
   status-hooks                     Read-only check of overlay installation health: binary
                                    present, hooks wired, contract readable. Exits 0 if all
                                    OK, 1 if any check fails, 2 for warnings alone (a missing
                                    or drifted review stop-hook or builder guard is one,
+                                   as is a codegraph prompt hook back to the bare command,
                                    until install-hooks is re-run).
                                    Codex is reported only if its home exists; presence
                                    does not prove trust (/hooks, key t). Read-only.
@@ -103,17 +121,11 @@ Commands:
                                    --fix: after the checks, attempt to install any missing
                                    discovery tools (bat rg fd sd eza) via Homebrew (best-effort,
                                    non-fatal), then re-check and report the result.
-  repair-sdd-registry [--cwd DIR] [--target claude|opencode|codex] [--no-refresh]
-                                   Refresh and repair .atl/skill-registry.md so existing
-                                   sdd-* phase executor skills stay resolvable after
-                                   gentle-ai sync/skill-registry refresh. The repair is the
-                                   engine's (registry repair-sdd): it takes the lock the
-                                   propagate hook takes and writes the registry atomically,
-                                   so it needs the engine binary (built on first use).
   skill-registry refresh [--cwd DIR] [--target claude|opencode|codex] [--no-repair]
-                                   Run gentle-ai skill-registry refresh, then immediately
-                                   repair sdd-* executor rows for the selected target
-                                   (default target: codex), as repair-sdd-registry does.
+                                   Write the table of skills of .atl/skill-registry.md with
+                                   the engine (registry refresh; no gentle-ai). --no-repair
+                                   does nothing; --target is validated and has no other
+                                   effect.
   tui                              Launch the Bubbletea TUI front-end
   install-alias [name]             Symlink a command (default: labdrian) into ~/.local/bin
   skills <verb>                    Forward to the engine's skills registry core
@@ -372,6 +384,15 @@ Commands:
                                              not asked again, and a re-ask the reviewer does not answer leaves
                                              the first refusal, with the re-ask's failure said after it
                                              (exit 0 stored, 2 reply refused, 1 usage error or any other failure)
+                                   frozen-context [--cwd REPO]
+                                             read a brief from stdin that names one full base and head pair as
+                                             review bind prints them, bind that candidate and print the brief
+                                             followed by its ## Frozen context, as launch --runtime claude hands its
+                                             reviewer; store nothing; refused (exit 2, one stderr line): an empty
+                                             brief, no pair or two different pairs, a candidate over the 150000-byte
+                                             limit of one launch, a brief that is not the candidate's, brief and
+                                             context over the reply limit
+                                             (exit 0 printed, 2 refused, 1 usage error or any other failure)
                                    proposals [--cwd REPO]
                                              print, and never run, what the owner may remove: the worktrees other
                                              than the main one and the one of --cwd, not locked, that git marks
@@ -384,6 +405,21 @@ Commands:
                                              the parent relays each proposal to the owner and runs a proposed
                                              command only after the owner confirms it
                                              (exit 0 listed, 1 usage error, refusal or any other failure)
+                                   ci --landing REV --head REV [--cwd REPO]
+                                             say whether the repository has no CI for the commit a delivery landed: exit 0
+                                             with one stdout line that starts CI: none configured and names the full
+                                             landing and head ids, only when the landing holds the head, git remote lists
+                                             no remote and the tree of the landing commit (never the working tree) holds
+                                             no CI marker, a path from the root of the tree: a file under
+                                             .github/workflows/, .gitea/workflows/, .forgejo/workflows/, .buildkite/ or
+                                             .woodpecker/, or .gitlab-ci.yml, .circleci/config.yml, .travis.yml,
+                                             azure-pipelines.yml, Jenkinsfile, bitbucket-pipelines.yml, .drone.yml,
+                                             .woodpecker.yml, appveyor.yml or .appveyor.yml; any other case is exit 1 with
+                                             one stderr line naming the head the landing does not hold, the markers (tree
+                                             order) or the remotes, and saying the no-CI closure does not apply; a missing
+                                             flag, a revision git cannot resolve or a failing git is non-zero too, never
+                                             CI: none configured; store nothing
+                                             (exit 0 no CI configured, 1 refusal, usage error or any other failure)
                                    findings --feature NAME --stored RESULT [--cwd REPO]
                                              list the findings of the stored result HEAD12-N.json that count as
                                              evidence for the learning loop, reading it and the verdict beside it as
@@ -521,7 +557,7 @@ Commands:
 
 Targets:
   claude   → ~/.claude/skills
-  opencode → ~/.config/opencode/skills
+  opencode → no skill copy (it reads ~/.claude/skills); its agents go to ~/.config/opencode/agents
   codex    → ~/.codex/skills
 
 Hook activation notes:

@@ -1,0 +1,46 @@
+{
+  "kind": "sweep",
+  "base": "a61a18717aa509556c197085bee78785bbb83873",
+  "head": "16a719fc144f4653cbbf66db42dab5b63b03d2ae",
+  "diff_sha256": "b6cd4fb05380375335df6cf4c7e1d5f1e2aec82a782a909bc2a9e0858d37c392",
+  "outcome": "fired",
+  "t1": {
+    "deleted_or_renamed": [],
+    "removed_names": [
+      {
+        "name": "pluginSHA256",
+        "hits": [
+          "odd/tasks/labdrian-orchestrator-opencode.md"
+        ]
+      },
+      {
+        "name": "proseIDForm",
+        "hits": [
+          "odd/tasks/labdrian-orchestrator-opencode.md"
+        ]
+      },
+      {
+        "name": "skillIDForm",
+        "hits": [
+          "odd/tasks/labdrian-orchestrator-opencode.md"
+        ]
+      },
+      {
+        "name": "wordChar",
+        "hits": [
+          "odd/tasks/labdrian-orchestrator-opencode.md"
+        ]
+      }
+    ]
+  },
+  "t2": [],
+  "t3": [
+    "?? CLAUDE.md",
+    "?? docs/wiki/.format",
+    "?? docs/wiki/README.md"
+  ],
+  "t4": {
+    "leftovers": [],
+    "orphaned_fixtures": []
+  }
+}

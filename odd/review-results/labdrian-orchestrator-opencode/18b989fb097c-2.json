@@ -1,0 +1,69 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "9593f57bf11915c9daa4d63bddb509f159aa03fd",
+    "head": "18b989fb097cb5453e57c9d9079b62ef12d3b044",
+    "diff_sha256": "d4cbf475e11cabc14b19f974d890eec88efdf99e6af384d6049477efc1cfebda",
+    "paths": [
+      "overlay.manifest",
+      "skills.registry.yaml",
+      "skills/sdd-design/.approval.json",
+      "skills/sdd-design/SKILL.md",
+      "skills/sdd-design/references/threat-matrix.md",
+      "skills/sdd-explore/.approval.json",
+      "skills/sdd-explore/SKILL.md",
+      "skills/sdd-init/.approval.json",
+      "skills/sdd-init/SKILL.md",
+      "skills/sdd-init/references/init-details.md",
+      "skills/sdd-onboard/.approval.json",
+      "skills/sdd-onboard/SKILL.md",
+      "skills/sdd-propose/.approval.json",
+      "skills/sdd-propose/SKILL.md",
+      "skills/sdd-spec/.approval.json",
+      "skills/sdd-spec/SKILL.md",
+      "skills/sdd-tasks/.approval.json",
+      "skills/sdd-tasks/SKILL.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "9593f57bf11915c9daa4d63bddb509f159aa03fd",
+      "head": "18b989fb097cb5453e57c9d9079b62ef12d3b044",
+      "diff_sha256": "d4cbf475e11cabc14b19f974d890eec88efdf99e6af384d6049477efc1cfebda"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "overlay.manifest",
+        "skills.registry.yaml",
+        "skills/sdd-design/.approval.json",
+        "skills/sdd-design/SKILL.md",
+        "skills/sdd-design/references/threat-matrix.md",
+        "skills/sdd-explore/.approval.json",
+        "skills/sdd-explore/SKILL.md",
+        "skills/sdd-init/.approval.json",
+        "skills/sdd-init/SKILL.md",
+        "skills/sdd-init/references/init-details.md",
+        "skills/sdd-onboard/.approval.json",
+        "skills/sdd-onboard/SKILL.md",
+        "skills/sdd-propose/.approval.json",
+        "skills/sdd-propose/SKILL.md",
+        "skills/sdd-spec/.approval.json",
+        "skills/sdd-spec/SKILL.md",
+        "skills/sdd-tasks/.approval.json",
+        "skills/sdd-tasks/SKILL.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "Every deleted skill (design, explore, init, onboard, propose, spec, tasks) has its manifest row, registry entry, approval file and SKILL.md all removed together; the diff shows no orphan left within these files.",
+      "The manifest rows removed match the deleted files, including sdd-design/references/threat-matrix.md and sdd-init/references/init-details.md.",
+      "The diff contains no edits to the remaining skills or _shared docs, so I could not check from the diff alone whether any of them still reference the deleted skills. I report no finding for that."
+    ]
+  }
+}

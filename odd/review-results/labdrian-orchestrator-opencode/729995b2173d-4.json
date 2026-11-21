@@ -1,0 +1,89 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "16a719fc144f4653cbbf66db42dab5b63b03d2ae",
+    "head": "729995b2173db9401f7647931bbf6080c12b3913",
+    "diff_sha256": "d1f110ea52969dc0746fa79d1837075df4cd87053d83bf1a4dd17a167366ad53",
+    "paths": [
+      "CHANGELOG.md",
+      "engine/cmd/roles_skill_paths.go",
+      "engine/cmd/roles_skill_paths_test.go",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-context-lists-quotes-and-case.golden",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-minimalism-context-metadata-accepted-today.golden",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-phases-quoted-items-accepted-today.golden",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-reads-the-contracts-of-the-overlay.golden",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-without-the-oo-contract.golden",
+      "engine/cmd/testdata/runtime-golden/runtime-opencode-and-pi-with-an-overlay.golden",
+      "engine/cmd/usage.go",
+      "engine/gate/skillpaths.go",
+      "engine/gate/skillpaths_listed_test.go",
+      "engine/gate/skillpaths_prose_test.go",
+      "engine/roles/skills.go",
+      "engine/roles/skills_test.go",
+      "engine/runtime/labdrian-runtime-parity-plugin.mjs",
+      "engine/runtime/live_guard_test.go",
+      "engine/runtime/opencode_bridge_skills_test.go",
+      "engine/runtime/opencode_bridge_test.go",
+      "engine/runtime/opencode_plugin.go"
+    ]
+  },
+  "rows": [
+    "risk-line",
+    "recall"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "16a719fc144f4653cbbf66db42dab5b63b03d2ae",
+      "head": "729995b2173db9401f7647931bbf6080c12b3913",
+      "diff_sha256": "d1f110ea52969dc0746fa79d1837075df4cd87053d83bf1a4dd17a167366ad53"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "engine/cmd/roles_skill_paths.go",
+        "engine/cmd/roles_skill_paths_test.go",
+        "engine/cmd/usage.go",
+        "engine/gate/skillpaths.go",
+        "engine/gate/skillpaths_listed_test.go",
+        "engine/gate/skillpaths_prose_test.go",
+        "engine/roles/skills.go",
+        "engine/roles/skills_test.go",
+        "engine/runtime/labdrian-runtime-parity-plugin.mjs",
+        "engine/runtime/live_guard_test.go",
+        "engine/runtime/opencode_bridge_skills_test.go",
+        "engine/runtime/opencode_bridge_test.go",
+        "engine/runtime/opencode_plugin.go",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-context-lists-quotes-and-case.golden",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-minimalism-context-metadata-accepted-today.golden",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-phases-quoted-items-accepted-today.golden",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-reads-the-contracts-of-the-overlay.golden",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-without-the-oo-contract.golden",
+        "engine/cmd/testdata/runtime-golden/runtime-opencode-and-pi-with-an-overlay.golden"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "engine/runtime/labdrian-runtime-parity-plugin.mjs:434-436",
+        "severity": "WARNING",
+        "claim": "The plugin now always passes --agent to the skill-paths verb, with no capability guard. The plugin runs the engine binary at LABDRIAN_ENGINE_BINARY or ~/.claude/bin/gentle-ai-overlay (lines 192-213). That binary is deployed separately by install-hooks, not by `runtime install/update`, which writes the plugin. After `runtime update --target opencode` installs plugin 2026-11-20-runtime-parity-18, a deployed engine from before this commit still exits 1 with 'unknown flag \"--agent\"'. resolveSkillPaths turns every failure into a Tool.Error, so every OpenCode subagent launch whose input has a non-empty agent field is denied until install-hooks is re-run. The `skills_root` absence check handled an older install; no equivalent exists for this flag. No test covers a verb that rejects --agent. The Risk line names this case.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/runtime/labdrian-runtime-parity-plugin.mjs:209-213",
+          "engine/runtime/labdrian-runtime-parity-plugin.mjs:434-438",
+          "engine/cmd/roles_skill_paths.go"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the whole diff (t60b.diff) and the T60 criteria at odd/tasks/labdrian-orchestrator-opencode.md:102.",
+      "Read engine/gate/skillpaths.go in the head worktree: rewriteListed, addProseMentions, fenceOpening and fenceCloses. The shared function is behaviour-preserving for the header-only path, and all refusals are unchanged. The backtick-info-string fence rule and the lone trailing \\r fix are correct as written.",
+      "Read the plugin's AGENT_FIELD use and runEngine/engineBinary. The --agent value comes from the launch input as a non-empty string. ReadsOnlyItsCandidate matches exact lowercase reviewer or polisher, the same exactness as FROZEN_CONTEXT_AGENT.",
+      "Read the parseSkillPathsArgs changes: --agent is optional, rejected when empty or given twice, and the root checks are unchanged.",
+      "Ran no tests or commands; the review was static."
+    ]
+  }
+}

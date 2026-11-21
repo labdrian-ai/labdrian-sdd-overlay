@@ -1,0 +1,36 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "b8b6ca8bf08248feb34ed94c5235034016f80b03",
+    "head": "069c0d7309f00fa43dca3426112dc8367a253ed6",
+    "diff_sha256": "12fe1150f3eae1cffc0c07f799490e8e58f4107af848a19d2a575bec457ca1b6",
+    "paths": [
+      "engine/skills/procedural_candidate_memorycard_test.go",
+      "skills/_shared/procedural-candidate-detection.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "b8b6ca8bf08248feb34ed94c5235034016f80b03",
+      "head": "069c0d7309f00fa43dca3426112dc8367a253ed6",
+      "diff_sha256": "12fe1150f3eae1cffc0c07f799490e8e58f4107af848a19d2a575bec457ca1b6"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/skills/procedural_candidate_memorycard_test.go",
+        "skills/_shared/procedural-candidate-detection.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The doc change adds a stop rule for a failed or unavailable resolve, and the new test asserts that exact wording.",
+      "The asserted phrases span line breaks in the markdown. I could not see requireText or proceduralCandidateTexts, so I assumed they normalise whitespace, as the existing multi-line assertions in this test file imply.",
+      "The change is a prose rule plus a contract test, with no runtime path altered. I found no change-caused defect."
+    ]
+  }
+}

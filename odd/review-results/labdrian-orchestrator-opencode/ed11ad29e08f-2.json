@@ -1,0 +1,50 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "ac6b16c021171b78c9c699c7f4818723a97f7d1f",
+    "head": "ed11ad29e08f978b680227dce345103de00ffa9e",
+    "diff_sha256": "9aad7612cc0e8a76fc99fd728b385985a74fcc4b0615aa944834c6ad0c19d008",
+    "paths": [
+      "engine/agentgen/export_test.go",
+      "engine/agentgen/opencode_server_rules_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "ac6b16c021171b78c9c699c7f4818723a97f7d1f",
+      "head": "ed11ad29e08f978b680227dce345103de00ffa9e",
+      "diff_sha256": "9aad7612cc0e8a76fc99fd728b385985a74fcc4b0615aa944834c6ad0c19d008"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/agentgen/export_test.go",
+        "engine/agentgen/opencode_server_rules_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "engine/agentgen/opencode_server_rules_test.go:12-14",
+        "claim": "The test now imports the agentgen package as an external consumer, which requires the test file to be in package agentgen_test. The diff does not show the package clause, so it cannot be confirmed here. If the file is in package agentgen, this is an import cycle and the package fails to compile. The export_test.go comment says external tests, which suggests the author checked. Also, the test now iterates the production list, so an empty or wrongly trimmed production list would make the checks vacuous; no non-empty or expected-members assertion was added.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/agentgen/opencode_server_rules_test.go:12-14",
+          "engine/agentgen/export_test.go:5"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff replaces the local openCodeServerNames copy with agentgen.OpenCodeMCPServers in three loops.",
+      "export_test.go aliases the unexported openCodeMCPServers; the var alias shares the same slice, so there is no copy drift.",
+      "The diff hides the package clause and no assertion guards that the production list is non-empty, so a shrunk list would silently weaken the tests."
+    ]
+  }
+}

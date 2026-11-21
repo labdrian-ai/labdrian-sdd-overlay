@@ -1,0 +1,67 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "a61a18717aa509556c197085bee78785bbb83873",
+    "head": "16a719fc144f4653cbbf66db42dab5b63b03d2ae",
+    "diff_sha256": "b6cd4fb05380375335df6cf4c7e1d5f1e2aec82a782a909bc2a9e0858d37c392",
+    "paths": [
+      "CHANGELOG.md",
+      "engine/architecture_test.go",
+      "engine/cmd/usage.go",
+      "engine/gate/skillpaths.go",
+      "engine/gate/skillpaths_prose_test.go",
+      "engine/roles/skills.go",
+      "engine/runtime/opencode_bridge_test.go",
+      "engine/skillid/skillid.go",
+      "engine/skillid/skillid_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line",
+    "recall"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "a61a18717aa509556c197085bee78785bbb83873",
+      "head": "16a719fc144f4653cbbf66db42dab5b63b03d2ae",
+      "diff_sha256": "b6cd4fb05380375335df6cf4c7e1d5f1e2aec82a782a909bc2a9e0858d37c392"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "engine/architecture_test.go",
+        "engine/cmd/usage.go",
+        "engine/gate/skillpaths.go",
+        "engine/gate/skillpaths_prose_test.go",
+        "engine/roles/skills.go",
+        "engine/runtime/opencode_bridge_test.go",
+        "engine/skillid/skillid.go",
+        "engine/skillid/skillid_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "engine/gate/skillpaths.go:155-165",
+        "severity": "WARNING",
+        "claim": "fenceOpening treats any line that starts with three or more backticks as a fence opener, including a line that holds more backticks after the run. CommonMark does not open a backtick fence when the info string contains a backtick. The CHANGELOG and doc comment say fences are recognised 'as CommonMark opens them'. A prose line such as '```test-first``` skill' therefore opens a fence that has no close, and the rest of the prompt is skipped to the end. Every later prose mention is then silently dropped, and the role still meets 'Permission denied: skill'. The old code had the same prefix check, so this is not new, but the commit claims CommonMark parity. No test pins the case. The rule is reachable with realistic input only when a brief uses an inline triple-backtick span at the start of a line, so I could not show that the input is common.",
+        "evidence_class": "inferential",
+        "causal_disposition": "pre-existing",
+        "proof_refs": [
+          "engine/gate/skillpaths.go:155-165",
+          "engine/gate/skillpaths.go:102-105"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the whole diff and T60 (commit A) in odd/tasks/labdrian-orchestrator-opencode.md:102.",
+      "Read engine/gate/skillpaths.go at head. addProseMentions, the line-ending branch, the fence helpers and the id-based listing match the T60 commit A design items 1 to 4.",
+      "Confirmed in the opencode_bridge_test.go imports that fmt and exec are still used elsewhere, so removing the sha256 check leaves no unused import. enginetest.Binary builds once through sync.Once, as the test comment says.",
+      "Checked the skillid ring row and the skills.go change: the same pattern and WordChar body, so no behaviour change.",
+      "Reasoned about CRLF handling. The no-header branch uses '\\r\\n' only when lines[0] ends in '\\r'. The existing-header branch keeps its per-line eol, so the header rewrite is unchanged.",
+      "Did not run tests; no command was run."
+    ]
+  }
+}

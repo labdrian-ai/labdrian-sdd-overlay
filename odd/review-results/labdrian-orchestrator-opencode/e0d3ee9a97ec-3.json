@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "f0b0eb115e31b921dd2fa71dd019660441c086b1",
+    "head": "e0d3ee9a97ec16809b2864f6b943e130d5a51514",
+    "diff_sha256": "daae053ae473ed05958758f38827a1209ede302c3e5cebcffd34f2e3956399db",
+    "paths": [
+      "odd/tasks/labdrian-orchestrator-opencode.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "f0b0eb115e31b921dd2fa71dd019660441c086b1",
+      "head": "e0d3ee9a97ec16809b2864f6b943e130d5a51514",
+      "diff_sha256": "daae053ae473ed05958758f38827a1209ede302c3e5cebcffd34f2e3956399db"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/labdrian-orchestrator-opencode.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "odd/tasks/labdrian-orchestrator-opencode.md:34",
+        "claim": "The S17 check now says the decoded keys and values are piped to `rg '(^|[^\\w.-])gentle-ai([^\\w/-]|$)'` and that this finds `enabledPlugins` keys such as `engram@Gentleman-Programming/engram`. That key does not contain the literal `gentle-ai`: `Gentleman-Programming` has `gentle` followed by `man`, and `rg` is case-sensitive. So the pattern never matches the plugin key, and the check still cannot find the plugin source the acceptance requires gone. The L31 verification only shows that `jq` printed the key, not that `rg` matched it. The new wording therefore claims coverage the check does not provide. The plugin-source criterion needs its own search, for example `rg 'Gentleman-Programming/engram'` over the same decoded output.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/labdrian-orchestrator-opencode.md:34",
+          "odd/tasks/labdrian-orchestrator-opencode.md:376"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff is docs-only: the S2 acceptance sentence is reworded, the S17 check command is changed, and an L31 log entry is added.",
+      "The S17 regex requires the literal text `gentle-ai`, which the example key `engram@Gentleman-Programming/engram` does not contain.",
+      "L31 reports that `jq` printed the key and the decoded command, but does not report that `rg` matched the key."
+    ]
+  }
+}

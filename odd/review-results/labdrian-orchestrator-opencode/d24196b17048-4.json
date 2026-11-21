@@ -1,0 +1,43 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "2dc1cde4309596b73e0050f83491312592faaf4a",
+    "head": "d24196b17048fd4e8c29a4cc4598ec7184eec52c",
+    "diff_sha256": "704a886cf2beea6174e82083edd985244a6e1fb9926f6b45407cfeddb4c4526a",
+    "paths": [
+      "agents/foreman.md",
+      "engine/agentgen/foreman_test.go",
+      "opencode/agents/foreman.md",
+      "roles/foreman/body.md"
+    ]
+  },
+  "rows": [
+    "risk-line",
+    "recall"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "2dc1cde4309596b73e0050f83491312592faaf4a",
+      "head": "d24196b17048fd4e8c29a4cc4598ec7184eec52c",
+      "diff_sha256": "704a886cf2beea6174e82083edd985244a6e1fb9926f6b45407cfeddb4c4526a"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "roles/foreman/body.md",
+        "agents/foreman.md",
+        "opencode/agents/foreman.md",
+        "engine/agentgen/foreman_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "Read the whole diff: the same one-line change appears in roles/foreman/body.md:13, agents/foreman.md:20 and opencode/agents/foreman.md:53, and in the test's want at foreman_test.go:228.",
+      "The new line is character-identical to the T59 criteria text at line 101; the body keeps its line count of 38.",
+      "Read the full body.md: the new Evidence rule is consistent with the 'Advance only with' column (Build's 're-run by you'; Close's landing commit, verb line and delivery's entry).",
+      "Searched for the old line text: no other file hardcodes it besides the task document.",
+      "Not run: go test, gadu-generate --check and the differential."
+    ]
+  }
+}

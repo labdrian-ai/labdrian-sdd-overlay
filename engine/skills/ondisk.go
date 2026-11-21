@@ -25,12 +25,14 @@ const (
 // nonSkillRoutes lists the third-column route values that send a manifest row
 // somewhere other than skills/. It agrees with ResolveRoutes (routes.go), where any
 // other third-column value falls through to the default skill route.
-// The full route domain is {skill, agent, opencode-agent, codex-agent, mcp}
-// (the four of D13, and codex-agent from slice 4 of the role agents); "skill"
+// The route domain of longterm-mem/ rows is {skill, agent, opencode-agent, codex-agent, mcp}
+// (the four of D13, and codex-agent from slice 4 of the role agents); output-style (T27) is a
+// route of the rows outside longterm-mem/ only, and is listed here so that its row is never a skills row; "skill"
 // is not listed here because it is the default route and IS the skills
 // destination, so it must stay out of this exclusion set.
 var nonSkillRoutes = map[string]bool{
 	"agent":          true,
+	"output-style":   true,
 	"opencode-agent": true,
 	"codex-agent":    true,
 	"mcp":            true,

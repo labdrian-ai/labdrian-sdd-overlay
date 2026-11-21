@@ -1,0 +1,86 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "3d93b7c5fecfdee0b9c6ff462557fcda3574a825",
+    "head": "bcd6b4b80032c925cc6401ec8de55f680c402e78",
+    "diff_sha256": "af4dccd537f50c0ab85fa6c5cf8256d8e033fc35768022d874af0007bf69cefd",
+    "paths": [
+      "CHANGELOG.md",
+      "bin/lib/usage.sh",
+      "engine/cmd/review.go",
+      "engine/cmd/review_check_chain_test.go",
+      "engine/cmd/review_verbs_docs_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line",
+    "recall"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "3d93b7c5fecfdee0b9c6ff462557fcda3574a825",
+      "head": "bcd6b4b80032c925cc6401ec8de55f680c402e78",
+      "diff_sha256": "af4dccd537f50c0ab85fa6c5cf8256d8e033fc35768022d874af0007bf69cefd"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "bin/lib/usage.sh",
+        "engine/cmd/review.go",
+        "engine/cmd/review_check_chain_test.go",
+        "engine/cmd/review_verbs_docs_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "engine/cmd/review_verbs_docs_test.go:200-203",
+        "severity": "SUGGESTION",
+        "claim": "The wrapper and README coverage checks accept any line in the section that starts with the verb word at the expected indent, so prose can satisfy them. The wrapper check looks for ' {35}verb( |$)' and the README check for '^    verb( |$)'. Today the README review section has no such prose line, so nothing fails. A future continuation line that happens to start with 'record', 'check' or 'verify' at that indent would let a deleted entry pass. The CHANGELOG check ('review <verb>' anywhere in the file) is weaker still: any earlier mention of a verb satisfies it, so it does not prove the verb has its own entry.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/cmd/review_verbs_docs_test.go:200-211"
+        ]
+      },
+      {
+        "id": "F2",
+        "location": "engine/cmd/review_verbs_docs_test.go:215-279",
+        "severity": "SUGGESTION",
+        "claim": "Four tests pin exact prose: the review ci wrapper and README sentences, the #6179 CHANGELOG sentence and the topicMadeOnAMainMerge doc comment. Any rewording of the engine usage, wrapper help or README text for review ci fails them even when the facts stay the same. The only prose they compare across documents is the review ci text. The topicMadeOnAMainMerge doc-comment test reads a test file's comment, so it will fail on any reflow that changes the sentence.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/cmd/review_verbs_docs_test.go:222-231",
+          "engine/cmd/review_verbs_docs_test.go:260-278"
+        ]
+      },
+      {
+        "id": "F3",
+        "location": "engine/cmd/review_verbs_docs_test.go:144-146",
+        "severity": "SUGGESTION",
+        "claim": "The routed-verb parse has a hard-coded floor of 13 verbs. If a verb is later removed from runReview, the test fails with a message about the parse finding nothing, not about a removed verb. The count is correct today: bind, record, verify, check, exempt, sweep, anchor, launch, frozen-context, proposals, ci, findings and stop-hook make 13.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/cmd/review.go:75-100"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full diff at /home/labdrian/.cache/foreman-scratch/t70.diff.",
+      "Compared the new bin/lib/usage.sh review ci block with the engine usage in engine/cmd/usage.go:233-238 and the README entry at README.md:866-879. Each string pinned by TestWrapperUsageOfReviewCISaysWhatTheEngineUsageSays and TestReadmeCIEntrySaysWhatTheEngineUsageSays is present after whitespace normalization, including the 'never CI: none configured' pair.",
+      "The usage.sh heredoc is quoted ('EOF' at line 11), so the new text, which has parentheses and colons, is not expanded.",
+      "Confirmed the runReview switch on args[0] at review.go:75-100 routes 13 verbs, including reviewStopVerb, the only identifier case. The test handles that identifier.",
+      "Confirmed the verb column in the wrapper is 35 spaces, README verbs sit at 4 spaces, and the engine usage lines start with '  engine review <verb>'. The helper functions readRepositoryFile, docSection and normalizeDocText exist in the same package.",
+      "Checked the package comment of review.go lines 3-34. After normalization every verb matches the pattern; 'review sweep' wraps across a line but matches once whitespace is collapsed.",
+      "Checked that each of the 13 verbs appears in CHANGELOG.md as 'review <verb>' followed by a non-alphanumeric character.",
+      "Checked chain.go startsInBase and insideRange: the corrected CHANGELOG wording 'the oldest commit the range covers, the one whose first parent is that start' matches the code and its comments.",
+      "Checked that the topicMadeOnAMainMerge comment change matches its four return values (m, first, merged, tip).",
+      "The Risk line 'none' holds: the production Go change is a comment in review.go, and the other changes are help text, CHANGELOG text and tests. No exec, network, path or secret surface is added.",
+      "I did not run any tests or commands. 'Not run' applies to the new tests."
+    ]
+  }
+}

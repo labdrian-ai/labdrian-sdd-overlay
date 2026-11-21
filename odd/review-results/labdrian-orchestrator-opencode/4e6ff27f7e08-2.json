@@ -1,0 +1,58 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "f4cf6b53940bf9f8d37b5d33663e6e09dd746e44",
+    "head": "4e6ff27f7e086b6c62ac187dc7ccd57f044ca5e1",
+    "diff_sha256": "cf0877338072f1bb4948e39fab8aee8102c47953f3ff44b08ab6c8a278d4d462",
+    "paths": [
+      "odd/tasks/labdrian-orchestrator-opencode.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "f4cf6b53940bf9f8d37b5d33663e6e09dd746e44",
+      "head": "4e6ff27f7e086b6c62ac187dc7ccd57f044ca5e1",
+      "diff_sha256": "cf0877338072f1bb4948e39fab8aee8102c47953f3ff44b08ab6c8a278d4d462"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/labdrian-orchestrator-opencode.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/labdrian-orchestrator-opencode.md:420",
+        "claim": "L39 says T25b's row is the authority over L37, but L37 itself (not visible in this diff) still states the old split of which commit rewords the help line and skills_candidates_cli.go:15. Because the Log is append-only, a reader of L37 alone sees a conflicting statement; L39 resolves this only by cross-reference and does not name the L37 text it overrides. It also does not say whether L37's own commit list or the T25a row needs the same correction.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/labdrian-orchestrator-opencode.md:420"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/labdrian-orchestrator-opencode.md:47",
+        "claim": "T25b's row is now a very long single line; the forecast for commit (b) (235-250 lines) and the total (435-580) were not revisited after adding the skills_candidates_cli.go:15 wording to (b) and moving the help line explicitly into (a). The line-count ranges may be slightly stale, and no note says they were rechecked.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/labdrian-orchestrator-opencode.md:47"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff changes only T25b's row, T8's row and appends L39 in odd/tasks/labdrian-orchestrator-opencode.md.",
+      "T8's row edit is consistent with L39's F2 claim (BLOCKED on T25a and T25b).",
+      "T25b's row now assigns the help line to commit (a) and skills_candidates_cli.go:15 to commit (b), matching L39's text."
+    ]
+  }
+}

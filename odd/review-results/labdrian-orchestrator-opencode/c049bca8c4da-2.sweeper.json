@@ -1,0 +1,25 @@
+{
+  "kind": "sweeper",
+  "base": "4ff6d38b943f4845c843398f846b02d8a51c1ed5",
+  "head": "c049bca8c4da8029a16fa99b2e72c401fef047ac",
+  "diff_sha256": "d7026ec1e439f74931adf96df22790667f2c459aa5b069db0e79f77a3412a324",
+  "sweep": "c049bca8c4da-1.sweep.json",
+  "commit": null,
+  "candidates": [
+    {
+      "candidate": "T3: ?? CLAUDE.md",
+      "disposition": "live",
+      "evidence": "Owner decision L160 (odd/tasks/labdrian-orchestrator-opencode.md line 952), verbatim: \"se quedan los files de wiki\". The untracked CLAUDE.md and docs/wiki/README.md are kept. No role deletes them, and delivery does not commit them unless the owner says so. Still untracked, untouched."
+    },
+    {
+      "candidate": "T3: ?? docs/wiki/.format",
+      "disposition": "live",
+      "evidence": "Same L160 decision (\"se quedan los files de wiki\"). The file is under the untracked docs/wiki/ folder, which the owner kept. Not removed, moved or committed."
+    },
+    {
+      "candidate": "T3: ?? docs/wiki/README.md",
+      "disposition": "live",
+      "evidence": "Same L160 decision, verbatim: \"se quedan los files de wiki\". It names docs/wiki/README.md explicitly as kept. Not removed, moved or committed."
+    }
+  ]
+}

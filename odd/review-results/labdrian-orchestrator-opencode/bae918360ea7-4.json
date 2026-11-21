@@ -1,0 +1,76 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "4daa9dddb0645f285c222a9d8285a99a27541fa3",
+    "head": "bae918360ea7c4becb161c0a1088bbe6565bcc4d",
+    "diff_sha256": "7004dffad05524e1900aaf0488103224c1720bb1ad059706f5a7928a58dcab89",
+    "paths": [
+      "CHANGELOG.md",
+      "engine/cmd/roles.go",
+      "engine/cmd/roles_bound.go",
+      "engine/cmd/roles_feature_entry_test.go",
+      "engine/cmd/usage.go",
+      "engine/roles/bound.go",
+      "engine/roles/bound_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line",
+    "recall"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "4daa9dddb0645f285c222a9d8285a99a27541fa3",
+      "head": "bae918360ea7c4becb161c0a1088bbe6565bcc4d",
+      "diff_sha256": "7004dffad05524e1900aaf0488103224c1720bb1ad059706f5a7928a58dcab89"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "engine/cmd/roles.go",
+        "engine/cmd/roles_bound.go",
+        "engine/cmd/roles_feature_entry_test.go",
+        "engine/cmd/usage.go",
+        "engine/roles/bound.go",
+        "engine/roles/bound_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "engine/cmd/roles.go:327-336",
+        "severity": "WARNING",
+        "claim": "The refusal now conflicts with the chain entry that skills/inception-pipeline/SKILL.md:34 tells the parent to write. That text says goal and chain both equal change-name, and the first record is `shaper → estimator`. By the time the shaper's handoff is recorded, odd/tasks/<change>.md exists, so `labdrian roles append --goal X --chain X` with from_role shaper and no bound workflow is refused. The refusal sends the parent to `workflow open --feature X --task T`, which writes chain `X-t1`, not chain `X`. The skill is unchanged here (the task records that as deliberate, L168 R1) and the Risk line names this skill as a consumer. Nothing in the diff updates SKILL.md or references/chain-entry.md. The skill text and the verb now disagree for any inception whose feature document is already written. This is inferential: I did not run the pipeline.",
+        "evidence_class": "inferential",
+        "causal_disposition": "behavior-activated",
+        "proof_refs": [
+          "skills/inception-pipeline/SKILL.md:34",
+          "engine/roles/bound.go FeatureChainRefusal: chain==goal && from!=prototyper && hasDocument -> refusal"
+        ]
+      },
+      {
+        "id": "F2",
+        "location": "engine/cmd/roles_bound.go:68-81",
+        "severity": "SUGGESTION",
+        "claim": "hasFeatureDocument fails closed on any read error except not-found or no-repository. That includes ENOTDIR (when `odd` or `odd/tasks` is a regular file), EACCES, and CauseNoCwd. `causeOf` returns pe.Err.Error() for those, so they count as a document being present. A shaper, estimator, builder or reviewer record under chain == goal is then refused with the sentence 'odd/tasks/<G>.md is a feature document', even though no such document exists. The sentence is misleading and the record cannot be stored by any route the message offers. Realistic triggers are rare (an unreadable odd/tasks directory). The fail-closed choice is deliberate and documented.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/oddtask/fsdoc/fsdoc.go:98-106 causeOf",
+          "engine/cmd/roles_bound.go:76-80"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the diff and the T57 criteria (task file line 99).",
+      "Read engine/cmd/roles.go runRolesAppend (285-353), where the document is read only when bound does not hold, chain==goal and from is not the prototyper.",
+      "Read engine/oddtask/fsdoc/fsdoc.go to check the ReadError causes that hasFeatureDocument maps.",
+      "Read skills/inception-pipeline/SKILL.md:28-41 for the chain-entry contract.",
+      "Checked that no remaining caller uses the old FeatureEntryRefusal or the lowercase holds(). The only Grep matches for the old names were the new hasFeatureDocument definition and its call site.",
+      "Confirmed the rule table, the sentence text and the usage and CHANGELOG wording match the T57 spec.",
+      "No tests were run."
+    ]
+  }
+}

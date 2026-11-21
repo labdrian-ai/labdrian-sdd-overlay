@@ -1,0 +1,26 @@
+{
+  "kind": "polisher",
+  "base": "940496742321891133905e5f2135cd11e63135c3",
+  "head": "025ce6ec03092d1b416e843793cfd74cec57f96c",
+  "diff_sha256": "90ddacc0fca81876cebdbaca85d9e21768aed524860fa10172414132dd2fa0bd",
+  "findings": {
+    "findings": [
+      {
+        "id": "P1",
+        "severity": "SUGGESTION",
+        "location": "engine/roles/skills.go:11-13",
+        "claim": "wordChar tests single bytes and treats only ASCII letters, digits, '_' and '-' as word characters, so a non-ASCII letter right after 'skill' (for example 'skillé') does not end the match and SkillsNamed reports a mention; no test names a Unicode case.",
+        "evidence": [
+          "The diff line `return b == '_' || b == '-' || b >= '0' && b <= '9' || b >= 'a' && b <= 'z' || b >= 'A' && b <= 'Z'` has no branch for bytes >= 0x80.",
+          "Role bodies are English and SkillsNamed matches only lowercase ASCII 'skill', so this is unlikely to occur."
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full diff of 025ce6ec and engine/gate/skillpaths.go.",
+      "The rewrite keeps the indent, trailing spaces and \\r: entry is the TrimSpace of the line and strings.Replace(...,1) replaces its first occurrence after the indent.",
+      "Adjacent mentions '`a` skill`b` skill' yield both ids; the m[1] < len(body) guard prevents an out-of-range read.",
+      "Not run: read-only static judgment."
+    ]
+  }
+}

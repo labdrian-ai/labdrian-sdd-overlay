@@ -51,8 +51,9 @@ import (
 //     asks the shared resolver of the identity module (identity/resolve, C23 M2), whose chain and
 //     disk adapter (identity/gitfs) are shared with longterm-mem; the composition root hands it the
 //     adapter.
-//   - skills/engramexport adapts the read-only `engram export` command to the CandidateSource port
-//     owned by skills and consumed by skills/app (C23 M10); it filters topics and never writes Engram.
+//   - skills/memorycardcli adapts the read-only `memorycard list` verb to the CandidateSource port
+//     owned by skills and consumed by skills/app (C23 M10); it sorts rows into the two families
+//     through the domain and never writes memorycard.
 //   - execrunner is the adapter of the CommandRunner port the Pi adapter owns (H24): it looks a
 //     program up on the PATH and runs it with a fixed argument vector and a deadline. It is
 //     the one place in the module that starts the CLI of a runtime.
@@ -104,16 +105,18 @@ import (
 //   - synctrigger/osproc is the adapter of the Runner port of synctrigger (H34): it starts the
 //     programs of the machine in sessions and process groups of their own and kills a group at a
 //     deadline. synctrigger itself reads neither the clock nor the process table: it is handed both.
-//   - sddregistry is a domain package (B2): the rule over text for the SDD executor rows of a
-//     project's skill registry (which skills are executors, how a row reads, how a registry that
-//     has none starts, how the rows of an earlier repair are replaced). It reads and writes no file.
-//   - sddregistry/app holds the use case of `engine registry repair-sdd` (B2): it reads the
-//     registry, or starts one, reads the executor skills a target has installed and writes the
-//     registry back, over the RegistryStore and SkillSource ports it owns. It takes no lock, prints
-//     nothing and exits nowhere.
-//   - sddregistry/fsstore is the adapter of those two ports (B2): the registry as a file, written
-//     as `engine propagate` writes it (propagator/fsstore), and the skills of a target as files.
-//     The lock and the words a person reads are the command's, in cmd.
+//   - skillregistry is a domain package (T30): the table of skills in a project's .atl/skill-registry.md,
+//     the rules `gentle-ai skill-registry refresh` 4.2.0 follows (which directories hold skills, how a
+//     SKILL.md names itself, which skills are listed, how the file is written around the rows) over
+//     text. It reads and writes no file and reads no clock.
+//   - skillregistry/app holds the use case of `engine registry refresh` (T30): it finds the skills of a
+//     project and its machine and writes the table into the registry, over the RegistryStore,
+//     SkillSource, Locker and clock it is given. It prints nothing and exits nowhere.
+//   - skillregistry/fsscan is the adapter of its SkillSource (T30): the directories and SKILL.md files
+//     of the machine, and the stat of .git and .atl that makes a directory a project.
+//   - skillregistry/fsstore is the adapter of the RegistryStore port of skillregistry/app (B2, T30): the
+//     registry as a file, written as `engine propagate` writes it (propagator/fsstore). The lock and
+//     the words a person reads are the command's, in cmd.
 //   - sha256hex is a domain package (H34): what a SHA-256 digest looks like on the wire (64
 //     lowercase hex characters) and how one is made, which every record that carries a digest
 //     (the goal, the workflow event, the role handoff, the clearance, the approval, the project
@@ -157,6 +160,8 @@ import (
 //     feature document it names (the Documents port) and the decision of oddtask.
 //   - oddtask/fsdoc is the adapter of the Documents port of oddtask/app: it reads the feature document from the
 //     file system, as a regular file that is not a link and is at most 8 MiB.
+//   - skillid is a leaf domain package (labdrian-orchestrator-opencode T60): the form of a skill id and the
+//     characters of a word that holds one, which gate and roles share. It imports nothing of the module.
 //   - workflow/app is the application layer of the workflow (own-rdd S19 b): the use case 'workflow open'
 //     composes the role chain log, workflow.Lifecycle and the binding use case, and writes none of their rules.
 //   - repotest is test support: the hand-made repositories the tests of gitfs and cmd share.
@@ -236,9 +241,6 @@ var rings = map[string]archguard.Ring{
 	"runtime/ownership":         archguard.Domain,
 	"runtime/ownership/app":     archguard.Application,
 	"runtime/ownership/fsstore": archguard.Adapter,
-	"sddregistry":               archguard.Domain,
-	"sddregistry/app":           archguard.Application,
-	"sddregistry/fsstore":       archguard.Adapter,
 	"settings":                  archguard.Domain,
 	"settings/settingsfile":     archguard.Adapter,
 	"settings/codexhooks":       archguard.Domain,
@@ -247,9 +249,14 @@ var rings = map[string]archguard.Ring{
 	"shaper/fsadapter":          archguard.Adapter,
 	"shaper/shapertest":         archguard.Support,
 	"shelltest":                 archguard.Support,
+	"skillid":                   archguard.Domain,
 	"skills":                    archguard.Domain,
+	"skillregistry":             archguard.Domain,
+	"skillregistry/app":         archguard.Application,
+	"skillregistry/fsscan":      archguard.Adapter,
+	"skillregistry/fsstore":     archguard.Adapter,
 	"skills/app":                archguard.Application,
-	"skills/engramexport":       archguard.Adapter,
+	"skills/memorycardcli":      archguard.Adapter,
 	"skills/projectidentity":    archguard.Adapter,
 	"skills/registryyaml":       archguard.Adapter,
 	"skills/skillsfs":           archguard.Adapter,
