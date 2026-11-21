@@ -1,0 +1,18 @@
+{
+  "kind": "polisher",
+  "base": "86645d3b45b45576f6bcf2f685e6a0b397815e2d",
+  "head": "06ae2b0b8a56340bb28d51aac0e831ab978c467a",
+  "diff_sha256": "497127a2220f639782339358c81053146fbfaab5ff16fe85d3aa6729c65521ad",
+  "findings": {
+    "findings": [],
+    "evidence": [
+      "Read the full diff fix1.diff and the criteria S1-S3 and L3 in /home/labdrian/labdrian-sdd-overlay-worktrees/review-06ae2b0b8a56/odd/tasks/review-chain-integration-base.md. Nothing was run, including tests and git. The conclusions below come from reading the code and docs, not from executing the change.",
+      "Read engine/review/app/chain.go at the head. CheckChain ends the walk when start == baseName, or when startsInBase finds that IsAncestor(start, base) is true and IsAncestor(oldest, base) is false. S2 is kept: a range that starts before the base and covers a base commit does not end the chain, so it is refused as before. IsAncestor is only asked when start differs from the base, as S1 requires, and a git failure is wrapped with the 'the chain from <base> to <head>: ' prefix.",
+      "Consumers of CheckChain are exactly three callers: engine/cmd/review.go:555 (review check --base), engine/review/app/onto.go:45 (--onto) and engine/review/app/landing.go:86 (review anchor --merge). All three get the new rule from the one function, as S1 intends.",
+      "CI job Merge Lands A Reviewed Tree (.github/workflows/ci.yml:315-334) only runs go run ./cmd/ review anchor --merge HEAD and reads the exit code. It does not parse base or ranges. In CheckLanding the base is the merge base of first parent and head. The #6179 shape is cleared by the new rule, and a chain that reaches the base asks git nothing new, so landings that cleared before are unchanged.",
+      "The only code that reads the JSON base and ranges is reportChained in engine/cmd/review.go. It prints the chain's Base unchanged (the delivery base) and the ranges from the first one. Only the first range's base can now differ from the top-level base, as S1 states. The roles/delivery/body.md line was searched for ranges, first range and merge base and has no match, so it does not depend on the first range starting at the base.",
+      "No refusal weakened beyond the specs. A start in the base with an oldest commit also in the base stays refused, so the pinned subtest 'a range that begins before the base' keeps its refusal. The commits the chain covers are all in base..head because the base's ancestor set is closed under parents. The one intended behaviour change, --base main clearing after main moved on, is stated in S3(d), the CHANGELOG entry, the help and the README, and a test pins it.",
+      "The help (usage.go), the README (lines 685-700), the CheckChain and reportChained comments, and the CHANGELOG are consistent with the code. No user-impacting defect found."
+    ]
+  }
+}

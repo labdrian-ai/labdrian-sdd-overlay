@@ -281,16 +281,18 @@ func (w *reviewWorld) moveMain(fork string) {
 }
 
 // --onto names the integration branch of the delivery and the engine starts the chain where the branch was made (own-rdd
-// T9a, S11 a). When main moved on after topic was made, --base main walks to a commit the chain never reaches and is
-// refused, as it always was, while --onto main starts at the fork point and clears, printing what --base <fork point> does.
+// T9a, S11 a). When main moved on after topic was made, --base main clears too: the first range starts at the fork point,
+// a commit main has, and the walk ends there while the base printed stays main. --onto main starts the chain at the fork
+// point and prints what --base <fork point> does.
 func TestCheckOntoClearsTheChainFromWhereTheBranchWasMade(t *testing.T) {
 	w := newCheckedWorld(t)
 	fork, mid, tip := w.topicOfTwoReviewedCommits()
 	w.moveMain(fork)
 
-	_, refusal, exits := w.checkChain("main")
-	if want := "error: review check: the chain from " + w.name("main") + " to " + tip + ": head " + fork + ": review: no stored result binds the head\n"; refusal != want || !equalInts(exits, []int{1}) {
-		t.Fatalf("setup: --base main: stderr = %q, exits = %v; want %q, [1]", refusal, exits, want)
+	mainOut, mainErr, mainExits := w.checkChain("main")
+	if wantBase := fmt.Sprintf("\"head\": %q,\n  \"base\": %q,", tip, w.name("main")); mainErr != "" || !equalInts(mainExits, []int{0}) || !strings.Contains(mainOut, wantBase) ||
+		!strings.Contains(mainOut, fmt.Sprintf("\"ranges\": [\n    {\n      \"base\": %q,\n      \"head\": %q,", fork, mid)) {
+		t.Fatalf("setup: --base main: stdout = %q, stderr = %q, exits = %v; want a cleared chain of base main whose first range starts at %s", mainOut, mainErr, mainExits, fork)
 	}
 	wantOut, wantErr, wantExits := w.checkChain(fork)
 	if wantErr != "" || !equalInts(wantExits, []int{0}) || !strings.Contains(wantOut, mid) {
@@ -327,6 +329,87 @@ func TestCheckOntoOfABranchThatDidNotMoveIsCheckBase(t *testing.T) {
 		if reviewed != equalInts(baseExits, []int{0}) {
 			t.Errorf("reviewed %v: --base main exits = %v; want 0 exactly when the chain is reviewed", reviewed, baseExits)
 		}
+	}
+}
+
+// sweepCommits runs `review sweep` for each commit given, from its first parent, under the feature.
+func (w *reviewWorld) sweepCommits(feature string, commits ...string) {
+	w.t.Helper()
+	state := w.t.TempDir()
+	for _, commit := range commits {
+		stdout, stderr, exits := w.sweepRun(state, "", "sweep", "--feature", feature, "--base", commit+"^", "--head", commit)
+		if !equalInts(exits, []int{0}) || decodeSwept(w.t, stdout).Outcome != "clean" {
+			w.t.Fatalf("setup: review sweep of %s exit calls = %v, stdout = %q, stderr = %q; want [0] and a clean sweep", commit, exits, stdout, stderr)
+		}
+	}
+}
+
+// topicMadeOnAMainMerge makes the branch shape of known error #6179. main gets a merge commit M of a side branch, made
+// with --no-ff and with no Risk trailer, as a GitHub merge has none. topic is made on M with one commit, main moves on
+// past M, and topic merges main in (the merge commit declares its risk) and gets one more commit. Every commit of topic
+// is reviewed from its first parent and swept under the feature; topic stays checked out, main is at the commit it moved to. It returns M,
+// the first commit of topic and the merge of main into topic.
+func (w *reviewWorld) topicMadeOnAMainMerge(feature string) (m, first, merged, tip string) {
+	w.t.Helper()
+	w.git("checkout", "-q", "-b", "side")
+	w.commitMore("s.txt")
+	w.git("checkout", "-q", "main")
+	w.git("merge", "-q", "--no-ff", "side", "-m", "Merge pull request #1")
+	m = w.name("HEAD")
+	w.git("checkout", "-q", "-b", "topic")
+	first = w.commitMore("d.txt")
+	w.git("checkout", "-q", "main")
+	w.commitMore("m.txt") // main moves on past M
+	w.git("checkout", "-q", "topic")
+	w.git("merge", "-q", "--no-ff", "main", "-m", "Merge main into topic", "-m", "Risk: none")
+	merged = w.name("HEAD")
+	tip = w.commitMore("f.txt")
+	w.recordFeature(feature, m, first)
+	w.recordFeature(feature, first, merged)
+	w.recordFeature(feature, merged, tip)
+	w.sweepCommits(feature, first, merged, tip)
+	return m, first, merged, tip
+}
+
+// A branch made on a merge commit of main, after which main moved on and was merged into the branch, is cleared from
+// main: the walk ends at the range that starts at M, a commit main already has, and does not ask M for a Risk trailer
+// (known error #6179). --onto and --base print the same chain and the first range starts at M.
+func TestCheckClearsABranchMadeOnAMainMergeThatMergedMainIn(t *testing.T) {
+	w := newCheckedWorld(t)
+	m, first, _, tip := w.topicMadeOnAMainMerge("own-rdd")
+
+	baseOut, baseErr, baseExits := w.checkChain("main")
+	ontoOut, ontoErr, ontoExits := w.run("", "check", "--feature", "own-rdd", "--onto", "main")
+
+	if baseErr != "" || !equalInts(baseExits, []int{0}) {
+		t.Fatalf("--base main: stderr = %q, exits = %v; want nothing, [0] (M is %s)", baseErr, baseExits, m)
+	}
+	if want := fmt.Sprintf("\"head\": %q,\n  \"base\": %q,", tip, w.name("main")); !strings.Contains(baseOut, want) {
+		t.Errorf("--base main: stdout = %q, want the head and the delivery base main: %q", baseOut, want)
+	}
+	if want := fmt.Sprintf("\"ranges\": [\n    {\n      \"base\": %q,\n      \"head\": %q,", m, first); !strings.Contains(baseOut, want) {
+		t.Errorf("--base main: stdout = %q, want the first range to start at M: %q", baseOut, want)
+	}
+	if ontoOut != baseOut || ontoErr != "" || !equalInts(ontoExits, []int{0}) {
+		t.Errorf("--onto main: stdout = %q, stderr = %q, exits = %v; want the stdout of --base main (%q), nothing, [0]", ontoOut, ontoErr, ontoExits, baseOut)
+	}
+}
+
+// A branch whose first range starts at a main merge commit is also cleared as the head of a no-ff merge into main
+// (review anchor --merge), the third caller of the chain.
+func TestReviewAnchorClearsAMergeOfABranchMadeOnAMainMerge(t *testing.T) {
+	w := newCheckedWorld(t)
+	w.topicMadeOnAMainMerge("f")
+	overlaytest.WriteFile(t, w.root, "odd/tasks/f.md", "a feature\n")
+	w.git("add", "-A")
+	w.git("commit", "-q", "-m", "docs: f", "-m", "Risk: none")
+	w.git("checkout", "-q", "main")
+	w.git("merge", "-q", "--no-ff", "topic", "-m", "Merge pull request #2")
+
+	stdout, stderr, exits := w.run("", "anchor", "--merge", "HEAD")
+
+	if !strings.Contains(stdout, `"outcome": "verified"`) || stderr != "" || !equalInts(exits, []int{0}) {
+		t.Errorf("anchor --merge HEAD: stdout = %q, stderr = %q, exits = %v; want a verified merge, nothing, [0]", stdout, stderr, exits)
 	}
 }
 

@@ -481,6 +481,34 @@ func TestCheckChainTakesAPassiveCommitAsALinkWithNoRecord(t *testing.T) {
 	}
 }
 
+// A range that starts at an ancestor of the base ends the chain, but when git cannot say whether the start is in the base
+// the chain is refused with the usual prefix and the cause wrapped. A chain that reaches the base asks git nothing.
+func TestCheckChainRefusesWhenGitCannotSayWhetherTheStartIsInTheBase(t *testing.T) {
+	g, store := chain(t)
+	reviewed(t, store, headSHA, otherSHA, 1) // the range starts at head, which is not the delivery base
+	cause := errors.New("git is gone")
+	g.fail["IsAncestor"] = cause
+
+	got, err := app.New(g, store).CheckChain(evidenceDir, "own-rdd", baseSHA, otherSHA)
+
+	prefix := "the chain from " + baseSHA + " to " + otherSHA + ": "
+	if !errors.Is(err, cause) || !strings.HasPrefix(err.Error(), prefix) || len(got.Ranges) != 0 {
+		t.Errorf("CheckChain() = %+v, %v; want a refusal after %q that wraps %v", got, err, prefix, cause)
+	}
+}
+
+func TestCheckChainThatReachesTheBaseAsksNoAncestry(t *testing.T) {
+	g, store := chain(t)
+	reviewed(t, store, baseSHA, otherSHA, 1)
+
+	if _, err := app.New(g, store).CheckChain(evidenceDir, "own-rdd", baseSHA, otherSHA); err != nil {
+		t.Fatalf("CheckChain() error = %v, want the chain cleared", err)
+	}
+	if n := g.called("IsAncestor"); n != 0 {
+		t.Errorf("IsAncestor was asked %d times, want 0 for a chain that reaches the base", n)
+	}
+}
+
 // A commit that is inside a range a review covers needs everything but the review: its trailer, its sweep, the sweeper
 // and the polisher. The refusal names the commit.
 func TestCheckChainHoldsTheCommitsInsideAReviewedRangeToWhatTheyNeed(t *testing.T) {

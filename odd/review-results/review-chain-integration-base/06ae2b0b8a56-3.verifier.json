@@ -1,0 +1,32 @@
+{
+  "verdicts": [
+    {
+      "id": "F1",
+      "result": "not-run",
+      "command": "none",
+      "output": "SUGGESTION: The changelog states the S2 guard wrongly. It says the walk ends when 'the commit the range ends at, whose first parent is that start, is not in the base either'. The code (chain.go:85-93, startsInBas",
+      "base_result": "not-run"
+    },
+    {
+      "id": "F2",
+      "result": "not-run",
+      "command": "none",
+      "output": "SUGGESTION: The doc comment of topicMadeOnAMainMerge says 'It returns M, the first commit of topic and the merge of main into topic' (three values). The function returns four: (m, first, merged, tip). tip, the he",
+      "base_result": "not-run"
+    },
+    {
+      "id": "F3",
+      "result": "not-run",
+      "command": "none",
+      "output": "SUGGESTION: At the unit level (fakeGit), the new stop is tested only for its failure path (IsAncestor errors) and for the no-call path (start == base). No app-level test drives startsInBase to true (start in base",
+      "base_result": "not-run"
+    },
+    {
+      "id": "F4",
+      "result": "not-run",
+      "command": "none",
+      "output": "SUGGESTION: The new stop widens the existing caveat about a caller-named base. Before, a wrong --base cleared only when it sat on the head's first-parent line, because the walk had to reach it exactly. Now any co",
+      "base_result": "not-run"
+    }
+  ]
+}
