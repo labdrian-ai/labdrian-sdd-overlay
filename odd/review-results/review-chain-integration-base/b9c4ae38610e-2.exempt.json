@@ -1,0 +1,49 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "7a9495ce03f6376891639875513ec5063865b342",
+    "head": "b9c4ae38610e12d9b30083badeacdcb72cfc3519",
+    "diff_sha256": "7fd6614a4e0c3af2796d21acd2c4dba4277f9974cabd58c4e0f0453b02559d9f",
+    "paths": [
+      "odd/review-results/review-chain-integration-base/06ae2b0b8a56-1.sweep.json",
+      "odd/review-results/review-chain-integration-base/06ae2b0b8a56-2.sweep.json",
+      "odd/review-results/review-chain-integration-base/06ae2b0b8a56-3.json",
+      "odd/review-results/review-chain-integration-base/06ae2b0b8a56-3.verifier.json",
+      "odd/review-results/review-chain-integration-base/06ae2b0b8a56-4.json",
+      "odd/review-results/review-chain-integration-base/06ae2b0b8a56-4.verifier.json",
+      "odd/review-results/review-chain-integration-base/86645d3b45b4-1.sweep.json",
+      "odd/review-results/review-chain-integration-base/86645d3b45b4-2.exempt.json",
+      "odd/tasks/review-chain-integration-base.md"
+    ]
+  },
+  "risk": "none",
+  "report": {
+    "checks": [
+      {
+        "command": "git -C /home/labdrian/labdrian-sdd-overlay-worktrees/review-chain-integration-base diff --name-only 7a9495ce b9c4ae38",
+        "result": "pass",
+        "output": "odd/review-results/review-chain-integration-base/06ae2b0b8a56-1.sweep.json, 06ae2b0b8a56-2.sweep.json, 06ae2b0b8a56-3.json, 06ae2b0b8a56-3.verifier.json, 06ae2b0b8a56-4.json, 06ae2b0b8a56-4.verifier.json, 86645d3b45b4-1.sweep.json, 86645d3b45b4-2.exempt.json, odd/tasks/review-chain-integration-base.md. Exit 0. No source, test or config path."
+      },
+      {
+        "command": "git -C /home/labdrian/labdrian-sdd-overlay-worktrees/review-chain-integration-base log -1 --format=%B b9c4ae38 (and piped to rg -ci 'co-authored-by')",
+        "result": "pass",
+        "output": "Message: 'chore(review): record the review of T1 of review-chain-integration-base' / body 'Review results, sweeps and verdicts of 86645d3b and 06ae2b0b; Log L5 carries the four suggestions to the cleanup batch.' / 'Risk: none' as the last line. rg -ci 'co-authored-by' found no match (exit 1)."
+      },
+      {
+        "command": "git -C /home/labdrian/labdrian-sdd-overlay-worktrees/review-chain-integration-base rev-list --parents -n 1 b9c4ae38; git -C ... rev-parse 7a9495ce",
+        "result": "pass",
+        "output": "b9c4ae38610e12d9b30083badeacdcb72cfc3519 7a9495ce03f6376891639875513ec5063865b342. That is one parent, and it equals rev-parse 7a9495ce = 7a9495ce03f6376891639875513ec5063865b342."
+      },
+      {
+        "command": "For each file from git diff --name-only --diff-filter=A 7a9495ce b9c4ae38 -- 'odd/review-results/review-chain-integration-base/*.json': git show b9c4ae38:<file> > /tmp/tmp.8a0LrbHQxK/<basename>; jq -e . /tmp/tmp.8a0LrbHQxK/<basename>",
+        "result": "pass",
+        "output": "All 8 added .json files gave exit 0 (06ae2b0b8a56-1.sweep, -2.sweep, -3, -3.verifier, -4, -4.verifier, 86645d3b45b4-1.sweep, 86645d3b45b4-2.exempt). The contents were taken from commit b9c4ae38 into a mktemp scratch directory."
+      },
+      {
+        "command": "git -C /home/labdrian/labdrian-sdd-overlay-worktrees/review-chain-integration-base diff 7a9495ce b9c4ae38 -- odd/tasks/review-chain-integration-base.md (plus diff --numstat)",
+        "result": "pass",
+        "output": "numstat shows 1 line added and 0 removed. The only change is the added L5 log entry (foreman, the review of 06ae2b0b recorded and clear, with four carried suggestions)."
+      }
+    ]
+  }
+}

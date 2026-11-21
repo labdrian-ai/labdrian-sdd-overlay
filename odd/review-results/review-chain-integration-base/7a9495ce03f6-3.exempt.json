@@ -1,0 +1,36 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "06ae2b0b8a56340bb28d51aac0e831ab978c467a",
+    "head": "7a9495ce03f6376891639875513ec5063865b342",
+    "diff_sha256": "15cad6f580c01f98a108bb29882231bbe2849880efa531ee2b357e116275ec11",
+    "paths": [
+      "odd/tasks/review-chain-integration-base.md"
+    ]
+  },
+  "risk": "none",
+  "report": {
+    "checks": [
+      {
+        "command": "git -C /home/labdrian/labdrian-sdd-overlay-worktrees/review-chain-integration-base diff --name-only 06ae2b0b 7a9495ce",
+        "result": "pass",
+        "output": "odd/tasks/review-chain-integration-base.md (only path; exit 0)"
+      },
+      {
+        "command": "git -C /home/labdrian/labdrian-sdd-overlay-worktrees/review-chain-integration-base log -1 --format=%B 7a9495ce (and piped to rg -ci 'co-authored-by')",
+        "result": "pass",
+        "output": "Message: 'docs(odd): record T1 of review-chain-integration-base' / blank / 'Risk: none' as the last line. rg -ci 'co-authored-by' found no match (exit 1)."
+      },
+      {
+        "command": "git -C /home/labdrian/labdrian-sdd-overlay-worktrees/review-chain-integration-base rev-list --parents -n 1 7a9495ce; git -C ... rev-parse 06ae2b0b",
+        "result": "pass",
+        "output": "7a9495ce03f6376891639875513ec5063865b342 06ae2b0b8a56340bb28d51aac0e831ab978c467a. That is one parent, and it equals rev-parse 06ae2b0b = 06ae2b0b8a56340bb28d51aac0e831ab978c467a."
+      },
+      {
+        "command": "git -C /home/labdrian/labdrian-sdd-overlay-worktrees/review-chain-integration-base diff 06ae2b0b 7a9495ce -- odd/tasks/review-chain-integration-base.md (plus diff --numstat)",
+        "result": "pass",
+        "output": "numstat shows 10 lines added and 1 removed. The only removed line is the T1 task line: '- [ ] T1 ... — commit: -' became '- [x] T1 ... — commit: 06ae2b0b'. The other 9 added lines are the L4 log entry and its sub-bullets."
+      }
+    ]
+  }
+}
