@@ -1,0 +1,44 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "c049bca8c4da8029a16fa99b2e72c401fef047ac",
+    "head": "3d93b7c5fecfdee0b9c6ff462557fcda3574a825",
+    "diff_sha256": "c9b0260cac8fa9b1aec4710e33bc723e9c206cb09ebc517d012e43e1372561bd",
+    "paths": [
+      "odd/review-results/labdrian-orchestrator-opencode/c049bca8c4da-1.sweep.json",
+      "odd/review-results/labdrian-orchestrator-opencode/c049bca8c4da-2.sweeper.json",
+      "odd/review-results/labdrian-orchestrator-opencode/c049bca8c4da-3.exempt.json",
+      "odd/tasks/labdrian-orchestrator-opencode.md"
+    ]
+  },
+  "risk": "none",
+  "report": {
+    "checks": [
+      {
+        "command": "git -C /home/labdrian/labdrian-sdd-overlay-worktrees/labdrian-orchestrator-opencode diff --name-only c049bca8 3d93b7c5",
+        "result": "pass",
+        "output": "odd/review-results/labdrian-orchestrator-opencode/c049bca8c4da-1.sweep.json\nodd/review-results/labdrian-orchestrator-opencode/c049bca8c4da-2.sweeper.json\nodd/review-results/labdrian-orchestrator-opencode/c049bca8c4da-3.exempt.json\nodd/tasks/labdrian-orchestrator-opencode.md\n(--name-status: the three .json files are A and the tasks file is M. No source, test or config path is listed.)"
+      },
+      {
+        "command": "git -C /home/labdrian/labdrian-sdd-overlay-worktrees/labdrian-orchestrator-opencode log -1 --format=%B 3d93b7c5 (plus: ... | rg -ci co-authored-by)",
+        "result": "pass",
+        "output": "Subject 'docs(odd): shape T70, the review ci help and the carried suggestions', one body paragraph, and the last line is 'Risk: none'. rg -ci co-authored-by printed nothing and exited 1, so the message has no Co-Authored-By line."
+      },
+      {
+        "command": "git -C /home/labdrian/labdrian-sdd-overlay-worktrees/labdrian-orchestrator-opencode rev-list --parents -n 1 3d93b7c5 (plus: rev-parse c049bca8)",
+        "result": "pass",
+        "output": "3d93b7c5fecfdee0b9c6ff462557fcda3574a825 c049bca8c4da8029a16fa99b2e72c401fef047ac; rev-parse c049bca8 = c049bca8c4da8029a16fa99b2e72c401fef047ac. The commit has one parent, and it matches."
+      },
+      {
+        "command": "for p in c049bca8c4da-1.sweep.json c049bca8c4da-2.sweeper.json c049bca8c4da-3.exempt.json; do git -C /home/labdrian/labdrian-sdd-overlay-worktrees/labdrian-orchestrator-opencode show 3d93b7c5:odd/review-results/labdrian-orchestrator-opencode/$p | jq -e . >/dev/null; echo \"$p exit=$?\"; done",
+        "result": "pass",
+        "output": "c049bca8c4da-1.sweep.json exit=0\nc049bca8c4da-2.sweeper.json exit=0\nc049bca8c4da-3.exempt.json exit=0"
+      },
+      {
+        "command": "git -C /home/labdrian/labdrian-sdd-overlay-worktrees/labdrian-orchestrator-opencode diff --numstat c049bca8 3d93b7c5 -- odd/tasks/labdrian-orchestrator-opencode.md",
+        "result": "pass",
+        "output": "26\t0\todd/tasks/labdrian-orchestrator-opencode.md. No lines were deleted. The added lines are a new '- [ ] T70' task line and a new L196 shaper Log entry with its sub-items."
+      }
+    ]
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "verdicts": [
+    {
+      "id": "F1",
+      "result": "not-run",
+      "command": "none",
+      "output": "SUGGESTION: The minimum of 13 verbs is an unexplained constant equal to the current number of verbs. If a verb is removed on purpose, runReview routes 12 verbs and the test fails with the message 'the parse found",
+      "base_result": "not-run"
+    },
+    {
+      "id": "F2",
+      "result": "not-run",
+      "command": "none",
+      "output": "SUGGESTION: The CHANGELOG part of the check only looks for the words 'review <verb>' anywhere in the whole file. Because of this, a new verb whose name already appears after 'review ' somewhere in CHANGELOG.md (i",
+      "base_result": "not-run"
+    },
+    {
+      "id": "F3",
+      "result": "not-run",
+      "command": "none",
+      "output": "SUGGESTION: There are two more places that list the review verbs, and the class check covers neither: the 'review requires a verb: ...' message and the 'unknown verb ... (expected ...)' message in runReview. If s",
+      "base_result": "not-run"
+    },
+    {
+      "id": "F4",
+      "result": "not-run",
+      "command": "none",
+      "output": "SUGGESTION: To find the routed switch, the code accepts any switch on an index of 'args' (args[i] for any i) inside runReview, and stops looking inside that switch once it matches. It does not check that the inde",
+      "base_result": "not-run"
+    }
+  ]
+}
