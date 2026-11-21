@@ -495,8 +495,8 @@ type reviewCheckedJSON struct {
 }
 
 // reviewChainJSON is what 'review check --base' prints for a head that is cleared from the base by an unbroken chain of
-// reviews: both as full object names, the outcome and the ranges, from the one that starts at the base to the one that
-// ends at the head, each with the files that clear it.
+// reviews: both as full object names, the outcome and the ranges, from the one that starts at the base, or at an ancestor
+// of it that no covered commit passes, to the one that ends at the head, each with the files that clear it.
 type reviewChainJSON struct {
 	Head    string            `json:"head"`
 	Base    string            `json:"base"`

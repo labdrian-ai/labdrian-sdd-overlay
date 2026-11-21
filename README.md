@@ -687,10 +687,11 @@ overlay review <verb>
         per commit, so the head is cleared only when clear results or exemptions cover base..head as an
         unbroken chain, each range starting where the one before ended. It walks back from the head: each
         commit is held as above, the base its range names is the next commit, and the walk is done at the
-        base. It is refused at a gap (no result or exemption ends at a commit, which is also where a chain
-        that passes the base ends), at a range that is not clear and at a commit it already passed. stdout is
-        then one JSON object (head, base, outcome, and ranges, from the one that starts at the base, each with
-        base, head, results and exemptions). Without --base the check is by head alone. `--onto <rev>`
+        base, or at a range that starts at an ancestor of the base and covers no commit of it, as a branch
+        made on a merge commit of the base begins. It is refused at a gap (no result or exemption ends at a
+        commit, which is also where a chain that passes the base ends), at a range that is not clear and at a
+        commit it already passed. stdout is then one JSON object (head, base, outcome, and ranges, from the
+        one that starts at the base or at that ancestor, each with base, head, results and exemptions). Without --base the check is by head alone. `--onto <rev>`
         names the integration branch of the delivery (main, a tracker or a dev branch) and starts the chain at
         the one merge base of that branch and the head, which the engine finds, so the role does not compute
         it when the branch moved on after the head's branch was made: it is the check of `--base <that merge
