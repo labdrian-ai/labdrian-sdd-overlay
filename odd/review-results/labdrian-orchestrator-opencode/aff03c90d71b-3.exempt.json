@@ -1,0 +1,36 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "782a5a8b5571c042a56a49032e5b8383ce4b8c6c",
+    "head": "aff03c90d71bbf88c977f5f8a8960f87f4fd0cfb",
+    "diff_sha256": "842990ca3b3b121538a9e3bc58e093047cecdbb52b21e4d80d5e7e6c270adac5",
+    "paths": [
+      "odd/tasks/labdrian-orchestrator-opencode.md"
+    ]
+  },
+  "risk": "none",
+  "report": {
+    "checks": [
+      {
+        "command": "git -C /home/labdrian/labdrian-sdd-overlay-worktrees/labdrian-orchestrator-opencode diff --name-only 782a5a8b aff03c90",
+        "result": "pass",
+        "output": "odd/tasks/labdrian-orchestrator-opencode.md"
+      },
+      {
+        "command": "git -C /home/labdrian/labdrian-sdd-overlay-worktrees/labdrian-orchestrator-opencode log -1 --format=%B aff03c90",
+        "result": "pass",
+        "output": "docs(odd): shape T69, merge main into the branch\n\nT69 (S3) and its design L194: resolve the six conflicts of merging origin/main 21d5c233 into the branch, keeping both sides.\n\nRisk: none\n(the last line is 'Risk: none'; there is no Co-Authored-By line)"
+      },
+      {
+        "command": "git -C /home/labdrian/labdrian-sdd-overlay-worktrees/labdrian-orchestrator-opencode rev-list --parents -n 1 aff03c90; git -C /home/labdrian/labdrian-sdd-overlay-worktrees/labdrian-orchestrator-opencode rev-parse 782a5a8b",
+        "result": "pass",
+        "output": "aff03c90d71bbf88c977f5f8a8960f87f4fd0cfb 782a5a8b5571c042a56a49032e5b8383ce4b8c6c\n782a5a8b5571c042a56a49032e5b8383ce4b8c6c\n(one parent, and it equals the full hash of 782a5a8b)"
+      },
+      {
+        "command": "git -C /home/labdrian/labdrian-sdd-overlay-worktrees/labdrian-orchestrator-opencode diff --numstat 782a5a8b aff03c90; git -C /home/labdrian/labdrian-sdd-overlay-worktrees/labdrian-orchestrator-opencode diff -U0 782a5a8b aff03c90 | rg -n '^(@@|\\+[^+])'",
+        "result": "pass",
+        "output": "21\t0\todd/tasks/labdrian-orchestrator-opencode.md\nThere are two hunks, and both only add lines. '@@ -110,0 +111 @@' adds one line: the T69 task line. '@@ -1116,0 +1118,20 @@' adds 20 lines that start with '- **L194** (2026-11-21, shaper) — T69 designed: ...'. No line is deleted and no earlier line is changed."
+      }
+    ]
+  }
+}

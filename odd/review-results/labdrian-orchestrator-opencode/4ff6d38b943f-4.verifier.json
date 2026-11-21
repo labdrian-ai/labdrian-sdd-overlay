@@ -1,0 +1,18 @@
+{
+  "verdicts": [
+    {
+      "id": "F1",
+      "result": "not-run",
+      "command": "none",
+      "output": "SUGGESTION: The merged CHANGELOG entry for known error #6179 says the walk ends when the commit the range ends at, whose first parent is the start, is not in the base. The code (chain.go startsInBase) tests the o",
+      "base_result": "not-run"
+    },
+    {
+      "id": "F2",
+      "result": "not-run",
+      "command": "none",
+      "output": "SUGGESTION: Unreleased has no entry for the `review findings` verb or its four skip reasons, including `verdict base-reproduced`. Main has carried this gap since T1 (review 720f16760340-3 F1, reproduced at base) ",
+      "base_result": "not-run"
+    }
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "kind": "sweeper",
+  "base": "aff03c90d71bbf88c977f5f8a8960f87f4fd0cfb",
+  "head": "4ff6d38b943f4845c843398f846b02d8a51c1ed5",
+  "diff_sha256": "515015c504d511010bb7189c88fa23a6c0956a6e1dbbc9bbe424dfc05e8fe295",
+  "sweep": "4ff6d38b943f-1.sweep.json",
+  "commit": null,
+  "candidates": [
+    {
+      "candidate": "T3: ?? CLAUDE.md",
+      "disposition": "live",
+      "evidence": "Owner decision L160 (odd/tasks/labdrian-orchestrator-opencode.md line 952, 2026-11-20). The owner said, verbatim, \"se quedan los files de wiki\". The file is kept: no role deletes it, and delivery does not commit it unless the owner says so. It is still untracked in git status. Not removed, moved or committed."
+    },
+    {
+      "candidate": "T3: ?? docs/wiki/.format",
+      "disposition": "live",
+      "evidence": "Owner decision L160 (odd/tasks/labdrian-orchestrator-opencode.md line 952, 2026-11-20). The owner said, verbatim, \"se quedan los files de wiki\". git status shows docs/wiki/ untracked as a whole directory, which includes .format. It is kept: no role deletes it, and delivery does not commit it unless the owner says so. Not removed, moved or committed."
+    },
+    {
+      "candidate": "T3: ?? docs/wiki/README.md",
+      "disposition": "live",
+      "evidence": "Owner decision L160 (odd/tasks/labdrian-orchestrator-opencode.md line 952, 2026-11-20). The owner said, verbatim, \"se quedan los files de wiki\". The file is kept: no role deletes it, and delivery does not commit it unless the owner says so. It is still untracked in git status under docs/wiki/. Not removed, moved or committed."
+    }
+  ]
+}
