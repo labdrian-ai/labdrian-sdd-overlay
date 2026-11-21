@@ -1,0 +1,36 @@
+{
+  "version": 3,
+  "project_id": "labdrian-sdd-overlay",
+  "goal_id": "review-chain-integration-base",
+  "objective": "Deliver the branch fix/review-chain-integration-base so that the review chain is done at a range that starts at an ancestor of the delivery base, and review check --base/--onto and review anchor --merge clear a branch made on a main merge commit that later merged main in (memorycard #6179), per odd/tasks/review-chain-integration-base.md.",
+  "scope": "The specs S1-S3 of odd/tasks/review-chain-integration-base.md; one workflow for T1, in the worktree /home/labdrian/labdrian-sdd-overlay-worktrees/review-chain-integration-base.",
+  "constraints": [
+    "The regression test reproducing the branch shape is written first and fails before the fix with the Risk-trailer refusal naming the main merge commit.",
+    "A range whose oldest covered commit is already in the base stays refused unless the owner decides otherwise (S2).",
+    "Every commit is reviewed or exempted, and labdrian review check clears it.",
+    "Merge only after green CI; push, pull request and merge follow the owner's word."
+  ],
+  "non_goals": [
+    "Changing review.FirstUnreviewed or the standing/hunt walk.",
+    "Editing other features' documents, such as odd/tasks/own-rdd.md.",
+    "Changes to CheckOnto or CheckLanding beyond what the chain rule requires."
+  ],
+  "acceptance_criteria": [
+    "T1 of odd/tasks/review-chain-integration-base.md is checked off with its commit.",
+    "The regression test of S3 (a) passes, and cd engine && GOTOOLCHAIN=go1.26.1 TMPDIR=/home/labdrian/.cache go test ./... passes.",
+    "TestCheckBaseRefusesAChainThatDoesNotReachTheBase passes unchanged.",
+    "labdrian review check --onto main clears the head of the pull request."
+  ],
+  "memory_directive": {
+    "version": 1,
+    "scope": "project",
+    "sources": [
+      "engram",
+      "longterm-mem",
+      "procedural-skills"
+    ],
+    "write": "none"
+  },
+  "runtime_scope": "Claude Code, as the parent that runs the labdrian workflow and the role agents.",
+  "delivery_boundary": "Work-unit commits on fix/review-chain-integration-base, merged into main after green CI as the owner said (L1); then CI of PR #789 is re-run."
+}
