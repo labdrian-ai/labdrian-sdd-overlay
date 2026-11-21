@@ -1,0 +1,37 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "39574646fec7c989300aab3ecdb373230214ab8b",
+    "head": "86645d3b45b45576f6bcf2f685e6a0b397815e2d",
+    "diff_sha256": "317a41eb7bdc1a19e6b6745741d7bc518828e2789c349c236520ad5ca4350366",
+    "paths": [
+      "odd/goals/review-chain-integration-base.json",
+      "odd/tasks/review-chain-integration-base.md"
+    ]
+  },
+  "risk": "none",
+  "report": {
+    "checks": [
+      {
+        "command": "git -C /home/labdrian/labdrian-sdd-overlay-worktrees/review-chain-integration-base diff --name-only 39574646 86645d3b",
+        "result": "pass",
+        "output": "odd/goals/review-chain-integration-base.json\nodd/tasks/review-chain-integration-base.md\n(exit 0; only the two odd/ paths, no source, test or config path)"
+      },
+      {
+        "command": "git -C /home/labdrian/labdrian-sdd-overlay-worktrees/review-chain-integration-base log -1 --format=%B 86645d3b",
+        "result": "pass",
+        "output": "docs(odd): shape review-chain-integration-base\n\nFeature document and goal file for the fix of known error #6179: the review chain is done at a range that starts in the integration base. S2 decided by the owner (L3).\n\nRisk: none\n(exit 0; the last trailer is 'Risk: none' and there is no Co-Authored-By line)"
+      },
+      {
+        "command": "jq -e . /home/labdrian/labdrian-sdd-overlay-worktrees/review-chain-integration-base/odd/goals/review-chain-integration-base.json",
+        "result": "pass",
+        "output": "exit 0 (stdout was sent to /dev/null)"
+      },
+      {
+        "command": "git -C /home/labdrian/labdrian-sdd-overlay-worktrees/review-chain-integration-base rev-list --parents -n 1 86645d3b",
+        "result": "pass",
+        "output": "86645d3b45b45576f6bcf2f685e6a0b397815e2d 39574646fec7c989300aab3ecdb373230214ab8b\n(exit 0; one parent, which git rev-parse 39574646 resolves to 39574646fec7c989300aab3ecdb373230214ab8b)"
+      }
+    ]
+  }
+}
