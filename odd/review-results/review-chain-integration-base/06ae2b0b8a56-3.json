@@ -1,0 +1,106 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "86645d3b45b45576f6bcf2f685e6a0b397815e2d",
+    "head": "06ae2b0b8a56340bb28d51aac0e831ab978c467a",
+    "diff_sha256": "497127a2220f639782339358c81053146fbfaab5ff16fe85d3aa6729c65521ad",
+    "paths": [
+      "CHANGELOG.md",
+      "README.md",
+      "engine/cmd/review.go",
+      "engine/cmd/review_check_chain_test.go",
+      "engine/cmd/usage.go",
+      "engine/review/app/chain.go",
+      "engine/review/app/needs_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability",
+    "hunt"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "86645d3b45b45576f6bcf2f685e6a0b397815e2d",
+      "head": "06ae2b0b8a56340bb28d51aac0e831ab978c467a",
+      "diff_sha256": "497127a2220f639782339358c81053146fbfaab5ff16fe85d3aa6729c65521ad"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "README.md",
+        "engine/cmd/review.go",
+        "engine/cmd/review_check_chain_test.go",
+        "engine/cmd/usage.go",
+        "engine/review/app/chain.go",
+        "engine/review/app/needs_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "CHANGELOG.md:9",
+        "severity": "SUGGESTION",
+        "claim": "The changelog states the S2 guard wrongly. It says the walk ends when 'the commit the range ends at, whose first parent is that start, is not in the base either'. The code (chain.go:85-93, startsInBase) tests 'oldest' instead: the oldest commit the range covers, whose first parent is start. That is the same commit as the one the range ends at only for a one-commit range. For a multi-commit range, the changelog describes a weaker check: the range's end commit is never in the base whenever oldest is not. A reader auditing the safety rule from the changelog would get the guard wrong. The code comment at chain.go:103-106 and the Spec S2 say it correctly.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "CHANGELOG.md:9",
+          "engine/review/app/chain.go:85-93",
+          "engine/review/app/chain.go:103-121",
+          "odd/tasks/review-chain-integration-base.md:14"
+        ]
+      },
+      {
+        "id": "F2",
+        "location": "engine/cmd/review_check_chain_test.go:92-97",
+        "severity": "SUGGESTION",
+        "claim": "The doc comment of topicMadeOnAMainMerge says 'It returns M, the first commit of topic and the merge of main into topic' (three values). The function returns four: (m, first, merged, tip). tip, the head both new tests check, is missing from the comment.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/cmd/review_check_chain_test.go:92-97"
+        ]
+      },
+      {
+        "id": "F3",
+        "location": "engine/review/app/needs_test.go:484-510",
+        "severity": "SUGGESTION",
+        "claim": "At the unit level (fakeGit), the new stop is tested only for its failure path (IsAncestor errors) and for the no-call path (start == base). No app-level test drives startsInBase to true (start in base, oldest not) or to false through the second step (start in base, oldest also in base), and none checks which commits are asked. Both branches are pinned only indirectly, by real-repo cmd tests. The S2 guard is pinned by the 'a range that begins before the base' subtest (review_check_chain_test.go:183-189), and the start-in-base step indirectly by TestCheckBaseRefusesAChainWithAGap. As a result, the exact IsAncestor argument order (commit, base) and the choice of 'oldest' rather than 'end' have no direct, cheap assertion. A mutant that passed end instead of oldest would survive any test whose ranges cover only one commit.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/review/app/needs_test.go:484-510",
+          "engine/review/app/chain.go:107-121",
+          "engine/review/app/fakes_test.go:317-323"
+        ]
+      },
+      {
+        "id": "F4",
+        "location": "engine/review/app/chain.go:89-94",
+        "severity": "SUGGESTION",
+        "claim": "The new stop widens the existing caveat about a caller-named base. Before, a wrong --base cleared only when it sat on the head's first-parent line, because the walk had to reach it exactly. Now any commit that has the start of some range among its ancestors also ends the chain, and the output then reports that commit as base. Example: another branch that already merged part of the topic. The clearance is still sound relative to the base given: by the closure argument in startsInBase, every first-parent commit covered is in base..head, and no commit of base..head on that line is left out. But a mistaken or adversarial --base (not --onto or anchor --merge, which compute the merge base) can now shorten the delivery in more shapes than the help sentence 'a commit of the head's own branch given as --onto shortens the chain, as a wrong --base does' covers. That sentence was not updated.",
+        "evidence_class": "inferential",
+        "causal_disposition": "behavior-activated",
+        "proof_refs": [
+          "engine/review/app/chain.go:89-94",
+          "engine/cmd/usage.go:177-179"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full diff at the given scratchpad path (fix1.diff, 319 lines) covering all seven changed paths.",
+      "Read engine/review/app/chain.go at head in full: CheckChain loop, new startsInBase, changed insideRange return of oldest, Checked.start.",
+      "Checked the IsAncestor port contract (app.go:144-146: a ancestor of b or b itself), the gitexec adapter (gitexec.go:779-798, full object names required), and the fakeGit (fakes_test.go:317-323). The argument order IsAncestor(repo, commit, base) in startsInBase is correct.",
+      "Checked landing.go:55-109: anchor --merge passes the computed merge base to CheckChain, so in the #6179 shape (merge base not on the topic's first-parent line) the new stop applies.",
+      "Read the existing cmd tests at review_check_chain_test.go:150-281. The 'a range that begins before the base' subtest reaches startsInBase with start=w.head (in base mid) and oldest=mid (in base), so the S2 guard is exercised. The gap test exercises the start-in-base step (start=mid, oldest=tip, neither in base).",
+      "Safety argument re-derived. Ancestors of B are closed under parents, so when oldest is not in B, no newer commit on the head's first-parent line is in B. Commits on that line older than start are ancestors of start, hence of B, hence outside base..head. Criss-cross shape checked by hand (topic t1 merged into main, then main merged into topic, then t3): the walk ends at t1..t2, and the remaining ranges cover exactly t2, X and t3, the first-parent commits of base..head. A head that is itself in the base: oldest is an ancestor of the head, so it is in the base and the walk is not done; no new clearance. A range whose start is off the first-parent line is refused by insideRange (no parent) before the done check. I found no input that clears a chain leaving a first-parent commit of base..head uncovered. Second-parent sides of merges stay covered by the merge's own range, as before.",
+      "Grep for consumers of Chained.Ranges outside tests: only engine/cmd/review.go:590-592 prints them. Nothing assumes Ranges[0].Base == Chained.Base.",
+      "Compared README.md and usage.go help text with the code; their wording ('starts at an ancestor of the base and covers no commit of it') matches the rule.",
+      "Criteria read: odd/tasks/review-chain-integration-base.md S1, S2, S3, L2 and L3. S2 is Decided by the owner in L3 and implemented as written.",
+      "Not run: no tests, builds or git commands were executed (review is read-only)."
+    ]
+  }
+}

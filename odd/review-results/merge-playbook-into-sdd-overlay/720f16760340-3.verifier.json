@@ -1,0 +1,11 @@
+{
+  "verdicts": [
+    {
+      "id": "F1",
+      "result": "reproduced",
+      "command": "head (worktree /home/labdrian/labdrian-sdd-overlay-playbook-merge-worktrees/review-720f16760340 at 720f1676): rg -n 'findings --feature|findings feed|left_out|review findings|base-reproduced' CHANGELOG.md; head -30 CHANGELOG.md; git diff --name-only 991f1db0 720f1676; git show 720f1676:engine/review/app/findings.go | rg -n 'ReasonBaseReproduced|base-reproduced'. base: git show 991f1db0:CHANGELOG.md | rg -n 'findings --feature|findings feed|left_out|review findings|base-reproduced'; git show 991f1db0:engine/cmd/usage.go | rg -n 'findings --feature'; git show 991f1db0:engine/review/app/findings.go | rg -c 'base-reproduced'; git status --short",
+      "output": "Head: rg on CHANGELOG.md returned no matches (rc=1). CHANGELOG.md line 3 is '## Unreleased', followed by '### Added'. That section lists many other behavior changes, such as 'labdrian review launch --runtime claude', 'review check --onto <rev>', 'labdrian review verify' and 'labdrian review stop-hook'. git diff --name-only 991f1db0 720f1676 lists README.md, bin/lib/usage.sh, engine/cmd/review_test.go, engine/cmd/usage.go, engine/review/app/findings.go, engine/review/app/findings_test.go, odd/review-results/README.md and odd/tasks/merge-playbook-into-sdd-overlay.md. CHANGELOG.md is not among them. At head, findings.go line 21 is 'ReasonBaseReproduced = \"verdict base-reproduced\"' and line 108 is 'return ReasonBaseReproduced'. Base: rg on base CHANGELOG.md returned no matches (rc=1). Base engine/cmd/usage.go:264 already has 'engine review findings --feature <name> --stored <result> [--cwd <repo>]', so the gap was already there for the findings verb. Base findings.go has no 'base-reproduced' string, because the new reason is introduced at head. git status --short printed nothing (exit 0); the worktree was not modified.",
+      "base_result": "reproduced"
+    }
+  ]
+}

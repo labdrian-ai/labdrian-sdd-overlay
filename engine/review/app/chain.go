@@ -16,7 +16,7 @@ type Range struct {
 
 // Chained is what CheckChain found out about a head that is cleared as the end of an unbroken chain from a base: the
 // full names of both and the ranges, from the one that starts at Base to the one that ends at Head, each starting where
-// the one before ended.
+// the one before ended. The first range starts at Base, or at an ancestor of Base when the chain was done there.
 type Chained struct {
 	Base, Head string
 	Ranges     []Range
@@ -29,7 +29,10 @@ type Chained struct {
 //
 // The walk goes back from the head. At each commit it asks what Check asks of a head (cleared), so every result and
 // every exemption that binds the commit is held to its file and to git again and must be clear (review.Cleared), and
-// the base of the range it follows is the next commit. It is done when that base is the delivery base. It is refused
+// the base of the range it follows is the next commit. It is done when that base is the delivery base, or when it is an
+// ancestor of the delivery base, a commit the integration branch already has, and the range covers no commit of the base
+// (startsInBase): a branch made on a merge commit of main begins there, and that commit is not its merge base. The ranges
+// then start from that range, and Chained.Base stays the delivery base. It is refused
 // when no result or exemption ends at a commit (a gap, which is also where a chain that begins after the base ends, and
 // where one that passes the base ends), when a range is not clear or does not hold, when git or the store fails, and
 // when the walk comes back to a commit it already passed (review.ErrChainLoops): each step takes a commit not passed
@@ -79,10 +82,17 @@ func (s Service) CheckChain(dir, feature, base, head string) (Chained, error) {
 		if start != baseName && passed[start] {
 			return Chained{}, refused(fmt.Errorf("%w: %s", review.ErrChainLoops, start))
 		}
-		if err := s.insideRange(repo, feature, names, parent, start); err != nil {
+		oldest, err := s.insideRange(repo, feature, names, point, parent, start)
+		if err != nil {
 			return Chained{}, refused(err)
 		}
-		if start == baseName {
+		done := start == baseName
+		if !done && start != "" {
+			if done, err = s.startsInBase(repo, baseName, start, oldest); err != nil {
+				return Chained{}, refused(err)
+			}
+		}
+		if done {
 			slices.Reverse(chain.Ranges)
 			return chain, nil
 		}
@@ -90,26 +100,48 @@ func (s Service) CheckChain(dir, feature, base, head string) (Chained, error) {
 	}
 }
 
+// startsInBase says whether a range that starts at start, not the delivery base, ends the chain: start is a commit the
+// base already has, and the range does not pass it, which is when oldest, the commit the range covers whose first parent
+// is start, is not in the base either (S2). The commits of the base are closed under their parents, so no commit newer
+// than oldest on the walk is in it, and the range covers only commits of base..head.
+func (s Service) startsInBase(repo Repository, base, start, oldest string) (bool, error) {
+	for _, step := range []struct {
+		commit string
+		want   bool
+	}{{start, true}, {oldest, false}} {
+		in, err := s.git.IsAncestor(repo, step.commit, base)
+		if err != nil {
+			return false, fmt.Errorf("ask whether %s is in the base %s: %w", step.commit, base, err)
+		}
+		if in != step.want {
+			return false, nil
+		}
+	}
+	return true, nil
+}
+
 // insideRange holds the commits a range covers besides the one it ends at to what a commit needs but its review
 // (own-rdd T6b5, S6 f): from first, the first parent of the commit the range ends at, back to start, the commit the range
 // starts from and which the range does not cover. The commit the range ends at is held with its review by cleared. A
 // commit that lacks something is refused with the first thing it lacks. A walk that reaches a commit with no parent
-// before start is refused.
-func (s Service) insideRange(repo Repository, feature string, names []string, first, start string) error {
+// before start is refused. It returns the oldest commit the range covers, the one whose first parent is start: the last
+// commit it held, or end, the commit the range ends at, when first is start.
+func (s Service) insideRange(repo Repository, feature string, names []string, end, first, start string) (string, error) {
+	oldest := end
 	for commit := first; commit != start; {
 		if commit == "" {
-			return fmt.Errorf("the commits down to %s cannot be walked: the first commit has no parent", start)
+			return "", fmt.Errorf("the commits down to %s cannot be walked: the first commit has no parent", start)
 		}
 		facts, parent, err := s.commitFacts(repo, feature, names, commit)
 		if err != nil {
-			return err
+			return "", err
 		}
 		if needs := review.Needs(facts); len(needs) > 0 {
-			return needs[0].Err
+			return "", needs[0].Err
 		}
-		commit = parent
+		oldest, commit = commit, parent
 	}
-	return nil
+	return oldest, nil
 }
 
 // start is the commit the range that clears the commit ends at starts from: the base of the first result that binds it,

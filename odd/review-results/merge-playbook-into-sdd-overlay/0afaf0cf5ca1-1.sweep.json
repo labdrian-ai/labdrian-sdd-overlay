@@ -1,0 +1,26 @@
+{
+  "kind": "sweep",
+  "base": "a6bee44f3e1ce9f15104c5daa08000285621ade7",
+  "head": "0afaf0cf5ca10dd8403a88e12eabe6663bbb7e78",
+  "diff_sha256": "e8cba6f6b764d80c57ca6eef48982084af783ebc86aa8ec45b9e882dcac267ea",
+  "outcome": "fired",
+  "t1": {
+    "deleted_or_renamed": [],
+    "removed_names": []
+  },
+  "t2": [],
+  "t3": [
+    " M bin/lib/usage.sh",
+    " M engine/cmd/dispatch_routes_test.go",
+    " M engine/cmd/review.go",
+    " M engine/cmd/review_exempt_test.go",
+    " M engine/cmd/review_test.go",
+    " M engine/cmd/usage.go",
+    "?? engine/cmd/review_findings.go",
+    "?? engine/cmd/review_findings_test.go"
+  ],
+  "t4": {
+    "leftovers": [],
+    "orphaned_fixtures": []
+  }
+}

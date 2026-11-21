@@ -1,0 +1,18 @@
+{
+  "verdicts": [
+    {
+      "id": "F1",
+      "result": "not-run",
+      "command": "none",
+      "output": "SUGGESTION: The doc comment of topicMadeOnAMainMerge says it returns three commits (M, the first commit of topic and the merge of main into topic), but the function returns four: m, first, merged and tip. The com",
+      "base_result": "not-run"
+    },
+    {
+      "id": "F2",
+      "result": "not-run",
+      "command": "none",
+      "output": "SUGGESTION: The unit tests cover only the IsAncestor failure and the no-ancestry call on a chain that reaches the base. The two-step decision in startsInBase (start in base and oldest not in base) is never assert",
+      "base_result": "not-run"
+    }
+  ]
+}

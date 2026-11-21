@@ -25,6 +25,8 @@ package main
 // (review_frozen_context.go) prints the brief on stdin followed by the frozen context of its candidate, the bytes
 // launch hands a Claude reviewer, and starts and stores nothing. 'review proposals [--cwd <repo>]' prints the worktrees
 // and branches the owner may remove and the git command for each, and deletes and stores nothing (review_proposals.go).
+// 'review findings --feature <name> --stored <result> [--cwd <repo>]' lists the findings of a stored result that count
+// as evidence and the ones left out, with the reason, and stores nothing (review_findings.go).
 // 'review stop-hook' is the odd one out: the
 // Claude Code Stop hook that blocks the stop of an agent whose branch has a commit no review covers, which Claude Code
 // starts and a person does not (review_stop_hook.go).
@@ -64,7 +66,7 @@ const reviewGitMaxOutput = 256 << 20
 // in an exit that ends nothing.
 func runReview(p process, d deps, args []string) {
 	if len(args) == 0 {
-		fmt.Fprintln(p.stderr, "error: review requires a verb: bind, record, verify, check, exempt, sweep, anchor, launch, frozen-context, proposals, ci")
+		fmt.Fprintln(p.stderr, "error: review requires a verb: bind, record, verify, check, exempt, sweep, anchor, launch, frozen-context, proposals, ci, findings")
 		p.exit(1)
 		return
 	}
@@ -91,10 +93,12 @@ func runReview(p process, d deps, args []string) {
 		runReviewProposals(p, d, args[1:])
 	case "ci":
 		runReviewCI(p, d, args[1:])
+	case "findings":
+		runReviewFindings(p, d, args[1:])
 	case reviewStopVerb:
 		runReviewStopHook(p, d, args[1:])
 	default:
-		fmt.Fprintf(p.stderr, "error: review: unknown verb %q (expected bind, record, verify, check, exempt, sweep, anchor, launch, frozen-context, proposals or ci)\n", args[0])
+		fmt.Fprintf(p.stderr, "error: review: unknown verb %q (expected bind, record, verify, check, exempt, sweep, anchor, launch, frozen-context, proposals, ci or findings)\n", args[0])
 		p.exit(1)
 	}
 }
@@ -499,8 +503,8 @@ type reviewCheckedJSON struct {
 }
 
 // reviewChainJSON is what 'review check --base' prints for a head that is cleared from the base by an unbroken chain of
-// reviews: both as full object names, the outcome and the ranges, from the one that starts at the base to the one that
-// ends at the head, each with the files that clear it.
+// reviews: both as full object names, the outcome and the ranges, from the one that starts at the base, or at an ancestor
+// of it that no covered commit passes, to the one that ends at the head, each with the files that clear it.
 type reviewChainJSON struct {
 	Head    string            `json:"head"`
 	Base    string            `json:"base"`

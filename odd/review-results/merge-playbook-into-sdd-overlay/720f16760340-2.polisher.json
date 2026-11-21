@@ -1,0 +1,23 @@
+{
+  "kind": "polisher",
+  "base": "991f1db0a57cdf6083b6d6551062509524c8fa95",
+  "head": "720f1676034079a59847a534c75df5bc024d1a34",
+  "diff_sha256": "763e035c17406bc5ed02ede05e6d477c2e067b2fd1f0bdfcf519809baf2188c6",
+  "findings": {
+    "findings": [],
+    "evidence": [
+      "Compared leftOutReason (engine/review/app/findings.go:93-113) with severeFinding (engine/reviewverdict/decide.go:98-122) for every combination of causal disposition, head result, base_result and no verdict. They agree.",
+      "pre-existing and base-only are left out before any verdict is read. This matches fateOfTheBase.",
+      "For unknown disposition, head not-reproduced returns ReasonNotReproduced first. This matches fateRefuted, and the base check does not run ahead of it.",
+      "For unknown disposition with base reproduced and head reproduced or not-run, the finding is left out as base-reproduced. This matches fateOfTheBase.",
+      "For unknown disposition with base not-reproduced or not-run, the finding is kept. This matches fateBlocks or fateUnchecked.",
+      "For introduced, behavior-activated and worsened dispositions, base_result is ignored. This matches severeFinding.",
+      "With no verdict, the finding is kept. Decide reads it as an unchecked finding, so it is listed as unverified.",
+      "The four help texts (engine/cmd/usage.go:268-269, bin/lib/usage.sh:396-402, README.md:829-833, odd/review-results/README.md:47) state the same rule and the same reason string, `verdict base-reproduced`.",
+      "TestFindingsKeepsASevereFindingExactlyWhenDecideListsItAsBlockingOrUnverified (engine/review/app/findings_test.go:239-272) runs BLOCKER and CRITICAL over 6 dispositions, 3 head results plus no verdict, and 3 base results. It compares each against reviewverdict.Decide, so a drift in either function fails it.",
+      "TestFindingsLeavesOutASevereUnknownFindingTheVerdictFoundOnBase and TestFindingsKeepsWhatTheBaseRuleDoesNotReach (findings_test.go:202-235) pin the reason string and the boundary cases. These include base reproduced with head not-reproduced, which keeps not-reproduced as the reason.",
+      "The wrapper parity test and the README test (engine/cmd/review_test.go:1242-1292) assert the new reason phrase in the engine usage, the wrapper usage and the README.",
+      "Not run: I did not execute the tests or the build, so this is a reading of the code only."
+    ]
+  }
+}

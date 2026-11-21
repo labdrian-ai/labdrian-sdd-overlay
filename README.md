@@ -717,10 +717,11 @@ overlay review <verb>
         per commit, so the head is cleared only when clear results or exemptions cover base..head as an
         unbroken chain, each range starting where the one before ended. It walks back from the head: each
         commit is held as above, the base its range names is the next commit, and the walk is done at the
-        base. It is refused at a gap (no result or exemption ends at a commit, which is also where a chain
-        that passes the base ends), at a range that is not clear and at a commit it already passed. stdout is
-        then one JSON object (head, base, outcome, and ranges, from the one that starts at the base, each with
-        base, head, results and exemptions). Without --base the check is by head alone. `--onto <rev>`
+        base, or at a range that starts at an ancestor of the base and covers no commit of it, as a branch
+        made on a merge commit of the base begins. It is refused at a gap (no result or exemption ends at a
+        commit, which is also where a chain that passes the base ends), at a range that is not clear and at a
+        commit it already passed. stdout is then one JSON object (head, base, outcome, and ranges, from the
+        one that starts at the base or at that ancestor, each with base, head, results and exemptions). Without --base the check is by head alone. `--onto <rev>`
         names the integration branch of the delivery (main, a tracker or a dev branch) and starts the chain at
         the one merge base of that branch and the head, which the engine finds, so the role does not compute
         it when the branch moved on after the head's branch was made: it is the check of `--base <that merge
@@ -876,6 +877,18 @@ overlay review <verb>
         markers found (comma-separated, in tree order) or the remotes, each ending `the no-CI closure does not apply`. A
         missing flag, a revision git cannot resolve and a failing git are non-zero too and never print `CI: none
         configured`. Nothing is stored. Exit 0 no CI configured, 1 refusal, usage error or any other failure.
+    findings --feature <name> --stored <result> [--cwd <repo>]
+        Lists the findings of the stored result `<head12>-<n>.json` that count as evidence for the learning loop, reading
+        the result and the verdict stored beside it as `verify` and `check` read them. stdout is one JSON object
+        `{review, verdict, kept, left_out}`: `review` is `<feature>/<head12>-<n>`, `verdict` is the stored verdict that was
+        read and is left out when the verifier did not run, `kept` lists the findings that count as evidence (id,
+        location, severity, claim, evidence_class, causal_disposition, proof_refs), in the order of the reply, and
+        `left_out` lists each of the others (id, severity, reason). A finding is left out when its causal_disposition is
+        pre-existing or base-only (reason `causal_disposition pre-existing` or `causal_disposition base-only`), or when
+        it is a BLOCKER or CRITICAL that the verdict found not-reproduced (reason `verdict not-reproduced`), or when it
+        is a BLOCKER or CRITICAL of causal_disposition unknown that the verdict found reproduced on base (reason
+        `verdict base-reproduced`). Both lists are always there. A result that is not stored, is not one, or whose verdict does not hold is refused, never an
+        empty list. Nothing is stored. Exit 0 listed, 1 usage error, a result that cannot be read or any other failure.
     stop-hook
         Not run by a person: the Claude Code Stop hook that `install-hooks` wires (the review stop-hook, described
         below as `gentle-ai-overlay review stop-hook`). It asks the agent for what the first commit with unfinished

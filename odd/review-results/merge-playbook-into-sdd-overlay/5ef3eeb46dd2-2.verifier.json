@@ -1,0 +1,25 @@
+{
+  "verdicts": [
+    {
+      "id": "F1",
+      "result": "reproduced",
+      "command": "head (in /home/labdrian/labdrian-sdd-overlay-playbook-merge-worktrees/review-5ef3eeb46dd2): bat -pp -r 380:400 bin/lib/usage.sh; bat -pp -r 258:275 engine/cmd/usage.go; rg -n 'left out when the verifier|verdict.*left out|omitted' odd/review-results/README.md; rg -n omitempty engine/cmd/review_findings.go; cd engine && go run ./cmd/ review findings --feature own-rdd --stored 09ee88a0fe00-1.json --cwd <worktree> | jq -c keys; rg -n 'Wrapper.*Findings|Findings.*Wrapper' engine/cmd; rg -n 'func TestWrapperUsage' engine/cmd. base: git show 0afaf0cf:bin/lib/usage.sh | rg -c 'findings --feature|review findings'; same for engine/cmd/usage.go; git show 0afaf0cf:engine/cmd/review_findings.go; git grep -n -E 'Wrapper.*Findings|Findings.*Wrapper' 0afaf0cf -- engine/cmd",
+      "output": "Head: bin/lib/usage.sh lines 387-395 read 'as one JSON object {review, verdict, kept, left_out}: review is NAME/HEAD12-N; a finding is left out ...' and do not say that verdict can be left out. engine/cmd/usage.go:263 reads 'verdict is the stored verdict that was read and is left out when the verifier did not run'. odd/review-results/README.md:46 reads '`verdict`, the stored verdict that was read (left out when the verifier did not run)'. engine/cmd/review_findings.go:16 has `Verdict string `json:\"verdict,omitempty\"`` (line 16, not the 108 the finding cites). There is no *.verifier.json for own-rdd/09ee88a0fe00, and go run ... review findings on that result exited 0 with keys [\"kept\",\"left_out\",\"review\"], so verdict is absent. The parity rg printed nothing (exit 1). The only wrapper parity tests are engine/cmd/review_launch_docs_test.go:48 (launch) and engine/cmd/review_test.go:1205 (verify). Base: neither usage file has a findings entry (rg -c printed nothing), and git show printed 'fatal: path engine/cmd/review_findings.go exists on disk, but not in 0afaf0cf'. The verb does not exist at base, so there is no drift there.",
+      "base_result": "not-reproduced"
+    },
+    {
+      "id": "F2",
+      "result": "reproduced",
+      "command": "head: rg -n 'causal_disposition pre-existing or base-only' engine/cmd/usage.go engine/cmd/review_findings_test.go; base: git grep -n 'causal_disposition pre-existing or base-only' 0afaf0cf -- engine/cmd/usage.go engine/cmd/review_findings_test.go",
+      "output": "Head: engine/cmd/usage.go:268 reads '(id, severity, reason). A finding is left out when its causal_disposition pre-existing or base-only (reason ...' (the verb 'is' is missing). engine/cmd/review_findings_test.go:167 pins the substring \"causal_disposition pre-existing or base-only\". Base: no match (exit 1).",
+      "base_result": "not-reproduced"
+    },
+    {
+      "id": "F3",
+      "result": "reproduced",
+      "command": "head: rg -n findings README.md; rg -n '^\\s*(bind|proposals|stop-hook|verify|check|launch|record|sweep|exempt)\\b' README.md; rg -n '^\\s+findings\\b' README.md; base: git grep -n findings 0afaf0cf -- README.md; git grep -n -E '^\\s+findings\\b' 0afaf0cf -- README.md",
+      "output": "Head: the review verb entries in README.md are bind 618, record 630, verify 648, check 664, exempt 700, sweep 725, record --role 746, launch 780, proposals 811 and stop-hook 823. No 'findings' verb entry exists. The only '^\\s+findings' match is line 754, which continues the description of record --role and is not an entry. The other 'findings' matches are prose. Base: the same 'findings' matches and no findings entry. The base engine has no findings verb (see F1), so the README is missing nothing there. The gap starts at head.",
+      "base_result": "not-reproduced"
+    }
+  ]
+}
