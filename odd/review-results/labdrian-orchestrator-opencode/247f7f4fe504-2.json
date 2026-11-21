@@ -1,0 +1,54 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "a410de63215c76d5b9e4250551b4cac509a332d3",
+    "head": "247f7f4fe50444219531e9c7fd3c676ce060d138",
+    "diff_sha256": "94d841f38c26bda4c69109fc4db82f0cb5e7c7643713c8b92971a841ba09ef9a",
+    "paths": [
+      "engine/capability/declarations.go",
+      "engine/cmd/memory_test.go",
+      "engine/cmd/phase7_acceptance_test.go",
+      "engine/enginetest/bind.go",
+      "engine/runtime/opencode_bridge_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "a410de63215c76d5b9e4250551b4cac509a332d3",
+      "head": "247f7f4fe50444219531e9c7fd3c676ce060d138",
+      "diff_sha256": "94d841f38c26bda4c69109fc4db82f0cb5e7c7643713c8b92971a841ba09ef9a"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/capability/declarations.go",
+        "engine/cmd/memory_test.go",
+        "engine/cmd/phase7_acceptance_test.go",
+        "engine/enginetest/bind.go",
+        "engine/runtime/opencode_bridge_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "engine/runtime/opencode_bridge_test.go:430-434",
+        "claim": "The comment says the project name is the basename of the directory the workflow is created from, and the test builds a `proj-1` workDir for that reason. BindRunning passes `--project proj-1` explicitly, so the basename plays no part. The comment and the directory naming mislead readers about what determines the project.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/runtime/opencode_bridge_test.go:430-434",
+          "engine/enginetest/bind.go:46-48"
+        ]
+      }
+    ],
+    "evidence": [
+      "I read only the diff. BindRunning replaces phase7World's own steps in the phase 7 acceptance test. The original `createWorkflow` and `goalPath` are not in the diff, so I cannot confirm the goal file name and the goal id `goal-1` match the old behaviour. I raise no finding on that."
+    ]
+  }
+}

@@ -1,0 +1,69 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "95d4e2549703d328aa8ab40c6a5107c7490c3a1c",
+    "head": "8b179b0e9f216f87f5b5c6fa698952389be7d6ea",
+    "diff_sha256": "ff71baed6f198bfd5d160896c10c1685d503c2346f15c5818590313acec1f602",
+    "paths": [
+      "CHANGELOG.md",
+      "engine/runtime/opencode_agents.go",
+      "engine/runtime/opencode_agents_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability",
+    "hunt"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "95d4e2549703d328aa8ab40c6a5107c7490c3a1c",
+      "head": "8b179b0e9f216f87f5b5c6fa698952389be7d6ea",
+      "diff_sha256": "ff71baed6f198bfd5d160896c10c1685d503c2346f15c5818590313acec1f602"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "engine/runtime/opencode_agents.go",
+        "engine/runtime/opencode_agents_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "engine/runtime/opencode_agents.go:40",
+        "severity": "SUGGESTION",
+        "claim": "The new bullet tells OpenCode workers to put their `## Key Learnings` block at the end of their report. The plugin cuts the text it sends to `memorycard capture` to 256 KiB and keeps the start (memorycard-opencode-plugin.mjs:119-126: `bytes.subarray(0, end)`). So when a subagent's final text is longer than 256 KiB, the block this rule asks for is the part that gets cut, and nothing is captured; the only trace is the 'capture input truncated' log line. The truncation code was not changed; this commit makes it matter. A final reply this long is unlikely. Possible fixes: keep the tail when cutting, or keep the trailing Key Learnings section.",
+        "evidence_class": "inferential",
+        "causal_disposition": "behavior-activated",
+        "proof_refs": [
+          "engine/runtime/opencode_agents.go:40",
+          "engine/runtime/memorycard-opencode-plugin.mjs:34-35",
+          "engine/runtime/memorycard-opencode-plugin.mjs:119-126"
+        ]
+      },
+      {
+        "id": "F2",
+        "location": "engine/runtime/opencode_agents_test.go:139-142",
+        "severity": "SUGGESTION",
+        "claim": "The banned list gained `subagent-stop` and `orchestrator`, but the failure message still says each banned word is 'not a memorycard tool'. Neither word is a tool: one is Claude Code's hook and the other is the retired gentle-ai rule. If either word comes back, the failure will misdescribe what was found and why it is banned.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/runtime/opencode_agents_test.go:139-142"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full diff t61.diff.",
+      "Read T61 (line 103), L163, L166, the S13 L166 amendment and L167 (owner's approval of the exact R1 bullet).",
+      "The bullet at opencode_agents.go:40 equals the approved bullet; the arrow is a literal U+2192; the comment at :28-31 was updated.",
+      "Read opencode_agents.go:1-80 and opencode_agents_test.go:1-240.",
+      "Grep under engine/ for the block's text and 'Key Learnings': no golden pins the block.",
+      "Read memorycard-opencode-plugin.mjs:1-40 and :116-150.",
+      "Nothing was run."
+    ]
+  }
+}

@@ -1,0 +1,67 @@
+{
+  "verdicts": [
+    {
+      "id": "F1",
+      "result": "reproduced",
+      "command": "printf 'Use test-first.\\r\\n' and 'Use test-first.\\r\\n\\r\\n' | engine-<v> roles skill-paths --skills-root $S/skills | od -c, v in 46521de8 and 62828131",
+      "output": "Head: single CRLF gives '...first.\\r\\n\\n## Skills to load before work\\n<path>\\n' (mixed); double CRLF gives a stray '\\r' line before the section. Base: both byte-identical to input.",
+      "base_result": "not-reproduced"
+    },
+    {
+      "id": "F2",
+      "result": "reproduced",
+      "command": "brief 'Review commit abc123 for task T9.\\nCriteria: the builder must follow test-first; do not use branch-pr in this review.\\n' | engine-<v> roles skill-paths --skills-root <review worktree>/skills; read labdrian-runtime-parity-plugin.mjs:421-453,662-669 and opencode/agents/reviewer.md",
+      "output": "Head appends '## Skills to load before work' with test-first and branch-pr SKILL.md paths (the negated mention included); base byte-identical. The plugin runs resolveSkillPaths on every subagent launch with no agent check, before attachFrozenContext, so a reviewer launch gets it; reviewer.md has no read deny, its body says read nothing outside the worktree.",
+      "base_result": "not-reproduced"
+    },
+    {
+      "id": "F3",
+      "result": "not-run",
+      "command": "none",
+      "output": "SUGGESTION: folded into the T60 correction design.",
+      "base_result": "not-run"
+    },
+    {
+      "id": "F4",
+      "result": "not-run",
+      "command": "none",
+      "output": "SUGGESTION: folded into the T60 correction design.",
+      "base_result": "not-run"
+    },
+    {
+      "id": "F5",
+      "result": "not-run",
+      "command": "none",
+      "output": "SUGGESTION: folded into the T60 correction design.",
+      "base_result": "not-run"
+    },
+    {
+      "id": "F6",
+      "result": "not-run",
+      "command": "none",
+      "output": "SUGGESTION: folded into the T60 correction design.",
+      "base_result": "not-run"
+    },
+    {
+      "id": "F7",
+      "result": "not-run",
+      "command": "none",
+      "output": "SUGGESTION: folded into the T60 correction design.",
+      "base_result": "not-run"
+    },
+    {
+      "id": "F8",
+      "result": "not-run",
+      "command": "none",
+      "output": "SUGGESTION: folded into the T60 correction design.",
+      "base_result": "not-run"
+    },
+    {
+      "id": "F9",
+      "result": "reproduced",
+      "command": "same as -4 F1: harmless comment appended to the plugin, go test ./runtime/ -run TestOpenCodeBridgeLaunchesABuilderWithTheSkillItsProseNames",
+      "output": "FAIL only on the pinned constant (opencode_bridge_test.go:623).",
+      "base_result": "not-reproduced"
+    }
+  ]
+}

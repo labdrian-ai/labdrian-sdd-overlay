@@ -1,0 +1,29 @@
+{
+  "kind": "polisher",
+  "base": "0dc641cf062d516dc791676dfa98bc4ce55fec5e",
+  "head": "4fa090157fea2e770c4ab41a58b2d5c0c778e810",
+  "diff_sha256": "8231a4f3c3400a20616b154216af908217431b5973061f5bdb42cfb3cef89b41",
+  "findings": {
+    "findings": [
+      {
+        "id": "F1",
+        "location": "engine/cmd/session_availability.go:148-167",
+        "severity": "SUGGESTION",
+        "claim": "The 0-byte check treats a main file of size 0 as an uncreated store. A 0-byte main file next to a -wal file that holds data, which SQLite reads as non-empty, would be reported as 'has no store yet'. The builder notes this case (L188 R2) is untested. The line only informs and forbids nothing, so the effect is a wrong sentence in the block, not a blocked tool.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "evidence": [
+          "storeProblem returns uncreated=true on info.Size()==0 without looking for a sibling -wal file.",
+          "No test in the diff covers a 0-byte main file with a -wal beside it.",
+          "The only consequence is the informational no-store line, which forbids no tool and still allows reads."
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full diff t64c.diff.",
+      "Checked session_availability.go, projection/availability.go, the usage text, README, the ADR amendment and CHANGELOG for consistency: the Uncreated field is set only for a missing or empty store and read only for engram, and the new line forbids nothing.",
+      "Grepped the worktree outside odd/ for the old line text 'though the plan allows its reads.' and the old reason text 'MEMORYCARD_DB is not set': no stale copies.",
+      "Not run: go build, go test and the L188 R2 case."
+    ]
+  }
+}

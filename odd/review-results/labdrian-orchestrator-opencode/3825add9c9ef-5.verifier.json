@@ -1,0 +1,11 @@
+{
+  "verdicts": [
+    {
+      "id": "F1",
+      "result": "not-run",
+      "command": "none",
+      "output": "SUGGESTION: carried to the next batch (T62's carried suggestions), with the polisher's banned-string note.",
+      "base_result": "not-run"
+    }
+  ]
+}

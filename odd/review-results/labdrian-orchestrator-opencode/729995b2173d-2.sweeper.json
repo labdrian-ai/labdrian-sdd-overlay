@@ -1,0 +1,25 @@
+{
+  "kind": "sweeper",
+  "base": "16a719fc144f4653cbbf66db42dab5b63b03d2ae",
+  "head": "729995b2173db9401f7647931bbf6080c12b3913",
+  "diff_sha256": "d1f110ea52969dc0746fa79d1837075df4cd87053d83bf1a4dd17a167366ad53",
+  "sweep": "729995b2173d-1.sweep.json",
+  "commit": null,
+  "candidates": [
+    {
+      "candidate": "T3: ?? CLAUDE.md",
+      "disposition": "live",
+      "evidence": "Untracked wiki entry file the owner keeps (L160, verbatim: \"se quedan los files de wiki\"); CLAUDE.md tells agents to read docs/wiki/README.md first."
+    },
+    {
+      "candidate": "T3: ?? docs/wiki/.format",
+      "disposition": "live",
+      "evidence": "Untracked wiki file the owner keeps (L160, verbatim: \"se quedan los files de wiki\"); not deleted."
+    },
+    {
+      "candidate": "T3: ?? docs/wiki/README.md",
+      "disposition": "live",
+      "evidence": "Untracked wiki index the owner keeps (L160, verbatim: \"se quedan los files de wiki\"); read first by CLAUDE.md."
+    }
+  ]
+}

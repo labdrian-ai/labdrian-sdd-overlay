@@ -1,0 +1,48 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "402f1f0f3b7c9bc62dbc437975ebfd49f8cf593b",
+    "head": "e5ffe5ee1d8cd07aa3b151e0765c89f1324a7bb6",
+    "diff_sha256": "1d0031324fe387f6f6ff861ae526169351b8f9e0e6981f7a577d2da428c6a0bc",
+    "paths": [
+      "engine/review/risk.go",
+      "engine/review/risk_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "402f1f0f3b7c9bc62dbc437975ebfd49f8cf593b",
+      "head": "e5ffe5ee1d8cd07aa3b151e0765c89f1324a7bb6",
+      "diff_sha256": "1d0031324fe387f6f6ff861ae526169351b8f9e0e6981f7a577d2da428c6a0bc"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/review/risk.go",
+        "engine/review/risk_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "engine/review/risk.go:105-111",
+        "claim": "riskWithoutReason cuts at the first \" (\" and only checks that the remainder ends with \")\". It therefore accepts values the commit says are refused, such as \"3 (a) more (b)\" or \"3 (a) (b)\", which read as item 3. Text after the first reason is accepted when a later parenthesis closes the value. A whitespace-only reason such as \"3 ( )\" passes the len(reason) < 2 check, although the stated rule is a reason that is not empty. A looser trailer is read as valid where the commit promises refusal. The tests do not cover these inputs.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/review/risk.go:105-111: strings.Cut(value, \" (\"), len(reason) < 2, HasSuffix(reason, \")\")",
+          "engine/review/risk_test.go:107-121: the refusal cases do not include a second parenthesized group or a blank reason"
+        ]
+      }
+    ],
+    "evidence": [
+      "Traced strings.Cut and the HasSuffix check by hand for \"3 (a) more (b)\": head is \"3\", the reason is \"a) more (b)\", it ends with \")\", so the value is read as \"3\".",
+      "Every listed refusal case in the tests (empty reason, no space, unclosed, text after, only a reason) is handled correctly by the new function."
+    ]
+  }
+}

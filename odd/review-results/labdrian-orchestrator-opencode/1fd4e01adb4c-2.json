@@ -1,0 +1,72 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "247f7f4fe50444219531e9c7fd3c676ce060d138",
+    "head": "1fd4e01adb4cd8c0f09204655a5c0c0795c82bcc",
+    "diff_sha256": "d134c36ac337930f4e602e99c89ea82d5d80a13a485b35fed1623c5e8eed70d2",
+    "paths": [
+      "engine/cmd/opencode_bridge_session_e2e_test.go",
+      "engine/cmd/projection_hook.go",
+      "engine/cmd/projection_hook_capability_test.go",
+      "engine/cmd/projection_prompt_once_test.go",
+      "engine/projection/app/hook.go",
+      "engine/projection/context.go",
+      "engine/projection/render.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "247f7f4fe50444219531e9c7fd3c676ce060d138",
+      "head": "1fd4e01adb4cd8c0f09204655a5c0c0795c82bcc",
+      "diff_sha256": "d134c36ac337930f4e602e99c89ea82d5d80a13a485b35fed1623c5e8eed70d2"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/cmd/opencode_bridge_session_e2e_test.go",
+        "engine/cmd/projection_hook.go",
+        "engine/cmd/projection_hook_capability_test.go",
+        "engine/cmd/projection_prompt_once_test.go",
+        "engine/projection/app/hook.go",
+        "engine/projection/context.go",
+        "engine/projection/render.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "engine/projection/app/hook.go:96",
+        "claim": "Runtime is set only in OnPrompt. Any other path that calls s.project or Project (for example a SessionStart handler, which the once-test shows emits a block for opencode) is not given a Runtime in this diff. An OpenCode session could therefore still read 'capability limits (claude)' from that path. The diff does not show those paths, so whether they exist and are affected is unknown.",
+        "evidence_class": "inferential",
+        "causal_disposition": "unknown",
+        "proof_refs": [
+          "engine/projection/app/hook.go:96",
+          "engine/cmd/projection_prompt_once_test.go:268"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "engine/cmd/projection_hook.go:252",
+        "claim": "projectionRuntime compares the source against the string literal \"opencode\". It also relies on the magic value \"\" meaning Claude Code, which is repeated in the app, context and render layers. A shared constant or typed value would keep the source name and the default in one place.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/cmd/projection_hook.go:252-257",
+          "engine/projection/render.go:365"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff threads Runtime from the hook source through PromptRequest, ProjectionInput, projectOwned and buildContext to capabilityLine.",
+      "An empty Runtime still maps to TargetClaude, so the claude, codex and no-source output is unchanged. The new command test pins this.",
+      "I could not see the other call sites of s.project or Project, because the diff does not include them."
+    ]
+  }
+}

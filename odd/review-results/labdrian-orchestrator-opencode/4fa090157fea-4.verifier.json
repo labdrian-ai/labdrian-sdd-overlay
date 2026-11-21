@@ -1,0 +1,25 @@
+{
+  "verdicts": [
+    {
+      "id": "F1",
+      "result": "not-reproduced",
+      "command": "Isolated scratch, memorycard 0.4.0-dev+3d41c89, MEMORYCARD_DB set per case: a 16-byte SQLite header, the first 100, 4096 and 5000 bytes of a real fixture store, and 100 random bytes; for each, size and sha256 before and after `memorycard list --topic-prefix labdrian/session-probe/ --project labdrian-session-probe`, cmp against the source bytes, eza -a1 of the directory; control: a 0-byte file through the same call.",
+      "output": "Every non-empty case: exit 1 (file is not a database (26) or database disk image is malformed (11)); size and sha unchanged; cmp same for the four fixture-derived cases; no -wal or -shm left. Control: the 0-byte file grew to 81920 bytes, so the method detects a write. storeProblem returns \"\" for all five, so the probe runs memorycard, which fails and reports unavailable without writing.",
+      "base_result": "not-reproduced"
+    },
+    {
+      "result": "not-run",
+      "command": "none",
+      "output": "SUGGESTION: folded into the next T64 correction design.",
+      "base_result": "not-run",
+      "id": "F2"
+    },
+    {
+      "result": "not-run",
+      "command": "none",
+      "output": "SUGGESTION: folded into the next T64 correction design.",
+      "base_result": "not-run",
+      "id": "F3"
+    }
+  ]
+}

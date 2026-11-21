@@ -1,0 +1,112 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "ec250124001db54af43d4fe63df6e1d20941b2eb",
+    "head": "8ceb67f8f08b7db3dd816fc9ca38bf7190a69f75",
+    "diff_sha256": "760fde698a0988f6e3bbb62a0547c068242f240f607ac14ec4381429a8a78a14",
+    "paths": [
+      "CHANGELOG.md",
+      "README.md",
+      "docs/architecture/adr-c23-m8-session-availability.md",
+      "engine/cmd/codex_hooks_test.go",
+      "engine/cmd/deps_test.go",
+      "engine/cmd/live_guard_test.go",
+      "engine/cmd/memory_acceptance_test.go",
+      "engine/cmd/session_availability.go",
+      "engine/cmd/session_availability_test.go",
+      "engine/cmd/usage.go",
+      "engine/projection/availability.go",
+      "engine/projection/availability_test.go",
+      "engine/runtime/live_guard_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line",
+    "recall"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "ec250124001db54af43d4fe63df6e1d20941b2eb",
+      "head": "8ceb67f8f08b7db3dd816fc9ca38bf7190a69f75",
+      "diff_sha256": "760fde698a0988f6e3bbb62a0547c068242f240f607ac14ec4381429a8a78a14"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "README.md",
+        "docs/architecture/adr-c23-m8-session-availability.md",
+        "engine/cmd/codex_hooks_test.go",
+        "engine/cmd/deps_test.go",
+        "engine/cmd/live_guard_test.go",
+        "engine/cmd/memory_acceptance_test.go",
+        "engine/cmd/session_availability.go",
+        "engine/cmd/session_availability_test.go",
+        "engine/cmd/usage.go",
+        "engine/projection/availability.go",
+        "engine/projection/availability_test.go",
+        "engine/runtime/live_guard_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "engine/projection/availability.go:50",
+        "severity": "WARNING",
+        "claim": "On a machine where memorycard's store does not exist yet (a fresh install, or the store was moved), the SessionStart block now says 'Do not call the memorycard tools', which covers mem_save and mem_session as well as the reads. The old engram line named only the Engram tools. The next block line still says memorycard writes are not limited by the plan, and the memorycard MCP creates the store on first write. An agent that obeys the new line may never save the first memory, so the store never appears and the line repeats every session. The wording ('though the plan allows its reads') speaks only of reads while the prohibition is on all tools. The behavior is activated by the candidate: the base probe asked the engram program and never looked at the memorycard store.",
+        "evidence_class": "inferential",
+        "causal_disposition": "behavior-activated",
+        "proof_refs": [
+          "engine/projection/availability.go:50",
+          "engine/cmd/session_availability.go",
+          "engine/cmd/memory_acceptance_test.go"
+        ]
+      },
+      {
+        "id": "F2",
+        "location": "engine/cmd/session_availability.go:119-122",
+        "severity": "WARNING",
+        "claim": "The task's premise check for the new probe ran with MEMORYCARD_EMBED=off, but the hook runs 'memorycard list' with the owner's real environment. If list on the real store loads or starts an embedding backend, or waits on a lock held by the memorycard MCP server or a hook, it can exceed the 3s sessionProbeTimeout. The source is then reported unavailable at session start although memorycard works, and the agent is told not to use its tools. The diff has no test or evidence for latency or locking under the real configuration. The accepted differential (e) uses a stub or a temporary store, so it would not catch this either. This is a new runtime dependency that the base did not have: engram stats was a different program.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/cmd/session_availability.go:119-122",
+          "odd/tasks/labdrian-orchestrator-opencode.md:106"
+        ]
+      },
+      {
+        "id": "F3",
+        "location": "engine/cmd/session_availability.go:143-158",
+        "severity": "SUGGESTION",
+        "claim": "The stat-then-run guard against creating the store is a TOCTOU check. If the store is removed or moved between the stat and 'memorycard list' (a concurrent sync or a rotation), memorycard creates an empty store at the owner's path, which is the write the guard exists to prevent. A 0-byte regular file also passes the guard, and memorycard then initialises its schema in it. The window is small and the ADR says the probe never creates the store. Say in the ADR or the comment that this is best-effort, or pass memorycard a flag that opens read-only if one exists.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/cmd/session_availability.go:143-158",
+          "docs/architecture/adr-c23-m8-session-availability.md"
+        ]
+      },
+      {
+        "id": "F4",
+        "location": "engine/cmd/session_availability_test.go:462",
+        "severity": "SUGGESTION",
+        "claim": "The test case 'the store is under a regular file' pins the exact OS error text 'stat <store>: not a directory'. That text is specific to Linux and macOS. The test fails on a platform with another error message, such as Windows, for a reason that has nothing to do with the behavior under test. Asserting the 'cannot be read:' prefix would give the same coverage.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/cmd/session_availability_test.go:462"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the whole diff at t64.diff.",
+      "Read the T64 task entry (line 106), including its premise check, accepted differential and Risk text.",
+      "The default store path matches longterm-mem/internal/memorycard/store.go:40-44 ($HOME/.memorycard/memory.db).",
+      "Grepped engine test packages (shelltest, hookwire, settings, capability) for os.Environ and MEMORYCARD_DB: they do not start a bound SessionStart hook, so the TestMain guards in engine/cmd and engine/runtime cover the reachable cases.",
+      "engine/runtime/opencode_plugin_live_test.go already scopes MEMORYCARD_DB to a sandbox.",
+      "CHANGELOG, README, usage and ADR text consistent with the code.",
+      "Ran no tests or commands."
+    ]
+  }
+}

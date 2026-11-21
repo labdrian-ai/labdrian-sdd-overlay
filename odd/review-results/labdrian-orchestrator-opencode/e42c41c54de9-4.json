@@ -1,0 +1,66 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "800bbcf89ab1a71c6f2eb937178d47b0c884d84f",
+    "head": "e42c41c54de97dfdcc6fe1681e4157f0cebfad77",
+    "diff_sha256": "8685c61351cf98437c13b32c6ef1d99960efbd8a48614eafc7fc60891ee18beb",
+    "paths": [
+      "agents/delivery.md",
+      "codex/agents/delivery.toml",
+      "engine/skills/role_agents_artifact_test.go",
+      "opencode/agents/delivery.md",
+      "pi/agents/delivery.md",
+      "roles/delivery/body.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "800bbcf89ab1a71c6f2eb937178d47b0c884d84f",
+      "head": "e42c41c54de97dfdcc6fe1681e4157f0cebfad77",
+      "diff_sha256": "8685c61351cf98437c13b32c6ef1d99960efbd8a48614eafc7fc60891ee18beb"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "agents/delivery.md",
+        "codex/agents/delivery.toml",
+        "engine/skills/role_agents_artifact_test.go",
+        "opencode/agents/delivery.md",
+        "pi/agents/delivery.md",
+        "roles/delivery/body.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "roles/delivery/body.md:9",
+        "claim": "The new sentence 'On any other exit put its stderr line in the entry instead; the no-CI closure then does not apply' does not say what delivery should do next. A command error (e.g. exit 2, crash) lets the delivery close with status success and the Log entry appended, with no block and no requirement that the test run pass at the head. A configured CI (exit other than 0) likewise leaves the close path open without any statement of whether CI results gate it. The gate for the error case is unspecified, so the 'error can never be read as no CI' goal is met only by omission.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "roles/delivery/body.md:9"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "engine/skills/role_agents_artifact_test.go:1123",
+        "claim": "The test asserts only that the sentence is present in the five files via strings.Contains. It would pass even if the sentence were placed in the wrong spot or the behavior were unenforced. The five-file duplication is also kept in sync only by this substring check.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/skills/role_agents_artifact_test.go:1123"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff appends the same sentence to the delivery body and its four generated copies; the test is updated to match.",
+      "The sentence defines only that the no-CI closure does not apply on other exits, and does not define a blocking or alternative gate."
+    ]
+  }
+}

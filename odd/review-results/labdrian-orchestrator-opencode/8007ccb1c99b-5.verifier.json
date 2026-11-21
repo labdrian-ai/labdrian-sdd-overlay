@@ -1,0 +1,18 @@
+{
+  "verdicts": [
+    {
+      "id": "F1",
+      "result": "not-run",
+      "command": "none",
+      "output": "SUGGESTION: carried to T62's batch.",
+      "base_result": "not-run"
+    },
+    {
+      "id": "F2",
+      "result": "not-run",
+      "command": "none",
+      "output": "SUGGESTION: carried to T62's batch (L182 R3).",
+      "base_result": "not-run"
+    }
+  ]
+}

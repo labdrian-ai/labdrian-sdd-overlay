@@ -1,0 +1,35 @@
+{
+  "kind": "polisher",
+  "base": "402f1f0f3b7c9bc62dbc437975ebfd49f8cf593b",
+  "head": "e5ffe5ee1d8cd07aa3b151e0765c89f1324a7bb6",
+  "diff_sha256": "1d0031324fe387f6f6ff861ae526169351b8f9e0e6981f7a577d2da428c6a0bc",
+  "findings": {
+    "findings": [
+      {
+        "id": "P1",
+        "severity": "BLOCKER",
+        "location": "engine/review/risk.go:105-111",
+        "claim": "riskWithoutReason cut at the first \" (\" and accepted any remainder ending in \")\", so \"Risk: none (x) 3 (y)\" read as none and \"Risk: 2 (x), 3 (y)\" dropped item 3: a commit could under-declare its risk.",
+        "evidence": [
+          "strings.Cut(value, \" (\") splits at the first occurrence; the check is only len(reason) >= 2 and HasSuffix(reason, \")\").",
+          "DeclaredRisk feeds needs.go:48 and exempt.go:105.",
+          "Fixed in 284962ad: the reason's parenthesis must close at the last byte; recheck resolved with traces."
+        ]
+      },
+      {
+        "id": "P2",
+        "severity": "SUGGESTION",
+        "location": "engine/review/risk.go:107",
+        "claim": "A whitespace-only reason \"3 ( )\" was accepted although the intent requires a non-empty reason.",
+        "evidence": [
+          "reason \" )\" has length 2 and ends in \")\".",
+          "Fixed in 284962ad: the reason is trimmed before the blank check; pinned by the 'a blank reason' case."
+        ]
+      }
+    ],
+    "evidence": [
+      "Read engine/review/risk.go and risk_test.go at e5ffe5ee; grepped every caller of ParseRisk, CheckRisk and DeclaredRisk; CheckRisk stays strict for --risk and stored exemptions.",
+      "Not run: read-only static judgment."
+    ]
+  }
+}

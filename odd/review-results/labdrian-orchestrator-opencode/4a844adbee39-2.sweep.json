@@ -1,0 +1,28 @@
+{
+  "kind": "sweep",
+  "base": "dbaf2ca1fe7d0144b8066ce51f3be06d40696c51",
+  "head": "4a844adbee39393a1be2e31b9476595007900b7d",
+  "diff_sha256": "f12a2188f368f2f41dc47703c2483a40dc24e5d1ba820e585847e465a8472bc2",
+  "outcome": "fired",
+  "t1": {
+    "deleted_or_renamed": [],
+    "removed_names": [
+      {
+        "name": "ownerRulesStatus",
+        "hits": [
+          "odd/review-results/labdrian-orchestrator-opencode/052d446962ff-2.json",
+          "odd/review-results/labdrian-orchestrator-opencode/b88fbec6e350-2.json",
+          "odd/review-results/labdrian-orchestrator-opencode/b88fbec6e350-4.polisher.json"
+        ]
+      }
+    ]
+  },
+  "t2": [],
+  "t3": [
+    " M odd/tasks/labdrian-orchestrator-opencode.md"
+  ],
+  "t4": {
+    "leftovers": [],
+    "orphaned_fixtures": []
+  }
+}

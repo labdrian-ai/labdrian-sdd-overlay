@@ -1,0 +1,25 @@
+{
+  "verdicts": [
+    {
+      "id": "F1",
+      "result": "reproduced",
+      "command": "Verifier W-A: bound scratch repo (workflow open --feature f --task T1); chmod 000 $S/state/labdrian/bindings/<key>.json, then separately chmod 000 $S/state/labdrian/workflows/proj-1/f-t1.jsonl; $S/bin/head roles append --project proj-1 --goal f --chain other --stdin < rec-other.json",
+      "output": "workflow binding: classification unavailable (permission denied); head append stored .../role-chains/proj-1/f/other/000001.json, exit=0. Workflow log unavailable: stored, exit=0. Control with a readable binding: 'error: roles append: this checkout is bound to workflow f-t1; append its hops with --project proj-1 --goal f --chain f-t1', exit=1. Base stores in both (no rule); the gap is in the new rule.",
+      "base_result": "reproduced"
+    },
+    {
+      "id": "F2",
+      "result": "reproduced",
+      "command": "Verifier W-B: mkdir $S/repo/sub; cd into it; rmdir it; env -i (no PWD) $S/bin/head roles append --project proj-1 --goal f --chain other --stdin < rec-other.json",
+      "output": "Subdir present: refused with the bound-chain sentence, exit=1. Cwd removed: stored .../other/000001.json, exit=0. Base stores in both (no rule).",
+      "base_result": "reproduced"
+    },
+    {
+      "id": "F3",
+      "result": "not-run",
+      "command": "none",
+      "output": "SUGGESTION (the 'not ours' subtest writes malformed JSON); answered in d4d54d60 with a real foreign-binding subtest.",
+      "base_result": "not-run"
+    }
+  ]
+}

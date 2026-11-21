@@ -1,0 +1,32 @@
+{
+  "verdicts": [
+    {
+      "id": "F1",
+      "result": "reproduced",
+      "command": "Isolated world; odd/tasks/f.md as a symlink, a directory, and an 8388609-byte file; seq 1 shaper->estimator piped to bin-f3c774ec roles append --project proj-1 --goal f --chain f --stdin",
+      "output": "f3c774ec: each exit=0, stored (fail open). Fixed at bae918360ea7: each exit=1, 0 files.",
+      "base_result": "not-reproduced"
+    },
+    {
+      "id": "F2",
+      "result": "reproduced",
+      "command": "workflow open --feature f --task T1 (bound f-t1), then seq 1 shaper->estimator piped to roles append --project proj-1 --goal f --chain f-t1 --stdin, on 747e3231, f3c774ec, bae918360ea7",
+      "output": "747e3231: exit=1 'role chain store: refusing to replace immutable record'. f3c774ec: exit=1 with the feature-document sentence advising workflow open although it is open (wrong advice). bae918360ea7: exit=1 'refusing to replace immutable record', as 747e3231.",
+      "base_result": "not-reproduced"
+    },
+    {
+      "id": "F3",
+      "result": "not-run",
+      "command": "read the test at f3c774ec and bae918360ea7",
+      "output": "SUGGESTION: at bae918360ea7 the test asserts seq 1 shaper->estimator, seq 2 estimator->builder and an owned binding of f-t1.",
+      "base_result": "not-run"
+    },
+    {
+      "id": "F4",
+      "result": "not-run",
+      "command": "read the tests at bae918360ea7; nested-cwd binary probe",
+      "output": "SUGGESTION: outside-repository, nested-cwd and only-under-cwd subtests added at bae918360ea7; nested probe refused with 0 files at both commits.",
+      "base_result": "not-run"
+    }
+  ]
+}

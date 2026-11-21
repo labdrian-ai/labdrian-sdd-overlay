@@ -1,0 +1,72 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "4eb00fb93259d9dac9d8340ecd024ef8358f587f",
+    "head": "8510c7b69ea5319c956c1d8935507da62b73ae11",
+    "diff_sha256": "c9e9a87ac2919a30acc0ab3d1a39fab1850dbd981db6625ddf8836abfc05dd57",
+    "paths": [
+      "README.md",
+      "engine/cmd/review_stop_hook_docs_test.go",
+      "engine/cmd/review_stop_hook_test.go",
+      "engine/cmd/usage.go",
+      "engine/review/app/app.go",
+      "engine/review/gitexec/gitexec.go",
+      "engine/review/gitexec/standing_test.go",
+      "skills/chained-pr/references/chaining-details.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "4eb00fb93259d9dac9d8340ecd024ef8358f587f",
+      "head": "8510c7b69ea5319c956c1d8935507da62b73ae11",
+      "diff_sha256": "c9e9a87ac2919a30acc0ab3d1a39fab1850dbd981db6625ddf8836abfc05dd57"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "README.md",
+        "engine/cmd/review_stop_hook_docs_test.go",
+        "engine/cmd/review_stop_hook_test.go",
+        "engine/cmd/usage.go",
+        "engine/review/app/app.go",
+        "engine/review/gitexec/gitexec.go",
+        "engine/review/gitexec/standing_test.go",
+        "skills/chained-pr/references/chaining-details.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "engine/review/gitexec/gitexec.go:1044-1076",
+        "claim": "upstreamTip treats any upstream whose name differs from the branch as a parent branch. A branch pushed under another name (`git push -u origin feat:other`) or renamed locally tracks its own earlier self, so the tip of that upstream is excluded. The branch's own already-pushed commits then drop out of Standing.Commits and the stop hook never asks about them. The failure is silent: no commit is asked and no error is reported. Only the tip of that upstream is excluded, not a verified parent relation.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/review/gitexec/gitexec.go:441-443",
+          "engine/review/gitexec/gitexec.go:1044-1076"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "WARNING",
+        "location": "engine/review/gitexec/gitexec.go:441-443",
+        "claim": "When the tracked branch has already absorbed the branch's commits (for example the parent merged the child, or the upstream is ahead of HEAD), `^tip` removes every commit of the branch. Standing.Commits becomes empty and review is silently skipped for commits that were never reviewed in this branch. The old range would have asked for them. No guard checks that the upstream tip is an ancestor of the branch's fork point rather than a descendant.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/review/gitexec/gitexec.go:441-443"
+        ]
+      }
+    ],
+    "evidence": [
+      "Reviewed the full diff. upstreamTip adds `^<upstream tip>` to the rev-list whenever branch.<b>.merge names a refs/heads branch of another name and the ref exists with one commit.",
+      "Error and odd-read paths return an empty string and keep the old range, as documented.",
+      "The tests cover local and remote parents, no upstream, an upstream of the branch's own name and a missing upstream. They do not cover an upstream that is ahead of or contains HEAD, or a differently named remote copy of the same branch."
+    ]
+  }
+}

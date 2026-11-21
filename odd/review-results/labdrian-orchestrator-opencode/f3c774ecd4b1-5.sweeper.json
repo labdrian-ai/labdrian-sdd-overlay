@@ -1,0 +1,35 @@
+{
+  "kind": "sweeper",
+  "base": "747e3231c9a7e21c89fc213c37b72a2ae40d9d1c",
+  "head": "f3c774ecd4b1d88f869be66b4cf4ee615c757b5d",
+  "diff_sha256": "cf3a55c99657c3c93d12e598c19b6490b7aff26d27cc8dc4f51950b06b5f17dd",
+  "sweep": "f3c774ecd4b1-1.sweep.json",
+  "commit": null,
+  "candidates": [
+    {
+      "candidate": "T1 name: unreadable",
+      "disposition": "live",
+      "evidence": "The removed helper unreadable has no remaining caller. rg over engine, docs and skills for the call form finds only the method targetsWorld.unreadable (engine/cmd/installed_targets_test.go:104, used at :282, a different symbol) and a local func in engine/runtime/ownership/app/app_test.go (another package). Other hits are prose or local variables; no live doc names the helper. go vet and go test -count=1 of engine ./cmd and ./roles pass. Nothing to remove."
+    },
+    {
+      "candidate": "T3:  M odd/tasks/labdrian-orchestrator-opencode.md",
+      "disposition": "live",
+      "evidence": "The foreman uncommitted Log entry L167 in the feature document; kept."
+    },
+    {
+      "candidate": "T3: ?? CLAUDE.md",
+      "disposition": "live",
+      "evidence": "Owner, verbatim, L160: se quedan los files de wiki; kept."
+    },
+    {
+      "candidate": "T3: ?? docs/wiki/.format",
+      "disposition": "live",
+      "evidence": "Owner, verbatim, L160: se quedan los files de wiki; kept."
+    },
+    {
+      "candidate": "T3: ?? docs/wiki/README.md",
+      "disposition": "live",
+      "evidence": "Owner, verbatim, L160: se quedan los files de wiki; kept."
+    }
+  ]
+}

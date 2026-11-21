@@ -1,0 +1,89 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "41f4f3a1a8b88793e250f4c2a0724e26c1502ca8",
+    "head": "8ff0e9f85d3f6f4d0c7580d57862345b28743488",
+    "diff_sha256": "b21f797ae381e29b52b7baa513ab9b2b14e39cd6873037579b2b16a957cbe367",
+    "paths": [
+      "CHANGELOG.md",
+      "README.md",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-context-lists-quotes-and-case.golden",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-minimalism-context-metadata-accepted-today.golden",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-phases-quoted-items-accepted-today.golden",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-reads-the-contracts-of-the-overlay.golden",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-without-the-oo-contract.golden",
+      "engine/cmd/testdata/runtime-golden/runtime-opencode-and-pi-with-an-overlay.golden",
+      "engine/runtime/labdrian-runtime-parity-plugin.mjs",
+      "engine/runtime/opencode.go",
+      "engine/runtime/opencode_bridge_skills_test.go",
+      "engine/runtime/opencode_bridge_test.go",
+      "engine/runtime/opencode_contracts.go",
+      "engine/runtime/opencode_contracts_test.go",
+      "engine/runtime/opencode_plugin.go",
+      "engine/runtime/opencode_records.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "41f4f3a1a8b88793e250f4c2a0724e26c1502ca8",
+      "head": "8ff0e9f85d3f6f4d0c7580d57862345b28743488",
+      "diff_sha256": "b21f797ae381e29b52b7baa513ab9b2b14e39cd6873037579b2b16a957cbe367"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "README.md",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-context-lists-quotes-and-case.golden",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-minimalism-context-metadata-accepted-today.golden",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-phases-quoted-items-accepted-today.golden",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-reads-the-contracts-of-the-overlay.golden",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-without-the-oo-contract.golden",
+        "engine/cmd/testdata/runtime-golden/runtime-opencode-and-pi-with-an-overlay.golden",
+        "engine/runtime/labdrian-runtime-parity-plugin.mjs",
+        "engine/runtime/opencode.go",
+        "engine/runtime/opencode_bridge_skills_test.go",
+        "engine/runtime/opencode_bridge_test.go",
+        "engine/runtime/opencode_contracts.go",
+        "engine/runtime/opencode_contracts_test.go",
+        "engine/runtime/opencode_plugin.go",
+        "engine/runtime/opencode_records.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "engine/runtime/opencode.go:107-110",
+        "claim": "Install now fails with a partial status when locateOverlay cannot find an overlay, through a second, separate locateOverlay call. The diff does not show whether promptConfig tolerates a missing overlay. If it does, an install that succeeded before (contracts omitted, no overlay) now aborts before writing the config and the plugin keeps no config. The diff cannot show whether such an install was valid before.",
+        "evidence_class": "inferential",
+        "causal_disposition": "unknown",
+        "proof_refs": [
+          "engine/runtime/opencode.go:107-110",
+          "engine/runtime/opencode_contracts.go:30-38"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "WARNING",
+        "location": "engine/runtime/labdrian-runtime-parity-plugin.mjs:425-436",
+        "claim": "Every subagent launch with a prompt now spawns the engine once more once skills_root is set. Any launch whose prompt has a line starting with the header text that is not the header alone (a quoted colon form in a builder brief, a spec excerpt or a pasted diff) is denied outright. Before, such launches went through, and the verb's refusal blames a skill list the agent never wrote.",
+        "evidence_class": "inferential",
+        "causal_disposition": "behavior-activated",
+        "proof_refs": [
+          "engine/runtime/labdrian-runtime-parity-plugin.mjs:425-436",
+          "engine/runtime/labdrian-runtime-parity-plugin.mjs:664-666"
+        ]
+      }
+    ],
+    "evidence": [
+      "Reviewed the diff only; the Go verb's and locateOverlay's bodies are not visible.",
+      "The plugin hook order is gate, skill paths, frozen context, contract injection, as the commit claims.",
+      "A missing or empty skills_root returns before any engine call, so those prompts stay byte-identical."
+    ]
+  }
+}

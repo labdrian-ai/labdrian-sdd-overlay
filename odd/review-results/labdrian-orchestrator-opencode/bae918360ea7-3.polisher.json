@@ -1,0 +1,17 @@
+{
+  "kind": "polisher",
+  "base": "4daa9dddb0645f285c222a9d8285a99a27541fa3",
+  "head": "bae918360ea7c4becb161c0a1088bbe6565bcc4d",
+  "diff_sha256": "7004dffad05524e1900aaf0488103224c1720bb1ad059706f5a7928a58dcab89",
+  "findings": {
+    "findings": [],
+    "evidence": [
+      "Read the whole diff t57b.diff (CHANGELOG, cmd/roles.go, roles_bound.go, roles_feature_entry_test.go, usage.go, roles/bound.go, bound_test.go).",
+      "FeatureChainRefusal returns a refusal only when the bound workflow does not hold the checkout, chain equals goal, from_role is not the prototyper and the document is present. The refusal applies at any seq, because no seq test remains.",
+      "The cmd caller reads the document only when not bound.Holds(), chain equals goal and from_role is not the prototyper. While an open workflow with a role chain is bound, nothing is answered, so a repeated seq 1 reaches the chain store's refusal. The test TestRolesAppendLeavesARepeatedFirstRecordOfTheBoundChainToTheChainStore covers this.",
+      "hasFeatureDocument reads through fsdoc.Reader{Root: worktreeRoot} with the relative path odd/tasks/<goal>.md, so the worktree root is used, not cwd. I read fsdoc.go:29-107. The read returns *oddtask.ReadError with CauseLink, CauseNotRegular or CauseTooLarge for a symlink, a directory or an oversized file, and the code counts these as present. It treats only CauseNotFound and CauseNoRepository as absent. Any other error, and a working directory that cannot be read, count as present (fail closed), which fits the spec.",
+      "The Holds() export is a minimal change: the method body is unchanged and the in-package callers were renamed. The cmd package needs it to skip the disk read while a workflow is bound. I judge the deviation acceptable.",
+      "Tests cover the shaper refusal, the prototyper exception with and without a shaped task, the shaper refusal after a stored prototyper hop, a link, a directory and an oversized file, a nested working directory, a document only under the working directory, and a directory outside any repository. I did not run them (not run)."
+    ]
+  }
+}

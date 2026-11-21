@@ -1,0 +1,92 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "b35a55b868da5d3efcc422386433f52ec6c0c29e",
+    "head": "1d0aabf772101c18bc45330574a0420340671db4",
+    "diff_sha256": "d276cef4df0b99adf408b8cb3b6aae791e1408a54a5d9aac8d0770d7d569538f",
+    "paths": [
+      "README.md",
+      "engine/agentgen/agentgen.go",
+      "engine/agentgen/artifacts_test.go",
+      "engine/agentgen/roles_test.go",
+      "engine/roles/skills.go",
+      "engine/roles/skills_test.go",
+      "engine/runtime/opencode_contracts.go",
+      "engine/runtime/opencode_contracts_test.go",
+      "engine/runtime/opencodeprompt/derive.go",
+      "engine/runtime/opencodeprompt/derive_test.go",
+      "engine/runtime/opencodeprompt/source.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "b35a55b868da5d3efcc422386433f52ec6c0c29e",
+      "head": "1d0aabf772101c18bc45330574a0420340671db4",
+      "diff_sha256": "d276cef4df0b99adf408b8cb3b6aae791e1408a54a5d9aac8d0770d7d569538f"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "README.md",
+        "engine/agentgen/agentgen.go",
+        "engine/agentgen/artifacts_test.go",
+        "engine/agentgen/roles_test.go",
+        "engine/roles/skills.go",
+        "engine/roles/skills_test.go",
+        "engine/runtime/opencode_contracts.go",
+        "engine/runtime/opencode_contracts_test.go",
+        "engine/runtime/opencodeprompt/derive.go",
+        "engine/runtime/opencodeprompt/derive_test.go",
+        "engine/runtime/opencodeprompt/source.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "engine/roles/skills.go:6",
+        "claim": "The skillMention regexp has no word boundary after `skill`, so \"`<id>` skills\" or \"`<id>` skillset\" also counts as a mention. A body that merely uses a backticked word before a longer word such as \"skills\" would then be treated as naming a skill. agentgen would refuse that body for lack of skills/<id>/SKILL.md, or the adapter would inject an unintended path. Backticked text inside code fences is matched too.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/roles/skills.go:6"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "engine/agentgen/agentgen.go:91-93",
+        "claim": "The foreman body is checked for named skills, but Derive iterates only roles.Vocabulary. The OpenCode tests also skip the foreman directory, which suggests the foreman is not in the vocabulary. If so, skills named in the foreman body are validated yet never injected, and the foreman gets no SKILL.md paths although it is checked as if it did. The diff does not show whether this gap is intended.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/agentgen/agentgen.go:91-93",
+          "engine/runtime/opencodeprompt/derive.go:68",
+          "engine/runtime/opencode_contracts_test.go:55"
+        ]
+      },
+      {
+        "id": "F3",
+        "severity": "SUGGESTION",
+        "location": "engine/agentgen/agentgen.go:27",
+        "claim": "The roles package is imported under the alias `vocabulary`, while the tests import it as `roles`. The alias is inconsistent and hides what the package is, which makes `vocabulary.SkillsNamed` harder to follow. The alias also suggests a name clash that the diff does not show.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/agentgen/agentgen.go:27",
+          "engine/agentgen/agentgen.go:123"
+        ]
+      }
+    ],
+    "evidence": [
+      "Reviewed the whole diff only; the repository was not inspected.",
+      "The Derive loop appends one entry per role and per skill. The tests pin the order and the empty non-nil ExcludedPhases.",
+      "checkSkillsNamed runs before project(), so a refused body writes nothing, which the new test covers."
+    ]
+  }
+}

@@ -1,0 +1,49 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "025ce6ec03092d1b416e843793cfd74cec57f96c",
+    "head": "402f1f0f3b7c9bc62dbc437975ebfd49f8cf593b",
+    "diff_sha256": "1a9466a2b397ff972dc6c2faeaa13205e979cffc0d45d0c8d7cf6437782b9714",
+    "paths": [
+      "engine/cmd/review_ci_test.go",
+      "engine/review/ci_test.go",
+      "engine/runtime/opencode_bridge_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "025ce6ec03092d1b416e843793cfd74cec57f96c",
+      "head": "402f1f0f3b7c9bc62dbc437975ebfd49f8cf593b",
+      "diff_sha256": "1a9466a2b397ff972dc6c2faeaa13205e979cffc0d45d0c8d7cf6437782b9714"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/cmd/review_ci_test.go",
+        "engine/review/ci_test.go",
+        "engine/runtime/opencode_bridge_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "engine/cmd/review_ci_test.go:36-38",
+        "claim": "The digest now records walk errors for the whole real HOME. A transient error, such as a directory removed or made unreadable by a concurrent process between the before and after snapshots, would change the digest and fail the before/after comparison spuriously. The base dropped such errors silently. This is a flakiness risk only; the diff does not show that it triggers.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/cmd/review_ci_test.go:36-38"
+        ]
+      }
+    ],
+    "evidence": [
+      "The three changes are test-only: the walk error handling, a comment count, and a comment wording.",
+      "The ten-files count and the BindRunning --project wording cannot be verified from the visible diff lines, so I report no finding on them."
+    ]
+  }
+}

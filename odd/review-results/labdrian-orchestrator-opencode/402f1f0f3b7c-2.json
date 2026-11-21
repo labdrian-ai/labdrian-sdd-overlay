@@ -1,0 +1,50 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "025ce6ec03092d1b416e843793cfd74cec57f96c",
+    "head": "402f1f0f3b7c9bc62dbc437975ebfd49f8cf593b",
+    "diff_sha256": "1a9466a2b397ff972dc6c2faeaa13205e979cffc0d45d0c8d7cf6437782b9714",
+    "paths": [
+      "engine/cmd/review_ci_test.go",
+      "engine/review/ci_test.go",
+      "engine/runtime/opencode_bridge_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "025ce6ec03092d1b416e843793cfd74cec57f96c",
+      "head": "402f1f0f3b7c9bc62dbc437975ebfd49f8cf593b",
+      "diff_sha256": "1a9466a2b397ff972dc6c2faeaa13205e979cffc0d45d0c8d7cf6437782b9714"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/cmd/review_ci_test.go",
+        "engine/review/ci_test.go",
+        "engine/runtime/opencode_bridge_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "engine/runtime/opencode_bridge_test.go:432-433",
+        "claim": "The new comment says the workflow is created outside any repository, yet BindRunning's --project name is 'the same name as the repository's'. A directory outside any repository has no repository name, so the sentence is self-contradictory and does not say what the name is. The old comment stated plainly that the project is the directory basename, so this edit makes the comment less clear. The diff does not show which behaviour is correct.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/runtime/opencode_bridge_test.go:432-433"
+        ]
+      }
+    ],
+    "evidence": [
+      "The ciState change handles the WalkDir callback error and the returned error correctly. A nil entry is never dereferenced, because the callback returns early when err != nil.",
+      "The 'ten files' count in ci_test.go cannot be checked, because the diff truncates the ciMarkerPaths list. No defect is reported for it."
+    ]
+  }
+}

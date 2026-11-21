@@ -1,0 +1,93 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "fe79c5bc98ab121beb00c8ba92101d1f4b03cedd",
+    "head": "99290fbc2144bec46d2351da401840ea87230b2f",
+    "diff_sha256": "f63cf6305ec14e06391c28310fa2b4c075955ae282bcff532fd9d4a29ef4e99b",
+    "paths": [
+      "skills/branch-pr/.approval.json",
+      "skills/chained-pr/.approval.json",
+      "skills/cognitive-doc-design/.approval.json",
+      "skills/comment-writer/.approval.json",
+      "skills/go-testing/.approval.json",
+      "skills/inception-pipeline/.approval.json",
+      "skills/issue-creation/.approval.json",
+      "skills/judgment-day/.approval.json",
+      "skills/project-architect/.approval.json",
+      "skills/project-inception/.approval.json",
+      "skills/project-manifest/.approval.json",
+      "skills/requirements-from-transcripts/.approval.json",
+      "skills/roadmap-maker/.approval.json",
+      "skills/role-chain/.approval.json",
+      "skills/skill-creator/.approval.json",
+      "skills/skill-improver/.approval.json",
+      "skills/skill-registry/.approval.json",
+      "skills/work-unit-commits/.approval.json"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "fe79c5bc98ab121beb00c8ba92101d1f4b03cedd",
+      "head": "99290fbc2144bec46d2351da401840ea87230b2f",
+      "diff_sha256": "f63cf6305ec14e06391c28310fa2b4c075955ae282bcff532fd9d4a29ef4e99b"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "skills/branch-pr/.approval.json",
+        "skills/chained-pr/.approval.json",
+        "skills/cognitive-doc-design/.approval.json",
+        "skills/comment-writer/.approval.json",
+        "skills/go-testing/.approval.json",
+        "skills/inception-pipeline/.approval.json",
+        "skills/issue-creation/.approval.json",
+        "skills/judgment-day/.approval.json",
+        "skills/project-architect/.approval.json",
+        "skills/project-inception/.approval.json",
+        "skills/project-manifest/.approval.json",
+        "skills/requirements-from-transcripts/.approval.json",
+        "skills/roadmap-maker/.approval.json",
+        "skills/role-chain/.approval.json",
+        "skills/skill-creator/.approval.json",
+        "skills/skill-improver/.approval.json",
+        "skills/skill-registry/.approval.json",
+        "skills/work-unit-commits/.approval.json"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "skills/branch-pr/.approval.json:6",
+        "claim": "The commit says the owner approved these skills, but every record now names approver \"labdrian-ai\" instead of the owner identity \"labdrian\" used in all prior records. All 18 approvals were stamped within a 2-second window (16:40:12Z-16:40:13Z), which looks like one scripted batch, not per-skill review. The approval lock exists to prove human sign-off on skill content. An AI-attributed or script-generated approval weakens that guarantee, and the record cannot be told apart from an agent self-approving its own skill edits. The diff does not show that the owner authorised this identity or this batch.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "skills/branch-pr/.approval.json:6-7",
+          "skills/go-testing/.approval.json:6-7",
+          "skills/work-unit-commits/.approval.json:6-7"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "skills/role-chain/.approval.json:5",
+        "claim": "The new sha256 values cannot be checked against the SKILL.md files from this diff. The diff does not touch any SKILL.md, so a hash mismatch, or a hash taken from a different tree state than the one the branch ships, would make the registry lock fail or wrongly pass. Confirm each hash matches the committed SKILL.md at head.",
+        "evidence_class": "inferential",
+        "causal_disposition": "unknown",
+        "proof_refs": [
+          "skills/role-chain/.approval.json:5"
+        ]
+      }
+    ],
+    "evidence": [
+      "Every changed file replaces sha256, approved_at and approver. The approver changes from \"labdrian\" to \"labdrian-ai\" in all 18 files.",
+      "All new approved_at values fall between 2026-11-19T16:40:12Z and 16:40:13Z.",
+      "The diff contains no SKILL.md content, so the hashes are unverifiable from it."
+    ]
+  }
+}

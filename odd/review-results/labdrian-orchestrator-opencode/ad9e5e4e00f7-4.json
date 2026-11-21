@@ -1,0 +1,58 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "8510c7b69ea5319c956c1d8935507da62b73ae11",
+    "head": "ad9e5e4e00f757c3ed2e8c5cb5de492eec3ea0c3",
+    "diff_sha256": "966380304f61b38b0ab85abf22884922ffb7df6b1c78fa20b924a7f1dd7efccc",
+    "paths": [
+      "README.md",
+      "engine/cmd/review_stop_hook_docs_test.go",
+      "engine/cmd/review_stop_hook_test.go",
+      "engine/cmd/usage.go",
+      "engine/review/app/app.go",
+      "engine/review/gitexec/gitexec.go",
+      "engine/review/gitexec/standing_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "8510c7b69ea5319c956c1d8935507da62b73ae11",
+      "head": "ad9e5e4e00f757c3ed2e8c5cb5de492eec3ea0c3",
+      "diff_sha256": "966380304f61b38b0ab85abf22884922ffb7df6b1c78fa20b924a7f1dd7efccc"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "README.md",
+        "engine/cmd/review_stop_hook_docs_test.go",
+        "engine/cmd/review_stop_hook_test.go",
+        "engine/cmd/usage.go",
+        "engine/review/app/app.go",
+        "engine/review/gitexec/gitexec.go",
+        "engine/review/gitexec/standing_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "engine/review/gitexec/gitexec.go:1089-1096",
+        "claim": "When the parent has merged only some of the child's commits and the child then adds more, the merge base of HEAD and the parent's tip is the last merged child commit. The stop hook therefore leaves the merged child commits out of the asked range, and they are not asked for review. The change documents this as a residual, so it is a known gap. It remains a silent narrowing that can skip a child's own commits, and no test pins the case.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/review/gitexec/gitexec.go:1089-1096"
+        ]
+      }
+    ],
+    "evidence": [
+      "I read only the diff. The middle of upstreamFork, between the merge-ref check and the tip resolution, is not visible in it.",
+      "Remote upstreams, tips that already hold HEAD, several merge bases and read failures all return an empty string, so the range stays as it was before the change.",
+      "The new tests cover -u to another name, fast-forward, --no-ff merge, a garbage merge config and a remote upstream of another name."
+    ]
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "kind": "polisher",
+  "base": "99290fbc2144bec46d2351da401840ea87230b2f",
+  "head": "940496742321891133905e5f2135cd11e63135c3",
+  "diff_sha256": "7430de326dccc64a783a3d0888343f0316c1a0e7e14e7b33f3a7b0e7bea615e4",
+  "findings": {
+    "findings": [],
+    "evidence": [
+      "Read the full diff 99290fbc..94049674.",
+      "engine/agentgen/opencode.go:69 derives deny(\"question\", r.hasTool(\"AskUserQuestion\")); only the foreman var (roles.go:166) gains the tool, so the eight roles keep the deny.",
+      "action: question is still present in opencode/agents/builder.md:9, delivery.md:9, polisher.md:15, prototyper.md:9, reviewer.md:15, shaper.md:12, sweeper.md:9, verifier.md:12; only foreman.md lost it; no other agent gains a tool.",
+      "opencode_denies_test.go:60-98 requires the foreman to keep question and deny exactly webfetch, websearch, experimental_image_generate; wantOpenCodeAgents pins all nine deny sets.",
+      "Static inspection; tests and the generator differential were run by the independent verifier (go test ./agentgen ok; gadu-generate --check OK; base/head generated diff limited to the two foreman lines)."
+    ]
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "verdicts": [
+    {
+      "id": "F1",
+      "result": "reproduced",
+      "command": "bat -pp -r 441:443 <review worktree>/engine/cmd/usage.go; bat -pp -r 48:55 <review worktree>/engine/projection/availability.go",
+      "output": "usage.go:441-442 documents 'Do not read <source>: it is unavailable in this session (<reason>).' for each source incl. engram ('engram stats'); availability.go:49-51 now gives engram '- Do not call the Engram tools: Engram is unavailable in this session' with tail '; this does not apply to memorycard.'",
+      "base_result": "not-reproduced"
+    },
+    {
+      "id": "F2",
+      "result": "reproduced",
+      "command": "bat -pp -r 1389:1390 <review worktree>/README.md",
+      "output": "README.md:1389-1390 documents the same generic 'Do not read <source>' line for each source the hook cannot read.",
+      "base_result": "not-reproduced"
+    },
+    {
+      "id": "F3",
+      "result": "not-run",
+      "command": "none",
+      "output": "SUGGESTION: carried into the T58 doc correction.",
+      "base_result": "not-run"
+    },
+    {
+      "id": "F4",
+      "result": "not-run",
+      "command": "none",
+      "output": "SUGGESTION: carried (skill text needs the owner's re-approval).",
+      "base_result": "not-run"
+    }
+  ]
+}

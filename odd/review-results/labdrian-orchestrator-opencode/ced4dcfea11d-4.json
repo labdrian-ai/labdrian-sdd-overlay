@@ -1,0 +1,80 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "37d8726ab95fa57b7bb1fd9e18bb35173cac7546",
+    "head": "ced4dcfea11d9eb65fa85db58ef2821ed9a3f9eb",
+    "diff_sha256": "75aab2509aa3c7de79a6593ab525b2c55d7bd2112abd34e897026dcf7362c4d4",
+    "paths": [
+      "CHANGELOG.md",
+      "docs/architecture/adr-c23-m6-plan-instructions.md",
+      "engine/cmd/codex_hooks_test.go",
+      "engine/cmd/memory_acceptance_test.go",
+      "engine/cmd/plan_instructions_test.go",
+      "engine/cmd/session_availability_test.go",
+      "engine/projection/availability.go",
+      "engine/projection/availability_test.go",
+      "engine/projection/instructions_test.go",
+      "engine/projection/render.go"
+    ]
+  },
+  "rows": [
+    "risk-line",
+    "recall"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "37d8726ab95fa57b7bb1fd9e18bb35173cac7546",
+      "head": "ced4dcfea11d9eb65fa85db58ef2821ed9a3f9eb",
+      "diff_sha256": "75aab2509aa3c7de79a6593ab525b2c55d7bd2112abd34e897026dcf7362c4d4"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "docs/architecture/adr-c23-m6-plan-instructions.md",
+        "engine/cmd/codex_hooks_test.go",
+        "engine/cmd/memory_acceptance_test.go",
+        "engine/cmd/plan_instructions_test.go",
+        "engine/cmd/session_availability_test.go",
+        "engine/projection/availability.go",
+        "engine/projection/availability_test.go",
+        "engine/projection/instructions_test.go",
+        "engine/projection/render.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "engine/projection/availability.go:48-50",
+        "severity": "SUGGESTION",
+        "claim": "The new engram degradation line says 'Do not call the Engram tools'. Memorycard exposes tools with the same names (mem_search, mem_context, mem_get, mem_save), and a model may read 'the Engram tools' as those names rather than as the server. The line only separates them with the trailing 'does not apply to memorycard'. The line also covers Engram's write tools, while the next lines say memory writes are not limited by the plan. This is a wording ambiguity only, since the line is information only and the gate is unchanged. Naming the server (the engram MCP server, mcp__*engram__*) would remove the ambiguity. No test checks how a model reads it, and the task's own 'Unverified' note says so.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/projection/availability.go:48-50",
+          "engine/projection/gate.go:274-282"
+        ]
+      },
+      {
+        "id": "F2",
+        "location": "engine/projection/instructions_test.go:151-157",
+        "severity": "SUGGESTION",
+        "claim": "The no-identity assertions changed from strings.Contains(got, \"Engram reads\") to strings.Contains(got, \"memorycard reads (\"). That substring appears only in the project line, so the assertions still detect the project line. They are brittle, though. Any rewording of the project line, or a future memorycard line containing 'memorycard reads (', would make them pass or fail for the wrong reason. Asserting on the full project-line prefix, such as '- Engram and memorycard reads', would pin the intended line.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/projection/instructions_test.go:148-158"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full diff t58b.diff.",
+      "Checked engine/projection/gate.go: memorycard mem_search and mem_context are project-checked by the Engram-name rule (:281, :532); mem_get is id-based (:282). The new project line and memorycard line are consistent with the gate.",
+      "Grepped outside odd/ for 'Do not read engram' and 'Engram reads (': no stale consumer remains.",
+      "degradationLines: the engram branch changes only prefix and tail; the detail is still sanitized and clipped; other sources unchanged.",
+      "The ADR sample test's Replacer ordering is correct and ../../docs resolves under go test.",
+      "No commands or tests run."
+    ]
+  }
+}

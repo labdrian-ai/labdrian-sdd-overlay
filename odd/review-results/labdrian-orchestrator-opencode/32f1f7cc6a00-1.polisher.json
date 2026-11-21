@@ -1,0 +1,33 @@
+{
+  "kind": "polisher",
+  "base": "ad9e5e4e00f757c3ed2e8c5cb5de492eec3ea0c3",
+  "head": "32f1f7cc6a000820fe5506b7d9757e0373e67948",
+  "diff_sha256": "59cf11a1fb411020264d59b2a5ccb9b0526e3ca4c25dc39178a5f70bd0c3fb27",
+  "findings": {
+    "findings": [
+      {
+        "id": "P1",
+        "severity": "SUGGESTION",
+        "location": "engine/cmd/workflow_goal_base_test.go:54-86",
+        "claim": "Tests pin only an scp-style remote; https, ssh://, uppercase and dotted names are correct by reading but unpinned.",
+        "evidence": [
+          "workflow_goal_base.go:80-86 validates the last segment with workflow.ValidateIdentifier; identity.NormalizeRemote keeps path case; a leading dot is refused with a pointer to --project."
+        ]
+      },
+      {
+        "id": "P2",
+        "severity": "SUGGESTION",
+        "location": "engine/cmd/workflow_goal_base.go:80-83",
+        "claim": "A declared name with a slash is reduced to its last segment and can collide across owners; matches the stated L152 rule.",
+        "evidence": [
+          "strings.LastIndex applied whatever the identity source."
+        ]
+      }
+    ],
+    "evidence": [
+      "Read workflow_goal_base.go and its test in full; no writes; output plus valid judgment fields always passes goal.Parse.",
+      "Shaper line 9 names no repository path and no source token; foreman Shape row passes goal-base output.",
+      "Not run: read-only static judgment."
+    ]
+  }
+}

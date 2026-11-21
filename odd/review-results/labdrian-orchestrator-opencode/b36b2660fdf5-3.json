@@ -1,0 +1,43 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "4a844adbee39393a1be2e31b9476595007900b7d",
+    "head": "b36b2660fdf57eaa91a54b545bff078d2862b4e7",
+    "diff_sha256": "90d7dfd830ac6330e7e87249bf02784f13d21dfb798cb05eb8c29638755b61e5",
+    "paths": [
+      "engine/cmd/runtime_owner_rules_test.go",
+      "engine/runtime/claude.go",
+      "engine/runtime/claude_owner_rules.go",
+      "engine/runtime/claude_owner_rules_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "4a844adbee39393a1be2e31b9476595007900b7d",
+      "head": "b36b2660fdf57eaa91a54b545bff078d2862b4e7",
+      "diff_sha256": "90d7dfd830ac6330e7e87249bf02784f13d21dfb798cb05eb8c29638755b61e5"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/cmd/runtime_owner_rules_test.go",
+        "engine/runtime/claude.go",
+        "engine/runtime/claude_owner_rules.go",
+        "engine/runtime/claude_owner_rules_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "ClaudeOwnerRulesAdapter.write maps the typed noCheckout flag to CapabilityUnsupported, so install and update with no checkout are now unsupported and exit 1; the clause text is unchanged.",
+      "ClaudeOwnerRulesAdapter.Status uses the typed noCheckout flag in place of strings.HasPrefix on the note.",
+      "Uninstall goes through remove(), which this change leaves alone, so it still removes the block when there is no checkout; the new adapter and command tests cover this.",
+      "ClaudeAdapter in claude.go discards the new return value, so its output is unchanged.",
+      "The diff does not show whether the strings import is still used elsewhere in claude_owner_rules.go after HasPrefix was removed, so I raised no finding on it."
+    ]
+  }
+}

@@ -1,0 +1,159 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "62828131b67423edb6488248dbab0cd495876c10",
+    "head": "46521de87cbb5fc474a9db55318ed01572b13cd1",
+    "diff_sha256": "5604805a015fa44d2090f9ae91607cc19a862604922561b9c0acb852f35b99c6",
+    "paths": [
+      "CHANGELOG.md",
+      "engine/cmd/roles_skill_paths_test.go",
+      "engine/cmd/usage.go",
+      "engine/gate/skillpaths.go",
+      "engine/gate/skillpaths_prose_test.go",
+      "engine/gate/skillpaths_test.go",
+      "engine/runtime/opencode_bridge_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability",
+    "hunt"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "62828131b67423edb6488248dbab0cd495876c10",
+      "head": "46521de87cbb5fc474a9db55318ed01572b13cd1",
+      "diff_sha256": "5604805a015fa44d2090f9ae91607cc19a862604922561b9c0acb852f35b99c6"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "engine/cmd/roles_skill_paths_test.go",
+        "engine/cmd/usage.go",
+        "engine/gate/skillpaths.go",
+        "engine/gate/skillpaths_prose_test.go",
+        "engine/gate/skillpaths_test.go",
+        "engine/runtime/opencode_bridge_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "engine/gate/skillpaths.go:110-112",
+        "severity": "WARNING",
+        "claim": "When a CRLF prompt has no header, the new section is added with mixed line endings, and the trailing line break is only partly removed. strings.TrimRight(..., \"\\n\") removes '\\n' but leaves '\\r'. So \"Use test-first.\\r\\n\" becomes \"Use test-first.\\r\\n\\n## Skills to load before work\\n<path>\\n\": the prompt keeps CRLF but the added section uses LF. A prompt ending in \"\\r\\n\\r\\n\" keeps a stray '\\r' line before the section. T60 says to add the section 'after the prompt with its trailing newlines removed', and the header branch (lines 120-123) keeps '\\r'. The only CRLF test (skillpaths_prose_test.go:267-270) covers the header case only.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/gate/skillpaths.go:111 body := strings.TrimRight(strings.Join(lines, \"\\n\"), \"\\n\")",
+          "engine/gate/skillpaths.go:112 appends \"\\n\\n\" + header + \"\\n\" + paths + \"\\n\" with no eol handling",
+          "engine/gate/skillpaths_prose_test.go:267-270 tests CRLF only with an existing header"
+        ]
+      },
+      {
+        "id": "F2",
+        "location": "engine/gate/skillpaths.go:87-106",
+        "severity": "WARNING",
+        "claim": "Every OpenCode subagent launch now picks up a skill from any hyphenated word in its prose, whatever that word is doing in the sentence, and that includes reviewer launches. The plugin runs resolveSkillPaths on every launch before attachFrozenContext (labdrian-runtime-parity-plugin.mjs:426-436, 666). So a reviewer brief that quotes criteria or task text naming a skill id now gets a 'Skills to load before work' section with absolute SKILL.md paths outside the candidate worktree. A brief that names a skill in a negative sense ('do not use branch-pr') also gets that skill added as something to load. Such a reviewer is told to load files outside the scope it may read, and a role can be given skills its brief told it not to load. Nothing excludes the reviewer agent or negated mentions, and no test covers a reviewer launch.",
+        "evidence_class": "inferential",
+        "causal_disposition": "behavior-activated",
+        "proof_refs": [
+          "engine/runtime/labdrian-runtime-parity-plugin.mjs:421-436 resolveSkillPaths applies to every INJECTED_TOOL launch with a prompt",
+          "engine/gate/skillpaths.go:95-105 adds every hyphenated word with a SKILL.md, with no role or context filter"
+        ]
+      },
+      {
+        "id": "F3",
+        "location": "engine/gate/skillpaths.go:23-30",
+        "severity": "SUGGESTION",
+        "claim": "The doc comment of RewriteSkillPaths now contradicts the behavior and breaks its own sentence. Line 26-27 still says a prompt with neither header 'is returned unchanged', but addProseMentions now adds a section to such a prompt when it has a mention. The added sentence on line 28 also sits between 'refused with one sentence ... to write' and the list of refusal cases.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/gate/skillpaths.go:26-27",
+          "engine/gate/skillpaths.go:110-112"
+        ]
+      },
+      {
+        "id": "F4",
+        "location": "engine/cmd/usage.go:335",
+        "severity": "SUGGESTION",
+        "claim": "The usage line still says 'a prompt without that line is printed unchanged' and then says a mention adds the section 'when absent'. The help text contradicts itself, and the first clause is now false for a prompt with no header that names a skill in prose.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/cmd/usage.go:335"
+        ]
+      },
+      {
+        "id": "F5",
+        "location": "engine/gate/skillpaths.go:131-154",
+        "severity": "SUGGESTION",
+        "claim": "The new code duplicates existing logic. proseIDForm is the same regex as skillIDForm (line 18). wordChar copies engine/roles/skills.go:11. If either copy changes alone, the prose mention boundary and the section id form drift apart without any error.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/gate/skillpaths.go:18 and :132",
+          "engine/roles/skills.go:11"
+        ]
+      },
+      {
+        "id": "F6",
+        "location": "engine/gate/skillpaths.go:81-84",
+        "severity": "SUGGESTION",
+        "claim": "A skill already listed is detected only by exact match on the trimmed text of the line. An absolute path to the same SKILL.md spelled another way (non-clean, or through a symlinked skills_root) is not recognized, so the same skill is listed twice under the header.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/gate/skillpaths.go:83"
+        ]
+      },
+      {
+        "id": "F7",
+        "location": "engine/gate/skillpaths.go:88-91",
+        "severity": "SUGGESTION",
+        "claim": "A fence is recognized only on a line that starts with three backticks at column 0. Indented fences, '~~~' fences and fences inside list items are read as prose, so skill ids in example code within them are added. An unclosed fence hides every later mention.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/gate/skillpaths.go:88"
+        ]
+      },
+      {
+        "id": "F8",
+        "location": "engine/gate/skillpaths.go:95-101",
+        "severity": "SUGGESTION",
+        "claim": "Each hyphenated prose word that is not a skill is checked on disk every time it appears; a miss is never remembered.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/gate/skillpaths.go:100"
+        ]
+      },
+      {
+        "id": "F9",
+        "location": "engine/runtime/opencode_bridge_test.go:326-366",
+        "severity": "SUGGESTION",
+        "claim": "The test pins the plugin's sha256 as a constant; any later legitimate change to the plugin fails this test. The test also runs 'go build' of the whole engine inside a unit test, which can fail offline or without a module cache.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/runtime/opencode_bridge_test.go:328",
+          "engine/runtime/opencode_bridge_test.go:340-344"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the whole diff t60.diff",
+      "Read T60 (line 102) of the feature document",
+      "Read engine/gate/skillpaths.go at head",
+      "Read engine/cmd/roles_skill_paths.go",
+      "Read engine/gate/gate.go hasExactHeader",
+      "Read engine/runtime/labdrian-runtime-parity-plugin.mjs:395-464",
+      "Grepped for wordChar duplicates",
+      "Nothing was run"
+    ]
+  }
+}

@@ -1,0 +1,37 @@
+{
+  "kind": "sweep",
+  "base": "ec250124001db54af43d4fe63df6e1d20941b2eb",
+  "head": "8ceb67f8f08b7db3dd816fc9ca38bf7190a69f75",
+  "diff_sha256": "760fde698a0988f6e3bbb62a0547c068242f240f607ac14ec4381429a8a78a14",
+  "outcome": "fired",
+  "t1": {
+    "deleted_or_renamed": [],
+    "removed_names": [
+      {
+        "name": "TestAnUnavailableEngramNamesTheEngramToolsAndSparesMemorycard",
+        "hits": [
+          "odd/tasks/labdrian-orchestrator-opencode.md"
+        ]
+      }
+    ]
+  },
+  "t2": [
+    {
+      "tool": "errcheck",
+      "module": "engine",
+      "new": [
+        "cmd/live_guard_test.go: unchecked error: os.Setenv(\"MEMORYCARD_DB\", filepath.Join(home, \"memorycard\", \"memory.db\"))",
+        "runtime/live_guard_test.go: unchecked error: os.Setenv(\"MEMORYCARD_DB\", filepath.Join(home, \"memorycard\", \"memory.db\"))"
+      ]
+    }
+  ],
+  "t3": [
+    "?? CLAUDE.md",
+    "?? docs/wiki/.format",
+    "?? docs/wiki/README.md"
+  ],
+  "t4": {
+    "leftovers": [],
+    "orphaned_fixtures": []
+  }
+}

@@ -1,0 +1,73 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "dbaf2ca1fe7d0144b8066ce51f3be06d40696c51",
+    "head": "4a844adbee39393a1be2e31b9476595007900b7d",
+    "diff_sha256": "f12a2188f368f2f41dc47703c2483a40dc24e5d1ba820e585847e465a8472bc2",
+    "paths": [
+      "engine/cmd/runtime.go",
+      "engine/cmd/runtime_options_test.go",
+      "engine/cmd/runtime_owner_rules_test.go",
+      "engine/cmd/testdata/runtime-golden/runtime-bad-command-lines.golden",
+      "engine/cmd/usage.go",
+      "engine/runtime/claude.go",
+      "engine/runtime/claude_owner_rules.go",
+      "engine/runtime/claude_owner_rules_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "dbaf2ca1fe7d0144b8066ce51f3be06d40696c51",
+      "head": "4a844adbee39393a1be2e31b9476595007900b7d",
+      "diff_sha256": "f12a2188f368f2f41dc47703c2483a40dc24e5d1ba820e585847e465a8472bc2"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/cmd/runtime.go",
+        "engine/cmd/runtime_options_test.go",
+        "engine/cmd/runtime_owner_rules_test.go",
+        "engine/cmd/testdata/runtime-golden/runtime-bad-command-lines.golden",
+        "engine/cmd/usage.go",
+        "engine/runtime/claude.go",
+        "engine/runtime/claude_owner_rules.go",
+        "engine/runtime/claude_owner_rules_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "engine/runtime/claude_owner_rules.go:32-33",
+        "claim": "In the owner-rules-only adapter, install or update with no overlay checkout returns restart_required with 'owner rules not installed', so the command exits 0 although nothing was written. That was acceptable in ClaudeAdapter, where the hooks were still installed. For this component the block is the only work, so reporting success and asking for a restart is misleading. Status in the same situation returns unsupported, so the two actions disagree.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/runtime/claude_owner_rules.go:32-33",
+          "engine/runtime/claude_owner_rules.go:117-120"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "engine/runtime/claude_owner_rules.go:104-108",
+        "claim": "Status distinguishes 'no checkout' from 'current' by matching the note text with strings.HasPrefix(note, \"owner rules not checked\"). Changing the wording in claudeOwnerRules.status silently turns the no-checkout case into supported. A typed return value would avoid the coupling.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/runtime/claude_owner_rules.go:104-108",
+          "engine/runtime/claude_owner_rules.go:78"
+        ]
+      }
+    ],
+    "evidence": [
+      "Compared the ClaudeAdapter refactor with the base: the messages and statuses of install, update, uninstall and status are preserved.",
+      "Reviewed the new adapter and the cmd wiring for the non-claude target refusal and for --config-root handling."
+    ]
+  }
+}

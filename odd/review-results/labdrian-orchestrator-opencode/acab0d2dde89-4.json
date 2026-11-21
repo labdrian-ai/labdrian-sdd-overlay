@@ -1,0 +1,42 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "f8ca3cdfb3b82828e3626b5ad8a588fbf8c916e1",
+    "head": "acab0d2dde890406e773c233d358964f203da1e3",
+    "diff_sha256": "aceb735b58eb129745e5542a9039757ca24d96639557e43fd215746fbc16b352",
+    "paths": [
+      "engine/cmd/dispatch_routes_test.go",
+      "engine/cmd/review.go",
+      "engine/cmd/review_exempt_test.go",
+      "engine/cmd/review_test.go",
+      "engine/cmd/usage.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "f8ca3cdfb3b82828e3626b5ad8a588fbf8c916e1",
+      "head": "acab0d2dde890406e773c233d358964f203da1e3",
+      "diff_sha256": "aceb735b58eb129745e5542a9039757ca24d96639557e43fd215746fbc16b352"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/cmd/dispatch_routes_test.go",
+        "engine/cmd/review.go",
+        "engine/cmd/review_exempt_test.go",
+        "engine/cmd/review_test.go",
+        "engine/cmd/usage.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The diff only changes two review verb-list error messages (adding ci), their three test expectations, and appends usage text for roles skill-paths.",
+      "The updated message strings in review.go match the expected strings in dispatch_routes_test.go, review_exempt_test.go and review_test.go exactly.",
+      "The usage text for roles skill-paths is documentation only and changes no runtime behavior; the diff does not show whether the roles skill-paths usage text matches the implementation, so no defect is claimed."
+    ]
+  }
+}

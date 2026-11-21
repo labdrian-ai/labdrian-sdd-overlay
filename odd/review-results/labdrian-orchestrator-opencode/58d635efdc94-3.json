@@ -1,0 +1,90 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "20883812ce18dd41f2a715c44dbbd5035b6efeff",
+    "head": "58d635efdc941d227111a3d82baccc3bbda29a45",
+    "diff_sha256": "7d2e983c24aa10471de0b3a74a4a6ae5b7de06a1cbe5cbd4e07f14fe33f6383c",
+    "paths": [
+      "CHANGELOG.md",
+      "engine/cmd/roles.go",
+      "engine/cmd/roles_bound.go",
+      "engine/cmd/roles_bound_test.go",
+      "engine/cmd/roles_builder_guard.go",
+      "engine/cmd/usage.go",
+      "engine/roles/bound.go",
+      "engine/roles/bound_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line",
+    "recall"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "20883812ce18dd41f2a715c44dbbd5035b6efeff",
+      "head": "58d635efdc941d227111a3d82baccc3bbda29a45",
+      "diff_sha256": "7d2e983c24aa10471de0b3a74a4a6ae5b7de06a1cbe5cbd4e07f14fe33f6383c"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "engine/cmd/roles.go",
+        "engine/cmd/roles_bound.go",
+        "engine/cmd/roles_bound_test.go",
+        "engine/cmd/roles_builder_guard.go",
+        "engine/cmd/usage.go",
+        "engine/roles/bound.go",
+        "engine/roles/bound_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "engine/cmd/roles_bound.go:145-160",
+        "severity": "WARNING",
+        "claim": "boundWorkflowHere calls describeBinding, which builds the binding store (newBindingStore) before it checks whether the cwd is in a repository. If the state home cannot be resolved, 'roles append' from a directory outside any repository now exits 1 with 'the binding of this checkout could not be read'. T56 and the CHANGELOG say a directory outside a repository answers as before. The NoRepositoryError branch is only reached after the store is built. The trigger is narrow, because the chain store needs the same state home, so append would probably have failed anyway with a different message. Even so, the claimed contract does not hold for that ordering, and the test only exercises the failure inside a repository.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/cmd/roles_builder_guard.go:427-437 (describeBinding builds newBindingStore first)",
+          "engine/cmd/roles_bound.go:153-160",
+          "engine/projection/app/bind.go:156-160 (RepoKey check happens inside Describe, after the store exists)"
+        ]
+      },
+      {
+        "id": "F2",
+        "location": "engine/cmd/roles_bound.go:149-152",
+        "severity": "SUGGESTION",
+        "claim": "Two states fail open silently. A working-directory error returns the zero BoundWorkflow, so append is allowed with no bound-chain check. A bound workflow whose log is unreadable (Workflow.Classification not owned, e.g. unavailable) also returns the zero value. In either case the L130 duplicate-chain append the rule exists to stop is accepted without any message. T56 asks for the unreadable-workflow behavior as 'as today', but neither path has a test, and the working-directory error is not named in the task at all.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/cmd/roles_bound.go:149-152,161-164",
+          "engine/cmd/roles_bound_test.go (no case for a workingDir error or an unavailable workflow log)"
+        ]
+      },
+      {
+        "id": "F3",
+        "location": "engine/roles/bound.go:478-483",
+        "severity": "SUGGESTION",
+        "claim": "The rule hard-codes closedStatus = \"closed\" as a string copy of workflow.StatusClosed, and the adapter passes string(state.Status). If the workflow package renames or adds a terminal status, the rule silently keeps refusing appends for a finished workflow. No test ties the two constants together. The tests use \"running\", \"paused\" and \"closed\" literals only.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/roles/bound.go:476-483",
+          "engine/cmd/roles_bound.go:166-167"
+        ]
+      }
+    ],
+    "evidence": [
+      "read the whole diff at the scratchpad t56.diff",
+      "read task T56 (line 98 of the tasks file)",
+      "read runRolesAppend at head in the review worktree; the check sits after the flag/record match and before the evidence check, as T56 requires",
+      "read BindWorkflow.Describe in engine/projection/app/bind.go; the NoRepositoryError path comes after the store is built",
+      "checked that the verbs' exact refusal strings in roles/bound.go match the strings T56 specifies",
+      "no commands run; tests not run"
+    ]
+  }
+}

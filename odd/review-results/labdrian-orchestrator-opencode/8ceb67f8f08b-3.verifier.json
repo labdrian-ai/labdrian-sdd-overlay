@@ -1,0 +1,32 @@
+{
+  "verdicts": [
+    {
+      "id": "F1",
+      "result": "reproduced",
+      "command": "Same as 8ceb67f8f08b-4 F2: the no-store SessionStart stdout logged from a head scratch copy of TestMemoryWiringAcceptance; base test run with its pinned line read.",
+      "output": "Head, no store: one block holds `- Do not call the memorycard tools: memorycard is unavailable in this session (the memorycard store <home>/.memorycard/memory.db does not exist), though the plan allows its reads.` and `- Memory writes (mem_save, promote) are not limited by the plan.`. Base names only the Engram tools and adds 'this does not apply to memorycard'.",
+      "base_result": "not-reproduced"
+    },
+    {
+      "id": "F2",
+      "result": "not-reproduced",
+      "command": "Fixture under a temp MEMORYCARD_DB (marker saved with --defer-embed and listed back), real HOME and environment otherwise. (a) MEMORYCARD_EMBED unset, 5 timed `memorycard list --topic-prefix labdrian/session-probe/ --project labdrian-session-probe`. (b1) sqlite3 holding BEGIN EXCLUSIVE (WAL) while the list runs. (b2) the holder in PRAGMA locking_mode=EXCLUSIVE.",
+      "output": "(a) exit 0, wall .0082-.0106 s, no embedder delay. (b1) exit 0 in .0092 s, not blocked. (b2) only with locking_mode=EXCLUSIVE the list waited 13.57 s (over the 3 s budget); whether memorycard's MCP server or any hook uses exclusive locking mode was not checked. Under the claim as stated (embedder, ordinary writer's lock) the call stays far below 3 s.",
+      "base_result": "not-run"
+    },
+    {
+      "result": "not-run",
+      "command": "none",
+      "output": "SUGGESTION: folded into the T64 correction design.",
+      "base_result": "not-run",
+      "id": "F3"
+    },
+    {
+      "result": "not-run",
+      "command": "none",
+      "output": "SUGGESTION: folded into the T64 correction design.",
+      "base_result": "not-run",
+      "id": "F4"
+    }
+  ]
+}

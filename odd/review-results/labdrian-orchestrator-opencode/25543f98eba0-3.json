@@ -1,0 +1,36 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "508889816fbde6dd774ec4d5f4fbd9b459ea1cc4",
+    "head": "25543f98eba0648c82a0a7831998128f2f24a426",
+    "diff_sha256": "85ca17c3d05e9fb3f2ff2626fa70b85a1338b2a1bfbd4ff35e28d67fc18116e9",
+    "paths": [
+      "skills/chained-pr/.approval.json"
+    ]
+  },
+  "rows": [
+    "recall"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "508889816fbde6dd774ec4d5f4fbd9b459ea1cc4",
+      "head": "25543f98eba0648c82a0a7831998128f2f24a426",
+      "diff_sha256": "85ca17c3d05e9fb3f2ff2626fa70b85a1338b2a1bfbd4ff35e28d67fc18116e9"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "skills/chained-pr/.approval.json"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "Read /home/labdrian/labdrian-sdd-overlay-worktrees/review-25543f98eba0/skills/chained-pr/.approval.json at head. It is valid JSON with version 2, skill chained-pr, sha256 7e151105e4ce0a182843b75994e897397860c18dbea8dff7f2696b99d17af05e, approved_at 2026-11-20T14:58:19Z and approver labdrian-ai. These values match the diff.",
+      "Globbed /home/labdrian/labdrian-sdd-overlay-worktrees/review-25543f98eba0/skills/chained-pr. The skill holds SKILL.md and references/chaining-details.md next to .approval.json.",
+      "Grepped /home/labdrian/labdrian-sdd-overlay-worktrees/review-25543f98eba0/odd/tasks/labdrian-orchestrator-opencode.md at head for 7e151105. It does not appear there, so the L160 re-approval record is not in this head. It is likely in the later commit a50f675a, which falls outside this candidate.",
+      "Not run: the engine's sha256 computation for skills/chained-pr at head and the skills suite's APPROVAL_STALE check. This role cannot run commands, so I could not confirm that the recorded sha256 matches the computed hash.",
+      "Risk line 'Risk: none': the change edits metadata only. It adds no secrets, permissions, path escapes, or exec or network imports."
+    ]
+  }
+}

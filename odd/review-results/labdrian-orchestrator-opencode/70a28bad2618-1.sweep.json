@@ -1,0 +1,41 @@
+{
+  "kind": "sweep",
+  "base": "8ff0e9f85d3f6f4d0c7580d57862345b28743488",
+  "head": "70a28bad2618d18ccb5cbf210eed5ad2b310dce6",
+  "diff_sha256": "95aff354ac91a03e379731916f1b77af974cfd44a9d7419a8888fe7cec802dc1",
+  "outcome": "fired",
+  "t1": {
+    "deleted_or_renamed": [],
+    "removed_names": []
+  },
+  "t2": [
+    {
+      "tool": "staticcheck",
+      "module": "engine",
+      "new": [
+        "cmd/review_ci_test.go: this value of landing is never used (SA4006)"
+      ]
+    },
+    {
+      "tool": "errcheck",
+      "module": "engine",
+      "new": [
+        "cmd/review_ci_test.go: unchecked error: filepath.WalkDir(root, func(path string, e fs.DirEntry, err error) error {"
+      ]
+    },
+    {
+      "tool": "nilerr",
+      "module": "engine",
+      "new": [
+        "engine/cmd/review_ci_test.go: error is not nil but it returns nil"
+      ]
+    }
+  ],
+  "t3": [
+    " M odd/tasks/labdrian-orchestrator-opencode.md"
+  ],
+  "t4": {
+    "leftovers": [],
+    "orphaned_fixtures": []
+  }
+}

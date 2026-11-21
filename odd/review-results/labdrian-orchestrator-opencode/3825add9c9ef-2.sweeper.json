@@ -1,0 +1,30 @@
+{
+  "kind": "sweeper",
+  "base": "068db6faac1a8e33bbf862dcb7286408ddb0df6b",
+  "head": "3825add9c9ef31d98da884383fbc57509a9bd302",
+  "diff_sha256": "36a0bd72a77fd2c4ff927b051c260cc96b22702bd40a8a8adda9787c704ae23d",
+  "sweep": "3825add9c9ef-1.sweep.json",
+  "commit": null,
+  "candidates": [
+    {
+      "candidate": "T1 name: TestOpenCodeBridgeNamesAnEngineOlderThanThePluginWithItsRemedy",
+      "disposition": "live",
+      "evidence": "rg over engine finds no reference; outside immutable review records the only hit is odd/tasks/labdrian-orchestrator-opencode.md (T60, which records the rename to TestOpenCodeBridgeDeniesAnExitOneWithTheRemedyForAnOlderEngineAndNoClaimOfIt on purpose; feature document history). Nothing to correct or delete."
+    },
+    {
+      "candidate": "T3: ?? CLAUDE.md",
+      "disposition": "live",
+      "evidence": "owner, verbatim, L160: \"se quedan los files de wiki\"; kept, never deleted"
+    },
+    {
+      "candidate": "T3: ?? docs/wiki/.format",
+      "disposition": "live",
+      "evidence": "owner, verbatim, L160: \"se quedan los files de wiki\"; kept, never deleted"
+    },
+    {
+      "candidate": "T3: ?? docs/wiki/README.md",
+      "disposition": "live",
+      "evidence": "owner, verbatim, L160: \"se quedan los files de wiki\"; kept, never deleted"
+    }
+  ]
+}

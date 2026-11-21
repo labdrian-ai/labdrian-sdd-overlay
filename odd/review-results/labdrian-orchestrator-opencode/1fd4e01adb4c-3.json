@@ -1,0 +1,69 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "247f7f4fe50444219531e9c7fd3c676ce060d138",
+    "head": "1fd4e01adb4cd8c0f09204655a5c0c0795c82bcc",
+    "diff_sha256": "d134c36ac337930f4e602e99c89ea82d5d80a13a485b35fed1623c5e8eed70d2",
+    "paths": [
+      "engine/cmd/opencode_bridge_session_e2e_test.go",
+      "engine/cmd/projection_hook.go",
+      "engine/cmd/projection_hook_capability_test.go",
+      "engine/cmd/projection_prompt_once_test.go",
+      "engine/projection/app/hook.go",
+      "engine/projection/context.go",
+      "engine/projection/render.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "247f7f4fe50444219531e9c7fd3c676ce060d138",
+      "head": "1fd4e01adb4cd8c0f09204655a5c0c0795c82bcc",
+      "diff_sha256": "d134c36ac337930f4e602e99c89ea82d5d80a13a485b35fed1623c5e8eed70d2"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/cmd/opencode_bridge_session_e2e_test.go",
+        "engine/cmd/projection_hook.go",
+        "engine/cmd/projection_hook_capability_test.go",
+        "engine/cmd/projection_prompt_once_test.go",
+        "engine/projection/app/hook.go",
+        "engine/projection/context.go",
+        "engine/projection/render.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "engine/projection/app/hook.go:96",
+        "claim": "Runtime is set only in OnPrompt. If the SessionStart path (not shown in the diff) also builds a ProjectionInput and calls s.project, its Runtime stays empty, so an OpenCode SessionStart block would still say 'capability limits (claude)'. The same mislabeling this commit fixes for prompts would remain there. The cmd tests only check that a SessionStart block exists, not its capability line.",
+        "evidence_class": "inferential",
+        "causal_disposition": "unknown",
+        "proof_refs": [
+          "engine/projection/app/hook.go:96 sets input.Runtime = req.Runtime only inside OnPrompt",
+          "engine/cmd/projection_prompt_once_test.go:268 checks only that SessionStart stdout is non-empty"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "engine/cmd/projection_hook.go:252",
+        "claim": "projectionRuntime compares source against the literal \"opencode\" and maps every other source, including unknown ones, silently to Claude Code's limits. A mistyped source or a new runtime would get Claude's line with no error. The literal also duplicates the source constant used elsewhere.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/cmd/projection_hook.go:249-256"
+        ]
+      }
+    ],
+    "evidence": [
+      "Diff inspected in full; all seven changed paths covered.",
+      "The capabilityLine default (\"\" maps to Claude) keeps Claude and Codex output unchanged, and the new test pins it."
+    ]
+  }
+}

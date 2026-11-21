@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "2dc1cde4309596b73e0050f83491312592faaf4a",
+    "head": "d24196b17048fd4e8c29a4cc4598ec7184eec52c",
+    "diff_sha256": "704a886cf2beea6174e82083edd985244a6e1fb9926f6b45407cfeddb4c4526a",
+    "paths": [
+      "agents/foreman.md",
+      "engine/agentgen/foreman_test.go",
+      "opencode/agents/foreman.md",
+      "roles/foreman/body.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability",
+    "hunt"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "2dc1cde4309596b73e0050f83491312592faaf4a",
+      "head": "d24196b17048fd4e8c29a4cc4598ec7184eec52c",
+      "diff_sha256": "704a886cf2beea6174e82083edd985244a6e1fb9926f6b45407cfeddb4c4526a"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "agents/foreman.md",
+        "engine/agentgen/foreman_test.go",
+        "opencode/agents/foreman.md",
+        "roles/foreman/body.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "Read the whole diff t59.diff: one line in each of 4 files.",
+      "Read T59 at line 101, S16 B1-B7 (incl. the L162 B7 amendment) and the L162 header.",
+      "roles/foreman/body.md:13 matches T59's exact text character for character; the body keeps 38 lines.",
+      "Read the Stages table roles/foreman/body.md:18-29: the new Evidence rule covers the Close cell (landing commit id, 'CI: none configured' line, delivery's entry with its test command and result, plus the foreman's re-run) and matches the B7 Check text.",
+      "Grep for 'Decision, Outcome, Evidence, Next' outside odd/: only the four changed places, all with the new line; no stale copy.",
+      "Neither generated agent's frontmatter pins a hash or version of the body.",
+      "Hunt classes do not apply: role prose and one test string.",
+      "Not run: go test, gadu-generate --check, the differential."
+    ]
+  }
+}

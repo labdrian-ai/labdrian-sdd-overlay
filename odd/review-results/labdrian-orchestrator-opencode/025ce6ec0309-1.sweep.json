@@ -1,0 +1,19 @@
+{
+  "kind": "sweep",
+  "base": "940496742321891133905e5f2135cd11e63135c3",
+  "head": "025ce6ec03092d1b416e843793cfd74cec57f96c",
+  "diff_sha256": "90ddacc0fca81876cebdbaca85d9e21768aed524860fa10172414132dd2fa0bd",
+  "outcome": "fired",
+  "t1": {
+    "deleted_or_renamed": [],
+    "removed_names": []
+  },
+  "t2": [],
+  "t3": [
+    " M odd/tasks/labdrian-orchestrator-opencode.md"
+  ],
+  "t4": {
+    "leftovers": [],
+    "orphaned_fixtures": []
+  }
+}

@@ -1,0 +1,78 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "ad9e5e4e00f757c3ed2e8c5cb5de492eec3ea0c3",
+    "head": "32f1f7cc6a000820fe5506b7d9757e0373e67948",
+    "diff_sha256": "59cf11a1fb411020264d59b2a5ccb9b0526e3ca4c25dc39178a5f70bd0c3fb27",
+    "paths": [
+      "CHANGELOG.md",
+      "README.md",
+      "agents/foreman.md",
+      "agents/shaper.md",
+      "codex/agents/shaper.toml",
+      "engine/agentgen/foreman_test.go",
+      "engine/cmd/roles_builder_guard_docs_test.go",
+      "engine/cmd/usage.go",
+      "engine/cmd/workflow.go",
+      "engine/cmd/workflow_bind_test.go",
+      "engine/cmd/workflow_goal_base.go",
+      "engine/cmd/workflow_goal_base_test.go",
+      "opencode/agents/foreman.md",
+      "opencode/agents/shaper.md",
+      "pi/agents/shaper.md",
+      "roles/foreman/body.md",
+      "roles/shaper/body.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "ad9e5e4e00f757c3ed2e8c5cb5de492eec3ea0c3",
+      "head": "32f1f7cc6a000820fe5506b7d9757e0373e67948",
+      "diff_sha256": "59cf11a1fb411020264d59b2a5ccb9b0526e3ca4c25dc39178a5f70bd0c3fb27"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "README.md",
+        "agents/foreman.md",
+        "agents/shaper.md",
+        "codex/agents/shaper.toml",
+        "engine/agentgen/foreman_test.go",
+        "engine/cmd/roles_builder_guard_docs_test.go",
+        "engine/cmd/usage.go",
+        "engine/cmd/workflow.go",
+        "engine/cmd/workflow_bind_test.go",
+        "engine/cmd/workflow_goal_base.go",
+        "engine/cmd/workflow_goal_base_test.go",
+        "opencode/agents/foreman.md",
+        "opencode/agents/shaper.md",
+        "pi/agents/shaper.md",
+        "roles/foreman/body.md",
+        "roles/shaper/body.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "engine/cmd/workflow_goal_base.go:77-86",
+        "claim": "The goal's project_id is the last '/'-separated part of the shared identity, while the memory gate and 'workflow open' record the full identity. If the shared identity ever contains a '/', the goal's project_id would differ from the project the gate records. The diff does not show whether 'workflow open' compares the two, so this is unverified.",
+        "evidence_class": "inferential",
+        "causal_disposition": "unknown",
+        "proof_refs": [
+          "engine/cmd/workflow_goal_base.go:77-86"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff adds a read-only verb that validates the feature name and project id, takes the memory directive from memoryscope.DefaultFor, and exits 2 on refusal.",
+      "The shaper role files in every runtime copy are consistent with each other, the foreman Shape rows match their test, and the usage and verb lists are updated together with their tests.",
+      "I found no regression on input that was valid before the change."
+    ]
+  }
+}

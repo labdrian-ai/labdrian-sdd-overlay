@@ -1,0 +1,11 @@
+{
+  "verdicts": [
+    {
+      "id": "F1",
+      "result": "not-run",
+      "command": "none",
+      "output": "SUGGESTION: carried to T62's batch.",
+      "base_result": "not-run"
+    }
+  ]
+}

@@ -1,0 +1,72 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "775dd532da9677e8df1636855ffa52d75a29978c",
+    "head": "8007ccb1c99b45e40a0ada1b7d229a083113cd93",
+    "diff_sha256": "a42d68a3c6bec0e49efa9b55944ee519386355b3370144a0ae1e7aba138e56a3",
+    "paths": [
+      "CHANGELOG.md",
+      "README.md",
+      "engine/cmd/session_availability_test.go",
+      "engine/cmd/usage.go",
+      "engine/projection/instructions_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability",
+    "hunt"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "775dd532da9677e8df1636855ffa52d75a29978c",
+      "head": "8007ccb1c99b45e40a0ada1b7d229a083113cd93",
+      "diff_sha256": "a42d68a3c6bec0e49efa9b55944ee519386355b3370144a0ae1e7aba138e56a3"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "README.md",
+        "engine/cmd/session_availability_test.go",
+        "engine/cmd/usage.go",
+        "engine/projection/instructions_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "engine/cmd/session_availability_test.go:272-282",
+        "severity": "SUGGESTION",
+        "claim": "The new test only checks that each rendered degradation line appears somewhere in the flattened usage text and README. It does not check which source each line is given for. If the engram line and the generic line were documented against the wrong sources, or if the strings appeared in an unrelated paragraph, the test would still pass. Concrete failure: if someone later swaps 'for engram' and 'for longterm-mem and procedural-skills' at usage.go:111-113 or README.md:1390-1393, the test stays green.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/cmd/session_availability_test.go:272-282"
+        ]
+      },
+      {
+        "id": "F2",
+        "location": "README.md:1389-1393",
+        "severity": "SUGGESTION",
+        "claim": "The newly documented engram line is quoted only with '(<reason>)'. degradationLines (engine/projection/availability.go:52-55) drops the parenthesis when the detail is empty. Neither README.md:1389-1393 nor usage.go:110-113 documents that no-detail form, and the new test feeds only a non-empty detail. L182 R3 records this as advisory, and it is unproved that the session probe ever gives an empty detail.",
+        "evidence_class": "inferential",
+        "causal_disposition": "unknown",
+        "proof_refs": [
+          "engine/projection/availability.go:52-55",
+          "engine/projection/availability_test.go:70"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the whole diff t58c.diff",
+      "Read T58 (line 100) and L181-L183; the usage.go, README and CHANGELOG wording match the exact flattened texts L182 specifies",
+      "Read engine/projection/availability.go in full",
+      "Read engine/cmd/session_availability_test.go:180-234 and README.md:1382-1397 at head",
+      "Grep: only degradationLines emits block lines starting '- Do not'; flat matches plan_instructions_test.go:172; captureUsage is in runtime_capabilities_test.go:205",
+      "instructions_test.go negative checks now look for the full project-line prefix",
+      "No tests, builds or commands were run"
+    ]
+  }
+}

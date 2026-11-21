@@ -1,0 +1,71 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "068db6faac1a8e33bbf862dcb7286408ddb0df6b",
+    "head": "3825add9c9ef31d98da884383fbc57509a9bd302",
+    "diff_sha256": "36a0bd72a77fd2c4ff927b051c260cc96b22702bd40a8a8adda9787c704ae23d",
+    "paths": [
+      "CHANGELOG.md",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-context-lists-quotes-and-case.golden",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-minimalism-context-metadata-accepted-today.golden",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-phases-quoted-items-accepted-today.golden",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-reads-the-contracts-of-the-overlay.golden",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-without-the-oo-contract.golden",
+      "engine/cmd/testdata/runtime-golden/runtime-opencode-and-pi-with-an-overlay.golden",
+      "engine/runtime/labdrian-runtime-parity-plugin.mjs",
+      "engine/runtime/opencode_bridge_skills_test.go",
+      "engine/runtime/opencode_plugin.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability",
+    "hunt"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "068db6faac1a8e33bbf862dcb7286408ddb0df6b",
+      "head": "3825add9c9ef31d98da884383fbc57509a9bd302",
+      "diff_sha256": "36a0bd72a77fd2c4ff927b051c260cc96b22702bd40a8a8adda9787c704ae23d"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-context-lists-quotes-and-case.golden",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-minimalism-context-metadata-accepted-today.golden",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-phases-quoted-items-accepted-today.golden",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-reads-the-contracts-of-the-overlay.golden",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-without-the-oo-contract.golden",
+        "engine/cmd/testdata/runtime-golden/runtime-opencode-and-pi-with-an-overlay.golden",
+        "engine/runtime/labdrian-runtime-parity-plugin.mjs",
+        "engine/runtime/opencode_bridge_skills_test.go",
+        "engine/runtime/opencode_plugin.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "engine/runtime/labdrian-runtime-parity-plugin.mjs:433-434",
+        "severity": "SUGGESTION",
+        "claim": "The exit-1 branch is chosen by the constant SKILL_PATHS_USAGE_EXIT, but its sentence writes the exit as the literal text \"exited 1\". If the constant changes, the denial will report an exit the engine did not give, which is the kind of misattribution correction D exists to remove. The literal also doubles the exit when the engine writes nothing to stderr. runEngine then fills in the failure as \"the engine ended with exit 1\" (:288), so the message reads \"...the engine ended with exit 1; the engine <path> exited 1 on this plugin's call...\". The \"no line from the engine\" row pins that wording. Interpolating ${reply.code} (or the constant) would keep the reported exit tied to the branch condition. L177 prescribes the exact sentence, so this is a maintainability note, not a deviation from the design.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/runtime/labdrian-runtime-parity-plugin.mjs:288",
+          "engine/runtime/labdrian-runtime-parity-plugin.mjs:419"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the whole diff t60d.diff (10 paths).",
+      "Read T60 (line 102), correction D's spec, and the L175-L178 log entries.",
+      "Read the plugin at head, lines 180-470: runEngine's code handling, skillPathsRefusal, resolveSkillPaths. The exit-2 branch, the unchecked prefix and other failures are unchanged. --agent is still passed unconditionally. The exit-1 sentence matches L177's exact text byte for byte.",
+      "Read the fake engine in engine/runtime/opencode_bridge_test.go:30-107: an empty message makes stderr empty, so the 'no line from the engine' row reaches runEngine's fallback.",
+      "Checked the test changes against L177.",
+      "Goldens and OpenCodePluginVersion now read runtime-parity-20; the CHANGELOG T60 item is edited in place.",
+      "No tests or commands were executed."
+    ]
+  }
+}

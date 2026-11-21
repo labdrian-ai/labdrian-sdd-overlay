@@ -1,0 +1,85 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "bd090aafa08c47aac6ec9b6918175271c9534d32",
+    "head": "6b227420edd2da17f78c2ffa4a0a966b10ca434c",
+    "diff_sha256": "617edde01a15662c4ff078de1cb4bbcee46f1e3ee71364075b36ac24da165562",
+    "paths": [
+      "CHANGELOG.md",
+      "engine/cmd/codex_hooks_test.go",
+      "engine/cmd/memory_acceptance_test.go",
+      "engine/cmd/plan_instructions_test.go",
+      "engine/gate/instructions_test.go",
+      "engine/projection/availability_test.go",
+      "engine/projection/instructions_test.go",
+      "engine/projection/render.go",
+      "engine/shelltest/memory_live_acceptance_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability",
+    "hunt"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "bd090aafa08c47aac6ec9b6918175271c9534d32",
+      "head": "6b227420edd2da17f78c2ffa4a0a966b10ca434c",
+      "diff_sha256": "617edde01a15662c4ff078de1cb4bbcee46f1e3ee71364075b36ac24da165562"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "engine/cmd/codex_hooks_test.go",
+        "engine/cmd/memory_acceptance_test.go",
+        "engine/cmd/plan_instructions_test.go",
+        "engine/gate/instructions_test.go",
+        "engine/projection/availability_test.go",
+        "engine/projection/instructions_test.go",
+        "engine/projection/render.go",
+        "engine/shelltest/memory_live_acceptance_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "engine/projection/render.go:327-330",
+        "severity": "WARNING",
+        "claim": "When the SessionStart probe finds engram unavailable, the block now contradicts itself. The new line comes right after the degradation line, so the agent reads '- Do not read engram: it is unavailable in this session (the engram program was not found).' and then '- memorycard is the source engram: its reads ... go ahead while engram is listed'. The engram probe (engine/cmd/session_availability.go:90) runs the `engram stats` binary, not memorycard. So a session with no engram binary but a working memorycard tells the agent both not to read source engram and to go ahead with its memorycard reads. Engram is the frozen legacy store, so this setup is realistic. The test in engine/cmd/codex_hooks_test.go:64 and the tests in engine/cmd/memory_acceptance_test.go:105 and :333 pin this contradictory text as the expected output. Neither line says which one wins, so the agent may skip the memorycard readback that T58 sets out to restore, or may ignore a real outage.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/projection/render.go:327-330",
+          "engine/projection/availability.go:44",
+          "engine/cmd/session_availability.go:88-90",
+          "engine/cmd/codex_hooks_test.go:64"
+        ]
+      },
+      {
+        "id": "F2",
+        "location": "engine/projection/render.go:348",
+        "severity": "WARNING",
+        "claim": "The new line says memorycard reads (mem_search, mem_context, mem_get) 'go ahead while engram is listed'. The gate does not allow them on that condition alone. It applies checkEngramProject to memorycard mem_search and mem_context (engine/projection/gate.go:319), so it denies them when they name no project, the wrong project, or all projects. The project line that follows still names only 'Engram reads (mem_search, mem_context) name project ...' and does not mention memorycard. An agent that follows the new line and calls mcp__memorycard__mem_search without the Engram name is denied, which is the same kind of failed readback the change tries to fix. The line should point to the project requirement, or the project line should cover memorycard reads.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/projection/render.go:348",
+          "engine/projection/gate.go:281",
+          "engine/projection/gate.go:319",
+          "engine/projection/render.go:355-358"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the whole diff t58.diff (9 paths)",
+      "Read T58 (line 100), L162 and S3",
+      "Read InstructionsBlock and memorycardLine in render.go:300-367: the line is added only when the plan's sources hold engram, not under scope none, after the degradation lines and before the project line, as T58 asks",
+      "Read degradationLines in engine/projection/availability.go and the engram probe in engine/cmd/session_availability.go:85-90",
+      "Read the gate's memory-read classification in engine/projection/gate.go:261-321",
+      "Checked TestTheInstructionsSayMemorycardIsTheSourceEngram",
+      "Not run: go tests and the differential"
+    ]
+  }
+}

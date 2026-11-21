@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "940496742321891133905e5f2135cd11e63135c3",
+    "head": "025ce6ec03092d1b416e843793cfd74cec57f96c",
+    "diff_sha256": "90ddacc0fca81876cebdbaca85d9e21768aed524860fa10172414132dd2fa0bd",
+    "paths": [
+      "engine/gate/skillpaths.go",
+      "engine/gate/skillpaths_test.go",
+      "engine/roles/skills.go",
+      "engine/roles/skills_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "940496742321891133905e5f2135cd11e63135c3",
+      "head": "025ce6ec03092d1b416e843793cfd74cec57f96c",
+      "diff_sha256": "90ddacc0fca81876cebdbaca85d9e21768aed524860fa10172414132dd2fa0bd"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/gate/skillpaths.go",
+        "engine/gate/skillpaths_test.go",
+        "engine/roles/skills.go",
+        "engine/roles/skills_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "skills.go: the word-end check reads body[m[1]], the byte after the match, and skips the mention when it is a word character. The regex ends at the literal 'skill', so a skipped match cannot swallow the start of the next backtick mention. Matching resumes after the skipped match.",
+      "skillpaths.go: strings.Replace(lines[i], entry, path, 1) is safe because entry is the trimmed line content. Only whitespace precedes it, so its first occurrence is the id itself. The indent and trailing whitespace or CR stay, which the new tests assert.",
+      "The new refusal text only extends the default-branch error message, and the tests were updated to match it."
+    ]
+  }
+}

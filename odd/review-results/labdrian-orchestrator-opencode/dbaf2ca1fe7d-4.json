@@ -1,0 +1,57 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "32f1f7cc6a000820fe5506b7d9757e0373e67948",
+    "head": "dbaf2ca1fe7d0144b8066ce51f3be06d40696c51",
+    "diff_sha256": "bf96b22193a4a3575f15255b519183d291921883f8b8300a22727026a707bef3",
+    "paths": [
+      "agents/shaper.md",
+      "codex/agents/shaper.toml",
+      "engine/cmd/roles_builder_guard_docs_test.go",
+      "opencode/agents/shaper.md",
+      "pi/agents/shaper.md",
+      "roles/shaper/body.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "32f1f7cc6a000820fe5506b7d9757e0373e67948",
+      "head": "dbaf2ca1fe7d0144b8066ce51f3be06d40696c51",
+      "diff_sha256": "bf96b22193a4a3575f15255b519183d291921883f8b8300a22727026a707bef3"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "agents/shaper.md",
+        "codex/agents/shaper.toml",
+        "engine/cmd/roles_builder_guard_docs_test.go",
+        "opencode/agents/shaper.md",
+        "pi/agents/shaper.md",
+        "roles/shaper/body.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "roles/shaper/body.md:9",
+        "claim": "The new sentence declares `runtime_scope` and `delivery_boundary` to be plain strings. The diff does not show the Go Goal struct, so I cannot confirm those two fields are strings. If either is an object or an array, the sentence would steer the shaper into the same unmarshal refusal it was meant to prevent. The commit message mentions only `constraints` and `non_goals`.",
+        "evidence_class": "inferential",
+        "causal_disposition": "unknown",
+        "proof_refs": [
+          "roles/shaper/body.md:9",
+          "engine/cmd/roles_builder_guard_docs_test.go:209"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff changes one sentence, identically in the five role files (roles/shaper/body.md and its four generated mirrors).",
+      "The new sentence is pinned by an added assertion in engine/cmd/roles_builder_guard_docs_test.go.",
+      "No defect was found in the wording of the arrays-versus-strings split itself: constraints, non_goals and acceptance_criteria are named as arrays, matching the reported unmarshal error."
+    ]
+  }
+}

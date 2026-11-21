@@ -1,0 +1,76 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "70a28bad2618d18ccb5cbf210eed5ad2b310dce6",
+    "head": "f8ca3cdfb3b82828e3626b5ad8a588fbf8c916e1",
+    "diff_sha256": "edecf0a455204588fd3c8dc2e26366ed111c92f72f092b6867fcc38ee5ccd855",
+    "paths": [
+      "agents/delivery.md",
+      "agents/foreman.md",
+      "codex/agents/delivery.toml",
+      "engine/agentgen/foreman_test.go",
+      "engine/skills/role_agents_artifact_test.go",
+      "opencode/agents/delivery.md",
+      "opencode/agents/foreman.md",
+      "pi/agents/delivery.md",
+      "roles/delivery/body.md",
+      "roles/foreman/body.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "70a28bad2618d18ccb5cbf210eed5ad2b310dce6",
+      "head": "f8ca3cdfb3b82828e3626b5ad8a588fbf8c916e1",
+      "diff_sha256": "edecf0a455204588fd3c8dc2e26366ed111c92f72f092b6867fcc38ee5ccd855"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "agents/delivery.md",
+        "agents/foreman.md",
+        "codex/agents/delivery.toml",
+        "engine/agentgen/foreman_test.go",
+        "engine/skills/role_agents_artifact_test.go",
+        "opencode/agents/delivery.md",
+        "opencode/agents/foreman.md",
+        "pi/agents/delivery.md",
+        "roles/delivery/body.md",
+        "roles/foreman/body.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "roles/delivery/body.md:9",
+        "claim": "The new delivery instruction tells the role to run the feature's test runner at the delivered head, but the delivery role is told to change nothing but the Log entry and may be run where the worktree is not at the delivered head; the fallback 'write it not run' lets a no-CI close be accepted by the foreman with a 'not run' test result, since the Close row only requires 'the local test results in delivery's entry' without requiring they be an actual passing run. The no-CI close path therefore has no gate on a passing or even executed test.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "roles/foreman/body.md:29",
+          "roles/delivery/body.md:9"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "engine/agentgen/foreman_test.go:272",
+        "claim": "The Close-row test pins the exact full prose of the advance cell, so any rewording breaks it. It also does not verify that the `labdrian review ci --landing --head` command referenced exists with those flags; the foreman now depends on a CLI surface this diff does not show or check.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/agentgen/foreman_test.go:271-274",
+          "roles/foreman/body.md:29"
+        ]
+      }
+    ],
+    "evidence": [
+      "Diff only adds prose to role bodies and their generated copies, plus two string-containment tests; no engine behavior changed.",
+      "All five delivery copies and both foreman copies (agents, opencode, roles) are updated consistently; pi/codex foreman copies not shown in the diff may not exist or may be unchanged, not verifiable from the diff."
+    ]
+  }
+}

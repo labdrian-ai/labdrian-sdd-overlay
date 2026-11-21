@@ -1,0 +1,42 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "b36b2660fdf57eaa91a54b545bff078d2862b4e7",
+    "head": "508889816fbde6dd774ec4d5f4fbd9b459ea1cc4",
+    "diff_sha256": "1b1c88d5923713f71374772b74363001ae7085c79f5d4544ae1053daaafda239",
+    "paths": [
+      "CHANGELOG.md",
+      "README.md",
+      "bin/lib/apply.sh",
+      "bin/lib/usage.sh",
+      "engine/shelltest/apply_claude_runtime_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "b36b2660fdf57eaa91a54b545bff078d2862b4e7",
+      "head": "508889816fbde6dd774ec4d5f4fbd9b459ea1cc4",
+      "diff_sha256": "1b1c88d5923713f71374772b74363001ae7085c79f5d4544ae1053daaafda239"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "README.md",
+        "bin/lib/apply.sh",
+        "bin/lib/usage.sh",
+        "engine/shelltest/apply_claude_runtime_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "bin/lib/apply.sh: the new claude case sets source_file, what and component_args, and the install call expands component_args with the set -u safe ${arr[@]+...} form, so the other targets get an empty list and an unchanged command line.",
+      "bin/lib/apply.sh: the claude call is placed after state_write_target and sets runtime_install_failed on failure, the same path codex uses, so apply still deploys every target and then exits non-zero.",
+      "Not verifiable from the diff: the engine's support for --component owner-rules on the claude target and the text of the missing-binary note, which the new tests assert by name. No defect shown."
+    ]
+  }
+}

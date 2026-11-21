@@ -1,0 +1,42 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "4a844adbee39393a1be2e31b9476595007900b7d",
+    "head": "b36b2660fdf57eaa91a54b545bff078d2862b4e7",
+    "diff_sha256": "90d7dfd830ac6330e7e87249bf02784f13d21dfb798cb05eb8c29638755b61e5",
+    "paths": [
+      "engine/cmd/runtime_owner_rules_test.go",
+      "engine/runtime/claude.go",
+      "engine/runtime/claude_owner_rules.go",
+      "engine/runtime/claude_owner_rules_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "4a844adbee39393a1be2e31b9476595007900b7d",
+      "head": "b36b2660fdf57eaa91a54b545bff078d2862b4e7",
+      "diff_sha256": "90d7dfd830ac6330e7e87249bf02784f13d21dfb798cb05eb8c29638755b61e5"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/cmd/runtime_owner_rules_test.go",
+        "engine/runtime/claude.go",
+        "engine/runtime/claude_owner_rules.go",
+        "engine/runtime/claude_owner_rules_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "ClaudeOwnerRulesAdapter.write overrides status to Unsupported only when the typed noCheckout flag is true, and that flag is set only on the ErrNoOverlayCheckout branch, so the claimed install/update behavior holds.",
+      "ClaudeOwnerRulesAdapter.Status now switches on the typed noCheckout flag in place of the note prefix. The note text is unchanged, so the status result for the no-checkout case is the same.",
+      "ClaudeAdapter call sites discard the new bool, so its output is unchanged, matching the claim.",
+      "Uninstall goes through remove(), which this diff does not touch, so it still removes the block with no checkout.",
+      "Whether the strings import is still used elsewhere in claude_owner_rules.go cannot be seen from the diff, so I report no finding on it."
+    ]
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "verdicts": [
+    {
+      "id": "F1",
+      "result": "reproduced",
+      "command": "Verifier W-B on d4d54d60: bound scratch repo; mkdir repo/sub; (cd repo/sub && rmdir repo/sub && exec env -i HOME=.. XDG_STATE_HOME=.. XDG_CONFIG_HOME=.. <bin> roles append --project proj-1 --goal f --chain other --stdin < rec-other.json), head and base 58d635ef",
+      "output": "Head: exit=1, stderr 'error: roles append: the binding of this checkout could not be read (getwd: no such file or directory)', store unchanged. Base 58d635ef: exit=0, stored. The refusal is the behavior the foreman's correction ledger asked for (fail closed, as an unreadable binding store); T56's text does not name the getwd case, so the fix is a shaper amendment of T56 naming it, not a code change.",
+      "base_result": "not-reproduced"
+    },
+    {
+      "id": "F2",
+      "result": "not-run",
+      "command": "none",
+      "output": "SUGGESTION (chmod 000 tests skip as root; a symlinked file would be deterministic): carried to the next correction batch.",
+      "base_result": "not-run"
+    }
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "kind": "sweeper",
+  "base": "2dc1cde4309596b73e0050f83491312592faaf4a",
+  "head": "d24196b17048fd4e8c29a4cc4598ec7184eec52c",
+  "diff_sha256": "704a886cf2beea6174e82083edd985244a6e1fb9926f6b45407cfeddb4c4526a",
+  "sweep": "d24196b17048-1.sweep.json",
+  "commit": null,
+  "candidates": [
+    {
+      "candidate": "T3: ?? CLAUDE.md",
+      "disposition": "live",
+      "evidence": "Untracked project instructions file; owner L160 verbatim: \"se quedan los files de wiki\". Not deleted."
+    },
+    {
+      "candidate": "T3: ?? docs/wiki/.format",
+      "disposition": "live",
+      "evidence": "Untracked wiki file; owner L160 verbatim: \"se quedan los files de wiki\". Not deleted."
+    },
+    {
+      "candidate": "T3: ?? docs/wiki/README.md",
+      "disposition": "live",
+      "evidence": "Untracked wiki entry page every agent must read first; owner L160 verbatim: \"se quedan los files de wiki\". Not deleted."
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "kind": "sweeper",
+  "base": "b36b2660fdf57eaa91a54b545bff078d2862b4e7",
+  "head": "508889816fbde6dd774ec4d5f4fbd9b459ea1cc4",
+  "diff_sha256": "1b1c88d5923713f71374772b74363001ae7085c79f5d4544ae1053daaafda239",
+  "sweep": "508889816fbd-1.sweep.json",
+  "commit": null,
+  "candidates": [
+    {
+      "candidate": "T3:  M odd/tasks/labdrian-orchestrator-opencode.md",
+      "disposition": "live",
+      "evidence": "The feature document is the foreman's working artifact, kept uncommitted by design until delivery commits it with the review records."
+    }
+  ]
+}

@@ -1,0 +1,28 @@
+{
+  "kind": "polisher",
+  "base": "284962adc519179d93c09b81179bca27ff759fe6",
+  "head": "800bbcf89ab1a71c6f2eb937178d47b0c884d84f",
+  "diff_sha256": "59a64c02b469be4edcb0bb9f3e2af749a8ff160865b5be01b10284c57072a070",
+  "findings": {
+    "findings": [
+      {
+        "id": "P1",
+        "severity": "SUGGESTION",
+        "location": "roles/delivery/body.md:9",
+        "claim": "The no-CI test requirement depends on the feature document's header naming a test runner, and the text does not say what happens when it names none; the 'when it was not run or failed, close nothing' clause probably covers it, but that relies on the model reading it so.",
+        "evidence": [
+          "roles/delivery/body.md:9 requires the run of the runner the header names; 'not run or failed' closes nothing and returns blocked.",
+          "roles/foreman/body.md:29 Close row: 'not run or failed is no closure'.",
+          "The runner sentence predates this commit (L123), pinned by TestDeliveryRecordsTheLocalTestResultAtTheDeliveredHead."
+        ]
+      }
+    ],
+    "evidence": [
+      "Read roles/delivery/body.md:9 and roles/foreman/body.md:29 at head; the delivery sentence appears once in each of five delivery files; the Close row appears verbatim in agents/foreman.md and opencode/agents/foreman.md.",
+      "Repositories with CI keep 'the merge commit, and CI read green'; the new clause applies only when review ci exits 0.",
+      "A run at another commit is written not run, so it cannot satisfy the rule.",
+      "Tests pin the delivery sentence in five files and the Close row against the body.",
+      "Not run: read-only static judgment."
+    ]
+  }
+}

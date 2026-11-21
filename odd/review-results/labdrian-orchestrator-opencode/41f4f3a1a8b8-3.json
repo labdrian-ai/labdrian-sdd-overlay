@@ -1,0 +1,64 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "1fd4e01adb4cd8c0f09204655a5c0c0795c82bcc",
+    "head": "41f4f3a1a8b88793e250f4c2a0724e26c1502ca8",
+    "diff_sha256": "a4ec522caddbb7528e72efbcdf82773be81c0576db6811e5cdfacc41b6d9973b",
+    "paths": [
+      "CHANGELOG.md",
+      "README.md",
+      "engine/cmd/dispatch_routes_test.go",
+      "engine/cmd/dispatch_test.go",
+      "engine/cmd/roles.go",
+      "engine/cmd/roles_builder_guard_test.go",
+      "engine/cmd/roles_skill_paths.go",
+      "engine/cmd/roles_skill_paths_test.go",
+      "engine/gate/skillpaths.go",
+      "engine/gate/skillpaths_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "1fd4e01adb4cd8c0f09204655a5c0c0795c82bcc",
+      "head": "41f4f3a1a8b88793e250f4c2a0724e26c1502ca8",
+      "diff_sha256": "a4ec522caddbb7528e72efbcdf82773be81c0576db6811e5cdfacc41b6d9973b"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "README.md",
+        "engine/cmd/dispatch_routes_test.go",
+        "engine/cmd/dispatch_test.go",
+        "engine/cmd/roles.go",
+        "engine/cmd/roles_builder_guard_test.go",
+        "engine/cmd/roles_skill_paths.go",
+        "engine/cmd/roles_skill_paths_test.go",
+        "engine/gate/skillpaths.go",
+        "engine/gate/skillpaths_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "engine/gate/skillpaths.go:60",
+        "claim": "A rewritten line is replaced with the bare path, so a CRLF prompt loses the trailing \\r on each rewritten id line and ends up with mixed line endings. Blank and untouched lines keep their \\r. The verb prints a prompt with no header byte for byte, but not one with a header and CRLF endings. This is harmless to a reader, but it differs from the 'stay as it came' behaviour.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/gate/skillpaths.go:56-60"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the whole diff. The rewrite logic, the argument parsing, the exit codes and the usage-line updates agree with the commit's claims.",
+      "The test expectations match the error strings in skillpaths.go.",
+      "Not inspected, because it is outside the diff: hasExactHeader and gate.Rewrite."
+    ]
+  }
+}

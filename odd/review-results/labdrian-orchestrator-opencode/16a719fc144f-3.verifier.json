@@ -1,0 +1,11 @@
+{
+  "verdicts": [
+    {
+      "id": "F1",
+      "result": "reproduced",
+      "command": "go build -o $D/eng ./cmd/ in the review worktree at 16a719fc; printf '```test-first``` is a skill\\nalso go-testing here\\n' | $D/eng roles skill-paths --skills-root <review worktree>/skills (skills/go-testing/SKILL.md and skills/test-first/SKILL.md exist)",
+      "output": "stdout equals the input unchanged, exit 0: go-testing, a skill on disk named in prose after the line, is not added, because the inline triple-backtick line opened a fence that never closes. The base 46521de8 toggled on the ``` prefix too (pre-existing), but 16a719fc claims CommonMark parity.",
+      "base_result": "not-run"
+    }
+  ]
+}

@@ -1,0 +1,57 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "e6b29f47fd82c43ae1c66df9c5fe4fe5a1023d66",
+    "head": "87cb2e93333e388ee9441419b21b4b3b4d60dc41",
+    "diff_sha256": "c13cd1de53764ae0fcacc7b5c6f061ab900275b4a8ccf898625011e4ddd276b9",
+    "paths": [
+      "engine/cmd/contract_golden_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "e6b29f47fd82c43ae1c66df9c5fe4fe5a1023d66",
+      "head": "87cb2e93333e388ee9441419b21b4b3b4d60dc41",
+      "diff_sha256": "c13cd1de53764ae0fcacc7b5c6f061ab900275b4a8ccf898625011e4ddd276b9"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/cmd/contract_golden_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "engine/cmd/contract_golden_test.go:231",
+        "claim": "PATH is replaced wholesale with only the temp bin dir. Anything the opencode install path runs that resolves via PATH (git, sh, shell-outs) will now fail or behave differently; the stub scripts use #!/bin/sh with absolute interpreter so they work, but other lookups would not. Appending to or prefixing the existing PATH would keep the memorycard/codegraph isolation only if the real machine lacks them, so the trade-off is a latent fragility rather than a proven failure.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/cmd/contract_golden_test.go:231"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "engine/cmd/contract_golden_test.go:223-232",
+        "claim": "The stub-binary setup is inlined in opencodeInstall with a magic list of program names; if the install code later checks additional MCP programs, goldens will silently record them as missing. Also the Windows case (no exec bit/.exe lookup) is not handled, though the repo is Linux-focused.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/cmd/contract_golden_test.go:223-232"
+        ]
+      }
+    ],
+    "evidence": [
+      "Single changed file reviewed from the diff only; the PATH replacement via t.Setenv is restored automatically at test end.",
+      "w.name(bin, \"<BIN>\") registers the temp dir for transcript normalization, so goldens stay stable across runs."
+    ]
+  }
+}

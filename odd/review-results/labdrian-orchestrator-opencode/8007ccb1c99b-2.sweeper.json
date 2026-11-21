@@ -1,0 +1,25 @@
+{
+  "kind": "sweeper",
+  "base": "775dd532da9677e8df1636855ffa52d75a29978c",
+  "head": "8007ccb1c99b45e40a0ada1b7d229a083113cd93",
+  "diff_sha256": "a42d68a3c6bec0e49efa9b55944ee519386355b3370144a0ae1e7aba138e56a3",
+  "sweep": "8007ccb1c99b-1.sweep.json",
+  "commit": null,
+  "candidates": [
+    {
+      "candidate": "T3: ?? CLAUDE.md",
+      "disposition": "live",
+      "evidence": "owner verbatim L160: se quedan los files de wiki; kept."
+    },
+    {
+      "candidate": "T3: ?? docs/wiki/.format",
+      "disposition": "live",
+      "evidence": "owner verbatim L160: se quedan los files de wiki; kept."
+    },
+    {
+      "candidate": "T3: ?? docs/wiki/README.md",
+      "disposition": "live",
+      "evidence": "owner verbatim L160: se quedan los files de wiki; kept; CLAUDE.md names it as first read."
+    }
+  ]
+}

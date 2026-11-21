@@ -1,0 +1,95 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "20883812ce18dd41f2a715c44dbbd5035b6efeff",
+    "head": "58d635efdc941d227111a3d82baccc3bbda29a45",
+    "diff_sha256": "7d2e983c24aa10471de0b3a74a4a6ae5b7de06a1cbe5cbd4e07f14fe33f6383c",
+    "paths": [
+      "CHANGELOG.md",
+      "engine/cmd/roles.go",
+      "engine/cmd/roles_bound.go",
+      "engine/cmd/roles_bound_test.go",
+      "engine/cmd/roles_builder_guard.go",
+      "engine/cmd/usage.go",
+      "engine/roles/bound.go",
+      "engine/roles/bound_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability",
+    "hunt"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "20883812ce18dd41f2a715c44dbbd5035b6efeff",
+      "head": "58d635efdc941d227111a3d82baccc3bbda29a45",
+      "diff_sha256": "7d2e983c24aa10471de0b3a74a4a6ae5b7de06a1cbe5cbd4e07f14fe33f6383c"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "engine/cmd/roles.go",
+        "engine/cmd/roles_bound.go",
+        "engine/cmd/roles_bound_test.go",
+        "engine/cmd/roles_builder_guard.go",
+        "engine/cmd/usage.go",
+        "engine/roles/bound.go",
+        "engine/roles/bound_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "engine/cmd/roles_bound.go:35-38",
+        "severity": "WARNING",
+        "claim": "`roles append` lets any chain through when the binding exists but cannot be read. fsstore.Store.Load (engine/projection/fsstore/store.go:173-193) does not return an error for a binding file it cannot read (permission denied, a symlinked binding file, a state directory that fails CheckDirs). It returns nil with ClassificationUnavailable. projapp.BindWorkflow.Describe passes that through without an error, and boundWorkflowHere then turns every non-owned classification into the zero BoundWorkflow. So in a checkout whose binding cannot be read, append stores a record for any project, goal or chain, including the L130 feature-named chain, without the required 'the binding of this checkout could not be read (<error>)' refusal. Only a failure to build the store, or a BindingStoreError from Describe, refuses. The same happens when the bound workflow's log is unavailable (described.Workflow.Classification == workflow.ClassificationUnavailable). The builder guard keeps BindingClass and WorkflowClass and decides on them, but this adapter drops them. This fails open on the very guarantee the change adds. No test covers an unavailable binding or an unavailable workflow.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/cmd/roles_bound.go:35-38 returns roles.BoundWorkflow{}, nil for every Classification other than owned",
+          "engine/projection/fsstore/store.go:173-193 returns unavailable(...), nil on CheckDirs, Lstat, symlink and read failures",
+          "engine/projection/app/bind.go:156-171 Describe returns no error for a loaded but unavailable binding",
+          "engine/cmd/roles_builder_guard.go:141-149 the guard keeps BindingClass and WorkflowClass instead of collapsing them"
+        ]
+      },
+      {
+        "id": "F2",
+        "location": "engine/cmd/roles_bound.go:23-26",
+        "severity": "WARNING",
+        "claim": "boundWorkflowHere drops the error from workingDir() and returns the zero BoundWorkflow with nil. If getwd fails (for example, the process's working directory has been removed, or deps.getwd is nil), `roles append` skips the bound-chain rule without a word and stores a record for any chain, when it should refuse the way it does for an unreadable binding store. The trigger is uncommon but real for a parent running in a worktree that has been deleted.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/cmd/roles_bound.go:23-26",
+          "engine/cmd/deps.go:151-156 workingDir returns errNoEnvironment or the getwd error"
+        ]
+      },
+      {
+        "id": "F3",
+        "location": "engine/cmd/roles_bound_test.go:379-389",
+        "severity": "SUGGESTION",
+        "claim": "The subtest 'a binding that is not ours' writes the bytes 'not json', which ClassifyBinding classifies as malformed, not foreign. A foreign binding (valid JSON that is not ours, or a repo_key mismatch) is never exercised, though S16 B5 names it as a separate as-today case. The name hides that this case has no test.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/projection/bindingstore.go:151 (invalid JSON gives malformed) and :155-158 (foreign)"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the whole diff /tmp/claude-1000/-home-labdrian-labdrian-sdd-overlay-worktrees-labdrian-orchestrator-opencode/4200d7c8-449a-4ded-84a4-5e93e8a111c1/scratchpad/t56.diff",
+      "Read the T56 criteria at odd/tasks/labdrian-orchestrator-opencode.md:98",
+      "Read engine/cmd/roles.go:185-344 at head (the order of the append checks, the read-refusal placement)",
+      "Read engine/cmd/roles_builder_guard.go:100-176 (describeBinding shared with boundWorkflows.Of)",
+      "Read engine/projection/app/bind.go:130-171 (Describe error and classification behavior)",
+      "Read engine/projection/fsstore/store.go:160-216 (Load returns unavailable with a nil error)",
+      "Searched the projection Classification constants and the usage.go roles entries (usage.go has no separate entries for next or resume)",
+      "Read engine/cmd/deps.go:145-156 (workingDir errors)",
+      "Checked the callers of runRolesCore: only tests, which now pass a nil workingDir",
+      "No commands or tests were run (not run)"
+    ]
+  }
+}

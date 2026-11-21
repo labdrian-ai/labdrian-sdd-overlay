@@ -1,0 +1,25 @@
+{
+  "verdicts": [
+    {
+      "id": "F1",
+      "result": "reproduced",
+      "command": "same reads as 6b227420edd2-5 F1: render.go:325-331 and codex_hooks_test.go:62-66 in the review worktree",
+      "output": "the memorycard line follows the 'Do not read engram: it is unavailable' degradation line whenever engram is in the plan; the test pins the pair.",
+      "base_result": "not-reproduced"
+    },
+    {
+      "id": "F2",
+      "result": "reproduced",
+      "command": "same reads as 6b227420edd2-5 F2: render.go:344-358 and gate.go:315-321",
+      "output": "memorycard mem_search/mem_context are gated by checkEngramProject; the line names no project condition.",
+      "base_result": "not-reproduced"
+    },
+    {
+      "id": "F3",
+      "result": "not-run",
+      "command": "none",
+      "output": "SUGGESTION: carried (stale ADR sample, also the polisher's note).",
+      "base_result": "not-run"
+    }
+  ]
+}

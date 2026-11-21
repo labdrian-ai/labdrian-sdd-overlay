@@ -1,0 +1,91 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "0dc641cf062d516dc791676dfa98bc4ce55fec5e",
+    "head": "4fa090157fea2e770c4ab41a58b2d5c0c778e810",
+    "diff_sha256": "8231a4f3c3400a20616b154216af908217431b5973061f5bdb42cfb3cef89b41",
+    "paths": [
+      "CHANGELOG.md",
+      "README.md",
+      "docs/architecture/adr-c23-m8-session-availability.md",
+      "engine/cmd/codex_hooks_test.go",
+      "engine/cmd/memory_acceptance_test.go",
+      "engine/cmd/session_availability.go",
+      "engine/cmd/session_availability_test.go",
+      "engine/cmd/usage.go",
+      "engine/projection/availability.go",
+      "engine/projection/availability_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line",
+    "recall"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "0dc641cf062d516dc791676dfa98bc4ce55fec5e",
+      "head": "4fa090157fea2e770c4ab41a58b2d5c0c778e810",
+      "diff_sha256": "8231a4f3c3400a20616b154216af908217431b5973061f5bdb42cfb3cef89b41"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "README.md",
+        "docs/architecture/adr-c23-m8-session-availability.md",
+        "engine/cmd/codex_hooks_test.go",
+        "engine/cmd/memory_acceptance_test.go",
+        "engine/cmd/session_availability.go",
+        "engine/cmd/session_availability_test.go",
+        "engine/cmd/usage.go",
+        "engine/projection/availability.go",
+        "engine/projection/availability_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "engine/cmd/session_availability.go:151-166",
+        "severity": "WARNING",
+        "claim": "The store check guards only a 0-byte file. The ADR says memorycard initialises an empty store of 0 to 81920 bytes, and the guard covers only the 0-byte case. A non-empty file that memorycard would still initialise or reject, such as a header-only or partly written file, passes the stat and `memorycard list` runs on the owner's store. The Risk 1 write window is narrowed, not closed. The ADR and usage text present the check as 'a regular file that is not empty', which fits the 0-byte case that was measured. I did not run memorycard, so I cannot show that a non-empty file is initialised. This is inferred from the ADR wording.",
+        "evidence_class": "inferential",
+        "causal_disposition": "worsened",
+        "proof_refs": [
+          "engine/cmd/session_availability.go:160-162",
+          "docs/architecture/adr-c23-m8-session-availability.md"
+        ]
+      },
+      {
+        "id": "F2",
+        "location": "engine/projection/availability.go:57-58",
+        "severity": "SUGGESTION",
+        "claim": "The no-store line asserts 'memorycard creates it when it first opens it, so its reads find nothing until a record is saved'. That line is chosen from the store stat alone, before anything checks that the `memorycard` program exists or that the store's parent directory can be created. If the program is missing, or `~/.memorycard` cannot be created, the agent is told memorycard will create the store and is not told to avoid its tools, so it may call tools that fail. The 'creates it' premise was measured only with the parent directory present.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/cmd/session_availability.go:123-125",
+          "odd/tasks/labdrian-orchestrator-opencode.md:106"
+        ]
+      },
+      {
+        "id": "F3",
+        "location": "engine/cmd/session_availability.go:151-166",
+        "severity": "SUGGESTION",
+        "claim": "Uncreated is decided only from the stat of the single path the hook's environment gives. The ADR admits that a memorycard MCP entry with another path, or a '-wal' sidecar next to a 0-byte main file, is not seen. In those cases the block says 'no store yet' and 'its reads find nothing' while the runtime's memorycard holds data. The ADR documents the other-path case, and the line has no hedge.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "docs/architecture/adr-c23-m8-session-availability.md"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the whole diff at t64c.diff",
+      "Read T64's line and its correction addendum (line 106)",
+      "Grepped the worktree for SourceAvailability, Uncreated and storeProblem consumers: Uncreated is read only in degradationLines, after Available",
+      "Compared code, tests, usage, README, CHANGELOG and ADR against the addendum: they match",
+      "Not run: no tests, builds or memorycard commands"
+    ]
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "kind": "sweeper",
+  "base": "58d635efdc941d227111a3d82baccc3bbda29a45",
+  "head": "d4d54d6068568a4740f4b846e949e1fac23b7a84",
+  "diff_sha256": "28a1b968e0e0b6be4b1ed5cbc21772c6ca0cc6372a54054fa5b508acc3e6f5e2",
+  "sweep": "d4d54d606856-1.sweep.json",
+  "commit": null,
+  "candidates": [
+    {
+      "candidate": "T3:  M odd/tasks/labdrian-orchestrator-opencode.md",
+      "disposition": "live",
+      "evidence": "Foreman uncommitted Log entries L163-L164; not dead, left untouched."
+    },
+    {
+      "candidate": "T3: ?? CLAUDE.md",
+      "disposition": "live",
+      "evidence": "Owner, verbatim, L160: \"se quedan los files de wiki\"; never delete."
+    },
+    {
+      "candidate": "T3: ?? docs/wiki/.format",
+      "disposition": "live",
+      "evidence": "Owner, verbatim, L160: \"se quedan los files de wiki\"; never delete."
+    },
+    {
+      "candidate": "T3: ?? docs/wiki/README.md",
+      "disposition": "live",
+      "evidence": "Owner, verbatim, L160: \"se quedan los files de wiki\"; never delete."
+    }
+  ]
+}

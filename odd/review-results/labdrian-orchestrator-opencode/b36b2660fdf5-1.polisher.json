@@ -1,0 +1,16 @@
+{
+  "kind": "polisher",
+  "base": "4a844adbee39393a1be2e31b9476595007900b7d",
+  "head": "b36b2660fdf57eaa91a54b545bff078d2862b4e7",
+  "diff_sha256": "90d7dfd830ac6330e7e87249bf02784f13d21dfb798cb05eb8c29638755b61e5",
+  "findings": {
+    "findings": [],
+    "evidence": [
+      "write() and status() return a typed noCheckout bool from errors.Is(err, ErrNoOverlayCheckout); the adapter maps it to CapabilityUnsupported; no strings.HasPrefix remains in engine/runtime/claude_owner_rules.go; note text unchanged.",
+      "Uninstall() never reads the rules source, so with no checkout it still removes the block.",
+      "ClaudeAdapter discards the new bool in withOwnerRules() and status(), so its output is unchanged.",
+      "engine/runtime/claude_owner_rules_test.go:99-134 pins install, update and status unsupported with no checkout and uninstall removing the block; engine/cmd/runtime_owner_rules_test.go:64-103 pins exit 1 for install, update, status and exit 0 for uninstall.",
+      "Not run: read-only static judgment."
+    ]
+  }
+}

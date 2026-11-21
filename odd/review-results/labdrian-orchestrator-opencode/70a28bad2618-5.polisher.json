@@ -1,0 +1,19 @@
+{
+  "kind": "polisher",
+  "base": "8ff0e9f85d3f6f4d0c7580d57862345b28743488",
+  "head": "70a28bad2618d18ccb5cbf210eed5ad2b310dce6",
+  "diff_sha256": "95aff354ac91a03e379731916f1b77af974cfd44a9d7419a8888fe7cec802dc1",
+  "findings": {
+    "findings": [],
+    "evidence": [
+      "Read the whole diff of 70a28bad.",
+      "gitexec.go TreeFiles (line 592) runs git ls-tree -r --name-only -z on the landing commit's tree, so an untracked or deleted marker cannot hide a committed one.",
+      "gitexec.go Commit (line 198) resolves with rev-parse --verify <rev>^{commit}; an unresolvable revision is an error, not 'CI: none configured'.",
+      "CheckNoCI (engine/review/app/ci.go) answers no-CI only when every step succeeds; a marker or a remote is a refusal; no error is swallowed.",
+      "isCIMarker pins the five directories and ten files with near-miss tests at unit level and end to end.",
+      "cmd/review_ci.go prints 'CI: none configured' only after CheckNoCI returns nil.",
+      "The marker list is closed per S3 L123; providers outside it read as no CI, partly covered by the no-remote requirement; not a defect of this commit.",
+      "Not run: read-only static judgment."
+    ]
+  }
+}

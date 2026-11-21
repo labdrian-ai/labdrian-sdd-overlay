@@ -1,0 +1,18 @@
+{
+  "verdicts": [
+    {
+      "id": "F1",
+      "result": "reproduced",
+      "command": "bat -pp -r 62:66 <review worktree>/engine/cmd/codex_hooks_test.go; bat -pp -r 325:331 <review worktree>/engine/projection/render.go",
+      "output": "render.go:327-330 appends memorycardLine after degradationLines whenever plan.Sources holds engram, whatever the probe said; codex_hooks_test.go:64 pins the expected block '- Do not read engram: it is unavailable in this session (the engram program was not found).' followed by '- memorycard is the source engram: its reads ... go ahead while engram is listed'. The base has no memorycard line.",
+      "base_result": "not-reproduced"
+    },
+    {
+      "id": "F2",
+      "result": "reproduced",
+      "command": "bat -pp -r 344:358 <review worktree>/engine/projection/render.go; bat -pp -r 315:321 <review worktree>/engine/projection/gate.go",
+      "output": "memorycardLine (render.go:348) says the reads 'go ahead while engram is listed' with no project condition; gate.go:319 checks memorycardProjectReadTool with checkEngramProject; instructionsProjectLine names only 'Engram reads (mem_search, mem_context) name project ...'.",
+      "base_result": "not-reproduced"
+    }
+  ]
+}

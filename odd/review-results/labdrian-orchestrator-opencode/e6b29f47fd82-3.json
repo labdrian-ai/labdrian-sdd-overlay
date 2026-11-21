@@ -1,0 +1,40 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "6c97d13a0fd37c74ced2feb94f3b98955c21368d",
+    "head": "e6b29f47fd82c43ae1c66df9c5fe4fe5a1023d66",
+    "diff_sha256": "90212e02fef5352790d2555f2cacd469bd2bb321a526fe06cf038389d49a36a8",
+    "paths": [
+      "engine/cmd/review_ci_test.go",
+      "tui/internal/adapters/overlaycli/capture_backend_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "6c97d13a0fd37c74ced2feb94f3b98955c21368d",
+      "head": "e6b29f47fd82c43ae1c66df9c5fe4fe5a1023d66",
+      "diff_sha256": "90212e02fef5352790d2555f2cacd469bd2bb321a526fe06cf038389d49a36a8"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/cmd/review_ci_test.go",
+        "tui/internal/adapters/overlaycli/capture_backend_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "review_ci_test.go: the first w.land result is no longer assigned and the second one is, so SA4006 is cleared and the later use of landing is unchanged.",
+      "capture_backend_test.go: with ssh.variant=simple git invokes the shim as '<host> <remote command>', so 'shift; exec sh -c \"$1\"' runs git-receive-pack locally against the origin path.",
+      "The ssh URL is 'ssh://scratch.invalid' plus the absolute origin path, which is well-formed.",
+      "GIT_ALLOW_PROTOCOL=file:ssh is appended last in the environment, so it overrides any value set by gitTestEnv.",
+      "The origin URL is restored to the path before the post-capture fetch, so the later assertions run over file transport as they did before the change.",
+      "runCapture's variadic extraEnv is empty for the other callers, so their environment is unchanged."
+    ]
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "kind": "sweeper",
+  "base": "0dc641cf062d516dc791676dfa98bc4ce55fec5e",
+  "head": "4fa090157fea2e770c4ab41a58b2d5c0c778e810",
+  "diff_sha256": "8231a4f3c3400a20616b154216af908217431b5973061f5bdb42cfb3cef89b41",
+  "sweep": "4fa090157fea-1.sweep.json",
+  "commit": null,
+  "candidates": [
+    {
+      "candidate": "T3: ?? CLAUDE.md",
+      "disposition": "live",
+      "evidence": "owner, verbatim, L160: se quedan los files de wiki; CLAUDE.md is the project instruction file that points to docs/wiki/README.md"
+    },
+    {
+      "candidate": "T3: ?? docs/wiki/.format",
+      "disposition": "live",
+      "evidence": "owner L160 keeps the wiki files; docs/wiki/ is untracked and kept"
+    },
+    {
+      "candidate": "T3: ?? docs/wiki/README.md",
+      "disposition": "live",
+      "evidence": "owner L160 keeps the wiki files; CLAUDE.md names it as the first read"
+    }
+  ]
+}

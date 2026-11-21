@@ -1,0 +1,39 @@
+{
+  "verdicts": [
+    {
+      "result": "not-run",
+      "command": "none",
+      "output": "SUGGESTION: folded into the next T64 correction design.",
+      "base_result": "not-run",
+      "id": "F1"
+    },
+    {
+      "result": "not-run",
+      "command": "none",
+      "output": "SUGGESTION: folded into the next T64 correction design.",
+      "base_result": "not-run",
+      "id": "F2"
+    },
+    {
+      "result": "not-run",
+      "command": "none",
+      "output": "SUGGESTION: folded into the next T64 correction design.",
+      "base_result": "not-run",
+      "id": "F3"
+    },
+    {
+      "result": "not-run",
+      "command": "none",
+      "output": "SUGGESTION: folded into the next T64 correction design.",
+      "base_result": "not-run",
+      "id": "F4"
+    },
+    {
+      "result": "not-run",
+      "command": "none",
+      "output": "SUGGESTION: folded into the next T64 correction design.",
+      "base_result": "not-run",
+      "id": "F5"
+    }
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "verdicts": [
+    {
+      "id": "F1",
+      "result": "reproduced",
+      "command": "Isolated world; odd/tasks/f.md as a symlink, a directory, and an 8388609-byte file; seq 1 shaper->estimator piped to bin-f3c774ec roles append --project proj-1 --goal f --chain f --stdin",
+      "output": "f3c774ec: each exit=0, stored .../role-chains/proj-1/f/f/000001.json (fail open). Fixed at bae918360ea7: each exit=1 with the feature-document sentence, 0 files.",
+      "base_result": "not-reproduced"
+    },
+    {
+      "id": "F2",
+      "result": "reproduced",
+      "command": "odd/tasks/u.md with no shaped task; prototyper->shaper seq 1 piped to bin-f3c774ec roles append --project proj-1 --goal u --chain u --stdin; then workflow open --feature u --task T1",
+      "output": "f3c774ec: append exit=1 with the T57 sentence naming workflow open; workflow open exit=2 'task T1 of odd/tasks/u.md is not marked as designed by the shaper': dead end. bae918360ea7: the append is stored (exit 0). The remaining skill-text mismatch is answered by the owner-approved skill alignment unit (L170).",
+      "base_result": "not-reproduced"
+    },
+    {
+      "id": "F3",
+      "result": "not-run",
+      "command": "read tests at bae918360ea7",
+      "output": "SUGGESTION: outside-repository and nested-cwd tests added in bae918360ea7 (TestRolesAppendReadsTheFeatureDocumentAtTheWorktreeRootOfTheWorkingDirectory) and read-refused documents (TestRolesAppendCountsADocumentTheReadRefusesAsPresent).",
+      "base_result": "not-run"
+    }
+  ]
+}

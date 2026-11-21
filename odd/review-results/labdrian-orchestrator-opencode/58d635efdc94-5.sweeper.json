@@ -1,0 +1,35 @@
+{
+  "kind": "sweeper",
+  "base": "20883812ce18dd41f2a715c44dbbd5035b6efeff",
+  "head": "58d635efdc941d227111a3d82baccc3bbda29a45",
+  "diff_sha256": "7d2e983c24aa10471de0b3a74a4a6ae5b7de06a1cbe5cbd4e07f14fe33f6383c",
+  "sweep": "58d635efdc94-1.sweep.json",
+  "commit": null,
+  "candidates": [
+    {
+      "candidate": "T2 nilerr engine: engine/cmd/roles_bound.go: error is not nil but it returns nil",
+      "disposition": "live",
+      "evidence": "boundWorkflowHere (roles_bound.go:19-43) returns (zero BoundWorkflow, nil) for a working-directory error (l.25) and for a projapp.NoRepositoryError (l.29-31), and returns the error for any other describeBinding failure (l.32-34). The NoRepositoryError nil is the T56 design (task line 98): a cwd outside any repository goes as today. The error path is what the callers read: roles.go:318 (append) refuses with the unreadable-binding line; boundReadRefusal (roles_bound.go:47-51) returns empty on err, so resume and next stay as today, exactly as T56 says. Callers are live (roles.go:197,235,318). go test ./roles/ ./cmd/ -count=1 ok (no change made). Observation for the shaper, not a removal: a failed working-directory read (l.23-26) also returns the zero value, so append goes as unbound; T56 names only the no-repository case and the unreadable store, not a failed Getwd. A process with no usable cwd has no checkout to bind, so I judge it intended fall-through; not fixed. Nothing removed."
+    },
+    {
+      "candidate": "T3:  M odd/tasks/labdrian-orchestrator-opencode.md",
+      "disposition": "live",
+      "evidence": "The foreman uncommitted Log entries L163-L164 (parent brief); the tracked feature document in use, not a leftover."
+    },
+    {
+      "candidate": "T3: ?? CLAUDE.md",
+      "disposition": "live",
+      "evidence": "Owner file, verbatim L160 \"se quedan los files de wiki\"; never deleted."
+    },
+    {
+      "candidate": "T3: ?? docs/wiki/.format",
+      "disposition": "live",
+      "evidence": "Owner wiki file, verbatim L160 \"se quedan los files de wiki\"; never deleted."
+    },
+    {
+      "candidate": "T3: ?? docs/wiki/README.md",
+      "disposition": "live",
+      "evidence": "Owner wiki file, verbatim L160 \"se quedan los files de wiki\"; CLAUDE.md directs every agent to read it first; never deleted."
+    }
+  ]
+}

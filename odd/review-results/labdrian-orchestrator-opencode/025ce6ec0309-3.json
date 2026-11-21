@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "940496742321891133905e5f2135cd11e63135c3",
+    "head": "025ce6ec03092d1b416e843793cfd74cec57f96c",
+    "diff_sha256": "90ddacc0fca81876cebdbaca85d9e21768aed524860fa10172414132dd2fa0bd",
+    "paths": [
+      "engine/gate/skillpaths.go",
+      "engine/gate/skillpaths_test.go",
+      "engine/roles/skills.go",
+      "engine/roles/skills_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "940496742321891133905e5f2135cd11e63135c3",
+      "head": "025ce6ec03092d1b416e843793cfd74cec57f96c",
+      "diff_sha256": "90ddacc0fca81876cebdbaca85d9e21768aed524860fa10172414132dd2fa0bd"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/gate/skillpaths.go",
+        "engine/gate/skillpaths_test.go",
+        "engine/roles/skills.go",
+        "engine/roles/skills_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "SkillsNamed checks the byte after each match end against wordChar, so a plural, a hyphenated word, an underscored word and a longer word are skipped, while end of body, a full stop and a newline still name the id. The new tests cover these cases.",
+      "Adjacent mentions such as `a` skill`b` skill still match: the first match ends before the backtick, which is not a word character.",
+      "RewriteSkillPaths replaces the first occurrence of the trimmed entry in the line. Only leading whitespace can come before the entry, so the first occurrence is the entry itself. Indent and trailing whitespace or carriage return are kept, as the new test shows.",
+      "The refusal message gained text, and the matching test expectations were updated to the new wording."
+    ]
+  }
+}

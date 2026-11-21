@@ -1,0 +1,54 @@
+{
+  "kind": "polisher",
+  "base": "62828131b67423edb6488248dbab0cd495876c10",
+  "head": "46521de87cbb5fc474a9db55318ed01572b13cd1",
+  "diff_sha256": "5604805a015fa44d2090f9ae91607cc19a862604922561b9c0acb852f35b99c6",
+  "findings": {
+    "findings": [
+      {
+        "location": "/home/labdrian/labdrian-sdd-overlay-worktrees/review-46521de87cbb/engine/runtime/opencode_bridge_test.go:584-585",
+        "severity": "WARNING",
+        "claim": "The test pins the sha256 of the plugin file as a permanent constant. Any later legitimate plugin edit will fail this test, whatever the change, and the only fix is to edit the constant. The T60 spec asked for the plugin to be unchanged in this commit only.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "evidence": [
+          "The diff adds `const pluginSHA256 = \"1f4d76a9...\"`, checked against `repositoryPluginSource(t)` on every run.",
+          "The task file mentions the plugin file 14 times, and T58 follows T60. Other plugin tasks are therefore likely, and each would break this test for a reason unrelated to the prose-mention behaviour.",
+          "The spec's 'plugin's sha256 is unchanged' is a check of this one commit. It fits a differential check at review or verify time better than a standing unit-test constant.",
+          "The test also compiles the real engine (about 4s). It depends on the shipped `work-unit-commits` skill existing under `shippedOverlay(t)/skills`."
+        ]
+      },
+      {
+        "location": "/home/labdrian/labdrian-sdd-overlay-worktrees/review-46521de87cbb/engine/gate/skillpaths_test.go:70-71",
+        "severity": "SUGGESTION",
+        "claim": "The spec says existing skill-paths prompts stay identical, but three fixtures were rewritten. The new rule forces this: those prompts name `test-first` in prose, and it now gets added. So the differential check the spec asks for (existing test prompts give identical stdout, stderr and exit) cannot hold for the old fixtures. The builder's choice is sound, but the divergence is not recorded.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "evidence": [
+          "Old fixtures `Build T1.\\ntest-first\\n` and `### Skills to load before work\\ntest-first\\n` contain the whole word `test-first`. With a `test-first/SKILL.md` under the root, the rule makes it a mention and appends the section.",
+          "The diff changes the fixtures to `plain text` (gate tests) and `plain` (cmd test, `engine/cmd/roles_skill_paths_test.go:52`).",
+          "Coverage of 'no header and no mention is unchanged' is kept. Coverage of 'a lower heading `###` does not count as the header' now only shows that a heading with no skill words is left alone."
+        ]
+      },
+      {
+        "location": "/home/labdrian/labdrian-sdd-overlay-worktrees/review-46521de87cbb/engine/gate/skillpaths.go:150-157",
+        "severity": "SUGGESTION",
+        "claim": "In a CRLF prompt with no header, the appended section is written with bare LF (`\\n\\n## Skills ...\\n`). The body keeps a trailing `\\r` where `TrimRight` removes only `\\n`. The result mixes line endings. This is harmless to the child, because header detection uses `TrimSpace`. Choice 3, adding `\\r` after paths in an existing section, is correct and consistent with the line it follows.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "evidence": [
+          "`body := strings.TrimRight(strings.Join(lines, \"\\n\"), \"\\n\")` followed by `body + \"\\n\\n\" + header + \"\\n\" + ...`.",
+          "The CRLF test covers only the existing-header case.",
+          "Choice 2 (fence lines toggle inside the section): a fence line inside the section is already refused as 'neither a skill id nor an absolute path' before `addProseMentions` runs. The toggle there is unreachable and has no user impact."
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the whole diff t60.diff.",
+      "Read T60 (task file line 102) and the L162 entry header.",
+      "Traced `RewriteSkillPaths` and `addProseMentions` for the start=-1, empty-section, header-on-last-line and CRLF cases.",
+      "Checked that a mention cannot escape the skills root: the word regex allows no slash or dot, and uppercase or leading-hyphen words fail it.",
+      "No tests were run."
+    ]
+  }
+}

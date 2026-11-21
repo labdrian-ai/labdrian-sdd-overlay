@@ -1,0 +1,15 @@
+{
+  "kind": "polisher",
+  "base": "800bbcf89ab1a71c6f2eb937178d47b0c884d84f",
+  "head": "e42c41c54de97dfdcc6fe1681e4157f0cebfad77",
+  "diff_sha256": "8685c61351cf98437c13b32c6ef1d99960efbd8a48614eafc7fc60891ee18beb",
+  "findings": {
+    "findings": [],
+    "evidence": [
+      "F1 resolved: roles/delivery/body.md:9 now ends 'On any other exit put its stderr line in the entry instead; the no-CI closure then does not apply.', so an error is neither written as a CI line nor read as no CI.",
+      "The full sentence matches exactly once in each of roles/delivery/body.md, agents/delivery.md, opencode/agents/delivery.md, codex/agents/delivery.toml and pi/agents/delivery.md.",
+      "TestDeliveryRequiresAPassingRunAtTheHeadWhenNoCI asserts that sentence in those five files.",
+      "Not run: read-only static judgment."
+    ]
+  }
+}

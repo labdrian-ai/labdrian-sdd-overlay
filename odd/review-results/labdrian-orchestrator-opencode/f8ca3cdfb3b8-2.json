@@ -1,0 +1,78 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "70a28bad2618d18ccb5cbf210eed5ad2b310dce6",
+    "head": "f8ca3cdfb3b82828e3626b5ad8a588fbf8c916e1",
+    "diff_sha256": "edecf0a455204588fd3c8dc2e26366ed111c92f72f092b6867fcc38ee5ccd855",
+    "paths": [
+      "agents/delivery.md",
+      "agents/foreman.md",
+      "codex/agents/delivery.toml",
+      "engine/agentgen/foreman_test.go",
+      "engine/skills/role_agents_artifact_test.go",
+      "opencode/agents/delivery.md",
+      "opencode/agents/foreman.md",
+      "pi/agents/delivery.md",
+      "roles/delivery/body.md",
+      "roles/foreman/body.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "70a28bad2618d18ccb5cbf210eed5ad2b310dce6",
+      "head": "f8ca3cdfb3b82828e3626b5ad8a588fbf8c916e1",
+      "diff_sha256": "edecf0a455204588fd3c8dc2e26366ed111c92f72f092b6867fcc38ee5ccd855"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "agents/delivery.md",
+        "agents/foreman.md",
+        "codex/agents/delivery.toml",
+        "engine/agentgen/foreman_test.go",
+        "engine/skills/role_agents_artifact_test.go",
+        "opencode/agents/delivery.md",
+        "opencode/agents/foreman.md",
+        "pi/agents/delivery.md",
+        "roles/delivery/body.md",
+        "roles/foreman/body.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "roles/delivery/body.md:9",
+        "claim": "The added sentence says to run the test runner 'at the delivered head' and write 'not run' when the worktree is not at that head, but it does not say what to do when the feature document header names no test runner, or when the run fails. A delivery with a failing or absent runner has no stated path, and the foreman Close row accepts 'the local test results in delivery's entry' without requiring them to be passing, so a failing result could still satisfy the no-CI closure.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "roles/delivery/body.md:9",
+          "roles/foreman/body.md:29"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "engine/agentgen/foreman_test.go:259-273",
+        "claim": "The new test only checks the Close row's advance cell text. It does not guard the foreman's Deliver row or any statement that delivery must produce the test results the Close row now depends on. The pairing is covered only by a separate test in another package, so one half can drift without the other failing.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/agentgen/foreman_test.go:259-273",
+          "engine/skills/role_agents_artifact_test.go:1119-1129"
+        ]
+      }
+    ],
+    "evidence": [
+      "The same sentence is added identically to all five delivery files, and the same Close-row cell to all three foreman files, so the generated copies stay consistent.",
+      "The delivery wording leaves open how the delivery role behaves when the feature header names no runner or the run fails.",
+      "The Close row's no-CI acceptance depends on delivery's test results but does not require a passing outcome."
+    ]
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "kind": "sweep",
+  "base": "20883812ce18dd41f2a715c44dbbd5035b6efeff",
+  "head": "58d635efdc941d227111a3d82baccc3bbda29a45",
+  "diff_sha256": "7d2e983c24aa10471de0b3a74a4a6ae5b7de06a1cbe5cbd4e07f14fe33f6383c",
+  "outcome": "fired",
+  "t1": {
+    "deleted_or_renamed": [],
+    "removed_names": []
+  },
+  "t2": [
+    {
+      "tool": "nilerr",
+      "module": "engine",
+      "new": [
+        "engine/cmd/roles_bound.go: error is not nil but it returns nil"
+      ]
+    }
+  ],
+  "t3": [
+    " M odd/tasks/labdrian-orchestrator-opencode.md",
+    "?? CLAUDE.md",
+    "?? docs/wiki/.format",
+    "?? docs/wiki/README.md"
+  ],
+  "t4": {
+    "leftovers": [],
+    "orphaned_fixtures": []
+  }
+}

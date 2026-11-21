@@ -1,0 +1,25 @@
+{
+  "kind": "sweeper",
+  "base": "bd090aafa08c47aac6ec9b6918175271c9534d32",
+  "head": "6b227420edd2da17f78c2ffa4a0a966b10ca434c",
+  "diff_sha256": "617edde01a15662c4ff078de1cb4bbcee46f1e3ee71364075b36ac24da165562",
+  "sweep": "6b227420edd2-1.sweep.json",
+  "commit": null,
+  "candidates": [
+    {
+      "candidate": "T3: ?? CLAUDE.md",
+      "disposition": "live",
+      "evidence": "Owner, verbatim, L160: \"se quedan los files de wiki\"; untracked wiki entry file (git status: ?? CLAUDE.md), kept, nothing deleted"
+    },
+    {
+      "candidate": "T3: ?? docs/wiki/.format",
+      "disposition": "live",
+      "evidence": "Owner, verbatim, L160: \"se quedan los files de wiki\"; untracked wiki file (git status: ?? docs/wiki/), kept, nothing deleted"
+    },
+    {
+      "candidate": "T3: ?? docs/wiki/README.md",
+      "disposition": "live",
+      "evidence": "Owner, verbatim, L160: \"se quedan los files de wiki\"; untracked wiki index every agent reads first, kept, nothing deleted"
+    }
+  ]
+}

@@ -1,0 +1,50 @@
+{
+  "kind": "polisher",
+  "base": "dbaf2ca1fe7d0144b8066ce51f3be06d40696c51",
+  "head": "4a844adbee39393a1be2e31b9476595007900b7d",
+  "diff_sha256": "f12a2188f368f2f41dc47703c2483a40dc24e5d1ba820e585847e465a8472bc2",
+  "findings": {
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "engine/runtime/claude_owner_rules.go:119-131",
+        "claim": "The builder's choice that standalone `status` with no overlay checkout reports `unsupported` (exit 1) is the one behaviour of this commit that no test pins, at either the adapter or the command level.",
+        "evidence": [
+          "Status() maps the 'owner rules not checked' note to CapabilityUnsupported, and runtime.go:156 calls ComponentFailed, which fails any status result other than supported. The result is exit 1.",
+          "engine/runtime/claude_owner_rules_test.go:99-113 (no checkout) exercises only Install, Update and Uninstall. TestClaudeOwnerRulesStatus (:84-97) covers only missing, current and stale.",
+          "engine/cmd/runtime_owner_rules_test.go has no no-checkout case.",
+          "A later change to the status mapping would pass every test."
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "engine/runtime/claude_owner_rules.go:67-87,127",
+        "claim": "Status() classifies the 'no checkout' case by matching a message prefix, `strings.HasPrefix(note, \"owner rules not checked\")`. The text is produced in status() at line 71, so rewording either place silently turns an unverifiable status into `supported` (exit 0).",
+        "evidence": [
+          "status() returns (message, ok, note) and has no field for the no-checkout state.",
+          "Status() recovers that state by prefix-matching the note string.",
+          "A typed third result, such as an enum or a sentinel error check, would keep ClaudeAdapter's byte-identical messages and remove the coupling."
+        ]
+      },
+      {
+        "id": "F3",
+        "severity": "SUGGESTION",
+        "location": "engine/runtime/claude_owner_rules.go:29-34",
+        "claim": "On the owner-rules component, install and update with no checkout write nothing but return restart_required and exit 0, while status in the same situation exits 1. The choice to make status unsupported is sound, but it sits next to this asymmetry.",
+        "evidence": [
+          "write() turns ErrNoOverlayCheckout into 'owner rules not installed: ...' with CapabilityRestartRequired. The task line asks for this ('leaves CLAUDE.md as it was with the note'), and ClaudeAdapter shares it.",
+          "For the component, which exists only to write the block, install exit 0 followed by status exit 1 is a visible mismatch.",
+          "In (b), apply.sh stays silent when the checkout has no `instructions/owner-rules.md`, so the apply path does not depend on this result."
+        ]
+      }
+    ],
+    "evidence": [
+      "Read engine/runtime/claude_owner_rules.go and engine/runtime/claude.go in full at HEAD; ClaudeAdapter delegates through ownerRules().",
+      "settings.json cannot be reached: ClaudeOwnerRulesAdapter holds only claudeOwnerRules{root, rules}; tests check the settings.json sha256 and no .bak.",
+      "Every target but claude exits 1 with the exact stderr; --config-root honoured; unknown --component lists three values; ComponentFailed used.",
+      "Not run: read-only static judgment."
+    ]
+  }
+}

@@ -1,0 +1,124 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "ec250124001db54af43d4fe63df6e1d20941b2eb",
+    "head": "8ceb67f8f08b7db3dd816fc9ca38bf7190a69f75",
+    "diff_sha256": "760fde698a0988f6e3bbb62a0547c068242f240f607ac14ec4381429a8a78a14",
+    "paths": [
+      "CHANGELOG.md",
+      "README.md",
+      "docs/architecture/adr-c23-m8-session-availability.md",
+      "engine/cmd/codex_hooks_test.go",
+      "engine/cmd/deps_test.go",
+      "engine/cmd/live_guard_test.go",
+      "engine/cmd/memory_acceptance_test.go",
+      "engine/cmd/session_availability.go",
+      "engine/cmd/session_availability_test.go",
+      "engine/cmd/usage.go",
+      "engine/projection/availability.go",
+      "engine/projection/availability_test.go",
+      "engine/runtime/live_guard_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability",
+    "hunt"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "ec250124001db54af43d4fe63df6e1d20941b2eb",
+      "head": "8ceb67f8f08b7db3dd816fc9ca38bf7190a69f75",
+      "diff_sha256": "760fde698a0988f6e3bbb62a0547c068242f240f607ac14ec4381429a8a78a14"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "README.md",
+        "docs/architecture/adr-c23-m8-session-availability.md",
+        "engine/cmd/codex_hooks_test.go",
+        "engine/cmd/deps_test.go",
+        "engine/cmd/live_guard_test.go",
+        "engine/cmd/memory_acceptance_test.go",
+        "engine/cmd/session_availability.go",
+        "engine/cmd/session_availability_test.go",
+        "engine/cmd/usage.go",
+        "engine/projection/availability.go",
+        "engine/projection/availability_test.go",
+        "engine/runtime/live_guard_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "engine/cmd/session_availability.go:144-159",
+        "severity": "WARNING",
+        "claim": "storeProblem accepts any regular file, including a 0-byte one, and then memorycard list runs on it. The premise evidence recorded in L186 says that on a 0-byte store `stats` and `list` exit 0 and initialise it, and that every open is O_RDWR with WAL (it leaves -wal/-shm files, even on a chmod 444 file). So a 0-byte memory.db (left by a touch or by a crash before the schema was written) is written by the SessionStart probe and reported as available. That breaks the adapter comment's own rule ('a probe must never write') and the CHANGELOG/README promise 'never creating the store'. The tests use an empty regular file as the healthy store (storeFile, withStore), which pins this write path instead of guarding against it. Failure mode: the first session start after a 0-byte store appears rewrites it silently, with no line in the block.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/cmd/session_availability.go:119-122",
+          "odd/tasks/labdrian-orchestrator-opencode.md:1051"
+        ]
+      },
+      {
+        "id": "F2",
+        "location": "engine/projection/availability.go:49-51",
+        "severity": "WARNING",
+        "claim": "When source engram is unavailable, the new line tells the agent 'Do not call the memorycard tools', with no exception for writes. The same block still says 'Memory writes (mem_save, promote) are not limited by the plan', and memorycard is the only store for new memories. On a fresh machine whose store does not exist yet (the shaper's own R2), the probe reports 'does not exist' and the line forbids mem_save. mem_save is the call that would create the store, so the store never gets created and every later session repeats the same line. The old line only steered agents away from frozen Engram. This one turns a missing store into a lasting ban on the only memory store.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/projection/availability.go:50",
+          "engine/cmd/memory_acceptance_test.go:146-147",
+          "odd/tasks/labdrian-orchestrator-opencode.md:1057"
+        ]
+      },
+      {
+        "id": "F3",
+        "location": "engine/cmd/session_availability.go:81-89",
+        "severity": "WARNING",
+        "claim": "memorycardStorePath reads MEMORYCARD_DB from the hook process environment. The memorycard MCP server that the agent's tools actually use gets its environment from the runtime's MCP entry, which may name another path. When the two differ, the probe stats and lists a different store than the tools use. It can then report a healthy store as unavailable (and with F2, ban its tools) or a broken store as available. Nothing detects or reports the mismatch. This is the shaper's unverified R1, now shipped.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/cmd/session_availability.go:70",
+          "odd/tasks/labdrian-orchestrator-opencode.md:1057"
+        ]
+      },
+      {
+        "id": "F4",
+        "location": "engine/cmd/session_availability.go:119-122",
+        "severity": "SUGGESTION",
+        "claim": "The stat check and the memorycard run are not atomic. If the store is removed or renamed between storeProblem returning \"\" and `memorycard list` opening it, memorycard creates a new store (and any missing parent directory) at that path. The window is short, but the 'never creates the store' promise in the CHANGELOG, README, usage and ADR does not hold under that race.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/labdrian-orchestrator-opencode.md:1051"
+        ]
+      },
+      {
+        "id": "F5",
+        "location": "engine/cmd/session_availability.go:147",
+        "severity": "SUGGESTION",
+        "claim": "memorycardStorePath treats an empty MEMORYCARD_DB the same as an unset one. So when MEMORYCARD_DB is set to \"\" and no home is known, the reason says 'MEMORYCARD_DB is not set', which is false: the variable is set but empty.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/cmd/session_availability.go:82",
+          "engine/cmd/session_availability.go:147"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the whole candidate diff t64.diff (13 paths)",
+      "Read the T64 task row (line 106) and L186/L187",
+      "Read engine/cmd/session_availability.go:100-189 at head",
+      "Grep of engine/cmd/deps.go for env/homeDir/getenv/userHomeDir",
+      "Grep of engine/cmd/memory_acceptance_test.go for SessionStart/withStore/withoutStore ordering",
+      "No command was run"
+    ]
+  }
+}

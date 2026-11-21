@@ -1,0 +1,122 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "0dc641cf062d516dc791676dfa98bc4ce55fec5e",
+    "head": "4fa090157fea2e770c4ab41a58b2d5c0c778e810",
+    "diff_sha256": "8231a4f3c3400a20616b154216af908217431b5973061f5bdb42cfb3cef89b41",
+    "paths": [
+      "CHANGELOG.md",
+      "README.md",
+      "docs/architecture/adr-c23-m8-session-availability.md",
+      "engine/cmd/codex_hooks_test.go",
+      "engine/cmd/memory_acceptance_test.go",
+      "engine/cmd/session_availability.go",
+      "engine/cmd/session_availability_test.go",
+      "engine/cmd/usage.go",
+      "engine/projection/availability.go",
+      "engine/projection/availability_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability",
+    "hunt"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "0dc641cf062d516dc791676dfa98bc4ce55fec5e",
+      "head": "4fa090157fea2e770c4ab41a58b2d5c0c778e810",
+      "diff_sha256": "8231a4f3c3400a20616b154216af908217431b5973061f5bdb42cfb3cef89b41"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "README.md",
+        "docs/architecture/adr-c23-m8-session-availability.md",
+        "engine/cmd/codex_hooks_test.go",
+        "engine/cmd/memory_acceptance_test.go",
+        "engine/cmd/session_availability.go",
+        "engine/cmd/session_availability_test.go",
+        "engine/cmd/usage.go",
+        "engine/projection/availability.go",
+        "engine/projection/availability_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "engine/cmd/session_availability.go:163-164",
+        "severity": "SUGGESTION",
+        "claim": "Every 0-byte regular file is marked Uncreated and gets the line 'memorycard has no store yet ... its reads find nothing until a record is saved'. That line is wrong for a store whose main file is 0 bytes but whose memory.db-wal holds committed pages (a crash before the first checkpoint; memorycard opens in WAL mode). SQLite replays the WAL on open, so the reads would find records. The probe does not look for a -wal sibling. The agent gets a false 'finds nothing' statement, though no tool is banned. L188 R2 records this risk as unverified; no test covers it.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/cmd/session_availability.go:163-164",
+          "engine/projection/availability.go:57-58"
+        ]
+      },
+      {
+        "id": "F2",
+        "location": "engine/projection/availability.go:60",
+        "severity": "SUGGESTION",
+        "claim": "The new tail makes the tool line contradict itself: 'Do not call the memorycard tools: memorycard is unavailable in this session (...), though the plan allows its reads and does not limit its writes.' The ban covers every memorycard tool, but the clause after 'though' can be read as allowing writes. The ADR (adr-c23-m8-session-availability.md:68-71) gives the reason that writes would fail there too, but the line does not say so. An agent that reads the clause as permission will call mem_save on an unreadable store and get a failure the line was meant to prevent.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/projection/availability.go:60",
+          "docs/architecture/adr-c23-m8-session-availability.md:68-71"
+        ]
+      },
+      {
+        "id": "F3",
+        "location": "engine/projection/availability.go:28-31",
+        "severity": "SUGGESTION",
+        "claim": "The doc comment of degradationLines still says each line is 'saying not to read it and why'. The new Uncreated form for engram says neither: by design it forbids no tool. A maintainer who trusts the comment could later add a 'Do not' prefix to every degradation line and bring back the ban L188 removed. The TestUsageAndReadme helper also still counts only '- Do not' lines as the degradation lines.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/projection/availability.go:28-31",
+          "engine/projection/availability.go:57-58"
+        ]
+      },
+      {
+        "id": "F4",
+        "location": "engine/cmd/memory_acceptance_test.go:98",
+        "severity": "SUGGESTION",
+        "claim": "The variable 'unavailable' now holds the no-store line ('- memorycard has no store yet ... does not exist ...'). By design that line does not mark the source as unavailable, and the test derives emptyLine from it at line 204. The name says the opposite of what the value means.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/cmd/memory_acceptance_test.go:98",
+          "engine/cmd/memory_acceptance_test.go:204"
+        ]
+      },
+      {
+        "id": "F5",
+        "location": "CHANGELOG.md:17",
+        "severity": "SUGGESTION",
+        "claim": "The changed CHANGELOG entry still cites only '(labdrian-orchestrator-opencode T64, S3, L186)', and the ADR amendment (adr-c23-m8-session-availability.md:65) also cites only S3, L186. The empty-store rule, the Uncreated no-store line and the best-effort wording come from L188; neither text points to it, so a reader cannot trace the changed behaviour to its decision.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "CHANGELOG.md:17",
+          "docs/architecture/adr-c23-m8-session-availability.md:65"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the whole diff t64c.diff (10 paths).",
+      "Read L188 and the S3 L188 amendment.",
+      "Read 8ceb67f8f08b-4.json and 8ceb67f8f08b-3.json in full.",
+      "Fix check -4 F1: fixed; storeProblem returns 'is empty' with uncreated=true for a 0-byte file and runs nothing (session_availability.go:163-164); tests assert the file stays 0 bytes and the stub never ran; storeFile and withStore use 16 bytes of SQLite header.",
+      "Fix check -4 F2 = -3 F1: fixed; with Uncreated set, availability.go:57-58 gives a line that forbids no tool, pinned by TestAnEngramSourceWithNoStoreYetForbidsNoTool, the acceptance test and the codex hooks test.",
+      "Fix check -4 F4 = -3 F3: fixed as documentation; 'never creating the store' is gone.",
+      "Fix check -4 F5: fixed (session_availability.go:153).",
+      "Fix check -3 F4: fixed (session_availability_test.go:275-279).",
+      "Grep outside odd/ for the old line tail, the old reason text and Uncreated: no stale copy.",
+      "No command or test was run."
+    ]
+  }
+}

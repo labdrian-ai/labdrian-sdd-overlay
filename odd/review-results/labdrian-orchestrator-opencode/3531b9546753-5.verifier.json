@@ -1,0 +1,18 @@
+{
+  "verdicts": [
+    {
+      "id": "F1",
+      "result": "reproduced",
+      "command": "bat -pp -r 425:436 <review worktree>/engine/runtime/labdrian-runtime-parity-plugin.mjs; bat -pp -r 52:60 <review worktree>/engine/cmd/roles_skill_paths.go; go test ./runtime/ -run 'TestOpenCodeBridgeNamesAnEngineOlderThanThePluginWithItsRemedy/a_usage_error' -count=1 -v",
+      "output": "skillPathsRefusal adds 'does not accept this plugin's call, as an engine older than the plugin does' for every reply.code === SKILL_PATHS_USAGE_EXIT; roles_skill_paths.go:57-58 returns '--skills-root <root> is not a directory' through the same exit 1; the test row 'a usage error' (opencode_bridge_skills_test.go:162,178) feeds that line and PASSES only because the denial carries olderEngineRemedy, so the wrong attribution is pinned.",
+      "base_result": "not-reproduced"
+    },
+    {
+      "id": "F2",
+      "result": "not-run",
+      "command": "none",
+      "output": "SUGGESTION: carried to the next correction.",
+      "base_result": "not-run"
+    }
+  ]
+}

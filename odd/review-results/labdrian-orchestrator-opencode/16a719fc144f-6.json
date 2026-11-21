@@ -1,0 +1,108 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "a61a18717aa509556c197085bee78785bbb83873",
+    "head": "16a719fc144f4653cbbf66db42dab5b63b03d2ae",
+    "diff_sha256": "b6cd4fb05380375335df6cf4c7e1d5f1e2aec82a782a909bc2a9e0858d37c392",
+    "paths": [
+      "CHANGELOG.md",
+      "engine/architecture_test.go",
+      "engine/cmd/usage.go",
+      "engine/gate/skillpaths.go",
+      "engine/gate/skillpaths_prose_test.go",
+      "engine/roles/skills.go",
+      "engine/runtime/opencode_bridge_test.go",
+      "engine/skillid/skillid.go",
+      "engine/skillid/skillid_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability",
+    "hunt"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "a61a18717aa509556c197085bee78785bbb83873",
+      "head": "16a719fc144f4653cbbf66db42dab5b63b03d2ae",
+      "diff_sha256": "b6cd4fb05380375335df6cf4c7e1d5f1e2aec82a782a909bc2a9e0858d37c392"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "engine/architecture_test.go",
+        "engine/cmd/usage.go",
+        "engine/gate/skillpaths.go",
+        "engine/gate/skillpaths_prose_test.go",
+        "engine/roles/skills.go",
+        "engine/runtime/opencode_bridge_test.go",
+        "engine/skillid/skillid.go",
+        "engine/skillid/skillid_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "engine/gate/skillpaths.go:155-165",
+        "severity": "SUGGESTION",
+        "claim": "fenceOpening treats any line that starts with three or more backticks as a fence opener, even when backticks follow later on the same line, for example a line of inline code such as \"```go test ./...``` runs the suite\". CommonMark does not open a fence there because a backtick fence's info string may not contain a backtick. Nothing closes this false fence, so the rest of the prompt is read as code and every later prose mention is dropped. The doc comment says fences are read 'as CommonMark opens them' (lines 78 and 153), so it overstates the behaviour. The base's toggle on the '```' prefix misread such a line too, so the effect is mostly unchanged. The new claim is not true for this input, and no test pins it.",
+        "evidence_class": "inferential",
+        "causal_disposition": "unknown",
+        "proof_refs": [
+          "engine/gate/skillpaths.go:155-165",
+          "engine/gate/skillpaths.go:96-105",
+          "engine/gate/skillpaths.go:78"
+        ]
+      },
+      {
+        "id": "F2",
+        "location": "engine/gate/skillpaths.go:129-134",
+        "severity": "SUGGESTION",
+        "claim": "CRLF detection depends on len(lines) > 1. A no-header prompt that ends in a lone carriage return with no newline, for example \"Use test-first.\\r\", is treated as LF. TrimRight with cutset \"\\n\" leaves the trailing \\r, so the output is \"Use test-first.\\r\\n\\n## Skills to load before work\\n<p>\\n\", which mixes endings and keeps a stray \\r. This is consistent with L173's rule (\"its first \\n follows a \\r\"), but the result is malformed. No test covers it.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/gate/skillpaths.go:129-134"
+        ]
+      },
+      {
+        "id": "F3",
+        "location": "CHANGELOG.md:10",
+        "severity": "SUGGESTION",
+        "claim": "The CHANGELOG says a skill 'the section already lists by any absolute path to its SKILL.md is not added again'. The code (skillpaths.go:87-88) treats any absolute path whose file is SKILL.md and whose parent directory has the id's name as listing that id, even when the file belongs to an unrelated skill under another root. For example, /other/test-first/SKILL.md suppresses <root>/test-first/SKILL.md, and the role never gets the root's skill. The code comment states this accurately ('whose directory is named for the id'). The CHANGELOG wording hides it.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/gate/skillpaths.go:84-89",
+          "CHANGELOG.md:10"
+        ]
+      },
+      {
+        "id": "F4",
+        "location": "engine/runtime/opencode_bridge_test.go:589",
+        "severity": "SUGGESTION",
+        "claim": "The test now uses enginetest.Binary, which builds into os.MkdirTemp(\"\", \"enginetest-\"). Only enginetest.Cleanup removes that directory (enginetest.go:44-45, 77). The runtime package's TestMain (live_guard_test.go:22-43) never calls enginetest.Cleanup. Before this change, this test built into t.TempDir, which is removed after the test. Now a run that selects only this test (for example `go test ./runtime -run ProseNames`) leaves a built engine in the system temp directory. T44's test already leaked the same way when it ran, so the leak existed before; this change adds one more trigger.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "worsened",
+        "proof_refs": [
+          "engine/runtime/opencode_bridge_test.go:589",
+          "engine/enginetest/enginetest.go:44-66",
+          "engine/runtime/live_guard_test.go:22-43"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the whole diff t60a.diff",
+      "Read T60 (line 102), including the design of commit A, and L173-L174",
+      "Read all of engine/gate/skillpaths.go at head",
+      "Read engine/gate/skillpaths_prose_test.go:1-40",
+      "Read engine/runtime/opencode_bridge_test.go:575-614",
+      "Read engine/enginetest/enginetest.go:30-74 and engine/runtime/live_guard_test.go",
+      "Grep: users of repositoryPluginSource and sha256 in engine/runtime",
+      "Grep: callers of enginetest.Binary and enginetest.Cleanup",
+      "Checked against L173 commit A items (1)-(8). Nothing was run."
+    ]
+  }
+}

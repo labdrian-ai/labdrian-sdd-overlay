@@ -1,0 +1,15 @@
+{
+  "kind": "polisher",
+  "base": "8510c7b69ea5319c956c1d8935507da62b73ae11",
+  "head": "ad9e5e4e00f757c3ed2e8c5cb5de492eec3ea0c3",
+  "diff_sha256": "966380304f61b38b0ab85abf22884922ffb7df6b1c78fa20b924a7f1dd7efccc",
+  "findings": {
+    "findings": [],
+    "evidence": [
+      "P1 resolved by trace: push -u origin HEAD:other has remote origin, so no exclusion (standing_test.go:139); fast-forward and --no-ff merge make HEAD an ancestor of the tip, so the range is unchanged (standing_test.go:149, :160).",
+      "Normal stacked case excludes only up to the fork point; every read failure asks as before.",
+      "Only remaining narrowing beyond intent is the documented residual of L153.",
+      "Not run: read-only static judgment."
+    ]
+  }
+}

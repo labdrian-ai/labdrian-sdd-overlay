@@ -1,0 +1,18 @@
+{
+  "kind": "polisher",
+  "base": "b36b2660fdf57eaa91a54b545bff078d2862b4e7",
+  "head": "508889816fbde6dd774ec4d5f4fbd9b459ea1cc4",
+  "diff_sha256": "1b1c88d5923713f71374772b74363001ae7085c79f5d4544ae1053daaafda239",
+  "findings": {
+    "findings": [],
+    "evidence": [
+      "bin/lib/apply.sh:34-61: the claude case sets component_args=(--component owner-rules) and shares the single runtime install call with codex and opencode; no second shape of the step; codex and opencode cases unchanged.",
+      "bin/lib/apply.sh:56: the empty-array expansion is safe under set -u.",
+      "bin/lib/apply.sh:231-236: claude and codex both call the step after state_write_target with || runtime_install_failed=1; line 276 makes apply exit non-zero; the opencode block is untouched.",
+      "engine/cmd/runtime.go:147-161: --component owner-rules builds only NewClaudeOwnerRulesAdapter, so apply never opens settings.json.",
+      "bin/lib/usage.sh:524-538 and README.md:1221-1226 match the behaviour.",
+      "engine/shelltest/apply_claude_runtime_test.go pins the argv, failure indenting with exit 1, the missing-engine note, the silent no-rules case, and the end-to-end block, idempotent second apply and unchanged settings.json with no .bak.",
+      "Not run: read-only static judgment."
+    ]
+  }
+}
