@@ -118,6 +118,12 @@ func gitBlobID(content string) string {
 	return hex.EncodeToString(sum[:])
 }
 
+// The two texts the License line of PROVENANCE.md may have, one for each state of LICENSE.
+const (
+	licenseLineIdentical = "- License: MIT, in `LICENSE` beside this file (the snapshot `LICENSE`, byte-identical)."
+	licenseLineChanged   = "- License: MIT, in `LICENSE` beside this file (changed since the snapshot `LICENSE`; see \"Changed since the snapshot\")."
+)
+
 // changedSinceTheSnapshot is the text under "## Changed since the snapshot" of PROVENANCE.md, up to the next
 // heading or the end of the file.
 func changedSinceTheSnapshot(t *testing.T, provenance string) string {
@@ -159,7 +165,9 @@ func TestEvidenceStore_CopiesMatchTheSnapshotOrAreListedAsChanged(t *testing.T) 
 		}
 	}
 
-	// The License line says LICENSE is byte-identical to the snapshot; that holds only while its blob is.
+	// The License line is tied to the blob of LICENSE in both states: while it equals the snapshot's the line
+	// is exactly licenseLineIdentical, and while it differs the line is exactly licenseLineChanged. No word
+	// of the line is a key, so a reworded claim fails either way.
 	licenseLine, found := "", false
 	for _, line := range strings.Split(provenance, "\n") {
 		if strings.HasPrefix(line, "- License:") {
@@ -169,9 +177,13 @@ func TestEvidenceStore_CopiesMatchTheSnapshotOrAreListedAsChanged(t *testing.T) 
 	}
 	if !found {
 		t.Errorf("PROVENANCE.md has no %q line", "- License:")
-	} else if strings.Contains(licenseLine, "byte-identical") {
-		if got, want := gitBlobID(readRepoFile(t, root, evidenceDirRel+"/LICENSE")), evidenceSnapshotBlobs["LICENSE"]; got != want {
-			t.Errorf("PROVENANCE.md says LICENSE is byte-identical to the snapshot, but its blob is %s, not %s", got, want)
-		}
+		return
+	}
+	got, want := gitBlobID(readRepoFile(t, root, evidenceDirRel+"/LICENSE")), evidenceSnapshotBlobs["LICENSE"]
+	switch {
+	case got == want && licenseLine != licenseLineIdentical:
+		t.Errorf("LICENSE equals the snapshot, so the License line is exactly %q, got %q", licenseLineIdentical, licenseLine)
+	case got != want && licenseLine != licenseLineChanged:
+		t.Errorf("LICENSE differs from the snapshot (blob %s, not %s), so the License line is exactly %q, got %q", got, want, licenseLineChanged, licenseLine)
 	}
 }

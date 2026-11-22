@@ -284,8 +284,9 @@ func resolveRoute(path, declared, overlayRoot string, dest RouteDestinations) (R
 		return placed, nil
 	}
 	// The skill route, claude-skill, and the route of any other third column: the skills directory of
-	// every target, except that claude-skill is for Claude Code alone. Only skill and claude-skill name
-	// the file by its place in skills/ on the branches.
+	// the target, but no copy for OpenCode (it reads the skills of Claude Code, below) and none for a
+	// target that a scoped route such as claude-skill is not for. Only skill and claude-skill name the
+	// file by its place in skills/ on the branches.
 	placed.RepoRel = path
 	if route == RouteSkill || route == RouteClaudeSkill {
 		placed.RepoRel = "skills/" + path

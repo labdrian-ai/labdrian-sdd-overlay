@@ -101,6 +101,9 @@ func TestRouteTexts_NameEveryReasonADestIsEmpty(t *testing.T) {
 	blockS, okS := linesBetween(routesSh,
 		func(l string) bool { return strings.HasPrefix(l, "#   dest") },
 		func(l string) bool { return l == "#" }, false)
+	blockR, okR := linesBetween(routesGo,
+		func(l string) bool { return strings.Contains(l, "// The skill route, claude-skill") },
+		func(l string) bool { return strings.Contains(l, "placed.RepoRel = path") }, false)
 	var lineK string
 	for _, l := range strings.Split(routesGo, "\n") {
 		if strings.HasPrefix(strings.TrimSpace(l), "// RouteSkill copies") {
@@ -129,6 +132,25 @@ func TestRouteTexts_NameEveryReasonADestIsEmpty(t *testing.T) {
 			if !strings.Contains(lower, strings.ToLower(want)) {
 				t.Errorf("%s does not say %q:\n%s", block.name, want, block.text)
 			}
+		}
+	}
+	// Block R is the comment above the skills-directory branch of resolveRoute: OpenCode gets no copy, and
+	// it must not say "every target".
+	if !okR {
+		t.Error("block R (the skills-directory comment of resolveRoute) not found")
+	} else {
+		lower := strings.ToLower(blockR)
+		rWants := []string{"opencode"}
+		for route := range skillRouteTargets {
+			rWants = append(rWants, route)
+		}
+		for _, want := range rWants {
+			if !strings.Contains(lower, strings.ToLower(want)) {
+				t.Errorf("block R (the skills-directory comment of resolveRoute) does not say %q:\n%s", want, blockR)
+			}
+		}
+		if strings.Contains(lower, "every target") {
+			t.Errorf("block R (the skills-directory comment of resolveRoute) says %q:\n%s", "every target", blockR)
 		}
 	}
 	if lineK == "" {

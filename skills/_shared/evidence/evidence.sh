@@ -27,7 +27,9 @@
 # - rule <kind>: the level, rule, applies when, and source of that kind, at any
 #   level, from the page first and then evidence-rules.md; when the kind is in
 #   neither, a message on stderr and exit 1 (seed-evidence-31).
-# count, rules, and index exit 0 always. A cell may hold "|" written as "\|". Not
+# count, rules, and index exit 0, but with no awk on PATH every mode prints
+# "evidence.sh: awk is not on PATH; <mode> cannot run" on stderr and exits 3
+# (a usage error still exits 2). A cell may hold "|" written as "\|". Not
 # read: a table inside a code block. A row after a line that ends the table
 # (a blank line, for one) is still read, and check fails on it.
 
@@ -48,6 +50,10 @@ case $mode in
     ;;
   *) printf '%s\n' "$usage" >&2; exit 2 ;;
 esac
+command -v awk >/dev/null 2>&1 || {
+  printf 'evidence.sh: awk is not on PATH; %s cannot run\n' "$mode" >&2
+  exit 3
+}
 if [ -n "$dirarg" ]; then
   wiki=$dirarg
 elif [ -n "${CLAUDE_PROJECT_DIR:-}" ]; then

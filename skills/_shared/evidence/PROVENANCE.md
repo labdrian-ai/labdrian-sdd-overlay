@@ -10,4 +10,4 @@ The evidence store of this repository: `evidence.sh` and `evidence-rules.md`.
 
 ## Changed since the snapshot
 
-- Nothing.
+- `evidence.sh`: with no `awk` on `PATH`, every mode but a usage error prints `evidence.sh: awk is not on PATH; <mode> cannot run` on stderr and exits 3; the snapshot printed nothing and exited 0 in `rules` and `index`, and `rule` reported the kind as missing (review `8e035ddb49dc-2`, F2).

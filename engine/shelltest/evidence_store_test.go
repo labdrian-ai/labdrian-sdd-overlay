@@ -54,6 +54,8 @@ type evidenceWorld struct {
 	script string
 }
 
+// newEvidenceWorld also refuses a script that names /tmp, since a temporary file made there would escape the
+// tree the tests watch; every evidence test calls it before its first run, so no mode of such a script runs.
 func newEvidenceWorld(t *testing.T, page string) evidenceWorld {
 	t.Helper()
 	overlaytest.RequireShAndAwk(t)
@@ -66,6 +68,9 @@ func newEvidenceWorld(t *testing.T, page string) evidenceWorld {
 		data, err := os.ReadFile(filepath.Join(src, name))
 		if err != nil {
 			t.Fatal(err)
+		}
+		if name == "evidence.sh" && strings.Contains(string(data), "/tmp") {
+			t.Fatalf("%s names /tmp: a write there is outside the tree the evidence tests watch, so no mode is run", filepath.Join(src, name))
 		}
 		writeEvidenceFile(t, filepath.Join(tmp, "skills", "_shared", "evidence", name), string(data))
 	}
@@ -194,6 +199,23 @@ func TestEvidenceStoreUsageErrorsExitTwo(t *testing.T) {
 	}
 }
 
+// B11: with no awk on PATH every mode but a usage error says so on stderr and exits 3, so a caller never
+// reads a missing awk as "no rules". PATH is an empty directory; sh is found by the test process, not by
+// that PATH, and exec keeps the last value of a duplicated key, so extra's PATH wins.
+func TestEvidenceStoreWithoutAwkSaysSoAndExitsThree(t *testing.T) {
+	w := newEvidenceWorld(t, evidencePage(stdKinds, stdEvidence))
+	noawk := filepath.Join(w.tmp, "noawk")
+	if err := os.MkdirAll(noawk, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	env := []string{"PATH=" + noawk}
+	for _, args := range [][]string{{"check"}, {"count"}, {"rules"}, {"index"}, {"rule", "beta-kind"}} {
+		wantResult(t, args[0]+" with no awk", w.run(w.repo, env, args...), 3, "",
+			"evidence.sh: awk is not on PATH; "+args[0]+" cannot run\n")
+	}
+	wantResult(t, "a usage error with no awk", w.run(w.repo, env, "bogus"), 2, "", evidenceUsage)
+}
+
 // fileTree is every entry under dir but dir itself, by path relative to dir: a regular file as "file "
 // and its content, a directory as "dir", a symbolic link as "link " and its target, anything else as
 // "other " and its type.
@@ -230,14 +252,6 @@ func fileTree(t *testing.T, dir string) map[string]string {
 // B9: no mode writes a file, and the repository needs no wiki file but the page (S4).
 func TestEvidenceStoreWritesNothingAndNeedsNoOtherWikiFile(t *testing.T) {
 	w := newEvidenceWorld(t, evidencePage(stdKinds, stdEvidence))
-	// A temporary file made under /tmp would escape the watched tree, so a literal /tmp is refused before any mode runs.
-	script, err := os.ReadFile(w.script)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if strings.Contains(string(script), "/tmp") {
-		t.Fatalf("%s names /tmp: a write there is outside the tree this test watches", w.script)
-	}
 	want := map[string]string{
 		"docs":                        "dir",
 		filepath.Join("docs", "wiki"): "dir",
