@@ -3,8 +3,8 @@ package main
 // roles subcommand: 'roles validate --file <path>', 'roles next --project
 // --goal --chain', 'roles resume --project --goal --chain', 'roles append
 // --project --goal --chain --stdin', and 'roles match-shaper --root
-// --handoff'. The internal hook verbs 'roles builder-guard' (roles_builder_guard.go) and 'roles skill-paths'
-// (roles_skill_paths.go) are not ones a person runs. Every other verb is read-only except append, which appends one
+// --handoff'. The internal hook verbs 'roles builder-guard' (roles_builder_guard.go), 'roles classifier-guard'
+// (roles_classifier_guard.go) and 'roles skill-paths' (roles_skill_paths.go) are not ones a person runs. Every other verb is read-only except append, which appends one
 // caller-supplied record to the role chain store. No verb launches an agent,
 // dispatches work, or grants execution authority; runtime-specific agent
 // adapters belong outside this package.
@@ -61,6 +61,8 @@ func runRolesIn(workingDir func() (string, error), args []string, stdin io.Reade
 		runRolesSkillPaths(args[1:], stdin, stdout, stderr, exit)
 	case rolesBuilderGuardVerb:
 		runRolesBuilderGuard(args[1:], stdin, stdout, stderr, exit, fsdoc.Reader{Root: worktreeRoot})
+	case rolesClassifierGuardVerb:
+		runRolesClassifierGuard(args[1:], stdin, stdout, stderr, exit)
 	default:
 		fmt.Fprintf(stderr, "error: roles: unknown verb %q (expected validate, next, resume, append, match-shaper, or skill-paths)\n", args[0])
 		exit(1)

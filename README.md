@@ -1628,6 +1628,20 @@ gentle-ai-overlay roles builder-guard
     the document can forge the mark together with a false shaper entry, and it guards Claude Code only: launches of the
     builder from Codex and Pi are not guarded.
 
+gentle-ai-overlay roles classifier-guard
+    Internal hook command: a person does not run it. The PreToolUse hook in the frontmatter of `agents/classifier.md`
+    runs it before every tool call of the classifier agent, on the installed engine binary, and no other agent is
+    hooked. It reads the hook JSON on stdin and decides from its text:
+    Read, Grep and Glob are allowed; Edit and Write are allowed only on one clean absolute path ending in
+    `/docs/wiki/evidence.md`; Bash is allowed only as `sh "$HOME/.claude/skills/_shared/evidence/evidence.sh"`
+    with `check`, `count`, `index` or `rule <kind>`, then one quoted clean absolute `<root>/docs/wiki`, with nothing
+    before or after (no `;`, `&&`, pipe, redirection, variable prefix or second line). Every other tool is blocked.
+    A block is exit 2 with the reason on stderr; an allow is exit 0 with no output.
+    It fails closed: an argument, a stdin that fails, input that does not decode, input over 8 MiB and an internal
+    error each exit 2 with one line on stderr.
+    Limits: it is a speed bump that matches text, not a security boundary. It does not follow symbolic links, and
+    a hand edit of the deployed agent file removes it.
+
 overlay --help
     Show this help.
 ```

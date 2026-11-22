@@ -1,0 +1,113 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "54a4ff7e8ceea8b078f2f77a63e85abd42c1d2d5",
+    "head": "7704d28b967815d44d5be1b774a3588efb9c5d1d",
+    "diff_sha256": "a290f6051b7f76e47ca5e8278b5f9b9db49664415345334357c2499462830f52",
+    "paths": [
+      "agents/classifier.md",
+      "engine/agentgen/agentgen.go",
+      "engine/agentgen/artifacts_test.go",
+      "engine/agentgen/classifier_test.go",
+      "engine/agentgen/foreman_test.go",
+      "engine/agentgen/messages_pin_test.go",
+      "engine/agentgen/opencode_test.go",
+      "engine/agentgen/roles.go",
+      "engine/agentgen/roles_test.go",
+      "engine/skills/classifier_artifact_test.go",
+      "odd/tasks/merge-playbook-into-sdd-overlay.md",
+      "overlay.manifest",
+      "roles/classifier/LICENSE",
+      "roles/classifier/PROVENANCE.md",
+      "roles/classifier/body.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "54a4ff7e8ceea8b078f2f77a63e85abd42c1d2d5",
+      "head": "7704d28b967815d44d5be1b774a3588efb9c5d1d",
+      "diff_sha256": "a290f6051b7f76e47ca5e8278b5f9b9db49664415345334357c2499462830f52"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "agents/classifier.md",
+        "engine/agentgen/agentgen.go",
+        "engine/agentgen/artifacts_test.go",
+        "engine/agentgen/classifier_test.go",
+        "engine/agentgen/foreman_test.go",
+        "engine/agentgen/messages_pin_test.go",
+        "engine/agentgen/opencode_test.go",
+        "engine/agentgen/roles.go",
+        "engine/agentgen/roles_test.go",
+        "engine/skills/classifier_artifact_test.go",
+        "odd/tasks/merge-playbook-into-sdd-overlay.md",
+        "overlay.manifest",
+        "roles/classifier/LICENSE",
+        "roles/classifier/PROVENANCE.md",
+        "roles/classifier/body.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "agents/classifier.md:11",
+        "severity": "WARNING",
+        "claim": "The deployed agent gets Bash, Edit and Write, and only prompt text limits it to docs/wiki/evidence.md and bars git commands. No guard enforces either limit; the builder guard covers the builder only. A misread prompt, or finding text that contains instructions, can make it edit other files or run git in the user's repository. It reads review findings as input and holds shell and write tools, so the prompt-injection surface is real.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "agents/classifier.md:11",
+          "roles/classifier/body.md Rules section",
+          "odd/tasks/merge-playbook-into-sdd-overlay.md L37 Risks"
+        ]
+      },
+      {
+        "id": "F2",
+        "location": "roles/classifier/body.md:1-69",
+        "severity": "WARNING",
+        "claim": "The deployed ~/.claude/agents/classifier.md is an adapted copy of MIT-licensed playbook classify.md and carries no copyright or permission notice. The LICENSE sits only in roles/classifier/, which is not deployed; the classifier's deploy route is one agent row for classifier.md. The MIT condition that the notice be included in copies or substantial portions is unmet for this deployed file.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "overlay.manifest row 'classifier.md custom agent'",
+          "roles/classifier/PROVENANCE.md",
+          "odd/tasks/merge-playbook-into-sdd-overlay.md L37 Risks"
+        ]
+      },
+      {
+        "id": "F3",
+        "location": "roles/classifier/body.md:11",
+        "severity": "SUGGESTION",
+        "claim": "The script path is hard-coded as $HOME/.claude/skills/_shared/evidence/evidence.sh. Nothing in the tests checks that this path is where the evidence store is deployed, so a drift between the two would not be caught.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "roles/classifier/body.md:11",
+          "engine/skills/classifier_artifact_test.go"
+        ]
+      },
+      {
+        "id": "F4",
+        "location": "odd/tasks/merge-playbook-into-sdd-overlay.md:1245",
+        "severity": "SUGGESTION",
+        "claim": "L37 specified a models.md Mid line naming classifier; the commit left it out because the role-chain approval went stale. The human-readable tier table no longer lists every Mid role, and no test pins that list.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/merge-playbook-into-sdd-overlay.md L38",
+          "engine/agentgen/roles.go claudeOnlyRoles tier: tierMid"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full diff t3.diff and the worktree",
+      "agents/*, verifier.md and subagent_type consumers in engine/pipkg, engine/assets and engine/gate show no breakage from agents/classifier.md",
+      "No command was run"
+    ]
+  }
+}

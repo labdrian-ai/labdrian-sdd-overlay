@@ -1,0 +1,106 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "54a4ff7e8ceea8b078f2f77a63e85abd42c1d2d5",
+    "head": "7704d28b967815d44d5be1b774a3588efb9c5d1d",
+    "diff_sha256": "a290f6051b7f76e47ca5e8278b5f9b9db49664415345334357c2499462830f52",
+    "paths": [
+      "agents/classifier.md",
+      "engine/agentgen/agentgen.go",
+      "engine/agentgen/artifacts_test.go",
+      "engine/agentgen/classifier_test.go",
+      "engine/agentgen/foreman_test.go",
+      "engine/agentgen/messages_pin_test.go",
+      "engine/agentgen/opencode_test.go",
+      "engine/agentgen/roles.go",
+      "engine/agentgen/roles_test.go",
+      "engine/skills/classifier_artifact_test.go",
+      "odd/tasks/merge-playbook-into-sdd-overlay.md",
+      "overlay.manifest",
+      "roles/classifier/LICENSE",
+      "roles/classifier/PROVENANCE.md",
+      "roles/classifier/body.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "hunt"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "54a4ff7e8ceea8b078f2f77a63e85abd42c1d2d5",
+      "head": "7704d28b967815d44d5be1b774a3588efb9c5d1d",
+      "diff_sha256": "a290f6051b7f76e47ca5e8278b5f9b9db49664415345334357c2499462830f52"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "agents/classifier.md",
+        "engine/agentgen/agentgen.go",
+        "engine/agentgen/artifacts_test.go",
+        "engine/agentgen/classifier_test.go",
+        "engine/agentgen/foreman_test.go",
+        "engine/agentgen/messages_pin_test.go",
+        "engine/agentgen/opencode_test.go",
+        "engine/agentgen/roles.go",
+        "engine/agentgen/roles_test.go",
+        "engine/skills/classifier_artifact_test.go",
+        "odd/tasks/merge-playbook-into-sdd-overlay.md",
+        "overlay.manifest",
+        "roles/classifier/LICENSE",
+        "roles/classifier/PROVENANCE.md",
+        "roles/classifier/body.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "engine/skills/classifier_artifact_test.go:15-43",
+        "severity": "WARNING",
+        "claim": "K1 only checks the core prefix, eight substring anchors and three banned strings. It does not protect the parts of the body L37 says must stay faithful to classify.md: the Format section (the empty-page template whose two table headers evidence.sh check parses, classify.md lines 42-63 verbatim), the Gotchas, steps 1, 3, 4 and 5, the Output section, the 'Only change <page>' clause and the 'no secret' rule. G2 compares the generated file with the source, so a source edit carries through. An edit that renames the column 'Applies when' in the template, or removes the 'Skip it' gotcha, keeps every test green; a classifier deployed from that body creates a page evidence.sh check rejects, or records dismissed findings as evidence.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/skills/classifier_artifact_test.go:23-34",
+          "roles/classifier/body.md:40-62",
+          "odd/tasks/merge-playbook-into-sdd-overlay.md L37"
+        ]
+      },
+      {
+        "id": "F2",
+        "location": "odd/tasks/merge-playbook-into-sdd-overlay.md:89",
+        "severity": "SUGGESTION",
+        "claim": "The S5 T3 detail still says the models.md Mid line names classifier while T3 is marked done; L38 records that the edit was reverted and models.md:6 has no classifier. The open choice is recorded only in L38, not where S5 states the requirement.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/merge-playbook-into-sdd-overlay.md S5 T3 detail",
+          "skills/role-chain/references/models.md:6",
+          "odd/tasks/merge-playbook-into-sdd-overlay.md L38"
+        ]
+      },
+      {
+        "id": "F3",
+        "location": "roles/classifier/body.md:18",
+        "severity": "SUGGESTION",
+        "claim": "The body gives a stop rule for exit 3 only. evidence.sh also exits 2 on a usage error and exits 1 from 'rule <kind>' when the kind is in neither the page nor evidence-rules.md. In step 3 the agent may treat the empty stdout of a failed 'rule' call as a level and add a general kind with no level or rule.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "skills/_shared/evidence/evidence.sh:27-31,40-51,212-219",
+          "roles/classifier/body.md:32-36"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full diff t3.diff (923 lines)",
+      "Compared roles/classifier/body.md line by line with snapshot classify.md: only the six changes PROVENANCE.md and L37 list; Format and Output verbatim",
+      "agentgen.go build: the claudeOnlyRoles loop mirrors the foreman's projection; models error reported after the loop",
+      "evidence.sh modes checked; all general kinds in evidence-rules.md are level 2 or 3",
+      "models.md line 6 has no classifier",
+      "G1, G2, K2, K3 assertions checked against the code they name",
+      "No command was run"
+    ]
+  }
+}

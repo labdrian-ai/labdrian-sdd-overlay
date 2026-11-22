@@ -188,6 +188,7 @@ var rings = map[string]archguard.Ring{
 	"capability":                archguard.Domain,
 	"capability/presence":       archguard.Adapter,
 	"capabilitytest":            archguard.Support,
+	"classifierguard":           archguard.Domain,
 	"cmd":                       archguard.Root,
 	"contract":                  archguard.Domain,
 	"enginetest":                archguard.Support,

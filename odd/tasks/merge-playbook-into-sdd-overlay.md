@@ -84,9 +84,9 @@ Branch: `feat/playbook-merge` (from origin/main ce22eb3f) in the clone `~/labdri
     - Generator: a new list `claudeOnlyRoles` in `engine/agentgen/roles.go` holds the classifier row. `build` projects each entry with the existing `projectClaude`, after the eight roles and before the foreman. No Pi, Codex or OpenCode file is generated for it.
     - Row: name `classifier`; tier mid (Claude alias `sonnet`, as playbook declares); no effort, because the Claude file takes none (`claudeKeys`); tools `Read, Grep, Glob, Bash, Edit, Write` in playbook's order. With no memorycard tool, `role.body` drops the memory line.
     - Deploy: one manifest row `classifier.md custom agent`. The `agent` route goes to Claude Code alone (`engine/skills/routes.go` `agentRouteTargets`). With no `pi/agents/classifier.md`, the Pi package does not ship it (`engine/pipkg/build.go` `copyPiAgents`). No new route is added.
-    - `skills/role-chain/references/models.md`: the Mid line names `classifier`.
+    - `skills/role-chain/references/models.md`: T3 did not add `classifier` to the Mid line, because that edit makes the `role-chain` approval stale (L38). The owner carried it to T4 with "Sumarla a T4 (Recommended)" (L39).
     - Body: it writes only `<root>/docs/wiki/evidence.md` and runs only `evidence.sh`, and it never commits, pushes or changes git state.
-    - Enforcement: these limits are prompt-level only. The builder guard fails closed for the builder alone (`engine/cmd/roles_builder_guard.go`). `gate-task` appends the memory instructions block to every sub-agent, this one included. T5's rule index does not reach the classifier.
+    - Enforcement: in T3 only the prompt enforced these limits (review `7704d28b9678-5` F1). T3c (L39) enforces them with a PreToolUse hook in the classifier's own frontmatter, which runs the engine verb `roles classifier-guard`. The builder guard still covers only the builder. `gate-task` appends the memory instructions block to every sub-agent, this one included. T5's rule index does not reach the classifier.
     - Position (CONFIRMED by the owner, L10: "va fuera"): outside the role chain, like the verifier, which `agentgen` generates but `engine/roles` does not list.
       - The parent launches it after `review record` / `verify` (T4).
       - `engine/roles` `Vocabulary`, `Catalog`, `optionalRole` and the chain transitions stay unchanged.
@@ -97,6 +97,13 @@ Branch: `feat/playbook-merge` (from origin/main ce22eb3f) in the clone `~/labdri
     - OD-5, OD-6, OD-8 and OD-11 do not change T3 (L37). The carried SUGGESTIONs F1 and F2 of `0178aa75ec87-5` go to T6, not T3 (L36).
     - No open decision of its own.
     - Risk expectation: item 5 (a new agent deployed to Claude Code and checked by CI's `gadu-generate --check`); own commit.
+  - T3c detail (L39): the fix round of the T3 reviews `7704d28b9678-2`, `-3`, `-4` and `-5`. It fixes the three WARNINGs and folds three SUGGESTIONs, in two commits:
+    - R5-F1 (enforcement): a new domain package `engine/classifierguard` decides each tool call of the classifier. Read, Grep and Glob are allowed. Edit and Write are allowed only on a clean absolute path ending in `/docs/wiki/evidence.md`. Bash is allowed only for `sh "$HOME/.claude/skills/_shared/evidence/evidence.sh"` with `check`, `count`, `index` or `rule <kebab-kind>`, followed by one quoted clean absolute `<root>/docs/wiki`. Every other call is blocked. An internal verb `roles classifier-guard` adapts it to Claude Code: it answers by exit status (2 blocks), and it fails closed. The generated `agents/classifier.md` declares that verb as a PreToolUse hook in its own frontmatter, so the hook runs only inside the classifier. It depends on premise P1, which the prototyper checks first.
+    - R5-F2 (license): the generator writes the MIT notice of `roles/classifier/LICENSE` into the deployed agent file as YAML comment lines of its frontmatter. The notice travels with the copy and adds no prompt text.
+    - R2-F1 (pins): the Format template and the example rows of the body are checked by running `evidence.sh check` on a page built from them. The Rules, Gotchas and Output sections are pinned line by line.
+    - Folded SUGGESTIONs: `7704d28b9678-2` F3 (the body says what exits 1 and 2 of the script mean); judge 2 of `7704d28b9678-4` (the body names `<page>` as the path this prompt names); `7704d28b9678-5` F3 (a test ties the script path of the body to the deploy route of `evidence.sh` and to the Claude skills root of `bin/lib/targets.sh`).
+    - Carried to T4 by the owner ("Sumarla a T4 (Recommended)"): `7704d28b9678-2` F2, `7704d28b9678-5` F4 and judge 1 of `7704d28b9678-3`, all on the models.md Mid line.
+    - Commits: T3c-a (the guard: domain, verb, docs), then T3c-b (generator, body, pins). Risk expectation: item 2 for T3c-a; items 2 and 5 for T3c-b.
 - **S6** — Lifecycle trigger. A stored result whose S3 feed keeps at least one finding is classified once. It counts as classified when the page holds an Evidence row whose Review is that result's identifier. This mirrors playbook `review-ran.sh`, which blocks once a review "that ended with findings and started no" classify. Acceptance: the parent of the role chain launches the classifier after `record` / `verify`. A branch commit whose result is unclassified gets asked for its classification once per session and commit by the existing `labdrian review stop-hook`. A result with no kept finding is never asked about. The hook keeps exiting 0 on anything it cannot tell.
 - **S7** — Rule injection. The index of level-2+ kinds (`evidence.sh index`: "- <kind> (level N): <applies when>"), and the command that prints one rule, reach the builder and the reviewer when they are launched, as playbook `rules-for-subagent.sh` does for write and review. Nothing reaches the other roles. Acceptance: with no level-2+ kind there is no text and no change to the prompt. The size the injection adds to a prompt is measured and reported, and the cap is OD-11. Injection never blocks or fails a launch. Injection by itself does not change the reviewer's JSON reply contract; the one change to that contract is the rule outcomes of S8 (b).
 - **S8** — Consolidation, promotion, level history and rule outcomes. The owner approved this scope: asked "¿Actualizo T6 del documento con esos dos puntos?", the owner answered "deacuerdo" (L7). Points (a) and (b) are adopted from arXiv 2611.18856 "Self-Improvement Memory" (SIM) and arXiv 2611.23476 "GUARD"; the shaper has not read either paper. The requirement is the owner's.
@@ -228,6 +235,7 @@ Order is execution order: the learning loop (T1, T19, T2, T20, T21, T22, T3-T6, 
 - [x] T21 — S4 — inline — pin the route column: a test that every third column of `overlay.manifest` is a known route (F1 of `d1e57b32f786-2`), the `Dest` texts of `engine/skills/routes.go` and `bin/lib/manifest_routes.sh` and the `RouteSkill` text naming `claude-skill` and OpenCode, and a test tying the `Dest` texts to `skillRouteTargets` (F2); and, from the review of T2b `8e035ddb49dc-2`, B10 refusing a stale `- Nothing.` and an untrue "byte-identical" (F1) and B9 seeing directories, links and writes under `TMPDIR` (F3); runs after T2b; detail in S4 (T21 detail), L29 and L32. Risk expectation: none; own commit — shaped: L32 — commit: the commit `test(skills): pin the route column and tighten the evidence store pins` (its SHA is not knowable inside its own commit; see L33 and `git log --grep`)
 - [x] T22 — S4 — inline — fail loud without awk: `evidence.sh` exits 3 with one stderr line in every mode but a usage error when `awk` is not on `PATH` (F2 of `8e035ddb49dc-2`), `PROVENANCE.md` names the change, and a test B11 pins it; folds the three SUGGESTIONs of `7b634ced2367-2` (the `/tmp` scan in `newEvidenceWorld`, the License line keyed on `LICENSE`'s blob, the `resolveRoute` comment pinned); runs after T21 and before T5; detail in S4 (T22 detail), L32 and L34. Risk expectation: items 3 and 5; own commit — shaped: L34 — commit: the commit `fix(evidence): fail loud when awk is missing` (its SHA is not knowable inside its own commit; see L35 and `git log --grep`)
 - [x] T3 — S5, S9 — inline — add the new `classifier` role (named by the owner, L37) outside the role chain, for Claude Code only (OD-7): `roles/classifier/body.md` adapted from playbook `classify.md` with `LICENSE` and `PROVENANCE.md`, a `claudeOnlyRoles` entry in `engine/agentgen` that generates `agents/classifier.md` alone, the manifest row `classifier.md custom agent`, and tests G1, G2, K1-K3; detail in S5 (T3 detail) and L37. Risk expectation: item 5; own commit — shaped: L37 — commit: the commit `feat(agents): add the classifier role for Claude Code` (its SHA is not knowable inside its own commit; see L38 and `git log --grep`)
+- [ ] T3c — S5, S9 — inline — fix round of T3 (reviews `7704d28b9678-2` to `-5`): enforce the classifier's write and run limits with a guard verb `roles classifier-guard` (domain `engine/classifierguard`), run by a PreToolUse hook in the generated `agents/classifier.md` frontmatter, after premise P1 is confirmed (R5-F1). Carry the MIT notice as frontmatter comments of the deployed file (R5-F2). Pin the Format template by running `evidence.sh check` on it, and pin the Rules, Gotchas and Output lines (R2-F1). Fold `-2` F3, judge 2 of `-4` and `-5` F3. The models.md items go to T4. Two commits, T3c-a then T3c-b; detail in S5 (T3c detail) and L39. Risk expectation: item 2 (T3c-a); items 2 and 5 (T3c-b) — shaped: L39 — commit: T3c-a: the commit `feat(agents): guard the tool calls of the classifier` (its SHA is not knowable inside its own commit, L40; `git log --grep`); T3c-b: -
 - [ ] T4 — S6 — inline — lifecycle trigger: a step in `skills/role-chain/SKILL.md`. After `record` / `verify`, when T1 keeps findings, the parent launches the classifier with T1's output and the repository root. `labdrian review stop-hook` asks once per session and commit for an unclassified result with kept findings, in its existing reason format. Tests cover: asked, not asked when no finding is kept, not asked when an Evidence row carries the identifier, and exit 0 on unreadable input. Depends on T1-T3. Risk expectation: item 3 (stop-hook behavior and the role-chain skill are contracts others consume); own commit — shaped: L6 — commit: -
 - [ ] T5 — S7 — inline — rule injection through `gate-task`: when the call's `subagent_type` is the builder or the reviewer, append the T2 `index` text and the `rule <kind>` command (absolute paths) to the prompt, in the same single rewrite as the memory instructions block. Nothing is appended when the index is empty. A reviewer body line says injected rules are review criteria inside its lens rows, with the reply shape unchanged. Measure and report the added size. Extend the gate-task golden tests. Blocked for its cap by OD-11, and for runtimes other than Claude Code by OD-7. Risk expectation: item 3 (gate-task contract pinned by `testdata/contract-golden`, reviewer prompt contract); own commit — shaped: L6 — commit: -
 - [ ] T6 — S8 — inline — consolidation at close with a per-kind level history, run by the parent; detail in S8 (T6 detail) and L7. Risk expectation: items 1 and 3; own commit — shaped: L7 — commit: -
@@ -1274,3 +1282,227 @@ Order is execution order: the learning loop (T1, T19, T2, T20, T21, T22, T3-T6, 
   **Lines.** Authored, 334 added (347 changed counting the 13 removed): body 69, `PROVENANCE.md` 18, `engine/agentgen` code 37 added (`agentgen.go` 22, `roles.go` 15), existing pin edits 16 added (`artifacts_test.go` 8, `foreman_test.go` 2, `messages_pin_test.go` 3, `opencode_test.go` 2, `roles_test.go` 1), new tests 193 (`classifier_test.go` 81, `classifier_artifact_test.go` 112), manifest row 1. Generated, reported apart: `agents/classifier.md` 75. Copied, reported apart: `roles/classifier/LICENSE` 21. The document edits (S5, S14, T3 line, L37, this entry) are not counted here. L37 forecast 270-360; 334 is inside it.
 
   **Left as designed, not checked here (L37 risks):** the write limits are prompt-level only; the effect of the `gate-task` memory block on a role with no memorycard tool; whether Claude Code reads `effort` from an agent file; the `$HOME/.claude` root; the MIT notice on the deployed agent. Nothing new was found beyond the models.md approval gap above.
+- **L39** (2026-11-22, shaper): the fix round of T3 on branch `feat/playbook-classifier-role`, head `7704d28b` (T3), workflow `merge-playbook-into-sdd-overlay-t3`. It designs the new task T3c. Changes: the S5 models.md and Enforcement bullets, a new "T3c detail" in S5, and the T3c line. No other spec or task changed. L37 still stands as T3's design; this entry adds to it.
+
+  **Owner rules and decision, verbatim.** Relayed by the coordinator in the brief: WARNINGs are fixed before delivery, SUGGESTIONs carry to the next batch, and nothing is declined. On 2026-11-22 the owner answered "Sumarla a T4 (Recommended)" for the models.md items: `7704d28b9678-2` F2, `7704d28b9678-5` F4 and the polisher judge 1 (`7704d28b9678-3`). Decided by the owner. T3c does not touch `skills/role-chain/references/models.md`. The T4 line was not edited here, because this shaper did not design T4. T4's shaper reads S5 and this entry.
+
+  **Sources read.**
+  - The document up to `## Log`, L37 and L38.
+  - The review records `7704d28b9678-2.json` (recall, hunt), `-3.polisher.json`, `-4.polisher.json` and `-5.json` (risk-line).
+  - The verifier's reproductions of R2-F1, R5-F1 and R5-F2, as relayed in the brief. They were not re-run here.
+  - At the worktree:
+    - `roles/classifier/body.md` (whole) and `engine/skills/classifier_artifact_test.go` (whole).
+    - `engine/cmd/roles_builder_guard.go` (whole). It hooks the Agent tool and exits at once for every `subagent_type` but `builder` (line 92).
+    - `engine/settings/builder_guard.go`, and `engine/settings/family.go` through codegraph.
+    - `engine/settings/approve_guard.go` (grep): the approve guard already runs on every Bash call and every file-tool call of every session.
+    - `engine/hookwire/guard.go` (whole): `DecodeToolCall`, `ExitReply`, `ExitBlock` = 2. Also `hookwire.go` lines 77-85: `MaxToolCallBytes` is 8 MiB.
+    - `engine/runtime/claude.go` lines 187-202: the hook binary is `<Claude root>/bin/gentle-ai-overlay`.
+    - `engine/agentgen/roles.go` lines 40-69, 165-183 and 270-334: `role`, `claudeOnlyRoles`, `claudeFile` and `projectClaude`.
+    - `skills/_shared/evidence/evidence.sh` lines 1-60 (the exit contract).
+    - `bin/lib/targets.sh`: line 14 sets the Claude skills root to `$HOME/.claude/skills`, and line 24 sets the Claude agents root.
+    - Grep for `builder-guard`: the verb is listed in `engine/cmd/roles.go`, `usage.go`, `bin/lib/usage.sh`, `README.md`, `CHANGELOG.md`, the status code and goldens, and the settings and runtime tests.
+  - The installed Claude Code binary `~/.local/share/claude/versions/2.1.330`, by grep. I did not run it.
+    - The hook input schema describes `agent_id` as "Present only when the hook fires from within a subagent", and `agent_type` as "Present when the hook fires from within a subagent (alongside agent_id)".
+    - The agent schema accepts the frontmatter keys `tools`, `disallowedTools`, `model`, `effort`, `permissionMode`, `mcpServers` and `hooks`. The loader keeps `hooks` (`...g.hooks&&{hooks:g.hooks}`).
+    - A plugin agent that sets `permissionMode`, `hooks` or `mcpServers` gets the warning "Plugin agent file ... sets <key>, which is ignored for plugin agents. Use .claude/agents/ for this level of control." So hooks in the frontmatter of a `~/.claude/agents/` file are honoured, and the classifier is deployed there. This is an inference from the text. I did not see a frontmatter hook fire.
+    - Side finding, not acted on: the schema accepts `effort` in an agent file. That contradicts the comment cited in L37's risk (`foreman_test.go` lines 83-84). I left it for a later shaper.
+  - I ran no command beyond reads and greps.
+
+  **Steelman of the idea.** The classifier is the one agent of the loop that writes. Its input, review findings, is text a reviewer copied from code under review, so instructions inside a finding can reach a model that holds Bash, Edit and Write. Most of what the body forbids can be stated as a closed list: one file pattern, and one script with four modes. A list that small can be decided by a pure function and enforced before each tool call, without trusting the prompt. The other two WARNINGs share that root: whatever matters (the template that `evidence.sh` parses, the license notice) must be checked by a machine, not by a reader.
+
+  **Options for R5-F1, with cost.**
+  - (b, chosen) A PreToolUse hook in the classifier's own frontmatter that runs a new verb `roles classifier-guard`. The decision lives in a new domain package.
+    - It runs only inside the classifier, so the rest of a session pays nothing.
+    - It can fail closed (exit 2) without risk to other agents.
+    - It needs no settings family, and no change to install, uninstall, `status-hooks` or their goldens.
+    - Cost: about 400 authored lines for the guard (T3c-a) and about 60 in the generator (T3c-b).
+    - It rests on premise P1, below.
+  - (a, fallback) A settings hook family on Bash and the file tools, beside the builder and approve guards, that acts when `agent_type` is `classifier`. The field is verified in the 2.1.330 schema.
+    - Cost: the same domain and verb, plus a settings family, the Install, Uninstall and status wiring, the status goldens and the runtime tests. I estimate 600-750 lines over two or three commits, unmeasured.
+    - Every Bash and file-tool call of every session spawns one more process; the approve guard already spawns one. That runs against the owner's efficiency rule.
+    - It must fail open for every non-classifier call, as all settings families do.
+    - In exchange, `status-hooks` reports it when it is missing or drifted.
+  - (c) Narrow the tools. With no Bash, the parent runs `evidence.sh`, but the classifier's own check-and-fix loop (step 5) then needs a relaunch. Edit and Write stay unguarded, so the write half of R5-F1 stays open. A read-only classifier that returns rows for an engine verb to append would close both halves. But it changes S5 ("One agent writes the evidence page") and T4's contract, which is a product change for the owner. I do not recommend it now.
+  - Not a product decision: (a) and (b) give the same behaviour and differ only in mechanism. The owner's standing preferences (enforcement over prompt text, maximum decoupling, efficiency) pick (b). So no question is returned.
+
+  **Strongest counter-argument to (b).** The guard lives inside a copied agent file. A hand edit of `~/.claude/agents/classifier.md` removes it, and nothing reports that drift: `gadu-generate --check` covers only the repository copy. The behaviour it rests on (a frontmatter hook firing on a sub-agent's own tool calls, and YAML comments in the frontmatter) is inferred from the binary's text, not observed. (a) is owned by the settings family, which `status-hooks` reports on. Tradeoff accepted: no drift report for the deployed file, in exchange for zero cost outside the classifier and fail-closed behaviour. If P1 fails, T3c-a still stands (the domain and the verb are the same), and only T3c-b's wiring is redesigned as (a) in a new shaper entry.
+
+  **Premise P1, checked by the prototyper before the builder starts** (design is shaper work; premises go to the prototyper):
+  - Set-up: a scratch project under the session scratchpad with `.claude/agents/probe.md`, a project agent (not a plugin agent). Its frontmatter holds two `#` comment lines right after the opening `---`, `tools: Read, Write, Bash`, and `hooks: PreToolUse: [{matcher: "*", hooks: [{type: command, command: 'echo "probe guard blocks" >&2; exit 2'}]}]`.
+  - Run: `claude -p` in that directory asks the parent to launch `probe` to Write `x.txt` and run `true`.
+  - Expected: the agent loads despite the comments; both calls are blocked with "probe guard blocks"; `x.txt` does not exist; the parent session's own tool calls are not blocked.
+  - Limits: no write to `~/.claude`, no settings change, nothing remote.
+  - If any expectation fails, the prototyper reports it, the builder does not start T3c-b, and a shaper redesigns the wiring as (a).
+
+  **T3c-a design: the guard** (commit `feat(agents): guard the tool calls of the classifier`, `Risk: 2`).
+  - New package `engine/classifierguard`. It is the domain: pure, with no IO and no import from the engine.
+    - `const ScriptPath = "$HOME/.claude/skills/_shared/evidence/evidence.sh"`, the one copy of the script path, which the body and K5 tie to. `const PageSuffix = "/docs/wiki/evidence.md"`.
+    - `type Call struct{ Tool, Command, FilePath, NotebookPath string }` and `type Verdict struct{ Block bool; Reason string }`.
+    - `func Decide(c Call) Verdict`:
+      - `Read`, `Grep`, `Glob`: allow.
+      - `Edit`, `Write`: allow only when `FilePath` starts with `/`, `path.Clean(FilePath) == FilePath`, it ends with `PageSuffix`, and it is longer than `PageSuffix` (a root is present). Otherwise block with `ReasonPage`.
+      - `Bash`: allow only when the whole command, anchored at both ends, is `sh "` + `ScriptPath` + `" ` + a mode + ` "` + a root + `/docs/wiki"`. The mode is one of `check`, `count` or `index`, or `rule ` followed by a kebab-case kind (`[a-z0-9]+(-[a-z0-9]+)*`). The root starts with `/`, holds no double quote, dollar sign, backtick, backslash or newline, and is clean (`path.Clean(root) == root`). Otherwise block with `ReasonCommand`. With nothing allowed before `sh` or after the closing quote, `;`, `&&`, `|`, redirections, `NAME=value` prefixes and a second line are all refused. `$`, a backtick, `"` and `\` cannot appear inside the quoted root, so nothing in it expands.
+      - Any other tool (`MultiEdit`, `NotebookEdit`, `Agent`, an `mcp__` tool, an empty name): block with `ReasonTool`.
+    - Three reason constants, each one line. Each names `labdrian classifier guard`, what is allowed (the page form; the four script forms; Read, Grep, Glob, and Edit and Write on the page), and says that it matches text and is a speed bump, not a security boundary (the approve guard's wording). Symbolic links are not followed: a `docs/wiki` that links elsewhere is not caught.
+  - New verb `roles classifier-guard` in `engine/cmd/roles_classifier_guard.go`, dispatched beside `rolesBuilderGuardVerb` in `engine/cmd/roles.go`. It is the adapter.
+    - It reads stdin bounded by `hookwire.MaxToolCallBytes+1`, decodes it with `hookwire.DecodeToolCall`, maps the result to `classifierguard.Call`, and writes a `hookwire.ExitReply`: exit 0 with no output to allow; exit 2 with the reason on stderr to block.
+    - It fails closed: any argument, a read error, a decode error, an input over the bound and a recovered panic each exit 2 with one stderr line. The hook is declared only in the classifier's file, so a block can never reach another agent.
+  - Docs: an `engine roles classifier-guard` block in `engine/cmd/usage.go` after the builder guard's, one line in `bin/lib/usage.sh` beside `builder-guard`, a `gentle-ai-overlay roles classifier-guard` section in `README.md`, and one `CHANGELOG.md` line. Each says: not run by a person; run by the PreToolUse hook in `agents/classifier.md`; what it allows; fails closed.
+  - Not changed: `engine/settings`, `engine/runtime`, `engine/status`, the status goldens, `roles_builder_guard.go`, `gate-task`.
+
+  **T3c-a tests**, RED first. Each mutation is reverted afterwards (backup, copy back, `cmp`), and the builder reports the failing test names.
+  - D1 `TestDecideAllowsOnlyTheClassifiersOwnCalls`, a table test in `engine/classifierguard`.
+    - Allowed: Read, Grep and Glob with any input; Write and Edit on `/r/docs/wiki/evidence.md`; `sh "$HOME/.claude/skills/_shared/evidence/evidence.sh" check "/r/docs/wiki"`, and the same with `count`, `index` and `rule test-passes-when-broken`.
+    - Blocked:
+      - Write on `/r/docs/wiki/evidence.md.bak`, `/r/docs/wiki/../wiki/evidence.md`, `docs/wiki/evidence.md`, `/docs/wiki/evidence.md`, `/r/README.md` and `/r/.git/config`.
+      - MultiEdit, NotebookEdit, Agent, `mcp__memorycard__mem_save`, and an empty tool name.
+      - Bash with:
+        - `git commit -m x`;
+        - an allowed command followed by `; git push`;
+        - an allowed command followed by `&& rm -rf /r`;
+        - an allowed command followed by `> /r/x`;
+        - an allowed command followed by `2>&1`;
+        - an allowed command, a newline and `git push`;
+        - `HOME=/x ` before an allowed command;
+        - the `rules` mode;
+        - `rule Bad_Kind`;
+        - a root holding `$(id)`, a backtick, `..` or `"`;
+        - `sh ~/.claude/skills/_shared/evidence/evidence.sh check "/r/docs/wiki"`;
+        - an allowed command with no wiki argument.
+    - Mw1: drop the `$` anchor. D1 fails on the `; git push` and `> /r/x` rows.
+    - Mw2: drop the `path.Clean` check on the page. D1 fails on the `..` row.
+    - Mw3: allow an unknown tool. D1 fails on the Agent and `mcp__` rows.
+  - D2 `TestEveryReasonIsOneLineAndNamesWhatIsAllowed`: each reason has no newline, names its allowed forms (the script forms quote `ScriptPath`), and says "speed bump".
+    - Mw4: a reason drops `ScriptPath`. D2 fails.
+  - C1 `TestRolesClassifierGuardAnswersByExitStatusAndFailsClosed` in `engine/cmd`, through the dispatcher.
+    - A Read input: exit 0, empty stdout and stderr.
+    - A Bash `git push` input: exit 2, empty stdout, stderr exactly `ReasonCommand` and a newline.
+    - Each of these exits 2 with one stderr line: not JSON; a `tool_input` that is not an object; input of `MaxToolCallBytes+1` bytes; an argument `x`.
+    - Mw5: a decode error exits 0. C1 fails.
+    - Mw6: the verb is not dispatched. C1 fails with the unknown-verb error.
+  - C2 `TestDocsDescribeTheClassifierGuard`: the usage block, cut with `docSection` from `engine roles classifier-guard` to the next verb; the `bin/lib/usage.sh` line; and the README section. Each holds `classifier-guard`, `agents/classifier.md` and "fails closed".
+    - Mw7: the README section is removed. C2 fails.
+  - Checks, in `engine/`: `go test ./classifierguard/ ./cmd/ -count=1`, `gofmt -l classifierguard/ cmd/`, `go vet ./classifierguard/`, and `bash -n ../bin/lib/usage.sh`.
+
+  **T3c-b design: generator, body and pins** (commit `fix(agents): enforce, license and pin the classifier`, `Risk: 2,5`). It starts only after T3c-a is committed and P1 passes.
+  - `engine/agentgen/roles.go`, `role` gets two optional fields that only Claude files use:
+    - `guard string`: the engine verb the frontmatter hook runs.
+    - `notice string`: the name of a license file in `roles/<name>/`.
+    - The classifier row sets `guard: "roles classifier-guard"` and `notice: "LICENSE"`. Every other row leaves them empty, so its file is byte-identical. `TestTheCommittedFilesOfTheRolesAreWhatTheGeneratorWrites` and `gadu-generate --check` show this.
+  - `claudeFile`, when `notice` is set, writes these lines right after the opening `---`:
+    - `# This agent includes material from andresfrei/playbook under the MIT License below; see roles/<name>/PROVENANCE.md in the source repository.`
+    - a line `#`;
+    - then each line of the notice as `# ` plus the line, or `#` for a blank line.
+  - When `guard` is set, after `tools:` it writes:
+
+    ```text
+    hooks:
+      PreToolUse:
+        - matcher: "*"
+          hooks:
+            - type: command
+              command: 'b="$HOME/.claude/bin/gentle-ai-overlay"; if [ -x "$b" ]; then exec "$b" <guard>; fi; echo "classifier guard: $b is missing, so this tool call is blocked" >&2; exit 2'
+    ```
+
+    The binary path matches `runtime.ClaudeAdapter.configPaths` (`<root>/bin/gentle-ai-overlay`, root `$HOME/.claude`). A missing binary blocks the call.
+  - `engine/agentgen/agentgen.go`: for a Claude-only role with a `notice`, `build` reads `roles/<name>/<notice>` through the same source reader as `body.md`. A missing notice is a `sourceError`, and `Check` names it in table order.
+  - `roles/classifier/body.md` (ASCII):
+    - Line 10 gains: "This prompt names `<page>` as the one file you write." This is judge 2 of `-4`.
+    - The Rules list gets one line after the exit-3 rule: "When `rule <kind>` exits 1, the kind is in neither the page nor the general rules: do not take a level or a rule from it. When the script exits 2, the call was malformed: show its stderr and stop with status blocked." This is `-2` F3.
+    - A Rules line: "A hook blocks every other file and command; when it blocks a call, report it and stop." This tells the agent what to do instead.
+  - `roles/classifier/PROVENANCE.md`: the Changed section lists these three additions.
+  - Regenerated `agents/classifier.md`: about 32 more lines (notice 23, hooks 6, body 3). Reported apart.
+  - Not changed: `skills/_shared/evidence/*` (its PROVENANCE fixes stay with T6, L36), `models.md` (T4), `engine/roles`, `overlay.manifest`.
+
+  **T3c-b tests**, RED first.
+  - G2, edited: the whole expected file now holds the notice comments and the hooks block, in the order above.
+  - G3 `TestOnlyTheClassifierFileRunsAGuardBeforeEveryTool`.
+    - `agents/classifier.md` holds the hooks block exactly, with `roles classifier-guard` and matcher `"*"`.
+    - No other generated Claude file (the eight roles and the foreman) holds `hooks:`.
+    - Mz1: the row's `guard` is emptied. G3 fails.
+    - Mz2: `guard` is set on the builder row. G3 fails.
+  - G4 `TestTheClassifierFileCarriesTheLicenseNoticeOfItsSource`: every line of `roles/classifier/LICENSE` appears, in order, as a frontmatter comment line before `name:`.
+    - Mz3: the row's `notice` is emptied. G4 fails.
+    - Mz4: a line of the LICENSE text is changed in `claudeFile` only. G4 fails.
+  - Pin edits: `seededRoot` stubs `roles/classifier/LICENSE`; the order of `TestCheckNamesEveryArtifactThatIsMissingInTheOrderOfTheTable` names the missing notice.
+  - K1, extended (R2-F1, part 1).
+    - The `## Rules`, `## Gotchas` and `## Output` sections equal want-lists in the test, line by line. That is 8 Rules lines (6 today plus the two T3c-b adds), 5 Gotchas lines and 3 Output lines.
+    - Steps 1-5 each hold an anchor: `check "<root>/docs/wiki"`, `index`, the central test, `Append one row`, `count`.
+    - The banned strings stay. The body holds `classifierguard.ScriptPath` exactly.
+    - My3: the line "... is not evidence. Skip it." is deleted. K1 fails.
+    - My4: "Only add rows." is reworded. K1 fails.
+  - K4 `TestTheFormatOfTheClassifierBodyPassesEvidenceCheck` in `engine/shelltest`, using `newEvidenceWorld` and the runtime helper (R2-F1, part 2).
+    - It cuts the first ```` ```markdown ```` fence after `## Format` from `roles/classifier/body.md` and writes it as the page. `check` exits 0 with the pass line.
+    - Then it puts the Kinds example row and the Evidence example row of the second fence under their tables. `check` exits 0 again.
+    - My1: `Applies when` is renamed in the template. K4 fails with exit 1 and the header message, as the verifier reproduced.
+    - My2: the example Evidence date becomes `2026/11/19`. K4 fails.
+  - K5 `TestTheClassifierScriptPathIsWhereTheEvidenceStoreIsDeployed` in `engine/skills` (`-5` F3).
+    - `ResolveRoutes` over the real manifest, for target `claude` with `SkillsRoot` set to the literal `$HOME/.claude/skills`, gives `_shared/evidence/evidence.sh` the `Dest` `classifierguard.ScriptPath`.
+    - `bin/lib/targets.sh` holds `[claude]="$HOME/.claude/skills"`.
+    - The body holds `ScriptPath`.
+    - My5: the body's path becomes `.../evidence/evidence-store.sh`. K5 fails (K1 too).
+    - My6: the Claude skills root of `targets.sh` changes. K5 fails.
+  - C3 `TestTheClassifierHookRunsTheGuardVerbOfTheInstalledBinary` in `engine/cmd`.
+    - It reads the `command:` of `agents/classifier.md`. The command names `$HOME/.claude/bin/gentle-ai-overlay`, which agrees with `configPaths`' `bin/gentle-ai-overlay`.
+    - The verb after `exec "$b"`, run through the dispatcher on a Read input, exits 0.
+    - Mz5: the hook verb is misspelt in the row. C3 fails.
+  - Checks, in `engine/`:
+    - `OVERLAY_DIR=<worktree> go run ./cmd/ gadu-generate`, then `gadu-generate --check`.
+    - `go test ./agentgen/ ./skills/ ./shelltest/ ./cmd/ -count=1`.
+    - `go run ./cmd/ skills validate ...`; the expected line is still "89 files".
+    - `rg -nP '[^\x00-\x7F]'` on the body and the generated file.
+    - `gofmt -l`.
+    - Once, before the commit, `go test ./... -count=1`.
+
+  **Forecast** (shaper estimate, no actuals, low confidence; authored lines, not counting generated or copied files, nor the document):
+  - T3c-a: 330-410.
+    - Domain 70-80, D1 and D2 120-140.
+    - Verb 60-70, dispatch 3, C1 60-70.
+    - Usage, README and CHANGELOG 20-25, C2 25-30.
+    - Past 400, the builder moves the docs and C2 into T3c-b and reports `partial` with that cut.
+  - T3c-b: 240-330.
+    - Agentgen 35-45, G2 edit 10, G3 and G4 55-65, pin edits 6.
+    - Body 3, PROVENANCE 4.
+    - K1 extension 40-50, K4 45-55, K5 30-40, C3 30-40.
+    - Generated, reported apart: +30-35.
+  - Two commits, each under about 400. Each gets its own review, chained from the last reviewed head (`7704d28b`).
+
+  **Risk expectation.** T3c-a: item 2 (a new guard verb). T3c-b: items 2 and 5. The guard becomes active in a deployed agent file, and the file changes for Claude Code. Not item 3: no contract read by another component changes; the agent file stays a Claude Code input.
+
+  **Risks, not decided here:**
+  - P1 is unverified until the prototyper runs it. Two things rest on it: that a frontmatter hook fires on the sub-agent's own calls and not on the parent's, and that YAML comment lines are accepted. If the comments fail, the notice moves into the body as an HTML comment, which costs prompt tokens on every launch. That would be a new shaper entry.
+  - The guard matches text and is a speed bump, not a sandbox. Symbolic links and a hand edit of the deployed agent file bypass it, and nothing reports a deployed file that differs from the repository.
+  - `$HOME/.claude` is still assumed, for the script, the binary and the agent (L37). A Claude Code run with another config directory blocks every Bash call of the classifier.
+  - Whether frontmatter comments satisfy MIT's "included in all copies or substantial portions" is a legal reading, not verified. The notice is now inside the deployed copy, which is the usual practice.
+  - The models.md items go to T4 (owner decision above). The T4 line itself was not edited.
+  - The `effort` side finding from the binary is open for a later shaper.
+  - No product decision is open for T3c.
+
+- **L40** (2026-11-22, builder): T3c-a built as designed in L39, on branch `feat/playbook-classifier-role` from `7704d28b` (T3), workflow `merge-playbook-into-sdd-overlay-t3`, in one commit (no cut: authored lines stayed under 400, so the docs and C2 stay in T3c-a). Commit `feat(agents): guard the tool calls of the classifier` (its SHA is not knowable inside its own commit; `git log --grep`), `Risk: 2`. S5 covered for its Enforcement part: the domain `engine/classifierguard`, the verb `roles classifier-guard`, and their docs. T3c-b (generator, body, pins) is not started, and the T3c box stays `[ ]`. The commit also holds the uncommitted document edits of L39 (S5, the T3c line) and the review records `odd/review-results/merge-playbook-into-sdd-overlay/7704d28b9678-1.sweep.json`, `-2.json`, `-3.polisher.json`, `-4.polisher.json` and `-5.json`, unchanged.
+
+  **Departures from L39, three, all small.**
+  - D1 gets one more blocked row, `Write` on `/r/../docs/wiki/evidence.md`. L39's Mw2 expects the `/r/docs/wiki/../wiki/evidence.md` row to catch a dropped `path.Clean` check, but that path does not end in `/docs/wiki/evidence.md`, so the suffix test already blocks it and Mw2 survived (D1 stayed green). With the new row, which ends in the suffix and is not clean, Mw2 fails D1. The row L39 listed stays.
+  - One extra test, `TestRolesClassifierGuardBlocksARecoveredPanic` (a reader that panics: one exit 2, one stderr line), because C1 as designed cannot reach the recovered-panic path L39 names.
+  - `engine/architecture_test.go` gains one `rings` entry, `"classifierguard": archguard.Domain`. L39's "not changed" list did not name it; the full `go test ./...` failed `TestArchitectureFollowsTheDependencyRule` ("package classifierguard has no ring") until the entry was added.
+
+  **Commands run, from `engine/` unless noted, with exact results:**
+  - RED 1, domain tests against a stub (`Decide` allows all, reasons empty): `go test ./classifierguard/ -count=1` printed `--- FAIL: TestDecideAllowsOnlyTheClassifiersOwnCalls` (every blocked row "allowed") and `--- FAIL: TestEveryReasonIsOneLineAndNamesWhatIsAllowed` (empty reasons), then `FAIL`.
+  - RED 2, the verb tests against a no-op stub that is not dispatched: `go test ./cmd/ -run ClassifierGuard -count=1` printed `--- FAIL` for `TestRolesClassifierGuardAnswersByExitStatusAndFailsClosed` (exit 1, `unknown verb "classifier-guard"`), `TestRolesClassifierGuardBlocksARecoveredPanic` (no exit) and `TestDocsDescribeTheClassifierGuard` (`marker "engine roles classifier-guard" not found`), then `FAIL`.
+  - GREEN: `go test ./classifierguard/ ./cmd/ -count=1` printed `ok` for both (`cmd` 110.555s). `gofmt -l classifierguard/ cmd/` printed nothing (after `gofmt -w` on the new domain test file). `go vet ./classifierguard/ ./cmd/` printed nothing. `bash -n ../bin/lib/usage.sh` printed nothing (exit 0).
+  - A first edit of `bin/lib/usage.sh` removed two padding spaces before `review <verb>`, which failed `TestInstallHooksSummariesNameTheReviewStopHook` in the first `cmd` run; restored, then `go test ./cmd/ -run 'Docs|Usage|Hooks|Help|ClassifierGuard|BuilderGuard' -count=1` printed `ok`.
+  - Full `go test ./...` from `engine/`, run to a file: the first run failed only `TestArchitectureFollowsTheDependencyRule` (above); after the `rings` entry, `gofmt -l .` printed nothing and the run exited 0 with 88 `ok` lines and no other line. `go test . -count=1` alone printed `ok` between the two.
+
+  **Test-first and mutation table** (every mutation applied with `sd -F` to a file backed up first in the session scratchpad, reverted by copying the backup back, then `cmp` against the backup: identical each time; no `git checkout`):
+
+  | Test | RED first | Mutation | Failing test |
+  |------|-----------|----------|--------------|
+  | D1 `TestDecideAllowsOnlyTheClassifiersOwnCalls` | yes (RED 1) | Mw1: the `$` anchor of the command pattern dropped | `TestDecideAllowsOnlyTheClassifiersOwnCalls` |
+  | D1 | yes | Mw2: the `path.Clean` check dropped from `isPage` | first run: none (survived, see Departures); with the added row: `TestDecideAllowsOnlyTheClassifiersOwnCalls` |
+  | D1 | yes | Mw3: an unknown tool allowed | `TestDecideAllowsOnlyTheClassifiersOwnCalls` |
+  | D2 `TestEveryReasonIsOneLineAndNamesWhatIsAllowed` | yes (RED 1) | Mw4: both uses of `ScriptPath` dropped from the reasons | `TestEveryReasonIsOneLineAndNamesWhatIsAllowed` (a first try that dropped only one of the two uses survived, because the other still holds it) |
+  | C1 `TestRolesClassifierGuardAnswersByExitStatusAndFailsClosed` | yes (RED 2) | Mw5: a decode error exits 0 | `TestRolesClassifierGuardAnswersByExitStatusAndFailsClosed` |
+  | C1 | yes | Mw6: the verb not dispatched (case renamed) | `TestRolesClassifierGuardAnswersByExitStatusAndFailsClosed` |
+  | C2 `TestDocsDescribeTheClassifierGuard` | yes (RED 2) | Mw7: the README section heading cut to `roles classifier-gua` (the section is no longer found) | `TestDocsDescribeTheClassifierGuard` |
+  | `TestRolesClassifierGuardBlocksARecoveredPanic` | yes (RED 2) | none | none |
+
+  **Lines.** Authored, 374 added: `engine/classifierguard/classifierguard.go` 89 and its test 106, `engine/cmd/roles_classifier_guard.go` 65 and its test 86, `roles.go` 4 added (2 removed), `usage.go` 5, `bin/lib/usage.sh` 3, `README.md` 14, `CHANGELOG.md` 1, `architecture_test.go` 1. The document edits and this entry are not counted. L39 forecast 330-410; 374 is inside it, under 400.

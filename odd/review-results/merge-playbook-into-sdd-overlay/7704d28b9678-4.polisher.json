@@ -1,0 +1,32 @@
+{
+  "kind": "polisher",
+  "base": "54a4ff7e8ceea8b078f2f77a63e85abd42c1d2d5",
+  "head": "7704d28b967815d44d5be1b774a3588efb9c5d1d",
+  "diff_sha256": "a290f6051b7f76e47ca5e8278b5f9b9db49664415345334357c2499462830f52",
+  "findings": {
+    "findings": [
+      {
+        "location": "roles/classifier/body.md:3-9",
+        "severity": "SUGGESTION",
+        "claim": "The core prefix says to write only the paths the prompt names and to stop on any other path, but the description tells the parent to send only the findings, the review identifier and the repository root. The page <root>/docs/wiki/evidence.md is worked out from the body and never named in the launch prompt, so a classifier that follows the prefix strictly may stop and report the page path instead of writing evidence.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "evidence": [
+          "roles/classifier/body.md line 3: Write only the artifacts and paths the prompt names",
+          "agents/classifier.md line 9 description: send them, the review identifier and the repository root",
+          "roles/classifier/body.md lines 9 and 13: <page> is <root>/docs/wiki/evidence.md",
+          "No launch step exists yet (T4 open)"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full diff t3.diff (923 lines)",
+      "Risk 5: manifest row classifier.md custom agent uses the agent route; _shared/evidence deployed via claude-skill; no codex/opencode/pi classifier",
+      "Each body call matched against evidence.sh",
+      "evidence-rules.md general kinds all level 2+",
+      "no installer agent globs; no role-name allowlist blocks classifier",
+      "claudeOnlyRoles loop mirrors the foreman's path",
+      "No tests or commands were run"
+    ]
+  }
+}
