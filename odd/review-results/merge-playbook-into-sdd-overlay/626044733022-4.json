@@ -1,0 +1,75 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "b4d601515f7980c6a60d20943b08705600ea84f1",
+    "head": "62604473302240043e301ed5ed6b810b09f70e8d",
+    "diff_sha256": "7b0a5bb9b3a92be26c7280d9c103720308e030021684aab06ab9194999034f17",
+    "paths": [
+      "engine/skills/evidence_store_artifact_test.go",
+      "odd/tasks/merge-playbook-into-sdd-overlay.md",
+      "overlay.manifest",
+      "skills/_shared/evidence/LICENSE",
+      "skills/_shared/evidence/PROVENANCE.md",
+      "skills/_shared/evidence/evidence-rules.md",
+      "skills/_shared/evidence/evidence.sh"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "b4d601515f7980c6a60d20943b08705600ea84f1",
+      "head": "62604473302240043e301ed5ed6b810b09f70e8d",
+      "diff_sha256": "7b0a5bb9b3a92be26c7280d9c103720308e030021684aab06ab9194999034f17"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/skills/evidence_store_artifact_test.go",
+        "odd/tasks/merge-playbook-into-sdd-overlay.md",
+        "overlay.manifest",
+        "skills/_shared/evidence/LICENSE",
+        "skills/_shared/evidence/PROVENANCE.md",
+        "skills/_shared/evidence/evidence-rules.md",
+        "skills/_shared/evidence/evidence.sh"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "overlay.manifest:108-111",
+        "severity": "WARNING",
+        "claim": "The four new custom rows use the generic skill route, which copies every row to the skills directory of each copy target. `apply --target codex` or `--target all` would therefore also install these inert files, including an executable script, under the Codex skills root. The owner restricted the learning loop to Claude Code only (OD-7, L21), and L22 defers this to T11. The test A2 pins only the Claude destination, so nothing guards the extra deployment. Not observed in a run.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "overlay.manifest:108-111",
+          "odd/tasks/merge-playbook-into-sdd-overlay.md L22 'Risks, not decided here' first bullet",
+          "engine/skills/evidence_store_artifact_test.go:32-49"
+        ]
+      },
+      {
+        "id": "F2",
+        "location": "skills/_shared/evidence/evidence.sh:326-331",
+        "severity": "SUGGESTION",
+        "claim": "The deployed header tells readers that 'The SubagentStart hook gives this index' and cites playbook ids such as seed-evidence-31. No such hook exists in this repository. The task file assigns the fix to T5 and T7. PROVENANCE.md lists 'Nothing' as changed, which stays accurate only while the bytes are untouched.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "skills/_shared/evidence/evidence.sh:328",
+          "odd/tasks/merge-playbook-into-sdd-overlay.md L22 'Risks, not decided here' second bullet"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full diff t2a.diff (7 paths)",
+      "Checked testOverlay, skillsRepoRoot and readRepoFile exist",
+      "Searched bin/, engine/cmd, engine/pipkg and .github for _shared references",
+      "Read evidence.sh in full; no new defect in the copied code",
+      "Read LICENSE and PROVENANCE.md against A3",
+      "Not run: go tests, shellcheck, cmp, apply"
+    ]
+  }
+}

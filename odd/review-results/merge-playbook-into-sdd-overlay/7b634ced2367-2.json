@@ -1,0 +1,90 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "8e035ddb49dc9fdd2f60c8ab1ece56ef1cd9382c",
+    "head": "7b634ced2367375a2e8f4d1572e06aaa59d67db8",
+    "diff_sha256": "11e1d9ce63d1a358915fc599b290280031103ea56c44325b2f32c2ab3682c4af",
+    "paths": [
+      "bin/lib/manifest_routes.sh",
+      "engine/shelltest/evidence_store_test.go",
+      "engine/skills/evidence_store_artifact_test.go",
+      "engine/skills/route_column_pins_test.go",
+      "engine/skills/routes.go",
+      "odd/review-results/merge-playbook-into-sdd-overlay/8e035ddb49dc-1.sweep.json",
+      "odd/review-results/merge-playbook-into-sdd-overlay/8e035ddb49dc-2.json",
+      "odd/tasks/merge-playbook-into-sdd-overlay.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "8e035ddb49dc9fdd2f60c8ab1ece56ef1cd9382c",
+      "head": "7b634ced2367375a2e8f4d1572e06aaa59d67db8",
+      "diff_sha256": "11e1d9ce63d1a358915fc599b290280031103ea56c44325b2f32c2ab3682c4af"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "bin/lib/manifest_routes.sh",
+        "engine/shelltest/evidence_store_test.go",
+        "engine/skills/evidence_store_artifact_test.go",
+        "engine/skills/route_column_pins_test.go",
+        "engine/skills/routes.go",
+        "odd/review-results/merge-playbook-into-sdd-overlay/8e035ddb49dc-1.sweep.json",
+        "odd/review-results/merge-playbook-into-sdd-overlay/8e035ddb49dc-2.json",
+        "odd/tasks/merge-playbook-into-sdd-overlay.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "engine/shelltest/evidence_store_test.go:233-240",
+        "severity": "SUGGESTION",
+        "claim": "The comment says a literal /tmp is refused 'before any mode runs', but the static check lives only inside B9. B1-B8 run evidence.sh before B9 in a normal `go test ./shelltest/` run, so a script changed to write under /tmp has already written to the real /tmp before B9 fails. Possible fix: do the /tmp scan in newEvidenceWorld or TestMain so it runs before any mode in the package, or reword the comment.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/shelltest/evidence_store_test.go:233-240",
+          "engine/shelltest/evidence_store_test.go:194",
+          "odd/tasks/merge-playbook-into-sdd-overlay.md:589"
+        ]
+      },
+      {
+        "id": "F2",
+        "location": "engine/skills/evidence_store_artifact_test.go:162-176",
+        "severity": "SUGGESTION",
+        "claim": "The License-line check is keyed on the exact word 'byte-identical'. If the line is reworded to an equally false claim such as 'identical to the snapshot' or 'unchanged', the blob comparison is skipped and B10 passes even though LICENSE differs. Possible fix: when LICENSE's blob differs, refuse any License line that does not name the change.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/skills/evidence_store_artifact_test.go:172"
+        ]
+      },
+      {
+        "id": "F3",
+        "location": "engine/skills/routes.go:286-288",
+        "severity": "SUGGESTION",
+        "claim": "A comment in resolveRoute still says skill rows are copied to 'the skills directory of every target', but OpenCode gets no copy (lines 294-298). It is neither fixed nor pinned by TestRouteTexts_NameEveryReasonADestIsEmpty.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "pre-existing",
+        "proof_refs": [
+          "engine/skills/routes.go:286-298"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full diff t21.diff (595 lines, 8 paths); no commands run",
+      "Read engine/skills/routes.go at head in full",
+      "Read B10 and B9 test code",
+      "Read bin/lib/manifest_routes.sh lines 1-60",
+      "skills/_shared/evidence has no /tmp, TMPDIR or mktemp",
+      "F1 and F2 of d1e57b32f786-2 resolved: P1 and P2 assert observable failures",
+      "F1 and F3 of 8e035ddb49dc-2 resolved",
+      "Authored-line counts in L33 match the diff"
+    ]
+  }
+}

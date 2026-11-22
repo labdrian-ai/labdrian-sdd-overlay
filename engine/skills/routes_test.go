@@ -109,6 +109,12 @@ func TestResolveRoutesPlacesEachKindOfRow(t *testing.T) {
 			ResolvedRoute{"go-testing/SKILL.md", "skill", "skills/go-testing/SKILL.md", "/o/skills/go-testing/SKILL.md", "/h/.codex/skills/go-testing/SKILL.md"}},
 		{"a row that says skill is the same", ManifestRow{"shared/helper.md", "managed", "skill"}, "claude",
 			ResolvedRoute{"shared/helper.md", "skill", "skills/shared/helper.md", "/o/skills/shared/helper.md", "/h/.claude/skills/shared/helper.md"}},
+		{"a claude-skill row goes to the skills of Claude", ManifestRow{"_shared/x/run.sh", "custom", "claude-skill"}, "claude",
+			ResolvedRoute{"_shared/x/run.sh", "claude-skill", "skills/_shared/x/run.sh", "/o/skills/_shared/x/run.sh", "/h/.claude/skills/_shared/x/run.sh"}},
+		{"a claude-skill row goes nowhere for Codex", ManifestRow{"_shared/x/run.sh", "custom", "claude-skill"}, "codex",
+			ResolvedRoute{"_shared/x/run.sh", "claude-skill", "skills/_shared/x/run.sh", "/o/skills/_shared/x/run.sh", ""}},
+		{"a claude-skill row goes nowhere for OpenCode", ManifestRow{"_shared/x/run.sh", "custom", "claude-skill"}, "opencode",
+			ResolvedRoute{"_shared/x/run.sh", "claude-skill", "skills/_shared/x/run.sh", "/o/skills/_shared/x/run.sh", ""}},
 		{"an agent goes to the agents of Claude", ManifestRow{"GADU.md", "custom", "agent"}, "claude",
 			ResolvedRoute{"GADU.md", "agent", "agents/GADU.md", "/o/agents/GADU.md", "/h/.claude/agents/GADU.md"}},
 		{"an agent goes nowhere for OpenCode", ManifestRow{"GADU.md", "custom", "agent"}, "opencode",
@@ -269,6 +275,8 @@ func TestResolveRoutesRefusesALongtermMemRowWithoutAKnownRoute(t *testing.T) {
 			"route_resolve: longterm-mem row 'longterm-mem/only-one-field' declares no route (missing third column); must be one of: skill, agent, opencode-agent, codex-agent, mcp"},
 		{"a route nobody knows", ManifestRow{"longterm-mem/internal/bar.go", "custom", "bogus"},
 			"route_resolve: longterm-mem row 'longterm-mem/internal/bar.go' declares an unrecognized route 'bogus'; must be one of: skill, agent, opencode-agent, codex-agent, mcp"},
+		{"claude-skill is not a route of longterm-mem", ManifestRow{"longterm-mem/x.md", "custom", "claude-skill"},
+			"route_resolve: longterm-mem row 'longterm-mem/x.md' declares an unrecognized route 'claude-skill'; must be one of: skill, agent, opencode-agent, codex-agent, mcp"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			_, err := ResolveRoutes([]ManifestRow{tc.row}, false, testOverlay, destinations("claude"))

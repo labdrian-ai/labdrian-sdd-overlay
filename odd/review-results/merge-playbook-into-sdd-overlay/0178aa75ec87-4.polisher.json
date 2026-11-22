@@ -1,0 +1,18 @@
+{
+  "kind": "polisher",
+  "base": "7b634ced2367375a2e8f4d1572e06aaa59d67db8",
+  "head": "0178aa75ec8789fe9a82f475b0a0d592a8354bdb",
+  "diff_sha256": "5bc3f78fb1aeea339efbfe8e8a198e3115648651425d27b8e77bef6b7cd9cf40",
+  "findings": {
+    "findings": [],
+    "evidence": [
+      "Read the full target diff t22.diff (base 7b634ced, head 0178aa75): evidence.sh, PROVENANCE.md, evidence_store_test.go, evidence_store_artifact_test.go, route_column_pins_test.go, routes.go, two review records and the task document",
+      "Risk 3: evidence.sh read in full; the command -v awk guard (lines 53-56) runs after the mode parse (lines 44-52), so usage errors still exit 2; every valid mode exits 3 before any awk call; $mode in the message is one of five literals; exit 3 is used by no other path",
+      "Consumers: evidence.sh outside odd/ appears only in the tests, overlay.manifest:108, PROVENANCE.md and evidence-rules.md; no hook or gate-task code invokes it yet (T5 not started)",
+      "Risk 5: the PROVENANCE.md Changed entry matches the snapshot behaviour it replaces; License line 8 unchanged and equals licenseLineIdentical",
+      "B11 premise: os/exec uses the last value of a duplicated env key; the guard uses only builtins",
+      "Folds: /tmp scan runs in newEvidenceWorld before any mode; B10 License check exact-line in both blob states; routes.go diff is comment-only; block R requires opencode and every skillRouteTargets route and refuses 'every target'",
+      "No commands were run; L35's test results not reproduced"
+    ]
+  }
+}

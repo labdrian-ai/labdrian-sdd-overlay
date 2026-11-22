@@ -1,0 +1,17 @@
+{
+  "kind": "polisher",
+  "base": "b4d601515f7980c6a60d20943b08705600ea84f1",
+  "head": "62604473302240043e301ed5ed6b810b09f70e8d",
+  "diff_sha256": "7b0a5bb9b3a92be26c7280d9c103720308e030021684aab06ab9194999034f17",
+  "findings": {
+    "findings": [],
+    "evidence": [
+      "Read the full diff t2a.diff: evidence.sh, evidence-rules.md, LICENSE, PROVENANCE.md, the four overlay.manifest rows, evidence_store_artifact_test.go and the task-file edits; no commands run",
+      "Declared risk 5: the four manifest rows match existing _shared conventions; the script locates evidence-rules.md with dirname $0 and all four files share one directory, so a deployed copy at ~/.claude/skills/_shared/evidence/ resolves it",
+      "Script logic read line by line: modes check, count, rules, index and rule each have a defined path; unknown kind exits 1; usage errors exit 2; nothing writes a file; POSIX awk only",
+      "LICENSE is the MIT text with the copyright notice; PROVENANCE.md names the snapshot commit, tag and source paths",
+      "Tests pin the manifest rows, the Claude deploy route, LICENSE and PROVENANCE content, and sh -n",
+      "Known side effect recorded in L22: the skill route also copies the files to Codex (deferred to T11, fixed by T20)"
+    ]
+  }
+}

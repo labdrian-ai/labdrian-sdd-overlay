@@ -105,6 +105,10 @@ _shared/entry-contract.schema.json custom
 _shared/actuals-record.schema.json custom
 _shared/procedural-candidate-detection.md custom
 _shared/ingested-observation-contract.md custom
+_shared/evidence/evidence.sh custom claude-skill
+_shared/evidence/evidence-rules.md custom claude-skill
+_shared/evidence/LICENSE custom claude-skill
+_shared/evidence/PROVENANCE.md custom claude-skill
 project-manifest/references/phase-templates.md custom
 project-manifest/references/universal-base-rules.md custom
 project-architect/references/architecture-template.md custom

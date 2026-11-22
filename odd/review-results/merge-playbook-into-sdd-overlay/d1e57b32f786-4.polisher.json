@@ -1,0 +1,18 @@
+{
+  "kind": "polisher",
+  "base": "62604473302240043e301ed5ed6b810b09f70e8d",
+  "head": "d1e57b32f7862dcdadf0687e49ccf0ed61bebeb0",
+  "diff_sha256": "4339ee3e7d7503ccb81a7f5f6189735c6a782b5e24aeced8afcc4b400394ec1e",
+  "findings": {
+    "findings": [],
+    "evidence": [
+      "Read the full diff t20.diff (703 lines); the 14 code, doc and manifest paths judged",
+      "engine/skills/routes.go:182-303: claude-skill sets RepoRel skills/<path>, leaves Dest empty for any target other than claude, after the OpenCode early return and before the SkillsRoot check",
+      "bin/lib/apply.sh:172-201, sync_check.sh:100-103, deploy_state.sh:33-35 skip a row whose dest column is empty; the claude deploy is unchanged",
+      "engine/skills/ondisk.go: claude-skill not in nonSkillRoutes or validLongtermMemRoutes; pinned by new tests",
+      "bin/lib/targets.sh:13-17 has only claude, opencode and codex; no other consumer compares the route to skill",
+      "New tests cover rows, per-target destinations and an apply integration case; not run",
+      "Residual: files an earlier apply left under ~/.codex/skills/_shared/evidence/ stay; the CHANGELOG states this"
+    ]
+  }
+}

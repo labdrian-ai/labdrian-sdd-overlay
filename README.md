@@ -1066,7 +1066,7 @@ gentle-ai-overlay manifest routes --overlay-root <dir> --target <name> --skills-
     Engine verb (Phase 9, B1): there is no `overlay manifest` wrapper, so run it on the installed engine binary,
     ~/.claude/bin/gentle-ai-overlay. It decides where each row of overlay.manifest goes, and is what `apply`, `status`,
     `sync-check`, `capture`, `restore` and `bootstrap` ask. Read-only: it prints one line per
-    row, in the order of the manifest, in five columns separated by a tab: the row's path; its route (`skill`, `agent`, `output-style`, `opencode-agent`, `codex-agent`, `mcp`,
+    row, in the order of the manifest, in five columns separated by a tab: the row's path; its route (`skill`, `claude-skill` (Claude Code only), `agent`, `output-style`, `opencode-agent`, `codex-agent`, `mcp`,
     `non-deployable`, or the third column when it is none of these, which takes the skill route under its own name);
     where its file is in the overlay repository (`skills/<path>` for a skill, `agents/<path>`, the path itself for the
     others); the absolute path the overlay copies it from (empty for a row that is never deployed); and the absolute

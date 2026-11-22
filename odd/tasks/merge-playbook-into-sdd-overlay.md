@@ -33,14 +33,43 @@ Branch: `feat/playbook-merge` (from origin/main ce22eb3f) in the clone `~/labdri
     - Depends on T1 only. No open decision blocks it; the reason string is an assumption.
     - Risk expectation: item 3 (the left-out set and its reason strings are the feed contract T4 and T17 read); own commit.
 - **S4** — Evidence store with a minimal wiki surface. The page is `<repo>/docs/wiki/evidence.md`, in the format the header of playbook `evidence.sh` defines (title `# Evidence`, tables `## Kinds` and `## Evidence`). The general rules live in `evidence-rules.md`, shipped next to the script. The store needs no other wiki file: playbook `format.md` says "`evidence.md` is optional: `evidence.sh` of `playbook-agents` checks and reads it ... and it does not change the format of the wiki", and `evidence.sh check` reads only the page and `evidence-rules.md`. Acceptance: `check`, `count`, `index` and `rule <kind>` behave as the header of `evidence.sh` states, in a repository with no other wiki file. Rows hold no secret and no customer data. Rows are only appended, except by consolidation (S8).
-  - T2 detail (L8):
+  - T2 detail (L8, L22, L25):
     - Absorb `evidence.sh` and `evidence-rules.md` from snapshot `6de8566` (v3.6.0) as overlay-owned code. They are the starting point and may be modified later (T6, T17 extend them).
     - They stay the one shared parser, with no second Go parse of the format.
     - The MIT LICENSE notice and a provenance note name the snapshot commit.
-    - Track them in `overlay.manifest` as overlay-owned, not as an upstream or vendor entry (assumption: management type `custom`).
-    - Tests: `check|count|index|rule` against a repository holding only `docs/wiki/evidence.md`, and lint with `bash -n`/`shellcheck` (`sh` and `awk` become runtime needs).
+    - Track them in `overlay.manifest` as overlay-owned, not as an upstream or vendor entry (management type `custom`).
+    - Home (L22): the repository directory `skills/_shared/evidence/` holds `evidence.sh`, `evidence-rules.md`, `LICENSE` and `PROVENANCE.md`. Deployed for Claude Code to `~/.claude/skills/_shared/evidence/`; the script finds `evidence-rules.md` beside itself (`dirname "$0"`), so the two keep their names and stay in one directory.
+    - Claude Code only (OD-7, L21: "Solo Claude Code (Recommended)"; L25): no other target receives the four files. The rows carry the third column `claude-skill` (T20).
+    - Tests (L22, L25): Go tests run by CI "Engine Tests" (`go test ./...` in `engine/`): the modes in `engine/shelltest/evidence_store_test.go`, against a temporary repository holding only `docs/wiki/evidence.md`, and the files, rows and deployed path in `engine/skills/evidence_store_artifact_test.go`; `sh -n` inside the Go tests, `shellcheck -s sh` run by the builder (`sh` and `awk` become runtime needs). T2b adds a test that ties the three copied files to the snapshot and to the "Changed since the snapshot" list of `PROVENANCE.md`, and a helper that skips without `sh` or `awk` locally and fails without them on CI (L25).
+    - Commits: T2a (done, L23), then T20 (L25), then T2b (L22, L25).
     - No open decision blocks it.
     - Risk expectation: item 5 (a deployed file and a new runtime dependency on `sh`/`awk`).
+  - T20 detail (L25): keep the evidence store Claude-only.
+    - A new route `claude-skill` in `engine/skills/routes.go`: a row of `skills/`, placed like the skill route, copied to the skills directory of Claude Code and to no other target's.
+    - The four rows `_shared/evidence/{evidence.sh,evidence-rules.md,LICENSE,PROVENANCE.md} custom` gain the third column `claude-skill`.
+    - `bin/lib/apply.sh` is not changed: it copies only rows with a destination (line 185).
+    - Acceptance: for target `claude` each of the four rows goes to `<skills root>/_shared/evidence/<name>`; for `codex` and `opencode` it goes nowhere; `apply --target codex` writes no file under `~/.codex/skills/_shared/evidence/`; `skills validate` still finds the four files on disk.
+    - Closes WARNING F1 of `626044733022-3` and `626044733022-4`, and folds SUGGESTIONs F2 and F3 of `626044733022-3`.
+    - Risk expectation: items 3 and 5; own commit.
+  - T21 detail (L29, L32): close the two SUGGESTIONs of `d1e57b32f786-2` (the review of T20), and SUGGESTIONs F1 and F3 of `8e035ddb49dc-2` (the review of T2b), with test-time pins and text, with no change to what any valid row deploys and no change to the four files of `skills/_shared/evidence/`.
+    - F1 of `d1e57b32f786-2`: a test fails when a third column of `overlay.manifest` is not a known route, so a misspelt `claude-skill` cannot reach `apply`. The routing keeps its leniency (`routes.go` lines 17-21 reserve a change to it to the owner; the owner chose "Test only (Recommended)", L31).
+    - F2 of `d1e57b32f786-2`: the three texts that say when a row goes nowhere or where the skill route goes name `claude-skill` and OpenCode, and a test fails when the `Dest` texts drop a scoped skill route.
+    - F1 of `8e035ddb49dc-2` (L32): B10 refuses a `- Nothing.` line in the Changed section of `PROVENANCE.md` whenever a copy differs from the snapshot, and refuses the License line's "byte-identical" while `LICENSE` differs from its snapshot blob.
+    - F3 of `8e035ddb49dc-2` (L32): B9 records directories and symbolic links as well as files, runs the script with `TMPDIR` inside the watched tree, and refuses a literal `/tmp` in the script before it runs any mode.
+    - Acceptance: every new or changed test passes on the current files; each fails under the mutation L29 or L32 names; `ResolveRoutes`, `ReadManifestRows`, `DeployableManifestPaths`, `overlay.manifest`, `bin/lib/apply.sh` and `skills/_shared/evidence/*` are unchanged.
+    - Runs after T2b, as its own commit; no open decision blocks it.
+    - Risk expectation: none (tests and comments only).
+  - T22 detail (L32, L34): close SUGGESTION F2 of `8e035ddb49dc-2` (pre-existing in absorbed code) before T5 reads `index`: with no `awk` on `PATH`, every mode of `evidence.sh` but a usage error says so on stderr and exits 3, instead of `rules` and `index` printing nothing with exit 0.
+    - The first change to the snapshot bytes of `evidence.sh`; `PROVENANCE.md` names it under "Changed since the snapshot" (B10 enforces it).
+    - Acceptance: without `awk`, `check`, `count`, `rules`, `index` and `rule <kind>` each print nothing on stdout, exactly `evidence.sh: awk is not on PATH; <mode> cannot run` on stderr, and exit 3; a usage error still exits 2 with the usage; with `awk`, B1-B9 pass with their expected results unchanged.
+    - Folded in (L34): the three SUGGESTIONs of `7b634ced2367-2`, the review of T21, all resolved, none declined:
+      - F1: the scan that refuses a literal `/tmp` in `evidence.sh` moves from B9 into `newEvidenceWorld`, so it runs before any test of `engine/shelltest` runs a mode of the script; B9 keeps its tree checks only.
+      - F2: B10 keys the `- License:` line of `PROVENANCE.md` on the blob of `LICENSE`, not on a word: while the blob equals the snapshot's, the line is exactly today's text; while it differs, the line is exactly a fixed text that names the change. Any other License line fails in either state.
+      - F3 (pre-existing): the comment above the skills-directory branch of `resolveRoute` (`engine/skills/routes.go` lines 286-288) stops saying "every target" and says OpenCode gets no copy; `TestRouteTexts_NameEveryReasonADestIsEmpty` pins that comment too.
+    - Acceptance of the folds: each new or changed check passes on the files T22 leaves, and fails under the mutation L34 names; `resolveRoute`'s code is unchanged (its diff touches comment lines only).
+    - Delivery of this branch: SUGGESTIONs a review of T22 raises carry to the next batch of this feature (its next task, such as T3 or T5) and do not block delivery; WARNINGs and defects are fixed before delivery.
+    - Runs after T21, as its own commit; no open decision blocks it. The exit code 3 is an assumption (a code no mode uses today).
+    - Risk expectation: items 3 (the exit contract of `evidence.sh`, which T5 consumes) and 5 (a deployed file changes).
 - **S5** — Classifier carrier. One agent writes the evidence page from the S3 feed, following playbook `classify.md`: its rules, its central test ("would the rule of this kind have prevented this finding?"), its steps and its format. It never commits, pushes or changes git state, and it changes only the page. Constraint: the overlay `reviewer` role cannot carry it. Its body says "Never edit, run, or delegate", and its tools are `Read, Grep, Glob` (`engine/agentgen/roles.go`).
   - The owner answered OD-10: "necesitamos un rol nuevo" (L9). Classify becomes a new overlay role.
   - Assumptions pending the owner's confirmation:
@@ -185,11 +214,14 @@ Branch: `feat/playbook-merge` (from origin/main ce22eb3f) in the clone `~/labdri
 
 ## Tasks
 
-Order is execution order: the learning loop (T1, T19, T2-T6, T16, T17) first, per S2, then the roadmap slices re-ordered behind it. Each task is shaped as one reviewable work unit of about 400 authored changed lines. Line forecasts are filled for every task in L13, and for T19 in L18 (ranges, basis and confidence per task; several high bounds exceed one slice, flagged there). S1 and S15 are constraints every task is held to.
+Order is execution order: the learning loop (T1, T19, T2, T20, T21, T22, T3-T6, T16, T17) first, per S2, then the roadmap slices re-ordered behind it. Each task is shaped as one reviewable work unit of about 400 authored changed lines. Line forecasts are filled for every task in L13, and for T19 in L18 (ranges, basis and confidence per task; several high bounds exceed one slice, flagged there). S1 and S15 are constraints every task is held to.
 
 - [x] T1 — S2-S3 — inline — findings feed: an engine function and a read-only verb (assumption: `labdrian review findings --feature <f> --stored <head12>-<n>.json`) that reads a stored result and its verdict through the existing store readers. It prints the kept findings with the review identifier and the left-out findings with their reason. Tests cover each skip rule and an unreadable result. Help text and `odd/review-results/README.md` are updated. Depends on no open decision. Risk expectation: none (adds a command; reuses the result/verdict readers `check` uses, so it must not change them) — shaped: L6 — commit: T1a 0afaf0cf; T1b is the commit that adds `engine/cmd/review_findings.go` (its SHA is not knowable inside its own commit, see L15)
 - [x] T19 — S3 — inline — align the findings feed with `reviewverdict.Decide` and pin its help: a fourth skip rule (a BLOCKER or CRITICAL of `unknown` disposition whose verdict found it on base, reason `verdict base-reproduced` as assumption) listed in the engine and wrapper help, `README.md` and `odd/review-results/README.md`; the wrapper parity test cut to the findings block of `bin/lib/usage.sh`, pinning `HEAD12-N.json` and `NAME/HEAD12-N` vs `<feature>/<head12>-<n>`; a test tying the README `findings` entry. Tests RED first, detail in S3 (T19 detail) and L18. Risk expectation: item 3; own commit — shaped: L18 — commit: -
-- [ ] T2 — S2, S4, S9 — inline — evidence store: absorb `evidence.sh` and `evidence-rules.md` from snapshot `6de8566` as overlay-owned code, with tests; detail in S4 (T2 detail) and L8. Risk expectation: item 5 — shaped: L8 — commit: -
+- [x] T2 — S2, S4, S9 — inline — evidence store: absorb `evidence.sh` and `evidence-rules.md` from snapshot `6de8566` into `skills/_shared/evidence/` as overlay-owned code with `LICENSE` and `PROVENANCE.md`, four `custom` manifest rows, and Go tests; T2a (absorb, rows, artifact test; built in L23), then T20, then T2b (mode tests B1-B9, the snapshot test of F4 and the runtime helper of F6); detail in S4 (T2 detail), L22 and L25. Risk expectation: item 5 for T2a, none for T2b — shaped: L25 — commit: T2a 62604473; T20 is its own line; T2b is the commit `test(evidence): pin the modes of the evidence store` (its SHA is not knowable inside its own commit; see L30 and `git log --grep`)
+- [x] T20 — S4 — inline — keep the evidence store Claude-only: a `claude-skill` route in `engine/skills/routes.go`, the four `_shared/evidence/*` rows routed by it, and tests that pin the Claude destination and no Codex or OpenCode destination in the domain and through `bin/lib/apply.sh`; closes F1 of the T2a reviews and folds their F2 and F3; runs before T2b; detail in S4 (T20 detail) and L25. Risk expectation: items 3 and 5; own commit — shaped: L25 — commit: the commit `fix(skills): deploy the evidence store to Claude Code only` (its SHA is not knowable inside its own commit; see L27 and `git log --grep`)
+- [x] T21 — S4 — inline — pin the route column: a test that every third column of `overlay.manifest` is a known route (F1 of `d1e57b32f786-2`), the `Dest` texts of `engine/skills/routes.go` and `bin/lib/manifest_routes.sh` and the `RouteSkill` text naming `claude-skill` and OpenCode, and a test tying the `Dest` texts to `skillRouteTargets` (F2); and, from the review of T2b `8e035ddb49dc-2`, B10 refusing a stale `- Nothing.` and an untrue "byte-identical" (F1) and B9 seeing directories, links and writes under `TMPDIR` (F3); runs after T2b; detail in S4 (T21 detail), L29 and L32. Risk expectation: none; own commit — shaped: L32 — commit: the commit `test(skills): pin the route column and tighten the evidence store pins` (its SHA is not knowable inside its own commit; see L33 and `git log --grep`)
+- [x] T22 — S4 — inline — fail loud without awk: `evidence.sh` exits 3 with one stderr line in every mode but a usage error when `awk` is not on `PATH` (F2 of `8e035ddb49dc-2`), `PROVENANCE.md` names the change, and a test B11 pins it; folds the three SUGGESTIONs of `7b634ced2367-2` (the `/tmp` scan in `newEvidenceWorld`, the License line keyed on `LICENSE`'s blob, the `resolveRoute` comment pinned); runs after T21 and before T5; detail in S4 (T22 detail), L32 and L34. Risk expectation: items 3 and 5; own commit — shaped: L34 — commit: the commit `fix(evidence): fail loud when awk is missing` (its SHA is not knowable inside its own commit; see L35 and `git log --grep`)
 - [ ] T3 — S5 — inline — add the new `classifier` role (working name) outside the role chain, from `roles/classifier/body.md` through `engine/agentgen`; detail in S5 (T3 detail), L9 and L10. Risk expectation: item 5; own commit — shaped: L10 — commit: -
 - [ ] T4 — S6 — inline — lifecycle trigger: a step in `skills/role-chain/SKILL.md`. After `record` / `verify`, when T1 keeps findings, the parent launches the classifier with T1's output and the repository root. `labdrian review stop-hook` asks once per session and commit for an unclassified result with kept findings, in its existing reason format. Tests cover: asked, not asked when no finding is kept, not asked when an Evidence row carries the identifier, and exit 0 on unreadable input. Depends on T1-T3. Risk expectation: item 3 (stop-hook behavior and the role-chain skill are contracts others consume); own commit — shaped: L6 — commit: -
 - [ ] T5 — S7 — inline — rule injection through `gate-task`: when the call's `subagent_type` is the builder or the reviewer, append the T2 `index` text and the `rule <kind>` command (absolute paths) to the prompt, in the same single rewrite as the memory instructions block. Nothing is appended when the index is empty. A reviewer body line says injected rules are review criteria inside its lens rows, with the reply shape unchanged. Measure and report the added size. Extend the gate-task golden tests. Blocked for its cap by OD-11, and for runtimes other than Claude Code by OD-7. Risk expectation: item 3 (gate-task contract pinned by `testdata/contract-golden`, reviewer prompt contract); own commit — shaped: L6 — commit: -
@@ -524,3 +556,475 @@ Order is execution order: the learning loop (T1, T19, T2-T6, T16, T17) first, pe
     - `docs/wiki` does not exist in this worktree, so no wiki page was read or written.
     - Open decisions from L6 to L13 are unchanged; this delivery answered none of them.
   - The memorycard mirror `odd/merge-playbook-into-sdd-overlay/tasks` was refreshed from this file on disk after this entry.
+- **L21** (2026-11-22, foreman): owner decisions and state since L20. (1) On 2026-11-21 the owner stopped OpenCode and Hermes work: "quiero dejar de hacer cambios para opencode y hermes y eso.y quedarnos con lo que verdaderamente importa el merge del.playbook las mejoras nuestro labdrian luego el lanzamiento de trysm" (memorycard #6184). (2) The carried SUGGESTION F1 (CHANGELOG reason strings of `labdrian review findings`) is resolved by feature `roadmap-order-and-findings-changelog`, PR #792, merge `14f7a6dc`. (3) The owner authorized T2 next: "si dale para delante". (4) OD-7 answered: asked "¿a qué runtimes se despliegan la wiki y el bucle de aprendizaje del playbook?" with the options Claude Code only, Claude Code + Codex, Claude Code + Codex + Pi, the owner chose, verbatim: "Solo Claude Code (Recommended)". Deploy targets for the wiki and the learning loop: Claude Code only; T10, T11, T12, T15 and T5 are no longer blocked by OD-7, and T5 needs no other runtime. (5) The T2 builder (workflow `merge-playbook-into-sdd-overlay-t2`) returned blocked before any edit: S4 and L8 name no repository path for `evidence.sh` and `evidence-rules.md`, no home for the MIT LICENSE and provenance note, and no shell test runner; manifest rows are skill-relative, so the path decides what deploys (builder report; `engine/skills/ondisk.go`, `manifest.go`, `routes.go`). T2 goes back to the shaper.
+- **L22** (2026-11-22, shaper): Design of T2 completed: the three gaps of the T2 builder (L21 item 5), for Claude Code only (OD-7, L21 item 4). This entry replaces L8 as T2's design entry; L8's decision on OD-4 stands. S4 (T2 detail) and the T2 line were rewritten; no other spec or task changed.
+
+  **Sources read:**
+  - overlay at `14f7a6dc`: `overlay.manifest`; `engine/skills/routes.go` (`ReadManifestRows`, `ResolveRoutes`, `resolveRoute`), `engine/skills/ondisk.go` (`DeployableManifestPaths`, `DiffOnDisk`), `engine/skills/manifest.go` (`infraPrefixes` = `engine/`, `_shared/`), `engine/skills/skillsfs/tree.go` (`ScanSkillFiles` walks every subdirectory), `engine/skills/ondisk_test.go` (`skillsRepoRoot`, the real-repository on-disk check), `engine/skills/adhd_output_test.go` (LICENSE and manifest-row pins of an absorbed skill), `engine/shelltest/overlay_shell_test.go` (Go tests that drive shell, run by CI "Engine Tests"), `engine/overlaytest` (`RepoRoot`), `engine/pipkg/build.go` (Pi copies a named list of `_shared` files), `bin/lib/targets.sh` and `bin/lib/apply.sh` (deploy copies every row with a destination, per target), `.github/workflows/ci.yml` (Shell Lint covers `bin/` only, `shellcheck ... || true`; "Validate skills registry"), `.gitattributes` (`skills/** -text`), `skills/_shared/SKILL.md` (`disable-model-invocation: true`).
+  - snapshot `6de8566` working tree: `plugins/playbook-agents/evidence.sh` (215 lines), `plugins/playbook-agents/evidence-rules.md` (27 lines, 19 kinds), `LICENSE` (21 lines, "Copyright (c) 2026 Andres Frei").
+
+  **Gap 1, the home.** Repository directory `skills/_shared/evidence/`.
+  - Files: `skills/_shared/evidence/evidence.sh` and `skills/_shared/evidence/evidence-rules.md`.
+  - Deployed for Claude Code: `~/.claude/skills/_shared/evidence/evidence.sh` and `~/.claude/skills/_shared/evidence/evidence-rules.md` (`TARGET_PATHS[claude]` + row path, `routes.go` line 290). T3 writes this path where `classify.md` has `${CLAUDE_PLUGIN_ROOT}`; T5 injects `sh ~/.claude/skills/_shared/evidence/evidence.sh index` and `... rule <kind>` with the home directory expanded to an absolute path.
+  - Why it works: `_shared/` is an infra prefix, so `ManifestView` never wants a skill there (`manifest.go` line 12) and no registry entry or approval record is needed. The rows have a `/`, are not under `engine/`, and have no non-skill third column, so they take the skill route and deploy. `ScanSkillFiles` walks subdirectories, so the on-disk check sees the files and finds their rows.
+  - The two files keep their snapshot names and sit in one directory: `evidence.sh` line 59 finds `evidence-rules.md` with `dirname "$0"`, and line 139 tells the general file by its basename `evidence-rules.md`.
+  - No `SKILL.md` is added; `_shared/SKILL.md` already keeps the tree out of model invocation.
+
+  **Gap 2, LICENSE and provenance.** In the same directory, so they travel with the code (S9, R-015):
+  - `skills/_shared/evidence/LICENSE`: byte-identical to `git -C ~/.local/share/playbook show 6de8566:LICENSE`.
+  - `skills/_shared/evidence/PROVENANCE.md` (authored, about 10 lines): source repository `andresfrei/playbook`, commit `6de8566bf7f1150f49a75c1162c0f4cf87bf57c5`, tag `v3.6.0`, the source paths `plugins/playbook-agents/evidence.sh` and `plugins/playbook-agents/evidence-rules.md`, the MIT License in `LICENSE` beside it, the L8 decision that the files are this repository's own with no upstream tracked, and a list "Changed since the snapshot" that starts as "nothing" and that T6, T7 and T17 extend. It names "this repository", not the brand (S15 proposal).
+  - The copied files stay byte-identical to the snapshot in T2; the note is a separate file so the copy can be checked with `cmp` against `git show`.
+
+  **Manifest rows, verbatim**, inserted after the row `_shared/ingested-observation-contract.md custom`:
+
+  ```text
+  _shared/evidence/evidence.sh custom
+  _shared/evidence/evidence-rules.md custom
+  _shared/evidence/LICENSE custom
+  _shared/evidence/PROVENANCE.md custom
+  ```
+
+  **Gap 3, the test runner.** Go tests, run by CI "Engine Tests" (`go test ./...` in `engine/`), as `engine/shelltest` already does for shell. No new CI job and no `ci.yml` change. Each test that runs the script skips when `sh` or `awk` is not on `PATH`, as `overlaytest.RequireBash` does for bash.
+  - `engine/skills/evidence_store_artifact_test.go` (T2a), repository root from `skillsRepoRoot`:
+    - (A1) `overlay.manifest` holds the four rows above, each followed by a line end.
+    - (A2) `ResolveRoutes` over the real manifest, target `claude`, SkillsRoot `/s`, places `_shared/evidence/evidence.sh` at `/s/_shared/evidence/evidence.sh` and `_shared/evidence/evidence-rules.md` at `/s/_shared/evidence/evidence-rules.md`: the deployed file of S4.
+    - (A3) `LICENSE` holds "MIT License" and "Copyright (c) 2026 Andres Frei"; `PROVENANCE.md` holds `6de8566bf7f1150f49a75c1162c0f4cf87bf57c5`, `v3.6.0`, `andresfrei/playbook`, both source paths and "MIT".
+    - (A4) `sh -n skills/_shared/evidence/evidence.sh` exits 0.
+  - `engine/shelltest/evidence_store_test.go` (T2b). Each case copies the four files into `<tmp>/skills/_shared/evidence/` (the deployed layout), builds `<tmp>/repo` holding only `docs/wiki/evidence.md`, runs `sh <tmp>/skills/_shared/evidence/evidence.sh <mode> ...` with `<tmp>/repo` as working directory and `CLAUDE_PROJECT_DIR` unset unless the case sets it, and reads exit code, stdout and stderr apart:
+    - (B1) `check` on a valid page: exit 0, stdout ends with `evidence check passed: docs/wiki/evidence.md`, no `FAIL` line, so the shipped `evidence-rules.md` passes too.
+    - (B2) `check` on a malformed page (an Evidence kind with no Kinds row, a date `2026-02-30`, a level `0`): exit 1, one `FAIL evidence.md: ...` line per problem.
+    - (B3) `check` with no page: exit 0, `there is no evidence page at docs/wiki/evidence.md`.
+    - (B4) `count`: a kind with three distinct reviews prints `ready to consolidate: <kind> (level 1): 3 distinct reviews, last <date>`; a kind with the same review on two rows prints `not ready: ... 1 distinct reviews`; no page prints nothing, exit 0.
+    - (B5) `index`: the page's level-2+ kinds first, then the 19 general kinds of `evidence-rules.md`, each `- <kind> (level N): <applies when>`; a level-1 kind is absent.
+    - (B6) `rule <kind>`: a page kind prints its five lines; a kind only in `evidence-rules.md` prints from there; an unknown kind exits 1 with `evidence.sh: no kind "<kind>" in ...` on stderr and nothing on stdout.
+    - (B7) wiki directory: an explicit argument wins; with none, `CLAUDE_PROJECT_DIR=<tmp>/repo` run from another directory reads `<tmp>/repo/docs/wiki`; with neither, `docs/wiki` under the working directory.
+    - (B8) usage: no mode, an unknown mode, and `rule` with no kind each exit 2 with the usage on stderr.
+    - (B9) the script writes nothing: the file tree of `<tmp>` is the same before and after every mode, and the repository still holds only `docs/wiki/evidence.md` (S4 "no other wiki file").
+  - Lint: `sh -n` is A4. `shellcheck -s sh skills/_shared/evidence/evidence.sh` is run by the builder and reported with its exact output; CI's Shell Lint is not extended, since its shellcheck step ends in `|| true` and gates nothing.
+
+  **Commits.** Two, each reviewed on its own, in this order:
+  - T2a, `feat(evidence): absorb the playbook evidence store`: `evidence.sh`, `evidence-rules.md` and `LICENSE` copied byte-identical (copied, about 263 lines), `PROVENANCE.md`, the four rows, and A1-A4. Authored about 60-110 lines. Risk: item 5 (deployed files; `sh` and `awk` become runtime needs).
+  - T2b, `test(evidence): pin the modes of the evidence store`: B1-B9 only. Authored about 200-320 lines. Risk expectation: none (tests only).
+  - If T2b passes about 400 authored lines, the builder stops and reports `partial` (L13 decision (2)); the cut is B1-B3 and B9 (check and no-write) apart from B4-B8.
+
+  **Test-first.**
+  - T2a: A1-A3 are RED before the files and rows exist; A4 is RED with the script absent.
+  - T2b characterises absorbed code, so it cannot be RED before the code. Each case is shown load-bearing by a mutation in a scratch copy of the script, reverted after: `threshold=3` to `2` fails B4; dropping the `file != "evidence-rules.md"` condition fails B1; making `rule`'s not-found branch exit 0 fails B6; swapping the `CLAUDE_PROJECT_DIR` branch with the default fails B7; removing the `usage` exit fails B8. The builder reports each mutation with its failing test name.
+
+  **Checks**, run in `engine/` with exact results reported:
+  - `go test ./skills/ ./shelltest/ -run Evidence -count=1` after each commit.
+  - `go test ./skills/ -run 'OnDisk|Manifest' -count=1` after T2a (the real-repository on-disk check).
+  - `go run ./cmd/ skills validate --registry ../skills.registry.yaml --manifest ../overlay.manifest --source-root ../skills` after T2a.
+  - `cmp` of each copied file against `git -C ~/.local/share/playbook show 6de8566:<path>` after T2a.
+  - `go test ./... -count=1` and `gofmt -l .` once, after T2b.
+
+  **Steelman of the absorb.** The overlay gains the one working parser of the format, already tested in playbook and already following its own rule `format-parsed-differently-by-two-scripts`, for the cost of a copy. Under `skills/_shared/` the copy is deployed by the existing route with no engine change, no registry entry and no model-visible skill description, so it adds no session context.
+
+  **Options weighed.**
+  - (chosen) `skills/_shared/evidence/`: four rows, no engine change.
+  - A new skill directory with its own `SKILL.md`: needs a registry entry and an approval record, and its description joins the skill list every session loads; nothing invokes it as a skill, since T3 and T5 call the script by path.
+  - `engine/` or the repository root: tracked but never deployed (`routes.go` lines 235-241), so S4's "a deployed file" and T5's absolute path fail.
+
+  **Strongest counter-argument.** `_shared` is described as "Shared SDD references for installed skills": it holds reference text, and this puts executable code there that no skill cites, so nothing in the skill tooling says who reads it. Tradeoff accepted: T3's body and T5's injection name the path, and A2 pins where it deploys.
+
+  **Forecast** (method of L13): T2a 60-110 authored plus about 263 copied; T2b 200-320 authored; lines-ref n=7; low; 26-143 minutes agent-compute-time, `no-actuals n=0`.
+
+  **Risks, not decided here:**
+  - OD-7 (L21: "Solo Claude Code (Recommended)"): the skill route copies every row to the skills directory of each copy target, so `apply --target codex` or `--target all` also places these four inert files in `~/.codex/skills/_shared/evidence/` (`bin/lib/targets.sh` line 16, `routes.go` lines 275-291). Pi's package copies a named list of `_shared` files and does not take them (`engine/pipkg/build.go` lines 158-181). Nothing on Codex reads them. Keeping them off Codex needs a Claude-only route in the engine, which belongs to T11 (single install path to the OD-7 targets), not to T2.
+  - The copied header still names playbook mechanisms that do not exist here (line 26: "The SubagentStart hook gives this index"; ids such as `seed-evidence-31`). T2 keeps the bytes; T5 and T7 correct the text when they change behaviour, and `PROVENANCE.md` lists each change.
+  - The snapshot's file mode of `evidence.sh` was not checked; it is called through `sh`, so the mode does not matter, and the builder keeps whatever `git show` gives.
+  - The tests skip when `sh` or `awk` is missing; on CI's Ubuntu runner both are present (unverified).
+- **L23** (2026-11-22, builder): T2a built as designed in L22. S2, S4, S9 covered for the absorb, the rows, the deployed path and the provenance. T2's box stays `[ ]`: T2b (mode tests B1-B9) remains.
+  - Files: `skills/_shared/evidence/evidence.sh` (215 lines), `evidence-rules.md` (27), `LICENSE` (21), all copied with `git -C ~/.local/share/playbook show 6de8566:<path> > file`; `PROVENANCE.md` (13, authored); four `custom` rows in `overlay.manifest` after `_shared/ingested-observation-contract.md custom`; `engine/skills/evidence_store_artifact_test.go` (77, authored; A1-A4 as `TestEvidenceStore_ManifestHoldsFourCustomRows`, `_DeploysBesideEachOtherForClaude`, `_LicenseAndProvenanceTravelWithTheCode`, `_ScriptParsesAsPosixShell`).
+  - Lines: copied 263; authored 94 (77 test + 13 provenance + 4 manifest rows), inside the 60-110 forecast.
+  - Test-first: RED `go test ./skills/ -run Evidence -count=1` failed all four (no rows; Dest empty; LICENSE missing; `sh -n` cannot open the script). The first RED of A2 failed for a wrong reason (ResolveRoutes needs an AgentsRoot for the agent rows); the test was given `AgentsRoot: "/a"` and re-run to RED for the right reason before any file was added. GREEN after the files and rows: `ok .../engine/skills`. REFACTOR: none needed.
+  - Checks: `cmp` of the three copied files against `git show` printed nothing (identical); `shellcheck -s sh skills/_shared/evidence/evidence.sh` printed nothing, exit 0; `go test ./skills/ ./shelltest/ -run Evidence -count=1`: skills ok, shelltest `[no tests to run]` (T2b); `go test ./skills/ -run 'OnDisk|Manifest' -count=1`: ok; `skills validate`: "registry and manifest aligned (31 skills)", "skills/ on disk matches overlay.manifest (89 files)", "global skill approvals verified (31 skills: 31 approved)"; `gofmt -l skills/`: empty; `go test ./... -count=1` in `engine/`: every package ok (the run was executed twice by mistake; both clean, 87 `ok` lines on the second).
+  - Risk: item 5 (deployed files; `sh` and `awk` become runtime needs).
+- **L24** (2026-11-22, foreman): OD-6 answered. Asked which review gate wins on conflict, the playbook hold that stops a commit until it is reviewed, or the overlay per-commit chain (commit first, then a chained review per commit with the `Risk:` trailer, and `labdrian review check` before delivery), the owner chose, verbatim: "Gana el nuestro (Recommended)". The overlay per-commit lifecycle wins; from the playbook gate only what does not conflict with it is kept. T8 and T12 are no longer blocked by OD-6 (T12 was also blocked by OD-7, answered in L21).
+- **L25** (2026-11-22, shaper): Design of T20 (new) and the rest of T2 (T2b), from the two reviews of T2a at `62604473`: `odd/review-results/merge-playbook-into-sdd-overlay/626044733022-3.json` (rows recall, hunt; WARNING F1, SUGGESTIONs F2-F6) and `626044733022-4.json` (row risk-line; WARNING F1, SUGGESTION F2). This entry replaces L22 as T2's design entry: L22's design of T2b (B1-B9, mutations, cut rule, checks) stands unless changed below. S4 (T2 detail, new T20 detail), the T2 line, the new T20 line and the Tasks preamble were changed; no other spec or task.
+
+  **Sources read:** the document up to `## Log`, L21-L24; both review records; `engine/skills/routes.go` (route constants lines 26-45, `ReadManifestRows` 68-85, `agentRouteTargets` 183-188, `resolveRoute` 225-292); `engine/skills/ondisk.go` (`nonSkillRoutes` 33-39, `validLongtermMemRoutes` 49-55, `DeployableManifestPaths` 78-134); `engine/skills/routes_test.go` 1-110; `engine/skills/ondisk_test.go` 280-357 (`TestRouteDomain_OnDiskCheckAndRoutingAgree`, `TestDeployableManifestPaths_AgreesWithTheRoutingOnWhatGoesToSkills`); `engine/skills/evidence_store_artifact_test.go`; `engine/cmd/manifest.go`; `bin/lib/apply.sh` 120-229; `bin/lib/manifest_routes.sh`; `engine/installer/routing_pins_test.go` 1-135 and the helper names of `routing_pins_world_test.go` (`newPinWorld` line 147, `run` 238, `tree` 295); `engine/shelltest/apply_opencode_runtime_test.go` 1-170; `engine/overlaytest/overlaytest.go` (`RequireBash` 53-58); `skills/_shared/evidence/PROVENANCE.md`; `.github/workflows/ci.yml` (`runs-on: ubuntu-latest`, `go test ./... -cover`, no `-short`); grep of route names in `engine/cmd/usage.go` (line 86) and `bin/lib/manifest_routes.sh` (line 31), and of `os.Getenv("CI")` (`engine/skills/actuals_instrumentation_d2_anchor_test.go` line 445).
+
+  **Where F1 lives.** T11's design (L6: "deploys T10 and the T2/T3 loop pieces to the targets OD-7 names") names no route and no engine change, so it does not cover the fix. A WARNING must be fixed before this branch is delivered, so the fix is its own task, T20, which runs next, before T2b. T10 and T11 can route their Claude-only rows with the same `claude-skill` value later.
+
+  **Steelman of the fix.** The routing has one owner: `routes.go` lines 11-21 say it is "the one place that decides" where a row goes, and the shell asks it through `engine manifest routes`. `apply.sh` already copies only the rows the engine gives a destination (line 185, `[[ -z "$rr_dest" ]] && continue`), and status, sync-check and the digest read the same lines. So a target rule in the domain reaches every shell command with no shell change, which is the ports/adapters split the overlay already has: the domain decides, the adapter copies.
+
+  **Options weighed.**
+  - (chosen) A route value `claude-skill`, named like `opencode-agent` and `codex-agent` (runtime, then kind). About 10 engine lines; `ReadManifestRows`, `DeployableManifestPaths` and `apply.sh` are unchanged.
+  - A fourth column naming targets: general, but `ReadManifestRows` reads three columns (lines 74-81) and `DeployableManifestPaths` its own fields, so both readers, their pins and the script's pins change.
+  - A filter in `apply.sh` on the `_shared/evidence/` prefix: puts a routing decision back in the adapter, and status, sync-check and backups would still list the rows for Codex.
+  - A Claude-only source directory beside `output-styles/`: a second new mapping of `RepoRel`, plus a `nonSkillRoutes` entry and on-disk changes; more surface for the same outcome.
+  - Deferring to T11: leaves a WARNING open at delivery.
+
+  **Strongest counter-argument.** A runtime-named route grows as runtimes times kinds (`claude-skill` now, perhaps `codex-skill` later), where a target column would grow once. Also OpenCode reads `~/.claude/skills` (`routes.go` lines 282-283), so the files stay where OpenCode looks, though no copy is made for it; whether OpenCode reads files other than `SKILL.md` there is unverified. Tradeoff accepted: one more route value, pinned by tests, until a second runtime-scoped skill route is needed; OpenCode work is stopped (L21 item 1).
+
+  **T20 design.**
+  - `engine/skills/routes.go`:
+    - constant `RouteClaudeSkill = "claude-skill"`, commented "copies a row from skills/ to the skills directory of Claude Code alone; no other target takes it";
+    - `var skillRouteTargets = map[string]string{RouteClaudeSkill: capability.TargetClaude}`, beside `agentRouteTargets`;
+    - in the skill fall-through: `RepoRel = "skills/" + path` when the route is `RouteSkill` or `RouteClaudeSkill` (today an unknown third column keeps `RepoRel = path`, line 277-280, which would break backups' `route_tar_path`); after the OpenCode return and before the `SkillsRoot` check, a route found in `skillRouteTargets` whose runtime is not `dest.Target` returns `placed` with no `Dest`;
+    - the comment at lines 275-276 names the new route.
+  - Not changed: `validLongtermMemRoutes` (a `longterm-mem/` row routed `claude-skill` stays refused) and `nonSkillRoutes` (a `claude-skill` row stays a skills row for the on-disk check); one comment sentence on `nonSkillRoutes` in `ondisk.go` says so.
+  - `overlay.manifest`, the four rows, verbatim:
+
+    ```text
+    _shared/evidence/evidence.sh custom claude-skill
+    _shared/evidence/evidence-rules.md custom claude-skill
+    _shared/evidence/LICENSE custom claude-skill
+    _shared/evidence/PROVENANCE.md custom claude-skill
+    ```
+
+  - Text: `claude-skill` added to the route list of `engine/cmd/usage.go` line 86, of the `manifest routes` entry of `README.md` (line 1069), and of the comment of `bin/lib/manifest_routes.sh` line 31, each with "Claude Code only"; one `CHANGELOG.md` line under the unreleased section.
+  - Tests, RED first where marked:
+    - (R1, RED) `TestResolveRoutesPlacesEachKindOfRow` gains three cases for `ManifestRow{"_shared/x/run.sh", "custom", "claude-skill"}`: `claude` gives `ResolvedRoute{"_shared/x/run.sh", "claude-skill", "skills/_shared/x/run.sh", "/o/skills/_shared/x/run.sh", "/h/.claude/skills/_shared/x/run.sh"}`; `codex` and `opencode` give the same with `Dest` empty. Today `RepoRel` is `_shared/x/run.sh` and codex's `Dest` is `/h/.codex/skills/_shared/x/run.sh`.
+    - (R2, pin) a `longterm-mem/x.md custom claude-skill` row is refused with the `UnroutedRowError` text naming `'claude-skill'`; `TestValidLongtermMemRoutesAreExactlyTheFiveRoutes` and `TestRouteDomain_OnDiskCheckAndRoutingAgree` stay unchanged and green.
+    - (R3, pin) the fixture of `TestDeployableManifestPaths_AgreesWithTheRoutingOnWhatGoesToSkills` gains `claude-only/run.sh custom claude-skill`: the on-disk check and the Claude routing still agree.
+    - (R4, RED; F3) A1 compares parsed rows: in `ReadManifestRows(overlay.manifest)` each of the four paths appears exactly once, with `Tag` `custom` and `Route` `claude-skill`, so a substring elsewhere in a line cannot satisfy it.
+    - (R5, RED; F1 and F2) A2 covers all four names, `LICENSE` and `PROVENANCE.md` included: `claude` (SkillsRoot `/s`, AgentsRoot `/a`) gives `/s/_shared/evidence/<name>`; `codex` (`/c`, `/ca`) and `opencode` (`/o2`, `/oa`) give an empty `Dest`.
+    - (R6, RED) through the script: new file `engine/installer/routing_claude_skill_test.go`, `TestApplyCopiesAClaudeSkillRowForClaudeAlone`, skipped in `-short` like `fullPinWorld`. `newPinWorld` with manifest `plain/SKILL.md custom\n_shared/only/run.sh custom claude-skill\n` and both sources under `skills/`; `apply --target claude` and `apply --target codex` each exit 0; then `<home>/.claude/skills/_shared/only/run.sh` holds the source, `<home>/.codex/skills/_shared/only/run.sh` does not exist, and `<home>/.codex/skills/plain/SKILL.md` exists (control).
+  - Mutations, each reverted and reported with the failing test names: drop the `skillRouteTargets` check (R1 codex/opencode, R5, R6 fail); drop `RouteClaudeSkill` from the `RepoRel` condition (R1 fails).
+  - Checks, in `engine/`, exact results reported: `go test ./skills/ ./installer/ ./cmd/ -count=1`; `go run ./cmd/ skills validate --registry ../skills.registry.yaml --manifest ../overlay.manifest --source-root ../skills` (expected still "89 files"); `bash -n ../bin/lib/manifest_routes.sh`; `go test ./... -count=1` and `gofmt -l .` once, since the routing is read by many packages.
+  - Commit `fix(skills): deploy the evidence store to Claude Code only`, with the `Risk:` trailer for items 3 (a new value in the route column `manifest routes` prints, read by the shell) and 5 (what apply deploys).
+  - Forecast: 140-190 authored lines (engine about 15, unit tests about 60, artifact test about 35 net, installer test about 45, text and manifest about 10); shaper estimate, no actuals, low confidence.
+
+  **T2b additions** (to L22's B1-B9):
+  - (B10; F4) `TestEvidenceStore_CopiesMatchTheSnapshotOrAreListedAsChanged` in `engine/skills/evidence_store_artifact_test.go`.
+    - Three constants: the git blob ids of `evidence.sh`, `evidence-rules.md` and `LICENSE` at the snapshot, taken by the builder with `git -C ~/.local/share/playbook rev-parse 6de8566:<path>` and reported.
+    - The test computes each file's blob id as SHA-1 of `blob <size>\0<bytes>` (`.gitattributes` has `skills/** -text`, so the file bytes are the blob bytes).
+    - Rule: a file equal to its snapshot id is not named in the `## Changed since the snapshot` section of `PROVENANCE.md`; a file that differs is named there by its backticked basename; when all three are equal the section is exactly `- Nothing.`.
+    - The constants never change, because the snapshot does not; T5, T6, T7 and T17 only have to keep the Changed list true.
+    - Load-bearing: edit a line of `skills/_shared/evidence/evidence-rules.md` in the worktree, the test fails; name it in the Changed section, it passes; revert both and show `git diff --exit-code` clean.
+  - (F6) What is pinned:
+    - A helper `RequireShAndAwk(t)` in `engine/overlaytest`, beside `RequireBash`: when `sh` or `awk` is not on `PATH`, `t.Fatalf` if `CI` is `true` (the precedent of `actuals_instrumentation_d2_anchor_test.go` line 445), `t.Skipf` otherwise. A4 and B1-B9 call it, so CI cannot pass by skipping. Load-bearing: `go test -c -o <scratch>/skills.test ./skills/`, then `CI=true PATH=/nonexistent <scratch>/skills.test -test.run ScriptParsesAsPosixShell` fails, and the same without `CI` skips.
+    - Bashisms: no new `-n` pin, since `sh -n` checks syntax only. B1-B9 run the script under CI's `sh`, and `shellcheck -s sh` stays a builder-run check, reported with its exact output.
+    - A missing `awk` making `index` print nothing with exit 0 is not pinned: in T2 the script stays byte-identical to the snapshot. A fail-loud check belongs to the first task that changes `evidence.sh`'s behaviour (T6), and is recorded as a risk.
+  - Size: L22's 200-320 plus about 35 (B10) and about 20 (helper and calls), so 255-375 authored. L22's cut rule stands, extended: past about 400 the builder stops with `partial`, and the cut is B1-B3, B9, B10 and the helper apart from B4-B8.
+  - Checks: L22's, plus `go test ./overlaytest/ -count=1`, and the two load-bearing runs above.
+
+  **Carry decision for the T2a findings.**
+  - F1 (both): fixed by T20, before T2b.
+  - F2 and F3 of `-3`: folded into T20, because T20 must rewrite A1 (the rows gain a column) and A2 (the Codex absence) anyway; carrying them to T2b would change the same assertions twice. They land in the next commit, so they still carry to the next batch.
+  - F4 and F6 of `-3`: T2b, as above.
+  - F5 of `-3` and F2 of `-4` (the copied header names playbook's SubagentStart hook and ids like `seed-evidence-31`): stay with T5 and T7, as L22 risk 2 says. T2 keeps the snapshot bytes. Once B10 exists, the change those tasks make must also name `evidence.sh` in the Changed list of `PROVENANCE.md`, or B10 fails.
+
+  **Risks, not decided here:**
+  - Any `apply --target codex` or `--target all` run from a checkout at `62604473` left four orphan files in `~/.codex/skills/_shared/evidence/`; apply never deletes, and T20 does not clean them. Not checked; the branch is not delivered.
+  - OpenCode reads `~/.claude/skills` (`routes.go` lines 282-283), so the files are where OpenCode looks; whether it reads non-`SKILL.md` files there is unverified.
+  - The silent `index` without `awk` (F6) is open for T6's shaper.
+  - That `ubuntu-latest` runners have `sh` and `awk` is unverified; with the helper, a missing one fails CI instead of skipping.
+  - That `engine/cmd` or the README have a parity test over the route list of `manifest routes` is not checked; the builder runs `go test ./cmd/`.
+- **L26** (2026-11-22, foreman): OD-5 answered. Asked whether wiki format 5 of the playbook may be extended so ODD feature documents link to wiki decisions by id, or stays unchanged, with the recommendation to extend it (the snapshot is absorbed once, so the format is ours), the owner chose, verbatim: "Extenderlo (Recommended)". The overlay may extend wiki format 5 for decision ids; T9 is no longer blocked by OD-5. Still open: OD-8 (blocks T13) and OD-11 (blocks T5 cap, T16, T17).
+- **L27** (2026-11-22, builder): T20 built as designed in L25. S4 covered (the Claude-only deploy of the evidence store). Closes WARNING F1 of `626044733022-3` and `-4`; folds F2 and F3 of `-3`. T2's box stays `[ ]`: T2b remains. The commit SHA is not knowable inside its own commit; the subject is `fix(skills): deploy the evidence store to Claude Code only`.
+  - Files: `engine/skills/routes.go` (`RouteClaudeSkill`, `skillRouteTargets`, `RepoRel` for the route, no `Dest` for a runtime that is not the route's); comment sentence in `engine/skills/ondisk.go` (`nonSkillRoutes` and `validLongtermMemRoutes` unchanged); the four rows of `overlay.manifest` gain `claude-skill`; text in `engine/cmd/usage.go`, `README.md` (`manifest routes`), `bin/lib/manifest_routes.sh` comment and `CHANGELOG.md`. `bin/lib/apply.sh` unchanged.
+  - Tests: R1 three cases and R2 refusal case in `engine/skills/routes_test.go`; R3 fixture row in `engine/skills/ondisk_test.go`; A1 and A2 rewritten in `engine/skills/evidence_store_artifact_test.go` as `TestEvidenceStore_ManifestHoldsFourClaudeSkillRows` (R4, parsed rows, each path once) and `TestEvidenceStore_DeploysToClaudeAndToNoOtherTarget` (R5, four names, claude `/s/...`, codex and opencode empty); R6 `TestApplyCopiesAClaudeSkillRowForClaudeAlone` in the new `engine/installer/routing_claude_skill_test.go`, in a temporary home and overlay (`newPinWorld`), skipped in `-short`.
+  - Lines: authored 145 (111 changed in tracked files, counting added and removed lines: 1+0 CHANGELOG, 1+1 README, 1+1 manifest_routes.sh, 1+1 usage.go, 42+21 artifact test, 2+1 ondisk.go, 3+2 ondisk_test, 14+3 routes.go, 8+0 routes_test, 4+4 overlay.manifest; plus 34 in the new installer test), inside the 140-190 forecast. The document and review records are not counted.
+  - Test-first (RED -> GREEN -> REFACTOR):
+
+    | Test | RED (before the engine change) | GREEN | REFACTOR |
+    |---|---|---|---|
+    | R1 three `claude-skill` cases | `TestResolveRoutesPlacesEachKindOfRow` failed all three: `RepoRel` was `_shared/x/run.sh`, codex `Dest` was `/h/.codex/skills/_shared/x/run.sh` | ok | none |
+    | R4 `ManifestHoldsFourClaudeSkillRows` | failed four times: `Route:` empty on each row | ok | none |
+    | R5 `DeploysToClaudeAndToNoOtherTarget` | failed four times: codex deployed `/c/_shared/evidence/<name>` | ok | none |
+    | R6 `ApplyCopiesAClaudeSkillRowForClaudeAlone` | failed: `codex copy of a claude-skill row: stat error = <nil>, want it absent` | ok | none |
+    | R2, R3 (pins) | passed before the change, as L25 expects; R2 refuses the row by the existing `longterm-mem/` check | ok | none |
+
+    The first RED of R4 and R5 was a build failure (`undefined: RouteClaudeSkill`), so the tests were changed to the literal `"claude-skill"` and re-run to RED for the right reason before any engine change.
+  - Mutations (each reverted; `git diff --stat skills/routes.go` afterwards showed only the intended change and `go test ./skills/` was ok):
+    - M1, drop the `skillRouteTargets` check (`scoped && false && ...`): `go test ./skills/ ./installer/ -run 'ResolveRoutesPlaces|EvidenceStore|ClaudeSkill'` failed `TestEvidenceStore_DeploysToClaudeAndToNoOtherTarget`, `TestResolveRoutesPlacesEachKindOfRow/a_claude-skill_row_goes_nowhere_for_Codex` and `TestApplyCopiesAClaudeSkillRowForClaudeAlone`. The OpenCode case did not fail: OpenCode returns before the check, so L25's "R1 codex/opencode" is only true of codex; the OpenCode empty `Dest` is held by the earlier return.
+    - M2, drop `RouteClaudeSkill` from the `RepoRel` condition: `TestResolveRoutesPlacesEachKindOfRow` failed all three `claude-skill` cases (claude, codex, opencode).
+  - Checks, in `engine/`: `gofmt -l .` printed nothing; `go test ./skills/ ./installer/ ./cmd/ -count=1`: skills ok 9.089s, installer ok 43.137s, cmd ok 94.330s; `go run ./cmd/ skills validate ...`: "registry and manifest aligned (31 skills)", "skills/ on disk matches overlay.manifest (89 files)", "global skill approvals verified (31 skills: 31 approved)"; `bash -n ../bin/lib/manifest_routes.sh`: no output, exit 0; `go test ./... -count=1`: exit 0, 87 `ok` lines, no other line. The usage-parity test (`go test ./cmd/`) passed with the edited usage line; `bin/lib/usage.sh` has no `manifest routes` text and was not changed. A first compound run of `go test ./...` was killed before it finished and run once more alone, so the result above is of one complete run.
+  - Not done: apply was not run against the real home; no cleanup of orphan files an earlier `apply --target codex` may have left (L25 risk).
+  - Risk: items 3 (a new value in the route column `manifest routes` prints) and 5 (what apply deploys).
+- **L28** (2026-11-22, foreman): OD-8 and OD-11 answered. (1) OD-8: asked whether the playbook hard word budgets for the session-start text (contract 270, rules 400, loaded at start 370/620) bind the merged playbook and overlay text, or relax, with the recommendation that they bind, the owner chose, verbatim: "Se aplican (Recommended)". The budgets bind the merged session text; T13 is no longer blocked. Not measured: how far the current overlay text exceeds them. (2) OD-11: asked what cap the text injected into builder and reviewer prompts has (the learned-rules index and, from T16, the request for rule outcomes), with the options 150 words, 300 words, or no cap with measurement only, the owner chose, verbatim: "150 palabras (Recommended)". The cap is 150 words; above it the lowest-level rules are cut and the cut is reported. T5 cap, T16 and T17 are no longer blocked. Every OD of this feature is now answered except OD-12.
+- **L29** (2026-11-22, shaper): Design of T21 (new), from the review of T20 at `d1e57b32`: `odd/review-results/merge-playbook-into-sdd-overlay/d1e57b32f786-2.json` (rows recall, hunt, readability; SUGGESTION F1 pre-existing, SUGGESTION F2 introduced). Both are resolved, none declined. S4 (new T21 detail), the new T21 line and the Tasks preamble changed; T2's design (L25) and its line are unchanged.
+
+  **Sources read:** the document up to `## Log`, L22, L25, L27, L28; the review record; at the worktree head: `engine/skills/routes.go` (whole), `engine/skills/ondisk.go` lines 25-56 and 78-124 (grep), `engine/skills/evidence_store_artifact_test.go` (whole), the test names of `engine/skills/routes_test.go` (grep), `bin/lib/manifest_routes.sh` (whole), the route lines of `engine/cmd/usage.go` 84-88 and `README.md` 1067-1071 (grep), `bin/lib/targets.sh` (grep: copy targets claude, opencode, codex; pi is a package target), `engine/capability/capability.go` 97-100 (grep), and every row of `overlay.manifest` with a third column (grep: only `claude-skill`, `agent`, `output-style`, `codex-agent`, `opencode-agent`, `mcp`).
+
+  **Where the findings go.** Not into T2b: L25 puts T2b at 255-375 authored lines, and adding about 85-115 here makes 340-490, past the 400 slice. So T21 is a separate commit after T2b, in the same batch, before delivery. T2b runs first because its design is settled and its builder is next; T21 touches neither T2b's files nor its tests, so the order does not matter for correctness.
+
+  **Steelman of the test-time pin.** `routes.go` lines 17-21 say the routing keeps the script's leniency and "a change to it is a decision of the owner, not a side effect of moving the code"; lines 23-25 say an unknown third column is not refused. A test over the real manifest stops the typo where it is written, in CI ("Engine Tests" runs `go test ./...`), and changes no deploy for any row, valid or not. It is also the overlay's own rule for a known error class: a check that fails on it, committed with the fix.
+
+  **Options weighed (F1).**
+  - (chosen) A test over the real `overlay.manifest` that every third column is a known route, plus a unit test of the helper on a fixture with misspellings.
+  - Refuse an unknown third column on a `custom` row in `resolveRoute`: closes the hole for every manifest and every run, but changes the leniency lines 17-21 reserve to the owner, changes `manifest routes` output (now an error), and needs the same in `DeployableManifestPaths` so the on-disk check agrees (`TestRouteDomain_OnDiskCheckAndRoutingAgree`). Not chosen without the owner's word; recorded as a risk.
+  - Extend the exact-value check of `TestEvidenceStore_ManifestHoldsFourClaudeSkillRows` to future rows: per-row, so a new Claude-only row without its own pin is still unguarded (the finding's point).
+
+  **Strongest counter-argument.** The pin guards only this repository's `overlay.manifest` and only when the tests run: a manifest edited locally and applied before `go test`, or any other manifest given with `--manifest`, still fails open to every copy target. Tradeoff accepted: the overlay ships one manifest and CI runs the test on every change to it; refusing at run time stays an owner decision.
+
+  **T21 design.**
+  - New file `engine/skills/route_column_pins_test.go` (package `skills`, uses `readRepoFile` and `skillsRepoRoot`):
+    - `knownManifestRoutes`: a test-local set of the values a third column may hold: `""`, `RouteSkill`, `RouteClaudeSkill`, `RouteAgent`, `RouteOpencodeAgent`, `RouteCodexAgent`, `RouteOutputStyle`, `RouteMCP`. `RouteNonDeployable` is not in it: it is an output of the routing, never a value to write.
+    - helper `unknownRouteRows(rows []ManifestRow) []ManifestRow`: the rows whose `Route` is not in `knownManifestRoutes`, compared exactly (no case folding).
+    - (P0, pin) `TestKnownManifestRoutes_CoverEveryScopedRoute`: every key of `agentRouteTargets` and of `skillRouteTargets` is in `knownManifestRoutes`, so the set cannot fall behind a new route added to either map.
+    - (P1, pin; F1) `TestOverlayManifest_EveryThirdColumnIsAKnownRoute`: `unknownRouteRows(ReadManifestRows(<repo>/overlay.manifest))` is empty; each offending row is reported as `overlay.manifest row %q has third column %q, which is no route: it would take the skill route and be copied to every copy target`.
+    - (P1b, pin; F1) `TestUnknownRouteRows_CatchesAMisspeltRoute`: over the fixture rows `{"_shared/x/run.sh","custom","claude-skills"}`, `{"_shared/x/b.sh","custom","Claude-Skill"}`, `{"plain/SKILL.md","custom",""}`, `{"_shared/x/c.sh","custom","claude-skill"}`, `{"builder.md","custom","agent"}`, the helper returns exactly the first two, in order.
+    - (P2, RED first; F2) `TestRouteTexts_NameEveryReasonADestIsEmpty`:
+      - block G: the lines of `engine/skills/routes.go` from the line holding `// Dest is` to the line holding `Dest string`;
+      - block S: the lines of `bin/lib/manifest_routes.sh` from the line starting `#   dest` up to, not including, the next line that is exactly `#`;
+      - line K: the comment line of `engine/skills/routes.go` that starts, after its indentation, with `// RouteSkill copies`;
+      - each of G and S contains every key of `skillRouteTargets` (today `claude-skill`), and, compared in lower case, `opencode`, `mcp` and `never deployed`; K contains `OpenCode`. A block not found fails the test with its name.
+  - Text, `engine/skills/routes.go` (comments only):
+    - lines 23-25 become: "The routes of a row, the value of its third column. A row with no third column takes RouteSkill. A value outside these is not refused by the routing (except under longterm-mem/, see UnroutedRowError): the row takes the skill route, keeps the value as its name and is copied like a skill row. overlay.manifest holds no such value: TestOverlayManifest_EveryThirdColumnIsAKnownRoute fails on one, so a misspelt route is caught before it is deployed."
+    - line 27 becomes: "RouteSkill copies a row from skills/ to the skills directory of Claude Code and of Codex; OpenCode reads the skills of Claude Code, so no copy is made for it (see resolveRoute)."
+    - the `Dest` comment (lines 128-129) becomes: "Dest is the absolute path the file is copied to for the target; empty when the row goes nowhere for it: a native agent or an output style of another runtime, a skill row for OpenCode (it reads the skills of Claude Code), a row of a skills route scoped to another runtime (claude-skill for any target but Claude Code), an mcp row, a row never deployed."
+  - Text, `bin/lib/manifest_routes.sh` lines 38-40 (comment only) become:
+
+    ```text
+    #   dest         the absolute path it is copied to for <target>; empty when it
+    #                goes nowhere for that target (an agent or output style for
+    #                another runtime, a skill row for opencode, a claude-skill
+    #                row for any target but claude, an mcp row, a row that is
+    #                never deployed)
+    ```
+
+  - Not changed: `ResolveRoutes`, `resolveRoute`, `ReadManifestRows`, `DeployableManifestPaths`, `nonSkillRoutes`, `validLongtermMemRoutes`, `overlay.manifest`, `bin/lib/apply.sh`, `engine/cmd/usage.go`, `README.md` (their route lists already say "the third column when it is none of these, which takes the skill route under its own name", and they list no reason for an empty destination).
+  - Test-first:
+    - P2 is RED before the text change: block G lacks `claude-skill` and `opencode`, block S lacks `claude-skill`, line K lacks `OpenCode`. The builder reports the RED output, then edits the three texts to GREEN. If the first RED is a build failure, the test is fixed and re-run to RED for the right reason before any text changes (L27 precedent).
+    - P0, P1 and P1b pass on arrival (the manifest is clean today); each is shown load-bearing by a mutation, reverted, with the failing test names reported:
+      - M1: in the worktree, change the third column of `_shared/evidence/evidence.sh` in `overlay.manifest` to `claude-skills`: P1 fails naming that path and value (`TestEvidenceStore_ManifestHoldsFourClaudeSkillRows` fails too). Revert; `git diff --exit-code overlay.manifest` clean.
+      - M2: make `unknownRouteRows` return no row: P1b fails.
+      - M3: drop `RouteClaudeSkill` from `knownManifestRoutes`: P0 and P1 fail.
+      - M4: remove `claude-skill` from block S: P2 fails naming block S.
+  - Checks, in `engine/`, exact results reported: `go test ./skills/ -count=1`; `bash -n ../bin/lib/manifest_routes.sh`; `gofmt -l skills/`; `go run ./cmd/ skills validate --registry ../skills.registry.yaml --manifest ../overlay.manifest --source-root ../skills` (expected still "89 files"); `go test ./... -count=1` once, as the last commit of the batch.
+  - Commit `test(skills): pin the route column of overlay.manifest`, no `Risk:` item (tests and comments).
+  - Forecast: 85-115 authored lines (test file 70-95, comments about 15 changed); shaper estimate, no actuals, low confidence.
+
+  **OD-8 and OD-11 against T2b (L28).** Neither changes T2b. OD-8 binds the word budgets of the session-start text (T13); T2b adds Go tests and a test helper, no session text. OD-11 caps the text `gate-task` injects into builder and reviewer prompts (T5, then T16 and T17); T2b's B5 pins what `evidence.sh index` prints, unchanged from the snapshot, and the cap is applied where the text is injected. The one link: if T5's shaper puts the 150-word cut inside `evidence.sh` instead of `gate-task`, B5 and B10 (the Changed list of `PROVENANCE.md`) must change with it; T5 owns that. Neither changes T21.
+
+  **Risks, not decided here:**
+  - Product decision, open: whether the routing itself refuses an unknown third column at run time. `routes.go` lines 17-21 reserve that change to the owner; T21 does not make it. Without it, a manifest applied before the tests run, or one passed with `--manifest`, still fails open.
+  - P2 pins words, not meaning: a text that names `claude-skill` but describes it wrongly still passes. It catches the drift F2 found (a new scoped route with no text), not every wrong sentence.
+  - `knownManifestRoutes` is a second list of the route values beside the constants; P0 ties it to the two maps, but a new route that is in neither map (like `mcp`) must be added to it by hand. P1 then fails on the first row that uses it, which is a loud failure, not a silent one.
+  - The claim that Pi never goes through the skill route was not checked; the new `RouteSkill` text names only Claude Code, Codex and OpenCode, the three copy targets of `bin/lib/targets.sh`.
+- **L30** (2026-11-22, builder): T2b built as designed in L22 and L25. S2, S4 and S9 covered for the modes of the evidence store (`check`, `count`, `index`, `rule`, usage, wiki directory, no writes), the snapshot tie and the `sh`/`awk` runtime need. T2 is closed: T2a `62604473`, T20 its own line, T2b this commit `test(evidence): pin the modes of the evidence store` (its SHA is not knowable inside its own commit). `evidence.sh`, `evidence-rules.md`, `LICENSE` and `PROVENANCE.md` are unchanged.
+  - Files: `engine/shelltest/evidence_store_test.go` (new, 226 lines; B1-B9 as `TestEvidenceStoreCheckPassesAValidPage`, `...CheckReportsEachProblemOfAMalformedPage`, `...CheckWithNoPageSaysSo`, `...CountSaysWhichKindsAreReady`, `...IndexListsTheRulesOfLevelTwoAndUp`, `...RulePrintsAKindOrFails`, `...ReadsTheWikiDirectoryFromArgumentThenEnvironmentThenWorkingDirectory`, `...UsageErrorsExitTwo`, `...WritesNothingAndNeedsNoOtherWikiFile`); `engine/skills/evidence_store_artifact_test.go` (B10 `TestEvidenceStore_CopiesMatchTheSnapshotOrAreListedAsChanged`, and A4 now calls the helper); `engine/overlaytest/overlaytest.go` (`RequireShAndAwk`).
+  - B10 blob ids at snapshot `6de8566`, from `git -C ~/.local/share/playbook rev-parse 6de8566:<path>`: `evidence.sh` `09b44a09878454b0f96f81ca00431236b142fd59`, `evidence-rules.md` `48c4bf91cda2322dc71f4fb080c9add7f6233031`, `LICENSE` `b6f9c476b8c3982bfd1b4368d61c83ea53e22dad`.
+  - Lines: authored 298 (226 new shelltest file, 56+1 artifact test, 15+0 overlaytest), inside the 255-375 forecast and under 400, so one commit and no cut. The document and review records are not counted.
+  - Test-first (the tests characterise absorbed code, so no RED before the code exists; each is shown to matter by a mutation of the worktree script, reverted with `git checkout` after each; `git diff --exit-code --stat -- skills/_shared/evidence` clean after each):
+
+    | Test | Mutation (script) | Result |
+    |---|---|---|
+    | B4 | M1 `threshold=3` to `2` | `TestEvidenceStoreCountSaysWhichKindsAreReady` FAIL |
+    | B1 | M2 `if (file != "evidence-rules.md") {` to `if (1) {` | B1, B2, B3 FAIL |
+    | B6 | M3 the not-found branch of `rule` ends `exit 0` | `TestEvidenceStoreRulePrintsAKindOrFails` FAIL |
+    | B7 | M4 the `CLAUDE_PROJECT_DIR` branch and the default swapped | B7 FAIL, and B1-B6 too (the default path breaks) |
+    | B8 | M5 the `exit 2` of the unknown-mode branch removed | `TestEvidenceStoreUsageErrorsExitTwo` FAIL |
+    | B2 | X6 `isdate` returns 1 for any well-formed date | `...CheckReportsEachProblemOfAMalformedPage` FAIL |
+    | B3 | X7 the no-page message changed | `...CheckWithNoPageSaysSo` FAIL |
+    | B5 | X8 `index` also lists level-1 kinds | `...IndexListsTheRulesOfLevelTwoAndUp` FAIL |
+    | B9 | X9 a `check` run writes `$wiki/stray` | `...WritesNothingAndNeedsNoOtherWikiFile` FAIL |
+    | B10 | edit line 1 of `evidence-rules.md`, not named in Changed | FAIL "evidence-rules.md differs from the snapshot and the Changed section does not name it"; naming it in `## Changed since the snapshot` gives ok; both reverted |
+    | helper | `go test -c`, then `CI=true PATH=/nonexistent skills.test -test.run ScriptParsesAsPosixShell` | FAIL "sh is not on PATH, and CI needs it", exit 1; the same without `CI` skips, exit 0 |
+
+    X6 to X9 go beyond the five mutations L22 lists. The first run of M1 passed: the first B4 page had no kind with exactly two distinct reviews, so the mutation changed nothing observable; `gamma-kind` was given two distinct reviews, and M1 then failed B4. REFACTOR: `gofmt -w` of the new file; no other.
+  - Checks, in `engine/`: `gofmt -l .` printed nothing; `shellcheck -s sh ../skills/_shared/evidence/evidence.sh` printed nothing, exit 0; `go test ./skills/ ./shelltest/ ./overlaytest/ -run 'Evidence|Require' -count=1`: skills ok, shelltest ok, overlaytest `[no tests to run]`; `go test ./overlaytest/ -count=1`: ok; `go test ./... -count=1`: exit 0, 87 `ok` lines, no other line.
+  - Tests use no real HOME: the script runs with `HOME=<tmp>`, `PATH` and no `CLAUDE_PROJECT_DIR` unless a case sets it; the package `TestMain` also gives a home of its own.
+  - Risk: none (tests and a test helper).
+- **L31** (2026-11-22, foreman): the open fork of L29 answered. Asked whether, besides the T21 test that catches a mistyped route column of `overlay.manifest` in CI, the installer should also refuse an unknown route value when it resolves routes, the owner chose "Test only (Recommended)". The question was put in English by mistake; its options were "Test only (Recommended)" (T21 pins it in CI; deploy behaviour for valid rows does not change) and "Also refuse at apply" (engine refuses an unknown value). The routing keeps its leniency (`engine/skills/routes.go:17-21`); T21 is the only guard.
+- **L32** (2026-11-22, shaper): T21 redesigned and T22 added, from the review of T2b at `8e035ddb`: `odd/review-results/merge-playbook-into-sdd-overlay/8e035ddb49dc-2.json` (rows recall, hunt; SUGGESTION F1 introduced, F2 pre-existing, F3 introduced). All three are resolved, none declined. This entry replaces L29 as T21's design entry: L29's design (P0, P1, P1b, P2, the three texts, M1-M4, its checks) stands unless changed below. S4 (T21 detail rewritten, new T22 detail), the T21 line, the new T22 line and the Tasks preamble changed; no other spec or task. T6's line, its marker (L7) and its detail are unchanged.
+
+  **Sources read:** the document up to `## Log`, L25, L29, L30, L31; the review record; at the worktree: `engine/skills/evidence_store_artifact_test.go` (whole, 154 lines; B10 is lines 133-153), `engine/shelltest/evidence_store_test.go` (whole, 227 lines; `run` 83-89, `fileTree` 194-211, B9 213-226), `skills/_shared/evidence/PROVENANCE.md` (whole), `skills/_shared/evidence/evidence.sh` lines 1-214, `engine/overlaytest/overlaytest.go` lines 40-84; grep: no `/tmp`, `mktemp` or `TMPDIR` in `evidence.sh`; `evidence.sh` is named outside `odd/` only by the four store files, the two test files and `overlay.manifest`, so no runtime consumer reads its exit codes today; `engine/shelltest/memory_live_acceptance_test.go` line 167 already sets `TMPDIR` in a test run. The review's line numbers (`evidence_store_artifact_test.go:322-342`, `evidence_store_test.go:226-258`) do not match the files (154 and 227 lines); they read as diff lines. The worktree head `8e035ddb` was not checked by the shaper (no command run).
+
+  **What the code does without awk** (`evidence.sh` at the worktree): `check` exits 1 with the shell's error (line 174, `|| rc=1`); `count` prints the shell's error and exits 0 (lines 185-186); `rules` and `index` send it to `/dev/null` and exit 0 with no output (lines 192, 202, 197, 204); `rule` reports the kind as missing and exits 1 (lines 209-213). So F2 reaches `rules` and `rule` too, not only `index`.
+
+  **Where F2 goes.** L25 carried it to T6 as "the first task that changes evidence.sh's behaviour". That premise does not hold: T5 runs before T6 (order T3, T4, T5, T6) and is the first consumer of `index`, so under the carry T5 would be built on an `index` that reads a missing `awk` as "no rules". The guard is designed now, as T22, before T5. T6 carries nothing of F2; its marker does not move, because its design (L7) is not changed. L25's risk line "open for T6's shaper" is closed by T22.
+
+  **Steelman of fixing F2 now.** The guard is four lines of POSIX shell at the one place every mode passes (after the mode parse, line 50), so a usage error keeps exit 2 and every other mode fails the same way. It turns a silent wrong answer into a loud one before any consumer exists, so T5 designs against the real contract instead of a later change of it. And it makes F1's new rule live on real files at once: B10's Changed section stops being `- Nothing.`.
+
+  **Strongest counter-argument.** It changes the absorbed bytes earlier than any feature needs, on a failure CI already prevents (`RequireShAndAwk` fails CI without `awk`), and it adds a high-risk commit (items 3 and 5) to a batch whose other T2 work is tests only. A host with `sh` and no `awk` is hypothetical; carrying to T5, which must handle the exit code anyway, would cost one commit less. Tradeoff accepted: one small extra commit for a contract T5 can rely on from its first line, and no silent "no rules" on any host.
+
+  **Options weighed (F1, the "byte-identical" line).** (chosen) tie the sentence by test: while line 8 says "byte-identical", `LICENSE` must equal its snapshot blob; T21 changes no deployed file. (not chosen) drop the duplicate claim from `PROVENANCE.md` line 8: simpler, but changes a deployed file in a commit whose risk is none.
+
+  **T21 additions** (to L29's design; the file list grows by the two evidence test files):
+  - (F1) `TestEvidenceStore_CopiesMatchTheSnapshotOrAreListedAsChanged` in `engine/skills/evidence_store_artifact_test.go`, the whole `PROVENANCE.md` text kept in a variable:
+    - after the loop, when `changed > 0`, no line of the section, trimmed, is exactly `- Nothing.`; else `t.Errorf("%d copies differ from the snapshot, so the Changed section must not say %q", changed, "- Nothing.")`;
+    - the line of `PROVENANCE.md` that starts with `- License:` exists, else `t.Errorf("PROVENANCE.md has no %q line", "- License:")`; when it contains `byte-identical`, `gitBlobID(LICENSE)` equals `evidenceSnapshotBlobs["LICENSE"]`, else `t.Errorf("PROVENANCE.md says LICENSE is byte-identical to the snapshot, but its blob is %s, not %s", got, want)`.
+  - (F3) `engine/shelltest/evidence_store_test.go`:
+    - `fileTree` records every entry under `dir` but `dir` itself, by relative path: a regular file as `"file " + content`, a directory as `"dir"`, a symbolic link as `"link " + target` (`os.Readlink`), anything else as `"other " + d.Type().String()`; its comment says so;
+    - `newEvidenceWorld` creates `<tmp>/tmpdir`, and `run` puts `TMPDIR=<tmp>/tmpdir` after `HOME` and `PATH`, before `extra`, so a temporary file the script makes lands in the watched tree;
+    - B9 expects the repository tree `{"docs": "dir", "docs/wiki": "dir", "docs/wiki/evidence.md": "file " + page}` (paths through `filepath.Join`);
+    - B9 first reads `w.script` and `t.Fatalf`s when it contains `/tmp` (which also covers `/var/tmp`), before any mode runs, so a hard-coded write there is refused without being made.
+  - Test-first: the new checks pass on the current files; each is shown load-bearing by a mutation in the worktree, reverted with `git checkout -- <path>`, with `git diff --exit-code -- <path>` clean after each; failing test names reported:
+    - M5 (F1): append a line to `skills/_shared/evidence/evidence-rules.md` and add ``- `evidence-rules.md`: probe.`` under the Changed section, keeping `- Nothing.`: B10 passes before the change (the gap), fails after it with the `- Nothing.` message.
+    - M6 (F1): append a newline to `skills/_shared/evidence/LICENSE`, and replace `- Nothing.` by ``- `LICENSE`: probe.``: B10 passes before, fails after with the byte-identical message.
+    - X10 (F3): in the `check` branch of `evidence.sh` add `mkdir "$wiki/stray"`: B9 passes before (empty directories were not seen), fails after.
+    - X11 (F3): at the top of `evidence.sh` add `: > "${TMPDIR:-/tmp}/evidence-probe"`: B9 fails after the change; not run before it, since it would write to the real `/tmp`. Run with `-run TestEvidenceStoreWritesNothingAndNeedsNoOtherWikiFile`.
+    - X12 (F3): at the top of `evidence.sh` add `: > /tmp/evidence-probe`: B9 fails on the static check before any mode runs. Run with the same `-run`, so B1-B8 never run the mutated script; the builder reports `ls /tmp/evidence-probe` before and after (both absent).
+  - Checks, in `engine/`, exact results reported: L29's, plus `go test ./shelltest/ -run Evidence -count=1`, and `gofmt -l skills/ shelltest/`; `go test ./... -count=1` moves to T22, the last commit of the batch.
+  - Commit `test(skills): pin the route column and tighten the evidence store pins`, no `Risk:` item (tests and comments).
+  - Forecast: 120-170 authored lines (L29's 85-115, F1 15-25, F3 20-30); under 400, so no separate task. Shaper estimate, no actuals, low confidence.
+
+  **T22 design** (F2):
+  - `skills/_shared/evidence/evidence.sh`, after the `esac` of the mode parse (line 50), before `if [ -n "$dirarg" ]`:
+
+    ```sh
+    command -v awk >/dev/null 2>&1 || {
+      printf 'evidence.sh: awk is not on PATH; %s cannot run\n' "$mode" >&2
+      exit 3
+    }
+    ```
+
+  - header lines 30-32 become:
+
+    ```text
+    # count, rules, and index exit 0, but with no awk on PATH every mode prints
+    # "evidence.sh: awk is not on PATH; <mode> cannot run" on stderr and exits 3
+    # (a usage error still exits 2). A cell may hold "|" written as "\|". Not
+    # read: a table inside a code block. A row after a line that ends the table
+    # (a blank line, for one) is still read, and check fails on it.
+    ```
+
+  - `skills/_shared/evidence/PROVENANCE.md`: the line `- Nothing.` becomes ``- `evidence.sh`: with no `awk` on `PATH`, every mode but a usage error prints `evidence.sh: awk is not on PATH; <mode> cannot run` on stderr and exits 3; the snapshot printed nothing and exited 0 in `rules` and `index`, and `rule` reported the kind as missing (review `8e035ddb49dc-2`, F2).``. Line 8 is unchanged (`LICENSE` stays byte-identical).
+  - (B11, RED first) `TestEvidenceStoreWithoutAwkSaysSoAndExitsThree` in `engine/shelltest/evidence_store_test.go`: `newEvidenceWorld` with the standard page; an empty directory `<tmp>/noawk`; for `check`, `count`, `rules`, `index` and `rule beta-kind`, `w.run(w.repo, []string{"PATH=" + noawk}, args...)` gives exit 3, empty stdout and stderr exactly `evidence.sh: awk is not on PATH; <mode> cannot run\n`; for `bogus` it gives exit 2, empty stdout and `evidenceUsage`. `sh` itself is found by the test process (`exec.Command` looks it up before `Env` applies). The override relies on Go's `os/exec` keeping the last value of a duplicated key (the `Cmd.Env` documentation; not read by the shaper): the builder confirms it, else `run` drops the base `PATH` when `extra` sets one.
+  - Order: B11 RED (today `index` and `rules` exit 0 with empty stderr), reported; the guard and header, B11 GREEN; B10 then RED ("evidence.sh differs from the snapshot and the Changed section does not name it"), reported; the Changed line, B10 GREEN.
+  - Mutations, reverted, failing test names reported: drop the guard (B11 fails); drop the new Changed line, restoring `- Nothing.` (B10 fails); keep `- Nothing.` beside the new line (B10 fails with T21's message, the F1 rule on real files).
+  - Note for T5's shaper, not a change to T5: a nonzero exit of `index` means the rules cannot be read; T5 injects nothing, reports it, and never blocks the launch (S7).
+  - Checks, in `engine/`, exact results reported: `go test ./shelltest/ ./skills/ -count=1`; `shellcheck -s sh ../skills/_shared/evidence/evidence.sh`; `gofmt -l shelltest/`; `go run ./cmd/ skills validate --registry ../skills.registry.yaml --manifest ../overlay.manifest --source-root ../skills` (expected still "89 files"); `go test ./... -count=1` once, as the last commit of the batch.
+  - Commit `fix(evidence): fail loud when awk is missing`, with the `Risk:` trailer for items 3 (the exit contract of `evidence.sh`, which T5 consumes) and 5 (a deployed file changes).
+  - Forecast: 45-70 authored lines (script and header about 9, `PROVENANCE.md` 1, B11 30-50); shaper estimate, no actuals, low confidence.
+
+  **Risks, not decided here:**
+  - The exit code 3 is an assumption: a code no mode uses today, so a caller can tell "cannot run" from a failed `check` (1), a missing kind (1) and a usage error (2).
+  - B9 still misses a write to a hard-coded absolute path other than one under `/tmp` (say `/dev/shm`); `HOME`, the working directory, the wiki directory, the script directory and `TMPDIR` are all inside the watched tree.
+  - The `/tmp` pin also refuses a comment that names `/tmp`; that fails loud, not silent.
+  - T22 changes the snapshot bytes before T5, T6 and T7; L25's "T2 keeps the snapshot bytes" held for T2 only. Every later change must keep the Changed list true (B10).
+  - The Go `os/exec` duplicate-key behaviour B11 relies on is not verified by the shaper.
+  - No product decision is open from this review.
+- **L33** (2026-11-22, builder): T21 built as designed in L32 (which replaces L29's design; L29's P0, P1, P1b, P2, texts and M1-M4 stand) and L31 (test only, no refusal at apply). S4 covered: the route column of `overlay.manifest`, the three `Dest`/`RouteSkill` texts, B10 (F1 of `8e035ddb49dc-2`) and B9 (F3). Commit `test(skills): pin the route column and tighten the evidence store pins` (its SHA is not knowable inside its own commit; `git log --grep`). `ResolveRoutes`, `resolveRoute`, `ReadManifestRows`, `DeployableManifestPaths`, `overlay.manifest`, `bin/lib/apply.sh` and `skills/_shared/evidence/*` are unchanged (`git diff --stat` on them printed nothing). T22 not started.
+  - Files: `engine/skills/route_column_pins_test.go` (new, 139 lines: `knownManifestRoutes`, `unknownRouteRows`, `TestKnownManifestRoutes_CoverEveryScopedRoute`, `TestOverlayManifest_EveryThirdColumnIsAKnownRoute`, `TestUnknownRouteRows_CatchesAMisspeltRoute`, `TestRouteTexts_NameEveryReasonADestIsEmpty`); `engine/skills/routes.go` and `bin/lib/manifest_routes.sh` (comments only); `engine/skills/evidence_store_artifact_test.go` (B10, F1); `engine/shelltest/evidence_store_test.go` (`fileTree`, `newEvidenceWorld`, `run`, B9, F3).
+  - Authored lines: 216 added and 17 removed by `git diff --numstat` plus the new file (139 new; `routes.go` 8/4, `manifest_routes.sh` 4/2, artifact test 25/1, shelltest 40/10). Over L32's 120-170 forecast (the P2 block-finder helper and the file-tree switch were larger than estimated), under 400. The document and review records are not counted.
+  - Test-first. P2 RED first for the right reason (`go test ./skills/ -run 'KnownManifestRoutes|EveryThirdColumn|UnknownRouteRows|RouteTexts'`): P0, P1, P1b pass; P2 FAIL with block G lacking `opencode` and `claude-skill`, block S lacking `claude-skill`, line K lacking `OpenCode`; after the three text edits all four PASS. The other tests pass on arrival and are shown load-bearing by mutation, each reverted:
+
+    | Test | Mutation | Result |
+    |---|---|---|
+    | P2 | (RED) texts before the edit | `TestRouteTexts_NameEveryReasonADestIsEmpty` FAIL (G, S, K as above), then PASS |
+    | P1 | M1 third column of `_shared/evidence/evidence.sh` in `overlay.manifest` set to `claude-skills` | `TestOverlayManifest_EveryThirdColumnIsAKnownRoute` FAIL naming that path and value; `TestEvidenceStore_ManifestHoldsFourClaudeSkillRows` FAIL |
+    | P1b | M2 `unknownRouteRows` condition `if false` | `TestUnknownRouteRows_CatchesAMisspeltRoute` FAIL |
+    | P0, P1 | M3 `RouteClaudeSkill` dropped from `knownManifestRoutes` | `TestKnownManifestRoutes_CoverEveryScopedRoute` and `TestOverlayManifest_EveryThirdColumnIsAKnownRoute` FAIL (four rows) |
+    | P2 | M4 `a claude-skill` replaced by `a skill` in `bin/lib/manifest_routes.sh` | `TestRouteTexts_NameEveryReasonADestIsEmpty` FAIL naming block S |
+    | B10 | M5 a line appended to `evidence-rules.md`, ``- `evidence-rules.md`: probe.`` added above `- Nothing.` | HEAD's B10 ok (the gap); new B10 FAIL "1 copies differ from the snapshot, so the Changed section must not say "- Nothing."" |
+    | B10 | M6 a newline appended to `LICENSE`, `- Nothing.` replaced by ``- `LICENSE`: probe.`` | HEAD's B10 ok (the gap); new B10 FAIL "PROVENANCE.md says LICENSE is byte-identical to the snapshot, but its blob is 392e44e5..., not b6f9c476..." |
+    | B9 | X10 `mkdir "$wiki/stray"` in the `check` branch of `evidence.sh` | HEAD's B9 ok (the gap); new B9 FAIL "after [check] the tree under ... changed" |
+    | B9 | X11 `: > "$TMPDIR/evidence-probe"` before the mode parse | B9 FAIL "the tree under ... changed" |
+    | B9 | X12 `: > /tmp/evidence-probe` before the mode parse | B9 FAIL "evidence.sh names /tmp ..." before any mode runs; `ls /tmp/evidence-probe` before and after: no such file |
+
+    X11 departs from L32 in one detail: it writes to `"$TMPDIR/evidence-probe"` with no `/tmp` fallback, because L32's `${TMPDIR:-/tmp}` contains the literal `/tmp`, which the static check refuses first, so X11 and X12 would be the same failure. The mutated files were reverted with `git checkout` (`evidence.sh`, `overlay.manifest`, `LICENSE`, `evidence-rules.md`, `PROVENANCE.md`; `git diff --exit-code --stat` clean after each) or by `cp` from a backup (the tests and the one edited comment file). M4's first run reverted the comment edit of `bin/lib/manifest_routes.sh` by `git checkout`; it was re-applied and checked before the commit.
+  - Checks, in `engine/`: `gofmt -l skills/ shelltest/` printed nothing; `bash -n ../bin/lib/manifest_routes.sh` exit 0; `go test ./skills/ ./shelltest/ -count=1`: skills ok, shelltest ok; `go run ./cmd/ skills validate --registry ../skills.registry.yaml --manifest ../overlay.manifest --source-root ../skills`: "skills/ on disk matches overlay.manifest (89 files)". `go test ./... -count=1` (once, before the commit): exit 0, 87 `ok` lines, and two `[no test files]` lines (`enginetest`, `repotest`).
+  - Tests use no real HOME: the script runs with `HOME=<tmp>` and `TMPDIR=<tmp>/tmpdir`.
+  - Risk: none (tests and comments).
+- **L34** (2026-11-22, shaper): T22 redesigned to fold the review of T21 at `7b634ced`: `odd/review-results/merge-playbook-into-sdd-overlay/7b634ced2367-2.json` (rows recall, readability; SUGGESTION F1 introduced, F2 introduced, F3 pre-existing). All three are resolved in T22, none declined. This entry replaces L32 as T22's design entry; L32's T22 design (the guard, the header, the Changed line, B11, its order, mutations and checks, the commit and its `Risk:` trailer) stands unless changed below. T21's marker stays on L32. S4 (T22 detail) and the T22 line changed; no other spec or task.
+
+  **Sources read:** the document up to `## Log`, L32, L33; the review record; at the worktree: `engine/shelltest/evidence_store_test.go` (whole, 256 lines; `newEvidenceWorld` 57-82, B9 230-256, its `/tmp` scan 233-240), `engine/skills/evidence_store_artifact_test.go` lines 120-177 (B10, its License check 162-176), `engine/skills/route_column_pins_test.go` (whole, 139 lines; `TestRouteTexts_NameEveryReasonADestIsEmpty` 93-139), `engine/skills/routes.go` lines 1-310 (the comment 286-288, the OpenCode return 294-298), `skills/_shared/evidence/PROVENANCE.md` (whole; the License line is line 8); grep: the one `TestMain` of `engine/shelltest` is in `live_guard_test.go` (lines 20-24, `testhome.Run` and `enginetest.Cleanup`). No command run; the worktree head `7b634ced` was not checked by the shaper.
+
+  **Steelman of folding all three into T22.** T22 already edits both evidence test files and is the batch's last commit, so the three fixes cost no extra review cycle; F2's rule is a B10 rule and T22 is the commit that first makes B10 read a non-empty Changed section; F3 is a two-line comment beside code T21 already pinned.
+
+  **Strongest counter-argument.** T22 carries Risk items 3 and 5 for a deployed-file change; mixing test-only and comment-only folds into it widens a high-risk review, and F3 is pre-existing in a file T22 has no other reason to touch. Tradeoff accepted: one wider commit (still under 400 authored lines) instead of a fourth commit and a fourth review in the batch.
+
+  **Correction of a premise in the brief.** T22's change to `evidence.sh` exercises T21's `- Nothing.` rule (F1 of `8e035ddb49dc-2`) on real files, not the License rule of F2: T22 leaves `LICENSE` byte-identical, so on real files only the "equal" branch runs. The "differs" branch is shown by the mutations M7-M9 below.
+
+  **F1 design** (the `/tmp` scan before any mode; option chosen: move it, not reword it).
+  - Options weighed: (chosen) `newEvidenceWorld`, which every evidence test calls before its first `run`, and which reads the source bytes of `evidence.sh` already (its copy loop, lines 65-71); (not chosen) `TestMain` in `live_guard_test.go`, the package-wide entry shared by every shelltest test: it would put evidence-store knowledge into the package's home guard and run the scan for tests that never touch the script.
+  - In the copy loop of `newEvidenceWorld`, when `name == "evidence.sh"` and the bytes contain `/tmp`: `t.Fatalf("%s names /tmp: a write there is outside the tree the evidence tests watch, so no mode is run", filepath.Join(src, name))`, before the file is copied. The comment of `newEvidenceWorld` says the scan is there so it runs before any mode of the script in the package.
+  - B9 loses lines 233-240 (its comment, the read and the scan); the rest of B9 is unchanged.
+  - The builder confirms with `rg -n 'evidence\.sh' engine/` that no code but `evidenceWorld.run` executes the script (the artifact test only parses it, `sh -n`), and reports the result.
+
+  **F2 design** (B10's License line keyed on the blob).
+  - In `engine/skills/evidence_store_artifact_test.go`, two constants: `licenseLineIdentical` = ``- License: MIT, in `LICENSE` beside this file (the snapshot `LICENSE`, byte-identical).`` (today's line 8, verbatim) and `licenseLineChanged` = ``- License: MIT, in `LICENSE` beside this file (changed since the snapshot `LICENSE`; see "Changed since the snapshot").``.
+  - Lines 162-176 become: find the line starting `- License:` (else the existing "has no" error); compute `gitBlobID(LICENSE)` once; when it equals `evidenceSnapshotBlobs["LICENSE"]`, the line must equal `licenseLineIdentical`, else `t.Errorf("LICENSE equals the snapshot, so the License line is exactly %q, got %q", licenseLineIdentical, line)`; when it differs, the line must equal `licenseLineChanged`, else `t.Errorf("LICENSE differs from the snapshot (blob %s, not %s), so the License line is exactly %q, got %q", got, want, licenseLineChanged, line)`. The word `byte-identical` is no longer a key; the comment above says the line is tied to the blob in both states.
+  - `PROVENANCE.md` line 8 is unchanged.
+
+  **F3 design** (the `resolveRoute` comment, pre-existing).
+  - `engine/skills/routes.go` lines 286-288 become, comment lines only:
+
+    ```text
+    // The skill route, claude-skill, and the route of any other third column: the skills directory of
+    // the target, but no copy for OpenCode (it reads the skills of Claude Code, below) and none for a
+    // target that a scoped route such as claude-skill is not for. Only skill and claude-skill name the
+    // file by its place in skills/ on the branches.
+    ```
+
+  - `TestRouteTexts_NameEveryReasonADestIsEmpty` gains block R: `linesBetween(routesGo, contains "// The skill route, claude-skill", contains "placed.RepoRel = path", false)`. Block R not found is an error, as for G and S; lowercased, it must contain `opencode` and every route of `skillRouteTargets`, and must not contain `every target`, else `t.Errorf("block R (the skills-directory comment of resolveRoute) ...")` naming what is missing or present.
+
+  **Order, test-first, exact results reported:** L32's order for B11 and the Changed line first; then F3 RED (block R fails on today's comment: no `opencode`, says `every target`), the comment, GREEN; then F2 and F1 as below.
+
+  **Mutations**, each reverted (`git checkout -- <path>` for tracked files, `git diff --exit-code -- <path>` clean after each), failing test names and messages reported:
+  - X13 (F1): `: > /tmp/evidence-probe` at the top of `evidence.sh`; `go test ./shelltest/ -run Evidence -count=1` (every evidence test, B1 first, not B9 alone): every test FAILs in `newEvidenceWorld` with the "names /tmp" message; `ls /tmp/evidence-probe` before and after: absent both times. Under T21's code the same run would let B1-B8 run the script first (not run: it would write to the real `/tmp`).
+  - M7 (F2, the review's example): append a newline to `LICENSE`, add ``- `LICENSE`: probe.`` to the Changed section, and set line 8 to ``- License: MIT, in `LICENSE` beside this file (identical to the snapshot).``: T21's B10 passes (the gap, run before the test change), the new B10 FAILs with the "differs" message.
+  - M8 (F2, the changed form is reachable): the same `LICENSE` and Changed edits with line 8 set to `licenseLineChanged`: B10 passes.
+  - M9 (F2, the equal branch is exact): `LICENSE` untouched, line 8 with `byte-identical` dropped: B10 FAILs with the "equals" message.
+  - M10 (F3): restore `every target` in the comment: `TestRouteTexts_NameEveryReasonADestIsEmpty` FAILs naming block R.
+  - L32's three mutations for the guard and the Changed line stand.
+
+  **Checks**, in `engine/`, exact results reported: L32's T22 checks (`go test ./shelltest/ ./skills/ -count=1`; `shellcheck -s sh ../skills/_shared/evidence/evidence.sh`; `gofmt -l shelltest/ skills/`; `go run ./cmd/ skills validate ...` expected "89 files"; `go test ./... -count=1` once, last commit of the batch); plus `git diff -U0 HEAD -- engine/skills/routes.go` shows only `//` comment lines added or removed.
+
+  **Commit** unchanged: `fix(evidence): fail loud when awk is missing`, `Risk:` items 3 and 5; its body names the folded F1, F2 and F3 of `7b634ced2367-2`.
+
+  **Forecast:** 85-130 authored lines (L32's 45-70; F1 about 8 moved and 3 added; F2 15-25; F3 4 comment lines and 10-15 test lines); under 400. Shaper estimate, no actuals, low confidence.
+
+  **Delivery rule for this branch:** SUGGESTIONs a review of T22 raises carry to the next batch of this feature (its next task, such as T3 or T5) and do not block delivery of this branch; WARNINGs and defects are fixed before delivery.
+
+  **Risks, not decided here:**
+  - The exact-line License check makes any rewording of line 8 a test edit; that is the price of no keyword gap.
+  - The `/tmp` scan in `newEvidenceWorld` makes every evidence test fail on one bad script, not only B9: louder, and the failing names no longer point at B9 alone.
+  - Block R relies on the anchors `// The skill route, claude-skill` and `placed.RepoRel = path`; a later edit of either breaks the pin loudly ("not found").
+  - L32's risks stand (exit code 3 an assumption; `/dev/shm`-style writes not watched; Go `os/exec` duplicate-key behaviour unverified).
+  - No product decision is open from this review.
+- **L35** (2026-11-22, builder): T22 built as designed in L34 (which replaces L32's T22 design; L32's guard, header, Changed line, B11, order and checks stand). S4 covered: the awk guard of `evidence.sh` (exit 3), its header and Changed entry, B11, and the three folded SUGGESTIONs F1, F2, F3 of `7b634ced2367-2`. Commit `fix(evidence): fail loud when awk is missing` (its SHA is not knowable inside its own commit; `git log --grep`), `Risk: 3,5`. T3 not started.
+  - Files: `skills/_shared/evidence/evidence.sh` (guard after the mode parse, header lines 30-33), `skills/_shared/evidence/PROVENANCE.md` (Changed entry; line 8 unchanged), `engine/shelltest/evidence_store_test.go` (B11, `/tmp` scan moved into `newEvidenceWorld`, B9 loses its scan), `engine/skills/evidence_store_artifact_test.go` (`licenseLineIdentical`, `licenseLineChanged`, B10 License check keyed on the LICENSE blob), `engine/skills/route_column_pins_test.go` (block R), `engine/skills/routes.go` (comment lines only: `git diff -U0 HEAD -- engine/skills/routes.go` shows only `//` lines added or removed).
+  - Authored lines: 72 added and 17 removed by `git diff --numstat HEAD -- engine skills` (shelltest 22/8, artifact test 17/5, pins test 22/0, `routes.go` 3/2, `PROVENANCE.md` 1/1, `evidence.sh` 7/1). Inside L34's 85-130 forecast (89 changed). The document and review records are not counted.
+  - The `os/exec` duplicate-key premise of L32 held: with `PATH=<empty dir>` in `extra`, the script found no `awk` and `sh` was still found by the test process (B11 RED showed `awk: not found`, then GREEN). `rg -n 'evidence\.sh' engine/` shows no code but `evidenceWorld.run` executing the script (the artifact test only runs `sh -n`).
+  - Test-first, each shown by a mutation, all reverted from backups (`cp`), none by `git checkout`:
+
+    | Step | Change | Result |
+    |---|---|---|
+    | B11 RED | test added, script as at HEAD | `TestEvidenceStoreWithoutAwkSaysSoAndExitsThree` FAIL: check and rule exit 1, count, rules and index exit 0, stderr is the shell's `awk: not found` (usage case passes) |
+    | B11 GREEN | guard and header | `go test ./shelltest/ -run Evidence` ok |
+    | B10 RED | script changed, `- Nothing.` kept | `TestEvidenceStore_CopiesMatchTheSnapshotOrAreListedAsChanged` FAIL "evidence.sh differs from the snapshot and the Changed section does not name it" and "1 copies differ ... must not say "- Nothing."" |
+    | B10 GREEN | Changed entry | `go test ./skills/ -run EvidenceStore` ok |
+    | F3 RED | block R added, comment as at HEAD | `TestRouteTexts_NameEveryReasonADestIsEmpty` FAIL: block R lacks `opencode`, and says `every target` |
+    | F3 GREEN | comment rewritten | `-run RouteTexts` ok |
+    | M7 | `LICENSE` plus newline, `- `LICENSE`: probe.` appended, line 8 "(identical to the snapshot)." | T21's B10 ok (the gap); new B10 FAIL "LICENSE differs from the snapshot (blob 392e44e5..., not b6f9c476...), so the License line is exactly ..." |
+    | M8 | same, line 8 set to `licenseLineChanged` | B10 ok |
+    | M9 | `LICENSE` untouched, `byte-identical` dropped from line 8 | B10 FAIL "LICENSE equals the snapshot, so the License line is exactly ..." |
+    | M10 | `every target` restored in the `routes.go` comment | `TestRouteTexts_NameEveryReasonADestIsEmpty` FAIL "block R ... says "every target"" |
+    | X13 | `: > /tmp/evidence-probe` after the shebang | `go test ./shelltest/ -run Evidence`: all 10 evidence tests FAIL ("names /tmp", ten matches); `/tmp/evidence-probe` absent before and after |
+    | guard dropped | the four guard lines removed | `TestEvidenceStoreWithoutAwkSaysSoAndExitsThree` FAIL (only that test) |
+    | `- Nothing.` restored | the Changed entry replaced by `- Nothing.` | B10 FAIL (differs and not named; must not say `- Nothing.`) |
+    | `- Nothing.` beside | `- Nothing.` appended after the entry | B10 FAIL "1 copies differ ... must not say "- Nothing."" (the F1 rule on real files) |
+
+  - Checks, in `engine/`: `gofmt -l shelltest/ skills/` printed nothing; `shellcheck -s sh ../skills/_shared/evidence/evidence.sh` printed nothing, exit 0; `go test ./shelltest/ ./skills/ -count=1`: both ok; `go run ./cmd/ skills validate --registry ../skills.registry.yaml --manifest ../overlay.manifest --source-root ../skills`: "skills/ on disk matches overlay.manifest (89 files)"; `go test ./... -count=1` (once): exit 0, 87 `ok` lines, and two `[no test files]` lines (`enginetest`, `repotest`).
+  - Tests use no real HOME: the script runs with `HOME=<tmp>` and `TMPDIR=<tmp>/tmpdir`. `/tmp/evidence-probe` was absent after X13.
+  - Risk: items 3 (the exit contract of `evidence.sh`, which T5 consumes) and 5 (a deployed file changes).
+- **L36** (2026-11-22, delivery): delivery of branch `feat/playbook-evidence-store` at head `0178aa75ec8789fe9a82f475b0a0d592a8354bdb` (`0178aa75`), onto `origin/main` (`14f7a6dc`). The feature is NOT finished: T3 to T18 and T7 to T15 stay open. This entry closes nothing else; the document is not closed.
+
+  **State at close.**
+  - Delivered on this branch, `[x]`, each with its commit: T2 (T2a `62604473`, T2b `8e035ddb`), T20 (`d1e57b32`), T21 (`7b634ced`), T22 (`0178aa75`). T1 and T19 were delivered before base `b4d60151` and are `[x]` in their lines.
+  - Open, `[ ]`, unfinished: T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18.
+  - Specs covered by the delivered commits: S2 and S4 (through T2, T20, T21, T22); S15 held as a constraint.
+  - Commits on the branch over `origin/main`: `62604473` feat(evidence) absorb; `d1e57b32` fix(skills) Claude-only; `8e035ddb` test(evidence) pin the modes; `7b634ced` test(skills) pin the route column; `0178aa75` fix(evidence) fail loud when awk is missing.
+
+  **Review records** (all under `odd/review-results/merge-playbook-into-sdd-overlay/` unless named):
+  - `62604473`: `626044733022-3.json`, `626044733022-4.json`, with sweeps `-1.sweep.json`, `-2.sweep.json` and polishers `-5.polisher.json`, `-6.polisher.json`.
+  - `d1e57b32`: `d1e57b32f786-2.json`, `d1e57b32f786-3.json`, with `-1.sweep.json`, `-4.polisher.json`, `-5.polisher.json`.
+  - `8e035ddb`: `8e035ddb49dc-2.json`, with `-1.sweep.json`.
+  - `7b634ced`: `7b634ced2367-2.json`, with `-1.sweep.json`.
+  - `0178aa75`: `0178aa75ec87-3.json`, `0178aa75ec87-5.json`, with `-1.sweep.json`, `-2.polisher.json`, `-4.polisher.json`; committed by this delivery (they were untracked until then).
+  - Base `b4d60151`: `odd/review-results/consolidation-phase9/b4d601515f79-1.sweep.json`, committed by this delivery.
+
+  **Review check.** `labdrian review check --feature merge-playbook-into-sdd-overlay --head 0178aa75ec8789fe9a82f475b0a0d592a8354bdb --onto origin/main`: exit 0, `"outcome": "clear"`. Exemptions: none printed. Ranges and results it printed:
+  - `14f7a6dc..b4d60151`: none.
+  - `b4d60151..62604473`: `626044733022-3` (fix F1; carry F2 to F6), `626044733022-4` (fix F1; carry F2).
+  - `62604473..d1e57b32`: `d1e57b32f786-2` (carry F1, F2), `d1e57b32f786-3`.
+  - `d1e57b32..8e035ddb`: `8e035ddb49dc-2` (carry F1 to F3).
+  - `8e035ddb..7b634ced`: `7b634ced2367-2` (carry F1 to F3).
+  - `7b634ced..0178aa75`: `0178aa75ec87-3`, `0178aa75ec87-5` (carry F1, F2).
+
+  **Suggestions carried (review `0178aa75ec87-5`; carried, not declined):**
+  - F1: the block R route-name check of `TestRouteTexts_NameEveryReasonADestIsEmpty` (`engine/skills/route_column_pins_test.go`) is non-load-bearing, because its anchor line holds `claude-skill`. Carried to T6, the first task of this feature that changes the evidence store and its tests. If T6 does not touch `route_column_pins_test.go`, it carries again to the next task that does.
+  - F2: the Changed entry at `skills/_shared/evidence/PROVENANCE.md:13` omits the count and the check. Carried to T6, which changes `evidence.sh` (history mode and `check`), so B10 requires that entry to name the change.
+
+  **Test run.** `cd engine && go test ./... -count=1`: exit 0, 87 `ok` lines, no `FAIL`. Run at `0178aa75`, the worktree clean apart from the untracked review records.
+
+  **CI gate.** `labdrian review ci --landing 0178aa75ec8789fe9a82f475b0a0d592a8354bdb --head 0178aa75ec8789fe9a82f475b0a0d592a8354bdb`: exit 1, stderr: `error: review ci: the tree of the landing 0178aa75ec8789fe9a82f475b0a0d592a8354bdb holds CI markers: .github/workflows/ci.yml, .github/workflows/release.yml; the repository has remotes: origin; the no-CI closure does not apply`. The CI job "Engine Tests" has not run; it is not run here and is still to be confirmed after the foreman's push.
+
+  **Unfinished at close:** T3 to T18 and T7 to T15 (listed above); the CI run of this head (see CI gate); push, PR and merge, which are the foreman's under the owner's standing ok.

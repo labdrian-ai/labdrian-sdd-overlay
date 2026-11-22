@@ -1,0 +1,18 @@
+{
+  "kind": "polisher",
+  "base": "62604473302240043e301ed5ed6b810b09f70e8d",
+  "head": "d1e57b32f7862dcdadf0687e49ccf0ed61bebeb0",
+  "diff_sha256": "4339ee3e7d7503ccb81a7f5f6189735c6a782b5e24aeced8afcc4b400394ec1e",
+  "findings": {
+    "findings": [],
+    "evidence": [
+      "Read the full diff t20.diff (703 lines, all paths)",
+      "Risk 3: engine/skills/routes.go:180-303: claude-skill falls through to the skill branch with RepoRel skills/<path>; OpenCode returns first; skillRouteTargets clears Dest for every target other than claude before the SkillsRoot check; longterm-mem rows routed claude-skill are refused",
+      "Shell consumers: route value used only in apply.sh:181 (mcp), bootstrap.sh:103 and capture.sh:106 via route_tar_path, which maps claude-skill to the same tarball path as a skill row",
+      "Per-target shell loops skip rows with an empty dest: apply.sh:185, backups.sh:35, bootstrap.sh:134, capture.sh:123, deploy_state.sh:35, restore.sh:120, status.sh:60, sync_check.sh:103",
+      "Go readers: ResolveRoutes only from engine/skills/app/routes.go:44; DeployableManifestPaths keeps the files under skills/; other readers read only the first two fields",
+      "Pi: pipkg copies only one-element skills/_shared/<name>.md, so the evidence files are never packaged for Pi",
+      "Not run: go test, skills validate, apply"
+    ]
+  }
+}

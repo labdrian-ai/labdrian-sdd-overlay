@@ -21,11 +21,15 @@ import (
 // effect of moving the code.
 
 // The routes of a row, the value of its third column. A row with no third column takes RouteSkill.
-// A value outside these is not refused (except under longterm-mem/, see UnroutedRowError): the row
-// takes the skill route and keeps the value as its name.
+// A value outside these is not refused by the routing (except under longterm-mem/, see
+// UnroutedRowError): the row takes the skill route, keeps the value as its name and is copied like a
+// skill row. overlay.manifest holds no such value: TestOverlayManifest_EveryThirdColumnIsAKnownRoute
+// fails on one, so a misspelt route is caught before it is deployed.
 const (
-	// RouteSkill copies a row from skills/ to the skills directory of every target.
+	// RouteSkill copies a row from skills/ to the skills directory of Claude Code and of Codex; OpenCode reads the skills of Claude Code, so no copy is made for it (see resolveRoute).
 	RouteSkill = "skill"
+	// RouteClaudeSkill copies a row from skills/ to the skills directory of Claude Code alone; no other target takes it.
+	RouteClaudeSkill = "claude-skill"
 	// RouteAgent copies a row from agents/ to the agents directory of Claude Code.
 	RouteAgent = "agent"
 	// RouteOpencodeAgent copies a row from opencode/agents/ to the agents directory of OpenCode.
@@ -124,7 +128,9 @@ type ResolvedRoute struct {
 	// is never deployed.
 	RepoSource string
 	// Dest is the absolute path the file is copied to for the target; empty when the row goes
-	// nowhere for it (a native agent of another runtime, an mcp row, a row never deployed).
+	// nowhere for it: a native agent or an output style of another runtime, a skill row for OpenCode
+	// (it reads the skills of Claude Code), a row of a skills route scoped to another runtime
+	// (claude-skill for any target but Claude Code), an mcp row, a row never deployed.
 	Dest string
 }
 
@@ -185,6 +191,11 @@ var agentRouteTargets = map[string]string{
 	RouteOpencodeAgent: capability.TargetOpenCode,
 	RouteCodexAgent:    capability.TargetCodex,
 	RouteOutputStyle:   capability.TargetClaude,
+}
+
+// skillRouteTargets names the one runtime a skills-directory route is for.
+var skillRouteTargets = map[string]string{
+	RouteClaudeSkill: capability.TargetClaude,
 }
 
 // ResolveRoutes decides, for each row of the manifest, the route it takes and where its file is
@@ -272,16 +283,21 @@ func resolveRoute(path, declared, overlayRoot string, dest RouteDestinations) (R
 		placed.RepoSource = overlayRoot + "/" + path
 		return placed, nil
 	}
-	// The skill route, and the route of any other third column: the skills directory of every
-	// target. Only the first names the file by its place in skills/ on the branches.
+	// The skill route, claude-skill, and the route of any other third column: the skills directory of
+	// the target, but no copy for OpenCode (it reads the skills of Claude Code, below) and none for a
+	// target that a scoped route such as claude-skill is not for. Only skill and claude-skill name the
+	// file by its place in skills/ on the branches.
 	placed.RepoRel = path
-	if route == RouteSkill {
+	if route == RouteSkill || route == RouteClaudeSkill {
 		placed.RepoRel = "skills/" + path
 	}
 	placed.RepoSource = overlayRoot + "/skills/" + path
 	// OpenCode v2 reads the skills of ~/.claude/skills; a copy in its own directories would shadow them
 	// (S13, measured in L10 T5), so no skill row is copied for it. Its native agents are placed above.
 	if dest.Target == capability.TargetOpenCode {
+		return placed, nil
+	}
+	if runtime, scoped := skillRouteTargets[route]; scoped && runtime != dest.Target {
 		return placed, nil
 	}
 	if dest.SkillsRoot == "" {

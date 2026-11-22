@@ -1,0 +1,19 @@
+{
+  "kind": "sweep",
+  "base": "b4d601515f7980c6a60d20943b08705600ea84f1",
+  "head": "62604473302240043e301ed5ed6b810b09f70e8d",
+  "diff_sha256": "7b0a5bb9b3a92be26c7280d9c103720308e030021684aab06ab9194999034f17",
+  "outcome": "fired",
+  "t1": {
+    "deleted_or_renamed": [],
+    "removed_names": []
+  },
+  "t2": [],
+  "t3": [
+    " M odd/tasks/merge-playbook-into-sdd-overlay.md"
+  ],
+  "t4": {
+    "leftovers": [],
+    "orphaned_fixtures": []
+  }
+}

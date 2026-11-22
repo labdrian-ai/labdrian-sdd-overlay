@@ -331,12 +331,13 @@ func TestRouteDomain_OnDiskCheckAndRoutingAgree(t *testing.T) {
 // check expects under skills/ is a row the routing copies into the skills directories, and the
 // other way round: the rows with a tag of routingManifest, which holds a row of each kind.
 func TestDeployableManifestPaths_AgreesWithTheRoutingOnWhatGoesToSkills(t *testing.T) {
-	onDisk, err := DeployableManifestPaths(strings.NewReader(routingManifest + "weird/SKILL.md managed unknown-route\n"))
+	manifest := routingManifest + "weird/SKILL.md managed unknown-route\nclaude-only/run.sh custom claude-skill\n"
+	onDisk, err := DeployableManifestPaths(strings.NewReader(manifest))
 	if err != nil {
 		t.Fatalf("DeployableManifestPaths: %v", err)
 	}
 	var tagged []ManifestRow
-	for _, row := range ReadManifestRows([]byte(routingManifest + "weird/SKILL.md managed unknown-route\n")) {
+	for _, row := range ReadManifestRows([]byte(manifest)) {
 		if row.Tag != "" {
 			tagged = append(tagged, row)
 		}

@@ -1,0 +1,97 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "62604473302240043e301ed5ed6b810b09f70e8d",
+    "head": "d1e57b32f7862dcdadf0687e49ccf0ed61bebeb0",
+    "diff_sha256": "4339ee3e7d7503ccb81a7f5f6189735c6a782b5e24aeced8afcc4b400394ec1e",
+    "paths": [
+      "CHANGELOG.md",
+      "README.md",
+      "bin/lib/manifest_routes.sh",
+      "engine/cmd/usage.go",
+      "engine/installer/routing_claude_skill_test.go",
+      "engine/skills/evidence_store_artifact_test.go",
+      "engine/skills/ondisk.go",
+      "engine/skills/ondisk_test.go",
+      "engine/skills/routes.go",
+      "engine/skills/routes_test.go",
+      "odd/review-results/merge-playbook-into-sdd-overlay/626044733022-1.sweep.json",
+      "odd/review-results/merge-playbook-into-sdd-overlay/626044733022-2.sweep.json",
+      "odd/review-results/merge-playbook-into-sdd-overlay/626044733022-3.json",
+      "odd/review-results/merge-playbook-into-sdd-overlay/626044733022-4.json",
+      "odd/tasks/merge-playbook-into-sdd-overlay.md",
+      "overlay.manifest"
+    ]
+  },
+  "rows": [
+    "recall",
+    "hunt",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "62604473302240043e301ed5ed6b810b09f70e8d",
+      "head": "d1e57b32f7862dcdadf0687e49ccf0ed61bebeb0",
+      "diff_sha256": "4339ee3e7d7503ccb81a7f5f6189735c6a782b5e24aeced8afcc4b400394ec1e"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "README.md",
+        "bin/lib/manifest_routes.sh",
+        "engine/cmd/usage.go",
+        "engine/installer/routing_claude_skill_test.go",
+        "engine/skills/evidence_store_artifact_test.go",
+        "engine/skills/ondisk.go",
+        "engine/skills/ondisk_test.go",
+        "engine/skills/routes.go",
+        "engine/skills/routes_test.go",
+        "odd/review-results/merge-playbook-into-sdd-overlay/626044733022-1.sweep.json",
+        "odd/review-results/merge-playbook-into-sdd-overlay/626044733022-2.sweep.json",
+        "odd/review-results/merge-playbook-into-sdd-overlay/626044733022-3.json",
+        "odd/review-results/merge-playbook-into-sdd-overlay/626044733022-4.json",
+        "odd/tasks/merge-playbook-into-sdd-overlay.md",
+        "overlay.manifest"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "engine/skills/routes.go:282-297",
+        "severity": "SUGGESTION",
+        "claim": "Any value outside the known routes still falls through to the generic skill route (routes.go:23-25, 282-301), so a misspelling of the new scoped value fails open. For example, `_shared/x/run.sh custom claude-skills` or `Claude-Skill` is not in skillRouteTargets, so it gets a Dest under every copy target's skills root, including ~/.codex/skills, the deployment T20 removes. Nothing refuses or warns about it. The four current rows are protected by the exact-value check in TestEvidenceStore_ManifestHoldsFourClaudeSkillRows; future Claude-only rows have no such guard. Possible fixes: refuse an unknown third column on a custom row, or add a manifest-wide test that every third column is a known route.",
+        "evidence_class": "inferential",
+        "causal_disposition": "pre-existing",
+        "proof_refs": [
+          "engine/skills/routes.go:23-25",
+          "engine/skills/routes.go:285-301",
+          "engine/skills/evidence_store_artifact_test.go:108-121 (only the four evidence paths are pinned)"
+        ]
+      },
+      {
+        "id": "F2",
+        "location": "engine/skills/routes.go:128-130",
+        "severity": "SUGGESTION",
+        "claim": "This change adds a new reason for an empty Dest: a claude-skill row resolved for codex. The places that list when Dest is empty were not updated: ResolvedRoute.Dest (routes.go:128-130), the dest column comment in bin/lib/manifest_routes.sh:38-40, and the RouteSkill doc (routes.go:27) which still says every target.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/skills/routes.go:128-130",
+          "bin/lib/manifest_routes.sh:38-40",
+          "engine/skills/routes.go:295-297"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full diff t20.diff (703 lines, 16 paths)",
+      "engine/skills/routes.go:1-320 at head",
+      "bin/lib/manifest_routes.sh, capture.sh, bootstrap.sh, sync_check.sh, apply.sh:181",
+      "bin/lib/targets.sh; engine/pipkg/build.go does not package the evidence subdirectory for pi",
+      "F1 of 626044733022-3 and -4 resolved, pinned by R1, R5 and R6",
+      "F2 and F3 of 626044733022-3 resolved",
+      "Not run: go test, apply, skills validate, gofmt, bash -n"
+    ]
+  }
+}

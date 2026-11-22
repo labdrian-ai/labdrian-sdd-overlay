@@ -1,0 +1,17 @@
+{
+  "kind": "polisher",
+  "base": "7b634ced2367375a2e8f4d1572e06aaa59d67db8",
+  "head": "0178aa75ec8789fe9a82f475b0a0d592a8354bdb",
+  "diff_sha256": "5bc3f78fb1aeea339efbfe8e8a198e3115648651425d27b8e77bef6b7cd9cf40",
+  "findings": {
+    "findings": [],
+    "evidence": [
+      "Read the full diff t22.diff (438 lines)",
+      "evidence.sh lines 1-120: the command -v awk guard sits after the mode and usage parse and before the first awk call; a usage error still exits 2, every other mode exits 3 with the named stderr line; the guard uses only shell builtins",
+      "evidence.sh appears outside odd/ only in evidence-rules.md, PROVENANCE.md, overlay.manifest and the two evidence test files; no caller consumes the exit code yet (T5 not built)",
+      "PROVENANCE.md Changed section now names evidence.sh, as B10 requires",
+      "Test changes judged from the diff: B11, the /tmp scan in newEvidenceWorld, the License-line check keyed on the LICENSE blob, block R; no user-visible defect",
+      "No tests or commands were run"
+    ]
+  }
+}

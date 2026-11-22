@@ -29,7 +29,8 @@ const (
 // (the four of D13, and codex-agent from slice 4 of the role agents); output-style (T27) is a
 // route of the rows outside longterm-mem/ only, and is listed here so that its row is never a skills row; "skill"
 // is not listed here because it is the default route and IS the skills
-// destination, so it must stay out of this exclusion set.
+// destination, so it must stay out of this exclusion set. The same holds for "claude-skill": it is a
+// skills row copied for Claude Code alone, so the on-disk check still expects it under skills/.
 var nonSkillRoutes = map[string]bool{
 	"agent":          true,
 	"output-style":   true,

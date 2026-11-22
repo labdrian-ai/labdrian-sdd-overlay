@@ -57,6 +57,21 @@ func RequireBash(t testing.TB) {
 	}
 }
 
+// RequireShAndAwk is what a test of a POSIX shell script that calls awk (the evidence store) asks of the
+// machine: both on PATH. Without them it skips on a developer machine, and fails when CI is "true", so a
+// runner that lost one cannot pass by skipping.
+func RequireShAndAwk(t testing.TB) {
+	t.Helper()
+	for _, name := range []string{"sh", "awk"} {
+		if _, err := exec.LookPath(name); err != nil {
+			if os.Getenv("CI") == "true" {
+				t.Fatalf("%s is not on PATH, and CI needs it: %v", name, err)
+			}
+			t.Skipf("%s is not on PATH: %v", name, err)
+		}
+	}
+}
+
 // Env is the environment a run of the script takes, and only that: the home and the overlay it is told
 // of, the PATH of the machine, and what GitSettings says. The environment of the test process, which
 // holds whatever whoever runs the tests has exported, is not in it. extra goes last, so it wins.
