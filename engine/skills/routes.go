@@ -26,6 +26,8 @@ import (
 const (
 	// RouteSkill copies a row from skills/ to the skills directory of every target.
 	RouteSkill = "skill"
+	// RouteClaudeSkill copies a row from skills/ to the skills directory of Claude Code alone; no other target takes it.
+	RouteClaudeSkill = "claude-skill"
 	// RouteAgent copies a row from agents/ to the agents directory of Claude Code.
 	RouteAgent = "agent"
 	// RouteOpencodeAgent copies a row from opencode/agents/ to the agents directory of OpenCode.
@@ -187,6 +189,11 @@ var agentRouteTargets = map[string]string{
 	RouteOutputStyle:   capability.TargetClaude,
 }
 
+// skillRouteTargets names the one runtime a skills-directory route is for.
+var skillRouteTargets = map[string]string{
+	RouteClaudeSkill: capability.TargetClaude,
+}
+
 // ResolveRoutes decides, for each row of the manifest, the route it takes and where its file is
 // and goes to. overlayRoot is the directory of the overlay, joined to the paths of the rows by
 // concatenation and not cleaned, as the script did, so that what a person sees in a path is what
@@ -272,16 +279,20 @@ func resolveRoute(path, declared, overlayRoot string, dest RouteDestinations) (R
 		placed.RepoSource = overlayRoot + "/" + path
 		return placed, nil
 	}
-	// The skill route, and the route of any other third column: the skills directory of every
-	// target. Only the first names the file by its place in skills/ on the branches.
+	// The skill route, claude-skill, and the route of any other third column: the skills directory of
+	// every target, except that claude-skill is for Claude Code alone. Only skill and claude-skill name
+	// the file by its place in skills/ on the branches.
 	placed.RepoRel = path
-	if route == RouteSkill {
+	if route == RouteSkill || route == RouteClaudeSkill {
 		placed.RepoRel = "skills/" + path
 	}
 	placed.RepoSource = overlayRoot + "/skills/" + path
 	// OpenCode v2 reads the skills of ~/.claude/skills; a copy in its own directories would shadow them
 	// (S13, measured in L10 T5), so no skill row is copied for it. Its native agents are placed above.
 	if dest.Target == capability.TargetOpenCode {
+		return placed, nil
+	}
+	if runtime, scoped := skillRouteTargets[route]; scoped && runtime != dest.Target {
 		return placed, nil
 	}
 	if dest.SkillsRoot == "" {

@@ -13,31 +13,52 @@ import (
 
 const evidenceDirRel = "skills/_shared/evidence"
 
-func TestEvidenceStore_ManifestHoldsFourCustomRows(t *testing.T) {
-	manifest := readRepoFile(t, skillsRepoRoot(t), "overlay.manifest")
-	for _, name := range []string{"evidence.sh", "evidence-rules.md", "LICENSE", "PROVENANCE.md"} {
-		row := "_shared/evidence/" + name + " custom\n"
-		if !strings.Contains(manifest, row) {
-			t.Errorf("overlay.manifest has no row %q", strings.TrimSuffix(row, "\n"))
+var evidenceStoreNames = []string{"evidence.sh", "evidence-rules.md", "LICENSE", "PROVENANCE.md"}
+
+func TestEvidenceStore_ManifestHoldsFourClaudeSkillRows(t *testing.T) {
+	rows := ReadManifestRows([]byte(readRepoFile(t, skillsRepoRoot(t), "overlay.manifest")))
+	for _, name := range evidenceStoreNames {
+		path := "_shared/evidence/" + name
+		var found []ManifestRow
+		for _, row := range rows {
+			if row.Path == path {
+				found = append(found, row)
+			}
+		}
+		if len(found) != 1 || found[0].Tag != "custom" || found[0].Route != "claude-skill" {
+			t.Errorf("overlay.manifest rows for %s = %+v, want exactly one, tagged custom and routed claude-skill", path, found)
 		}
 	}
 }
 
-func TestEvidenceStore_DeploysBesideEachOtherForClaude(t *testing.T) {
-	manifest := readRepoFile(t, skillsRepoRoot(t), "overlay.manifest")
-	rows := ReadManifestRows([]byte(manifest))
-	routes, err := ResolveRoutes(rows, false, testOverlay, RouteDestinations{Target: "claude", SkillsRoot: "/s", AgentsRoot: "/a"})
-	if err != nil {
-		t.Fatalf("ResolveRoutes: %v", err)
-	}
-	dest := map[string]string{}
-	for _, r := range routes {
-		dest[r.Path] = r.Dest
-	}
-	for _, name := range []string{"evidence.sh", "evidence-rules.md"} {
-		path := "_shared/evidence/" + name
-		if want := "/s/" + path; dest[path] != want {
-			t.Errorf("%s deploys to %q, want %q", path, dest[path], want)
+func TestEvidenceStore_DeploysToClaudeAndToNoOtherTarget(t *testing.T) {
+	rows := ReadManifestRows([]byte(readRepoFile(t, skillsRepoRoot(t), "overlay.manifest")))
+	for _, tc := range []struct {
+		target string
+		dest   RouteDestinations
+		root   string
+	}{
+		{"claude", RouteDestinations{Target: "claude", SkillsRoot: "/s", AgentsRoot: "/a"}, "/s"},
+		{"codex", RouteDestinations{Target: "codex", SkillsRoot: "/c", AgentsRoot: "/ca"}, ""},
+		{"opencode", RouteDestinations{Target: "opencode", SkillsRoot: "/o2", AgentsRoot: "/oa"}, ""},
+	} {
+		routes, err := ResolveRoutes(rows, false, testOverlay, tc.dest)
+		if err != nil {
+			t.Fatalf("ResolveRoutes for %s: %v", tc.target, err)
+		}
+		dest := map[string]string{}
+		for _, r := range routes {
+			dest[r.Path] = r.Dest
+		}
+		for _, name := range evidenceStoreNames {
+			path := "_shared/evidence/" + name
+			want := ""
+			if tc.root != "" {
+				want = tc.root + "/" + path
+			}
+			if got, ok := dest[path]; !ok || got != want {
+				t.Errorf("%s for %s deploys to %q (row present %v), want %q", path, tc.target, got, ok, want)
+			}
 		}
 	}
 }

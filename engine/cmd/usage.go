@@ -83,7 +83,7 @@ func usage(w io.Writer) {
 	fmt.Fprintln(w, "    check: reports drift between --dest-dir and the current manifest; exit 1 on drift; changes nothing")
 	fmt.Fprintln(w, "  engine manifest routes --overlay-root <dir> --target <name> --skills-root <dir> [--agents-root <dir>] [--manifest <file>] [--managed]")
 	fmt.Fprintln(w, "    read-only: tells what the overlay does with each row of overlay.manifest (default <overlay-root>/overlay.manifest) for one target, a row a line in the order")
-	fmt.Fprintln(w, "    of the manifest, in five columns separated by a tab: the path of the row; its route (skill, agent, output-style, opencode-agent, codex-agent, mcp, non-deployable, or the third column when it is")
+	fmt.Fprintln(w, "    of the manifest, in five columns separated by a tab: the path of the row; its route (skill, claude-skill (Claude Code only), agent, output-style, opencode-agent, codex-agent, mcp, non-deployable, or the third column when it is")
 	fmt.Fprintln(w, "    none of these, which takes the skill route under its own name); where its file is in the overlay repository; the absolute path the overlay copies it from; and the")
 	fmt.Fprintln(w, "    absolute path it is copied to for --target. A column with nothing to say is empty, and an empty column is never followed by one that is not. --managed keeps the rows")
 	fmt.Fprintln(w, "    whose second column is managed. The overlay script owns the directories of its targets and hands them over: --skills-root is where --target keeps its skills, and")

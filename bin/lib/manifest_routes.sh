@@ -28,7 +28,7 @@
 #   <path> <route> <repo_rel> <repo_source> <dest>
 #
 #   path         the first column of the row
-#   route        skill, agent, output-style, opencode-agent, codex-agent, mcp or
+#   route        skill, claude-skill (Claude Code only), agent, output-style, opencode-agent, codex-agent, mcp or
 #                non-deployable;
 #                a third column nobody knows keeps its own name and is the skill
 #                route

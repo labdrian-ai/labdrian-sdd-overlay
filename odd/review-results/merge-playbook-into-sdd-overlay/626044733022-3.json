@@ -1,0 +1,123 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "b4d601515f7980c6a60d20943b08705600ea84f1",
+    "head": "62604473302240043e301ed5ed6b810b09f70e8d",
+    "diff_sha256": "7b0a5bb9b3a92be26c7280d9c103720308e030021684aab06ab9194999034f17",
+    "paths": [
+      "engine/skills/evidence_store_artifact_test.go",
+      "odd/tasks/merge-playbook-into-sdd-overlay.md",
+      "overlay.manifest",
+      "skills/_shared/evidence/LICENSE",
+      "skills/_shared/evidence/PROVENANCE.md",
+      "skills/_shared/evidence/evidence-rules.md",
+      "skills/_shared/evidence/evidence.sh"
+    ]
+  },
+  "rows": [
+    "recall",
+    "hunt"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "b4d601515f7980c6a60d20943b08705600ea84f1",
+      "head": "62604473302240043e301ed5ed6b810b09f70e8d",
+      "diff_sha256": "7b0a5bb9b3a92be26c7280d9c103720308e030021684aab06ab9194999034f17"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/skills/evidence_store_artifact_test.go",
+        "odd/tasks/merge-playbook-into-sdd-overlay.md",
+        "overlay.manifest",
+        "skills/_shared/evidence/LICENSE",
+        "skills/_shared/evidence/PROVENANCE.md",
+        "skills/_shared/evidence/evidence-rules.md",
+        "skills/_shared/evidence/evidence.sh"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "overlay.manifest:108-111",
+        "severity": "WARNING",
+        "claim": "The four new rows have no route column, so resolveRoute gives them the default skill route. That route sets Dest = SkillsRoot + \"/\" + path for every copy target except OpenCode (routes.go:275-291). TARGET_PATHS has codex=$HOME/.codex/skills (bin/lib/targets.sh:16), and apply.sh copies every row that has a destination (apply.sh:174-197). As a result, `apply --target codex` or `--target all` also places evidence.sh, evidence-rules.md, LICENSE and PROVENANCE.md in ~/.codex/skills/_shared/evidence/. This contradicts the OD-7 decision (\"Solo Claude Code\") and the T2 detail line \"Deployed for Claude Code to ~/.claude/skills/_shared/evidence/\". L22 names this as an undecided risk and defers it to T11. Nothing reads the files on Codex, so the failure is limited to unwanted deployed content.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "overlay.manifest:108-111 (added rows, no third column)",
+          "engine/skills/routes.go:229-231,275-291",
+          "bin/lib/targets.sh:13-17",
+          "bin/lib/apply.sh:174-197"
+        ]
+      },
+      {
+        "id": "F2",
+        "location": "engine/skills/evidence_store_artifact_test.go:43-48",
+        "severity": "SUGGESTION",
+        "claim": "A2 pins the deployed path only for evidence.sh and evidence-rules.md. Nothing pins that LICENSE and PROVENANCE.md deploy beside the code, which is what S9's \"travel with the code\" requires. Add both names to the A2 loop.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/skills/evidence_store_artifact_test.go:43"
+        ]
+      },
+      {
+        "id": "F3",
+        "location": "engine/skills/evidence_store_artifact_test.go:24-29",
+        "severity": "SUGGESTION",
+        "claim": "A1 looks for each row with strings.Contains on the whole manifest, with no line-start anchor. A line such as `x_shared/evidence/LICENSE custom` would satisfy it while the real row is missing. Match a newline plus the row, or compare parsed ReadManifestRows paths and routes.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/skills/evidence_store_artifact_test.go:25-26"
+        ]
+      },
+      {
+        "id": "F4",
+        "location": "skills/_shared/evidence/PROVENANCE.md:8-13",
+        "severity": "SUGGESTION",
+        "claim": "PROVENANCE.md states that LICENSE is byte-identical to the snapshot and lists \"Changed since the snapshot: Nothing\". No test compares the three copied files with the snapshot or with recorded hashes, so a later edit without a PROVENANCE update would make the note false with no failing check. Pin the git blob hashes in a test that T6, T7 and T17 update together with the Changed list.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "skills/_shared/evidence/PROVENANCE.md:8,13"
+        ]
+      },
+      {
+        "id": "F5",
+        "location": "skills/_shared/evidence/evidence.sh:26-31",
+        "severity": "SUGGESTION",
+        "claim": "The deployed header describes playbook mechanisms that do not exist in this repository: \"The SubagentStart hook gives this index\" and the id \"seed-evidence-31\". L22 accepts this until T5 or T7, but PROVENANCE.md does not mention it.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "skills/_shared/evidence/evidence.sh:26",
+          "odd/tasks/merge-playbook-into-sdd-overlay.md L22 risk 2"
+        ]
+      },
+      {
+        "id": "F6",
+        "location": "engine/skills/evidence_store_artifact_test.go:74-83",
+        "severity": "SUGGESTION",
+        "claim": "A4 calls t.Skip when no `sh` is on PATH and checks only syntax with the host sh, so it passes under bash-as-sh even for bashisms. The runtime need for awk is never checked; a host without awk would make index print nothing and exit 0, which reads as \"no rules\".",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/skills/evidence_store_artifact_test.go:75-78",
+          "skills/_shared/evidence/evidence.sh:501-506"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full diff t2a.diff (all 7 changed paths)",
+      "engine/skills/routes.go:220-310",
+      "bin/lib/targets.sh:1-30",
+      "bin/lib/apply.sh:130-219",
+      "Grep of bin/lib for _shared, rm, chmod and TARGET_PATHS usage",
+      "/home/labdrian/.local/share/playbook/LICENSE header matches the copied file (full byte comparison not run)",
+      "No commands were run"
+    ]
+  }
+}
