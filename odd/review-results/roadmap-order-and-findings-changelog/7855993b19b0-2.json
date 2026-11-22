@@ -1,0 +1,94 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "0ca70c23a4573b87c0b41fe136d3b2c43891272a",
+    "head": "7855993b19b011e300793eb92fad42dac4fe177f",
+    "diff_sha256": "440a33e212ec74bb69c1827a837bc5c8aa24b0733258037c0c2da45a2ef812c9",
+    "paths": [
+      "odd/goals/roadmap-order-and-findings-changelog.json",
+      "odd/tasks/roadmap-order-and-findings-changelog.md",
+      "openspec/decisions/standalone-platform-roadmap.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "0ca70c23a4573b87c0b41fe136d3b2c43891272a",
+      "head": "7855993b19b011e300793eb92fad42dac4fe177f",
+      "diff_sha256": "440a33e212ec74bb69c1827a837bc5c8aa24b0733258037c0c2da45a2ef812c9"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/goals/roadmap-order-and-findings-changelog.json",
+        "odd/tasks/roadmap-order-and-findings-changelog.md",
+        "openspec/decisions/standalone-platform-roadmap.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "openspec/decisions/standalone-platform-roadmap.md:93",
+        "severity": "SUGGESTION",
+        "claim": "The rewritten Sequencing sentence still ends with 'this register does not add dependency edges beyond that stated sequence'. Two things make that sentence unclear now. First, 'that stated sequence' now points at two things: the Phase 7-9 phase sequence and 'the order after Phase 9 below'. Second, the edited Dependency cells of Phase 10 and Phase 11 (lines 40-41) now state ordering edges ('Comes after ...', '... no other dependency is asserted here'). These treat the owner's order as a dependency, while line 26 says dependencies appear only where the source establishes them. A reader can't tell whether the owner's order is a scheduling order or a dependency that gates Phase 10 work. The likely result is that some agents treat telemetry work as blocked and others don't.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "diff hunk @@ -90,7 +90,9 @@ (line 93 rewrite keeps the trailing clause)",
+          "diff hunk @@ -37,8 +37,8 @@ (Dependency cells now assert 'Comes after' edges)",
+          "worktree line 26: 'Dependencies are listed only where the source explicitly establishes them.'"
+        ]
+      },
+      {
+        "id": "F2",
+        "location": "openspec/decisions/standalone-platform-roadmap.md:40",
+        "severity": "SUGGESTION",
+        "claim": "The Phase 10 Dependency cell makes Phase 10 come after 'the cleanup' but does not say the cleanup is Open with no defined scope. That caveat appears only in the Sequencing paragraph (line 95). Someone who reads only the register row sees a gating item with no scope and no exit condition, so it is unclear when Phase 10 can start. S1 requires the cleanup to be written as Open wherever it is given a role.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "diff line +137 (Phase 10 Dependency cell)",
+          "diff line +149 ('3. cleanup (Open: its scope is not defined)')"
+        ]
+      },
+      {
+        "id": "F3",
+        "location": "openspec/decisions/standalone-platform-roadmap.md:95",
+        "severity": "SUGGESTION",
+        "claim": "The roadmap quotes the owner's 2026-11-21 answer 'vamos con ese prden el de ayer' as 'the owner kept it' but leaves out the question it answered. That question was whether to put labdrian improvements before the trysm launch (S1 and L1). It also leaves out the owner's earlier statement that day, which named 'las mejoras nuestro labdrian'. Without that context, a later reader can't check what the owner confirmed, and the record of what was decided (R7) is less clear.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "diff line +149",
+          "odd/tasks/roadmap-order-and-findings-changelog.md L1 and S1 (question context)"
+        ]
+      },
+      {
+        "id": "F4",
+        "location": "openspec/decisions/standalone-platform-roadmap.md:54-86",
+        "severity": "SUGGESTION",
+        "claim": "Line 9 now calls the register 'Phase 0–11', but lines 54, 81 and 86 still say 'Phase 0–10', and so do the linked docs/architecture/standalone-product-roadmap.md:3 and standalone-product-start-here.md:5. The P0–P8 crosswalk therefore appears to leave out Phase 11, the release phase that P8 relates to. The stale range existed before this change. The change makes the mismatch visible inside the file, and L2 deliberately left those lines as they were.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "pre-existing",
+        "proof_refs": [
+          "worktree roadmap lines 9, 54, 81, 86",
+          "docs/architecture/standalone-product-roadmap.md:3",
+          "docs/architecture/standalone-product-start-here.md:5"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full diff t1.diff (all three changed paths)",
+      "Read openspec/decisions/standalone-platform-roadmap.md lines 1-32 and 42-91 in the worktree; grepped for Phase 10/11, observability and release mentions; no remaining sentence orders Phase 10 before Phase 11 after Phase 9",
+      "Checked the T1 edits against L2 items 1-5; the diff matches the designed text, changes no Status cell or phase number, adds no OpenCode or Hermes item",
+      "Checked anchor #sequencing-and-completion matches heading at worktree line 91",
+      "Grepped odd/goals for memory_directive source 'engram'; all 15 goal files use it",
+      "Grepped docs/architecture/standalone-product-*.md for Phase 10/11 range references",
+      "No commands were run (reviewer is read-only)"
+    ]
+  }
+}

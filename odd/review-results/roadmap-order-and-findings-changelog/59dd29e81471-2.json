@@ -1,0 +1,60 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "d632ee42a7700c00c9c59558ccb79ae30897e9a9",
+    "head": "59dd29e81471140107a370937c2353f42fb181bb",
+    "diff_sha256": "206361c9f3490055761002f0c0fea6b5a19215c9e06c549d8ef647411b38f00d",
+    "paths": [
+      "odd/review-results/roadmap-order-and-findings-changelog/d632ee42a770-1.sweep.json",
+      "odd/review-results/roadmap-order-and-findings-changelog/d632ee42a770-2.json",
+      "odd/tasks/roadmap-order-and-findings-changelog.md",
+      "openspec/decisions/standalone-platform-roadmap.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "d632ee42a7700c00c9c59558ccb79ae30897e9a9",
+      "head": "59dd29e81471140107a370937c2353f42fb181bb",
+      "diff_sha256": "206361c9f3490055761002f0c0fea6b5a19215c9e06c549d8ef647411b38f00d"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/review-results/roadmap-order-and-findings-changelog/d632ee42a770-1.sweep.json",
+        "odd/review-results/roadmap-order-and-findings-changelog/d632ee42a770-2.json",
+        "odd/tasks/roadmap-order-and-findings-changelog.md",
+        "openspec/decisions/standalone-platform-roadmap.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "odd/tasks/roadmap-order-and-findings-changelog.md:25-27",
+        "severity": "SUGGESTION",
+        "claim": "The new bullet 'Carried finding of T3's review (d632ee42a770-2 ...)' was inserted between T1's carried F3 and F4. The existing F4 line is indented as a child of the preceding bullet, so it now nests under the T3-review heading instead of under 'Carried findings of T1's review (7855993b19b0-2 ...)'. In the rendered list, d632ee42a770-2 appears to carry an F4 ('Phase 0–10' to 'Phase 0–11'). That review record has only F1, and F4 belongs to 7855993b19b0-2. A reader tracing finding provenance would attribute F4 to the wrong review. Fix: move the new T3-review bullet below the F4 line, after line 27.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "diff hunk @@ -21,9 +21,11 @@ of odd/tasks/roadmap-order-and-findings-changelog.md: the added '  - Carried finding of T3's review' bullet and its '    - F1' child sit before the unchanged '    - F4 (pre-existing)' line",
+          "worktree odd/tasks/roadmap-order-and-findings-changelog.md lines 25-27",
+          "odd/review-results/roadmap-order-and-findings-changelog/d632ee42a770-2.json findings: only F1"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full diff t4.diff: 4 changed paths",
+      "Roadmap line 95 matches L11's text exactly; the foreman's question is quoted verbatim, identical to L10, with date and pointer; F1 of d632ee42a770-2 is resolved",
+      "Owner quotes on line 95 unchanged byte for byte",
+      "No \\uXXXX escape in the roadmap; literal characters in the diff",
+      "Roadmap: only line 95 changed",
+      "Task document: T4 added and checked, shaped by L11; L10-L13 appended without rewriting earlier entries; T4 scope exception recorded in L12",
+      "The two d632ee42a770 review records are new files matching the T3 review",
+      "No commands were run beyond read-only Read and Grep"
+    ]
+  }
+}

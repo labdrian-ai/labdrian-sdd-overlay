@@ -1,0 +1,43 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "59dd29e81471140107a370937c2353f42fb181bb",
+    "head": "3442f76df69106a93acc1aadb29af1d8f691fc3c",
+    "diff_sha256": "eedf071bda2971389f3ed91583caf22be9dcd3766ccd69c16590ac72bed6e227",
+    "paths": [
+      "odd/review-results/roadmap-order-and-findings-changelog/59dd29e81471-1.sweep.json",
+      "odd/review-results/roadmap-order-and-findings-changelog/59dd29e81471-2.json",
+      "odd/tasks/roadmap-order-and-findings-changelog.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "59dd29e81471140107a370937c2353f42fb181bb",
+      "head": "3442f76df69106a93acc1aadb29af1d8f691fc3c",
+      "diff_sha256": "eedf071bda2971389f3ed91583caf22be9dcd3766ccd69c16590ac72bed6e227"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/review-results/roadmap-order-and-findings-changelog/59dd29e81471-1.sweep.json",
+        "odd/review-results/roadmap-order-and-findings-changelog/59dd29e81471-2.json",
+        "odd/tasks/roadmap-order-and-findings-changelog.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "Read the whole diff t5.diff: two new review records and one modified task document",
+      "In Specs the only change is the F4 (pre-existing) line moved after T1's F3; removed and added lines are byte-identical",
+      "Task document lines 21-28: T1-review heading 21, F1-F3 22-24, F4 25, T3-review heading 26, its F1 27, S1 Acceptance 28; F1 of 59dd29e81471-2 resolved",
+      "Grep with the L14 pattern matched lines 21, 25, 26, 28 and 33",
+      "Outside Specs only the T5 task line and Log entries L14 and L15 were added; no earlier Log entry rewritten",
+      "The two 59dd29e81471-* review records are new files binding d632ee42..59dd29e8 with one finding F1",
+      "No commands were run; read-only Read and Grep only"
+    ]
+  }
+}

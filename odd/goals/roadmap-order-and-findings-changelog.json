@@ -1,0 +1,44 @@
+{
+  "version": 3,
+  "project_id": "labdrian-sdd-overlay",
+  "goal_id": "roadmap-order-and-findings-changelog",
+  "objective": "Write the owner's order after Phase 9 (playbook merge, trysm launch, cleanup, telemetry; memorycard #6178, kept by #6184) into openspec/decisions/standalone-platform-roadmap.md, name the four skip reasons of labdrian review findings in its CHANGELOG.md entry (carried SUGGESTION F1 of merge-playbook-into-sdd-overlay), and resolve the carried suggestions F1-F4 of T1's review 7855993b19b0-2, the order after Phase 9 being a scheduling order that does not gate work (owner, 2026-11-22: \"solo orden\"), per odd/tasks/roadmap-order-and-findings-changelog.md.",
+  "scope": "The specs S1 and S2 of odd/tasks/roadmap-order-and-findings-changelog.md; tasks T1, T2 and T3, documentation only.",
+  "constraints": [
+    "Documentation only: no code and no tests change.",
+    "Phase numbers stay as they are; no Status cell and no new work item changes; besides the order after Phase 9, the only roadmap changes are the Dependency cells of the Phase 10 and Phase 11 rows and the range Phase 0–10 → Phase 0–11 on roadmap lines 54, 81 and 86.",
+    "Outside the roadmap, the only changes are the range Phase 0–10 → Phase 0–11 in docs/architecture/standalone-product-roadmap.md line 3 and docs/architecture/standalone-product-start-here.md line 5.",
+    "The order after Phase 9 is a scheduling order and does not gate work (owner, 2026-11-22: \"solo orden\").",
+    "The owner's words are quoted verbatim, with the date and who decided.",
+    "Cleanup keeps no scope until the owner defines it.",
+    "odd/tasks/consolidation-phase9.md is not edited by a builder task; its Log is append-only and the foreman carries the note.",
+    "Commits use Conventional Commits with no AI attribution or Co-Authored-By."
+  ],
+  "non_goals": [
+    "Renumbering the phases.",
+    "Adding OpenCode or Hermes items to the roadmap.",
+    "Defining the scope of the cleanup.",
+    "Renaming the tool to trysm.",
+    "Settling the reason string verdict base-reproduced."
+  ],
+  "acceptance_criteria": [
+    "Each task of odd/tasks/roadmap-order-and-findings-changelog.md is checked off with its commits.",
+    "No sentence of openspec/decisions/standalone-platform-roadmap.md orders Phase 10 before Phase 11 after Phase 9, and the file states the order with the owner's words and the accepted cost.",
+    "The labdrian review findings entry of CHANGELOG.md names causal_disposition pre-existing, causal_disposition base-only, verdict not-reproduced and verdict base-reproduced.",
+    "openspec/decisions/standalone-platform-roadmap.md states the order after Phase 9 as a scheduling order that does not gate work, quotes the owner's \"solo orden\" once, and no Dependency cell says \"Comes after\".",
+    "No \"Phase 0–10\" remains in openspec/decisions/standalone-platform-roadmap.md, docs/architecture/standalone-product-roadmap.md or docs/architecture/standalone-product-start-here.md; each names Phase 0–11 instead.",
+    "go test ./... in engine/ passes."
+  ],
+  "memory_directive": {
+    "version": 1,
+    "scope": "project",
+    "sources": [
+      "engram",
+      "longterm-mem",
+      "procedural-skills"
+    ],
+    "write": "none"
+  },
+  "runtime_scope": "Claude Code, as the parent that runs the labdrian workflow and the role agents.",
+  "delivery_boundary": "Documentation commits on docs/roadmap-order-and-findings-changelog; push, pull request and merge under the owner's standing merge ok (green CI, clear review check)."
+}

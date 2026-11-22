@@ -1,0 +1,68 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "7855993b19b011e300793eb92fad42dac4fe177f",
+    "head": "d632ee42a7700c00c9c59558ccb79ae30897e9a9",
+    "diff_sha256": "ee0a34fec615adfa7798ee119d9557df48c6bab943c5f2520c4cdbe1310f644a",
+    "paths": [
+      "CHANGELOG.md",
+      "docs/architecture/standalone-product-roadmap.md",
+      "docs/architecture/standalone-product-start-here.md",
+      "odd/goals/roadmap-order-and-findings-changelog.json",
+      "odd/review-results/roadmap-order-and-findings-changelog/7855993b19b0-1.sweep.json",
+      "odd/review-results/roadmap-order-and-findings-changelog/7855993b19b0-2.json",
+      "odd/tasks/roadmap-order-and-findings-changelog.md",
+      "openspec/decisions/standalone-platform-roadmap.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "7855993b19b011e300793eb92fad42dac4fe177f",
+      "head": "d632ee42a7700c00c9c59558ccb79ae30897e9a9",
+      "diff_sha256": "ee0a34fec615adfa7798ee119d9557df48c6bab943c5f2520c4cdbe1310f644a"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "docs/architecture/standalone-product-roadmap.md",
+        "docs/architecture/standalone-product-start-here.md",
+        "odd/goals/roadmap-order-and-findings-changelog.json",
+        "odd/review-results/roadmap-order-and-findings-changelog/7855993b19b0-1.sweep.json",
+        "odd/review-results/roadmap-order-and-findings-changelog/7855993b19b0-2.json",
+        "odd/tasks/roadmap-order-and-findings-changelog.md",
+        "openspec/decisions/standalone-platform-roadmap.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "openspec/decisions/standalone-platform-roadmap.md:95",
+        "severity": "SUGGESTION",
+        "claim": "The new F3 text says the owner was 'asked whether to insert labdrian improvements (\"las mejoras nuestro labdrian\") between the playbook merge and the trysm launch'. It presents this as the recorded question. L7's F3 bullet in the task document says the question's own words are not recorded in the sources read, but the roadmap does not say the question is a paraphrase. The paraphrased question also sits right after an owner quote that names 'las mejoras nuestro labdrian' between the playbook merge and the trysm launch, the opposite of the order the paragraph then states. A later reader checking the decision (R7) cannot tell which wording is the owner's and which is the foreman's reconstruction. They might take the paraphrase as verbatim, or read the quoted words as contradicting the stated order. Marking the question as a paraphrase would remove that ambiguity.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "diff hunk @@ -90,7 +90,9 @@ of openspec/decisions/standalone-platform-roadmap.md (line 95 rewrite)",
+          "odd/tasks/roadmap-order-and-findings-changelog.md S1 F3 bullet: 'the question's own words are not recorded in the sources read'"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full diff t23.diff (all 8 changed paths, 104441 bytes)",
+      "CHANGELOG.md line 31: the four reason strings match engine/review/app/findings.go lines 16-21; S2 met",
+      "Roadmap rows 40-41: no 'Comes after' remains; each Dependency cell states a scheduling order that does not gate work, cites the owner and 2026-11-22, and writes the cleanup as Open; Status cells and phase numbers unchanged; F1 and F2 of 7855993b19b0-2 resolved",
+      "Roadmap line 93 no longer conflicts with line 26; F1 of 7855993b19b0-2 resolved",
+      "Roadmap line 95: 2026-11-21 words quoted with the question and earlier owner text, 'solo orden' quoted once with its date, L5 pointer; F3 of 7855993b19b0-2 resolved, see F1 here",
+      "No 'Phase 0–10' remains in the roadmap or the two docs/architecture files; F4 of 7855993b19b0-2 resolved",
+      "The Goal rewrite matches L6/L8",
+      "Task document: T2 and T3 checked off, L4-L9 appended without rewriting earlier entries",
+      "No commands were run (reviewer is read-only)"
+    ]
+  }
+}
