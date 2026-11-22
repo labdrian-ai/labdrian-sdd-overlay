@@ -1,7 +1,7 @@
 # roadmap-order-and-findings-changelog
 
-Objective: write the owner's order after Phase 9 (playbook merge, trysm launch, cleanup, telemetry; memorycard #6178, kept by #6184) into the standalone roadmap, and close the carried SUGGESTION F1 of merge-playbook-into-sdd-overlay (the `review findings` skip reasons in `CHANGELOG.md`). Docs only, no code and no tests.
-Branch: `docs/roadmap-order-and-findings-changelog` (from origin/main 0ca70c23) in the worktree `~/labdrian-sdd-overlay-worktrees/roadmap-order-and-findings-changelog`; delivery: one small docs unit (owner: "bueno vamos para delante"), T1 and T2 may share one commit, push and merge under the owner's standing merge ok (green CI, clear `labdrian review check`); test runner `go test ./...` in `engine/` (CI "Engine Tests"), plus the `rg` checks named on each task.
+Objective: write the owner's order after Phase 9 (playbook merge, trysm launch, cleanup, telemetry; memorycard #6178, kept by #6184) into the standalone roadmap, and close the carried SUGGESTION F1 of merge-playbook-into-sdd-overlay (the `review findings` skip reasons in `CHANGELOG.md`), and resolve the four SUGGESTIONs F1-F4 of T1's review `7855993b19b0-2`. Docs only, no code and no tests.
+Branch: `docs/roadmap-order-and-findings-changelog` (from origin/main 0ca70c23) in the worktree `~/labdrian-sdd-overlay-worktrees/roadmap-order-and-findings-changelog`; delivery: one small docs unit (owner: "bueno vamos para delante"), T1 and T2 may share one commit (T1 landed alone as 7855993b; T2 and T3 share the next commit), push and merge under the owner's standing merge ok (green CI, clear `labdrian review check`); test runner `go test ./...` in `engine/` (CI "Engine Tests"), plus the `rg` checks named on each task.
 
 ## Specs
 
@@ -15,10 +15,15 @@ Branch: `docs/roadmap-order-and-findings-changelog` (from origin/main 0ca70c23) 
     - (b) line 40, Phase 10 row, Dependency cell: "No dependency beyond the phase sequence is asserted here."
     - (c) line 41, Phase 11 row, Dependency cell: the same sentence.
     - (d) line 93, Sequencing and completion: "with runtime adapters, skill lifecycle, observability, and release following their explicit phase sequence. The original source also places Phase 7–10 in that order".
-  - Places read and left unchanged, because they state numbering or content, not order: lines 39 (Phase 9 row, "Phase 10 takes the store-agnostic tasks"), 40 and 41 outside their Dependency cells, 54-57, 81 and 86 (the P0–P8 vs Phase 0–10 crosswalk).
+  - Places read and left unchanged, because they state numbering or content, not order: lines 39 (Phase 9 row, "Phase 10 takes the store-agnostic tasks"), 40 and 41 outside their Dependency cells, 54-57, 81 and 86 (the P0–P8 vs Phase 0–10 crosswalk). T3 later changes only the stale range "Phase 0–10" on lines 54, 81 and 86 (carried F4); the rest of lines 54-57 stays unchanged.
   - OpenCode and Hermes: the roadmap names OpenCode only as a runtime inside the Phase 7 and Phase 8 evidence (lines 37, 38, 75) and does not name Hermes. Neither is a roadmap work item, so the stop of #6184 ("quiero dejar de hacer cambios para opencode y hermes y eso") adds nothing to this file.
   - The Phase 9 close note (`odd/tasks/consolidation-phase9.md` line 1410) is an entry under that document's `## Log`, which is append-only: it is never edited. The note is corrected by a new foreman Log entry appended to that document (the owner's words verbatim, the new order, a pointer to the roadmap's Sequencing section), not by a builder task. Its header (line 3, "before building Observability (Phase 10) and Release (Phase 11)") orders Phase 9 before both and is left unchanged.
-  - Acceptance: the roadmap states the order with the owner's words verbatim, the date, who decided and the accepted cost; no sentence of the file orders Phase 10 before Phase 11 after Phase 9; Status columns and every other row are unchanged; no new work item is added.
+  - Carried findings of T1's review (`odd/review-results/roadmap-order-and-findings-changelog/7855993b19b0-2.json`, clear, four SUGGESTIONs on the roadmap). Every finding is resolved, never declined (owner rule, as the foreman's brief states it; the owner's own words are not quoted in the sources read).
+    - F1: line 93 "this register does not add dependency edges beyond that stated sequence" now points at two sequences, and the Phase 10 and Phase 11 Dependency cells state "Comes after" edges, while line 26 lists dependencies "only where the source explicitly establishes them". The owner's words (L1, #6178) set an order of work. On 2026-11-22, asked whether that order is only an order of work or also gates work (no Phase 10 work until the trysm launch and the cleanup end), the owner answered "solo orden" (L5). The roadmap states the order after Phase 9 as a scheduling order, not a dependency, that does not gate work, and quotes "solo orden" with its date and who decided.
+    - F2: wherever the cleanup is given a role (the Phase 10 and Phase 11 Dependency cells too), it is written "cleanup (Open: its scope is not defined)".
+    - F3: the 2026-11-21 answer "vamos con ese prden el de ayer" is quoted with the question it answered (#6184: whether to insert labdrian improvements between the playbook merge and the trysm launch; the question's own words are not recorded in the sources read) and with the owner's earlier words that day, verbatim from L1.
+    - F4 (pre-existing): "Phase 0–10" on roadmap lines 54, 81 and 86, `docs/architecture/standalone-product-roadmap.md` line 3 and `docs/architecture/standalone-product-start-here.md` line 5 becomes "Phase 0–11". Each names the whole register, which was Phase 0–10 until Phase 9 was inserted on 2026-10-01 (roadmap rows 39-41: "the former Phases 9 and 10 become 10 and 11"), so none means 0–10 on purpose.
+  - Acceptance: the roadmap states the order with the owner's words verbatim, the date, who decided and the accepted cost; no sentence of the file orders Phase 10 before Phase 11 after Phase 9; Status columns are unchanged, and no other row changes except the range "Phase 0–10" → "Phase 0–11" on lines 54 and 81 (F4); no new work item is added. After T3: no Dependency cell or sentence states the order after Phase 9 as a dependency, the file states that it does not gate work with the owner's words "solo orden" (2026-11-22), and no sentence writes its gating as Open; the cleanup is written Open wherever it has a role; the 2026-11-21 answer appears with its question and the owner's earlier words; "Phase 0–10" appears in none of the three files.
 - **S2** — The `review findings` CHANGELOG entry names its skip reasons. Carried SUGGESTION F1 of merge-playbook-into-sdd-overlay (review `720f16760340-3`, that document's close entry): "`CHANGELOG.md` "## Unreleased" has no entry for the `labdrian review findings` verb or its skip reasons, including `verdict base-reproduced`."
   - State at 0ca70c23: `## Unreleased` → `### Added` already has an entry for the verb (`CHANGELOG.md` line 31, written with labdrian-orchestrator-opencode T69). It describes the four skip rules in prose but names none of the reason strings, so the residual of F1 is the reason strings.
   - The reason strings, as the engine prints them (`engine/review/app/findings.go` lines 16-21, `engine/cmd/usage.go` lines 313-314, `bin/lib/usage.sh` lines 432-437): `causal_disposition pre-existing`, `causal_disposition base-only`, `verdict not-reproduced`, `verdict base-reproduced`.
@@ -28,7 +33,8 @@ Branch: `docs/roadmap-order-and-findings-changelog` (from origin/main 0ca70c23) 
 ## Tasks
 
 - [x] T1 — S1 — inline — the roadmap states the order after Phase 9 in `openspec/decisions/standalone-platform-roadmap.md` — shaped: L2 — commit: the single `docs(roadmap)` commit on `docs/roadmap-order-and-findings-changelog` that carries this line (a commit cannot name its own SHA; the SHA is in the builder return and in `git log`)
-- [ ] T2 — S2 — inline — the `review findings` entry of `CHANGELOG.md` names its four skip reasons — shaped: L2 — commit: -
+- [x] T2 — S2 — inline — the `review findings` entry of `CHANGELOG.md` names its four skip reasons — shaped: L2 — commit: the single `docs` commit on `docs/roadmap-order-and-findings-changelog` that carries this line (shared with T3; the SHA is in the builder return and in `git log`)
+- [x] T3 — S1 — inline — carried F1-F4 of T1's review `7855993b19b0-2`: scheduling order that does not gate work ("solo orden"), cleanup Open in the cells, the 2026-11-21 question and words, the Phase 0–11 range — shaped: L7 — commit: the same `docs` commit as T2 (the SHA is in the builder return and in `git log`)
 
 ## Log
 
@@ -63,3 +69,123 @@ Branch: `docs/roadmap-order-and-findings-changelog` (from origin/main 0ca70c23) 
   - Other checks: `rg -c '\\u[0-9a-fA-F]{4}' <roadmap>` prints nothing, exit 1 (no literal escape left); `rg -n '^## Sequencing and completion'` matches line 91, so the `#sequencing-and-completion` anchor resolves; `git diff --stat` (before adding the two shaper files) names only the roadmap.
   - `go test ./...` from `engine/`: exit 0; 87 lines `ok`, 0 `FAIL` lines, 2 `no test files` lines (the first run printed the same packages, all `ok`).
   - Risk: none (docs only; the roadmap is not one of the six high-risk items).
+- **L4** (2026-11-22, shaper): design of T3 (carried F1-F4 of T1's review `7855993b19b0-2`). S1.
+  - Sources read: `odd/review-results/roadmap-order-and-findings-changelog/7855993b19b0-2.json`; `openspec/decisions/standalone-platform-roadmap.md` (whole file, at 7855993b); `docs/architecture/standalone-product-roadmap.md` line 3 and `docs/architecture/standalone-product-start-here.md` line 5 (by `rg`); memorycard #6178 and #6184; `odd/goals/roadmap-order-and-findings-changelog.json`; `skills/odd-feature-doc/SKILL.md`. No script, test or workflow reads "Phase 0–10" or these three files (`rg` over `*.{go,sh,yml,yaml,py}`: no match).
+  - Why a separate task line: T2 is S2 and is shaped by L2; a task holds `shaped: L<n>` only while the Log has exactly one design entry for it, so F1-F4 cannot be added to T2's design, and T1 stays checked with its commit. T3 is the S1 follow-up; the builder applies T2 and T3 in the same commit.
+  - Steelman: the review is clear, but the four suggestions point at the reader the roadmap exists for: an agent that reads a Dependency cell alone sees "Comes after" with an unscoped cleanup and treats telemetry as blocked, or reads line 93 and does not. Stating the order as a scheduling order, writing its gating and the cleanup as Open where they appear, quoting the 2026-11-21 answer with its question, and making the range match line 9 removes each misreading without deciding anything the owner has not decided.
+  - Strongest counter-argument: writing gating as Open leaves an Open item in the sole roadmap authority, and agents may still plan as if it gated. Asking the owner first and writing the answer would be cleaner. Rejected as a precondition: the text is correct today either way (the owner has not decided it), and the owner's answer later changes only the word Open and two cells. Accepted tradeoff: one Open statement until the owner settles it.
+  - T3, exact edits to `openspec/decisions/standalone-platform-roadmap.md` (line numbers at 7855993b):
+    1. Line 40, Phase 10 row, Dependency cell (F1, F2): replace "Comes after the trysm launch (Phase 11) and the cleanup, by the owner's order of 2026-11-20 (see Sequencing and completion); no other dependency is asserted here." with "Scheduled after the trysm launch (Phase 11) and the cleanup (Open: its scope is not defined), by the owner's order of work of 2026-11-20 (see Sequencing and completion); that order is not asserted as a dependency, and whether it gates Phase 10 work is Open. No dependency is asserted here."
+    2. Line 41, Phase 11 row, Dependency cell (F1, F2): replace "Comes after the playbook merge (`odd/tasks/merge-playbook-into-sdd-overlay.md`) and before the cleanup and Phase 10, by the owner's order of 2026-11-20 (see Sequencing and completion); this release is the trysm launch (memorycard #6160). Accepted cost: it ships without the Phase 10 metrics and with Engram code paths not yet deleted (store-agnostic T17). No other dependency is asserted here." with "Scheduled after the playbook merge (`odd/tasks/merge-playbook-into-sdd-overlay.md`) and before the cleanup (Open: its scope is not defined) and Phase 10, by the owner's order of work of 2026-11-20 (see Sequencing and completion); that order is not asserted as a dependency, and whether it gates work is Open. This release is the trysm launch (memorycard #6160). Accepted cost: it ships without the Phase 10 metrics and with Engram code paths not yet deleted (store-agnostic T17). No dependency is asserted here."
+    3. Line 93 (F1): replace "this register does not add dependency edges beyond that stated sequence." with "this register adds no dependency edges beyond the phase sequence of Phases 0–9, and the order after Phase 9 is a scheduling order, not asserted as a dependency (see below)." The rest of the paragraph is unchanged.
+    4. Line 95 (F3): replace "On 2026-11-21 the owner kept it: "vamos con ese prden el de ayer"." with "On 2026-11-21 the owner wrote: "quiero dejar de hacer cambios para opencode y hermes y eso.y quedarnos con lo que verdaderamente importa el merge del.playbook las mejoras nuestro labdrian luego el lanzamiento de trysm"; asked whether to insert labdrian improvements ("las mejoras nuestro labdrian") between the playbook merge and the trysm launch, the owner answered: "vamos con ese prden el de ayer", which keeps this order unchanged (memorycard #6184)."
+    5. Line 95 (F1): after "This replaces the sequencing of Observability (Phase 10) before Release (Phase 11)." insert "This is the order in which the work is scheduled; the owner has not said whether a later step may start before an earlier one ends (for example, Phase 10 work before the trysm launch), so whether the order gates work is Open." The rest of the paragraph ("Decisions: memorycard #6178 and #6184.") is unchanged.
+    6. Line 54, P5 row (F4): replace "no equivalent Phase 0–10 outcome asserted" with "no equivalent Phase 0–11 outcome asserted".
+    7. Line 81 (F4): replace "| P0–P8 vs Phase 0–10 |" with "| P0–P8 vs Phase 0–11 |".
+    8. Line 86 (F4): replace "P0–P8 to Phase 0–10 crosswalk" with "P0–P8 to Phase 0–11 crosswalk".
+  - T3, exact edits outside the roadmap (F4): `docs/architecture/standalone-product-roadmap.md` line 3, replace "owns canonical Phase 0–10 IDs" with "owns canonical Phase 0–11 IDs"; `docs/architecture/standalone-product-start-here.md` line 5, replace "stable Phase 0–10 IDs" with "stable Phase 0–11 IDs". Nothing else in either file changes.
+  - Nothing else changes: no Status cell, no phase number, no other cell of rows 40, 41, 54 and 81, no new work item. Each "–" is the literal en dash U+2013, as in line 9; the `-F` checks below match it only if it is literal.
+  - Checks (from the worktree root; R = roadmap path; "nothing" means no output and exit 1):
+
+    | Check | Before (7855993b) | After |
+    |---|---|---|
+    | `rg -c -F 'Phase 0–10' R docs/architecture/standalone-product-roadmap.md docs/architecture/standalone-product-start-here.md` | R:3, roadmap doc:1, start-here:1 | nothing |
+    | `rg -c -F 'Phase 0–11' R` | 1 | 4 |
+    | `rg -c -F 'Phase 0–11' docs/architecture/standalone-product-roadmap.md docs/architecture/standalone-product-start-here.md` | nothing | 1 each |
+    | `rg -c 'Comes after' R` | 2 | nothing |
+    | `rg -c -F 'not asserted as a dependency' R` | nothing | 3 (lines 40, 41, 93) |
+    | `rg -c -F 'scheduling order' R` | nothing | 1 |
+    | `rg -c -F 'beyond that stated sequence' R` | 1 | nothing |
+    | `rg -c -F 'cleanup (Open: its scope is not defined)' R` | 1 | 3 (lines 40, 41, 95) |
+    | `rg -c -F 'whether the order gates work is Open' R` | nothing | 1 |
+    | `rg -c -F 'the owner kept it' R` | 1 | nothing |
+    | `rg -c -F 'las mejoras nuestro labdrian' R` | nothing | 1 |
+    | `rg -c -F 'vamos con ese prden el de ayer' R` | 1 | 1 |
+    | `rg -c -F 'Order after Phase 9 (owner, 2026-11-20)' R` and `rg -c -F 'como lo veo yo merge de playbook lanzamiento de trysm limpieza y telemetria' R` | 1 and 1 | 1 and 1 (T1 unchanged) |
+    | `rg -c 'No dependency beyond the phase sequence' R` | nothing | nothing |
+    | `rg -c -F '**unverified**' R` | n | the same n |
+    | `rg -c '\\u[0-9a-fA-F]{4}' R docs/architecture/standalone-product-roadmap.md docs/architecture/standalone-product-start-here.md` | nothing | nothing |
+
+    - `git diff --stat` for the commit names only `CHANGELOG.md` (T2), the roadmap, the two `docs/architecture` files and this document; once for the unit, `go test ./...` in `engine/` passes.
+  - Commit: T2 and T3 in one Conventional Commit (for example `docs: name review findings skip reasons and resolve roadmap review suggestions`) with its `Risk:` trailer, no AI attribution; it needs its own review in the chain from 7855993b.
+  - Open for the owner, not decided here: whether the order after Phase 9 only schedules the work or also gates it (Phase 10 work may not start before the trysm launch and the cleanup end). Recommendation: a scheduling order only, because the accepted cost already decouples the launch from Phase 10's output (#6178), and a gate would block every small telemetry fix behind an unscoped cleanup (inference, unverified with the owner). If the owner decides, a later edit replaces "is Open" in the three places and the two cells.
+  - Forecast: about 8 changed lines of prose in three files besides T2; one builder run with T2; confidence high.
+- **L5** (2026-11-22, foreman): the owner settled the open question of L4. Asked whether the order after Phase 9 (playbook → trysm → cleanup → telemetry) is only an order of work or also gates work (no Phase 10 work until the trysm launch and the cleanup end), with the recommendation "only an order", the owner answered, verbatim: "solo orden". The order after Phase 9 is a scheduling order and does not gate work; the places L4 writes as "is Open" for this question state it as decided.
+- **L6** (2026-11-22, foreman): asked whether to change the Goal `odd/goals/roadmap-order-and-findings-changelog.json` (scope T1 and T2; line 9 "no other roadmap row and no new work item changes") so it covers T3 and its F4 range edits (roadmap lines 54, 81, 86 and two `docs/architecture` files), or to take T3 as a one-time exception, with the recommendation to change the Goal, the owner answered, verbatim: "cambiemoslo". The Goal changes to cover T3.
+- **L7** (2026-11-22, shaper): design of T3 (carried F1-F4 of T1's review `7855993b19b0-2`), after L5 ("solo orden"); it replaces L4 as T3's design, and T3's `shaped:` segment moves from L4 to L7. S1.
+  - Why a new entry: the Log is append-only, so L4 stays as written; L4's T3 design wrote the gating question as Open, which L5 settled. T3 now carries `shaped: L7`, and L7 is the only Log entry numbered L7 and the only shaper entry T3 points to; L4 is no longer referenced by any task's `shaped:` segment. T3 is still open, so no reopening applies.
+  - Sources read: this document (header to L6); `odd/goals/roadmap-order-and-findings-changelog.json`; `openspec/decisions/standalone-platform-roadmap.md` lines 40-41 and 91-95 (at 7855993b, unchanged since L4); `skills/odd-feature-doc/SKILL.md` and `references/format.md`; `engine/workflow/lifecycle.go` (goal digest bound at Create, re-checked by Verify) and `engine/shaper/readiness.go` (`goal_digest_mismatch` refuses a handoff); L4's sources for everything else.
+  - Steelman: with L5 the roadmap can say what the owner decided instead of an Open item: the order after Phase 9 schedules the work and gates none of it, so an agent reading a Dependency cell alone does not treat telemetry as blocked behind an unscoped cleanup.
+  - Strongest counter-argument: the cells now cite the decision without its words, so a reader of a cell alone sees "owner, 2026-11-22" but not "solo orden"; quoting it in each cell would be self-contained. Rejected: R7 asks the words recorded once with who decided; one quote in the Sequencing paragraph, with the cells pointing there by date and owner, avoids three copies of the same quote drifting. Accepted tradeoff: a cell reader follows one link to read the words.
+  - T3, exact edits to `openspec/decisions/standalone-platform-roadmap.md` (line numbers at 7855993b):
+    1. Line 40, Phase 10 row, Dependency cell (F1, F2): replace "Comes after the trysm launch (Phase 11) and the cleanup, by the owner's order of 2026-11-20 (see Sequencing and completion); no other dependency is asserted here." with "Scheduled after the trysm launch (Phase 11) and the cleanup (Open: its scope is not defined), by the owner's order of work of 2026-11-20; that order is a scheduling order, not a dependency, and does not gate work (owner, 2026-11-22; see Sequencing and completion). No dependency is asserted here."
+    2. Line 41, Phase 11 row, Dependency cell (F1, F2): replace "Comes after the playbook merge (`odd/tasks/merge-playbook-into-sdd-overlay.md`) and before the cleanup and Phase 10, by the owner's order of 2026-11-20 (see Sequencing and completion); this release is the trysm launch (memorycard #6160). Accepted cost: it ships without the Phase 10 metrics and with Engram code paths not yet deleted (store-agnostic T17). No other dependency is asserted here." with "Scheduled after the playbook merge (`odd/tasks/merge-playbook-into-sdd-overlay.md`) and before the cleanup (Open: its scope is not defined) and Phase 10, by the owner's order of work of 2026-11-20; that order is a scheduling order, not a dependency, and does not gate work (owner, 2026-11-22; see Sequencing and completion). This release is the trysm launch (memorycard #6160). Accepted cost: it ships without the Phase 10 metrics and with Engram code paths not yet deleted (store-agnostic T17). No dependency is asserted here."
+    3. Line 93 (F1): replace "this register does not add dependency edges beyond that stated sequence." with "this register adds no dependency edges beyond the phase sequence of Phases 0–9, and the order after Phase 9 is a scheduling order, not a dependency (see below)." The rest of the paragraph is unchanged.
+    4. Line 95 (F3): replace "On 2026-11-21 the owner kept it: "vamos con ese prden el de ayer"." with "On 2026-11-21 the owner wrote: "quiero dejar de hacer cambios para opencode y hermes y eso.y quedarnos con lo que verdaderamente importa el merge del.playbook las mejoras nuestro labdrian luego el lanzamiento de trysm"; asked whether to insert labdrian improvements ("las mejoras nuestro labdrian") between the playbook merge and the trysm launch, the owner answered: "vamos con ese prden el de ayer", which keeps this order unchanged (memorycard #6184)."
+    5. Line 95 (F1): after "This replaces the sequencing of Observability (Phase 10) before Release (Phase 11)." insert "This is a scheduling order, and it does not gate work: asked on 2026-11-22 whether it is only an order of work or also gates work (no Phase 10 work until the trysm launch and the cleanup end), the owner answered: "solo orden"." Then replace "Decisions: memorycard #6178 and #6184." with "Decisions: memorycard #6178 and #6184; the 2026-11-22 answer: `odd/tasks/roadmap-order-and-findings-changelog.md` L5."
+    6. Line 54, P5 row (F4): replace "no equivalent Phase 0–10 outcome asserted" with "no equivalent Phase 0–11 outcome asserted".
+    7. Line 81 (F4): replace "| P0–P8 vs Phase 0–10 |" with "| P0–P8 vs Phase 0–11 |".
+    8. Line 86 (F4): replace "P0–P8 to Phase 0–10 crosswalk" with "P0–P8 to Phase 0–11 crosswalk".
+  - T3, exact edits outside the roadmap (F4): `docs/architecture/standalone-product-roadmap.md` line 3, replace "owns canonical Phase 0–10 IDs" with "owns canonical Phase 0–11 IDs"; `docs/architecture/standalone-product-start-here.md` line 5, replace "stable Phase 0–10 IDs" with "stable Phase 0–11 IDs". Nothing else in either file changes.
+  - Nothing else changes: no Status cell, no phase number, no other cell of rows 40, 41, 54 and 81, no new work item. Each "–" is the literal en dash U+2013, as in line 9; the `-F` checks below match it only if it is literal.
+  - Checks (from the worktree root; R = roadmap path; "nothing" means no output and exit 1):
+
+    | Check | Before (7855993b) | After |
+    |---|---|---|
+    | `rg -c -F 'Phase 0–10' R docs/architecture/standalone-product-roadmap.md docs/architecture/standalone-product-start-here.md` | R:3, roadmap doc:1, start-here:1 | nothing |
+    | `rg -c -F 'Phase 0–11' R` | 1 | 4 |
+    | `rg -c -F 'Phase 0–11' docs/architecture/standalone-product-roadmap.md docs/architecture/standalone-product-start-here.md` | nothing | 1 each |
+    | `rg -c 'Comes after' R` | 2 | nothing |
+    | `rg -c -F 'a scheduling order, not a dependency' R` | nothing | 3 (lines 40, 41, 93) |
+    | `rg -c -F 'scheduling order' R` | nothing | 4 (lines 40, 41, 93, 95) |
+    | `rg -c -F 'does not gate work' R` | nothing | 3 (lines 40, 41, 95) |
+    | `rg -c -F 'solo orden' R` | nothing | 1 |
+    | `rg -c 'gates? [^.]*is Open' R` | nothing | nothing |
+    | `rg -c -F 'not asserted as a dependency' R` | nothing | nothing |
+    | `rg -c -F 'beyond that stated sequence' R` | 1 | nothing |
+    | `rg -c -F 'cleanup (Open: its scope is not defined)' R` | 1 | 3 (lines 40, 41, 95) |
+    | `rg -c -F 'the owner kept it' R` | 1 | nothing |
+    | `rg -c -F 'las mejoras nuestro labdrian' R` | nothing | 1 |
+    | `rg -c -F 'vamos con ese prden el de ayer' R` | 1 | 1 |
+    | `rg -c 'roadmap-order-and-findings-changelog\.md.{1,2}L5' R` | nothing | 1 |
+    | `rg -c -F 'Order after Phase 9 (owner, 2026-11-20)' R` and `rg -c -F 'como lo veo yo merge de playbook lanzamiento de trysm limpieza y telemetria' R` | 1 and 1 | 1 and 1 (T1 unchanged) |
+    | `rg -c 'No dependency beyond the phase sequence' R` | nothing | nothing |
+    | `rg -c -F '**unverified**' R` | n | the same n |
+    | `rg -c '\\u[0-9a-fA-F]{4}' R docs/architecture/standalone-product-roadmap.md docs/architecture/standalone-product-start-here.md` | nothing | nothing |
+
+    - `git diff --stat` for the commit names only `CHANGELOG.md` (T2), the roadmap, the two `docs/architecture` files, this document and, if the foreman has changed it per L6, `odd/goals/roadmap-order-and-findings-changelog.json`; once for the unit, `go test ./...` in `engine/` passes.
+  - Commit: T2 and T3 in one Conventional Commit (for example `docs: name review findings skip reasons and resolve roadmap review suggestions`) with its `Risk:` trailer, no AI attribution; it needs its own review in the chain from 7855993b.
+  - Goal (L6): the shaper's contract forbids it to rewrite an existing Goal file, so this entry does not edit `odd/goals/roadmap-order-and-findings-changelog.json`; the change L6 decided is returned to the foreman. A changed Goal has a new digest: `engine/workflow/lifecycle.go` Verify returns `ErrGoalDigestMismatch` when the re-read Goal's digest differs from the one recorded at Create, and `engine/shaper/readiness.go` refuses a handoff with `goal_digest_mismatch`; no re-bind verb was found in `engine/cmd/workflow.go`. How the open workflow `roadmap-order-and-findings-changelog-t1` follows the new Goal is not decided here.
+  - Forecast: about 8 changed lines of prose in three files besides T2; one builder run with T2; confidence high.
+- **L8** (2026-11-22, foreman): the shaper's contract says "never rewrite a goal file that exists: report it" (`~/.claude/agents/shaper.md:16`). Asked whether to authorize the shaper to rewrite this Goal once, as an exception, to apply L6, the owner answered, verbatim: "autorizo". Before the Goal changes, the workflow `roadmap-order-and-findings-changelog-t1` (T1 committed as 7855993b, its review `7855993b19b0-2` recorded clear) was verified and closed: `labdrian workflow verify ... --goal odd/goals/roadmap-order-and-findings-changelog.json` returned status running with goal digest `ab17d82e44471cba14bd4dfc13fd05dc7e349d02e0fc7fc3de393969e65c1ae4`; `labdrian workflow close ... --outcome completed` returned status closed. T2 and T3 run under a new workflow opened after the Goal rewrite.
+- **L9** (2026-11-22, builder): T2 and T3 done, S1 and S2 covered, in one commit with the feature document, the rewritten Goal and the untracked `odd/review-results/roadmap-order-and-findings-changelog/` records (committed unchanged). Edits exactly as L2 (T2) and L7 (T3) design them: `CHANGELOG.md` line 31 (four reason strings, `verdict base-reproduced` still the string the code prints today, not settled); roadmap Phase 10 and Phase 11 Dependency cells, line 93, line 95 (2026-11-21 question and words, "solo orden", L5 pointer), lines 54, 81 and 86 range; the two `docs/architecture` files line 3 and line 5. No Status cell, phase number, other row or work item changed; `odd/tasks/consolidation-phase9.md` not touched.
+  - Test-first table (docs task; checks are `rg` runs from the worktree root, R = roadmap; "nothing" = no output, exit 1). The targeted go test is not a RED here: both tests read CHANGELOG.md but do not check the reason strings, so they pass before and after.
+
+    | Check | RED (before) | GREEN (after) |
+    |---|---|---|
+    | `rg -c -F` each of `verdict base-reproduced`, `verdict not-reproduced`, `causal_disposition base-only`, `causal_disposition pre-existing` in `CHANGELOG.md` | nothing, exit 1 (each) | 1, exit 0 (each) |
+    | `rg -c -F 'Phase 0–10' R <roadmap doc> <start-here>` | R:3, roadmap doc:1, start-here:1 | nothing, exit 1 |
+    | `rg -c -F 'Phase 0–11' R` | 1 | 4 |
+    | `rg -c -F 'Phase 0–11'` on the two docs/architecture files | nothing | 1 each |
+    | `rg -c 'Comes after' R` | 2 | nothing |
+    | `rg -c -F 'a scheduling order, not a dependency' R` | nothing | 3 |
+    | `rg -c -F 'scheduling order' R` | nothing | 4 |
+    | `rg -c -F 'does not gate work' R` | nothing | 3 |
+    | `rg -c -F 'solo orden' R` | nothing | 1 |
+    | `rg -c 'gates? [^.]*is Open' R` | nothing | nothing |
+    | `rg -c -F 'not asserted as a dependency' R` | nothing | nothing |
+    | `rg -c -F 'beyond that stated sequence' R` | 1 | nothing |
+    | `rg -c -F 'cleanup (Open: its scope is not defined)' R` | 1 | 3 |
+    | `rg -c -F 'the owner kept it' R` | 1 | nothing |
+    | `rg -c -F 'las mejoras nuestro labdrian' R` | nothing | 1 |
+    | `rg -c -F 'vamos con ese prden el de ayer' R` | 1 | 1 |
+    | `rg -c 'roadmap-order-and-findings-changelog\.md.{1,2}L5' R` | nothing | 1 |
+    | `rg -c -F 'Order after Phase 9 (owner, 2026-11-20)' R` and the "como lo veo yo merge de playbook ..." quote | 1 and 1 | 1 and 1 |
+    | `rg -c 'No dependency beyond the phase sequence' R` | not run before (T1 already removed it) | nothing |
+    | `rg -c -F '**unverified**' R` | 12 | 12 |
+    | `rg -c '\\u[0-9a-fA-F]{4}'` over R, the two docs/architecture files and `CHANGELOG.md` | not run before | nothing, exit 1 |
+    | targeted `go test ./cmd/ -run 'TestEveryRoutedReviewVerbIsDocumentedWhereTheOtherVerbsAre\|TestChangelogItemOf6179SaysWhatTheChainChecks' -count=1` from `engine/` | `ok` (0.022s) | `ok` (0.031s) |
+
+  - `go test ./...` from `engine/` once: exit 0; 87 lines `ok`, 0 `FAIL` lines, 2 `no test files` lines.
+  - `git diff --stat` before staging the untracked review records: `CHANGELOG.md`, the roadmap, the two `docs/architecture` files, this document and the Goal; 6 files.
+  - Risk: none (docs only; no high-risk item touched).

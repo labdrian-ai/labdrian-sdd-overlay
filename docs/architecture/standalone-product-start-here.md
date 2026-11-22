@@ -2,7 +2,7 @@
 
 ## Read first
 
-Read [Standalone Platform Master Roadmap](../../openspec/decisions/standalone-platform-roadmap.md) first. It is the **sole active roadmap authority** for standalone product work: stable Phase 0–10 IDs, canonical status, source crosswalk, and next action. Then read this supporting [product rationale and source crosswalk](standalone-product-roadmap.md) for detailed package acceptance, non-goals, architecture rationale, and open decisions.
+Read [Standalone Platform Master Roadmap](../../openspec/decisions/standalone-platform-roadmap.md) first. It is the **sole active roadmap authority** for standalone product work: stable Phase 0–11 IDs, canonical status, source crosswalk, and next action. Then read this supporting [product rationale and source crosswalk](standalone-product-roadmap.md) for detailed package acceptance, non-goals, architecture rationale, and open decisions.
 
 The P0–P8 labels in the supporting document are historical source aliases, not a parallel active sequence. `openspec/project/roadmap.md` is a generated historical SDD mirror (on disk v7); the supplied canonical Engram locator is #2067 v11 with eight appendices. Neither is a competing standalone-product roadmap. Use current evidence; old planning statuses are not current truth.
 

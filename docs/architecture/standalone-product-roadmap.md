@@ -1,6 +1,6 @@
 # Labdrian: standalone product rationale and source crosswalk
 
-**Role:** supporting product rationale and requirements source; **not** an active roadmap or schedule. The sole active standalone-product roadmap is [Standalone Platform Master Roadmap](../../openspec/decisions/standalone-platform-roadmap.md), which owns canonical Phase 0–10 IDs, status, sequencing, and crosswalk decisions. The P0–P8 labels below are retained only as historical source aliases; they are not an ordered work queue, and their numbering does not map ordinally to phases.
+**Role:** supporting product rationale and requirements source; **not** an active roadmap or schedule. The sole active standalone-product roadmap is [Standalone Platform Master Roadmap](../../openspec/decisions/standalone-platform-roadmap.md), which owns canonical Phase 0–11 IDs, status, sequencing, and crosswalk decisions. The P0–P8 labels below are retained only as historical source aliases; they are not an ordered work queue, and their numbering does not map ordinally to phases.
 
 Product direction is approved; implementation status and authorization must be verified from current evidence. This document preserves the unique rationale, constraints, acceptance details, and open decisions behind the source packages. Read [START-HERE](standalone-product-start-here.md) for recovery. Earlier context: [Laya integration proposal](laya-system-one-overlay-plan.md), provenance only.
 
