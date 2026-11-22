@@ -33,12 +33,14 @@ Branch: `feat/playbook-merge` (from origin/main ce22eb3f) in the clone `~/labdri
     - Depends on T1 only. No open decision blocks it; the reason string is an assumption.
     - Risk expectation: item 3 (the left-out set and its reason strings are the feed contract T4 and T17 read); own commit.
 - **S4** — Evidence store with a minimal wiki surface. The page is `<repo>/docs/wiki/evidence.md`, in the format the header of playbook `evidence.sh` defines (title `# Evidence`, tables `## Kinds` and `## Evidence`). The general rules live in `evidence-rules.md`, shipped next to the script. The store needs no other wiki file: playbook `format.md` says "`evidence.md` is optional: `evidence.sh` of `playbook-agents` checks and reads it ... and it does not change the format of the wiki", and `evidence.sh check` reads only the page and `evidence-rules.md`. Acceptance: `check`, `count`, `index` and `rule <kind>` behave as the header of `evidence.sh` states, in a repository with no other wiki file. Rows hold no secret and no customer data. Rows are only appended, except by consolidation (S8).
-  - T2 detail (L8):
+  - T2 detail (L8, L22):
     - Absorb `evidence.sh` and `evidence-rules.md` from snapshot `6de8566` (v3.6.0) as overlay-owned code. They are the starting point and may be modified later (T6, T17 extend them).
     - They stay the one shared parser, with no second Go parse of the format.
     - The MIT LICENSE notice and a provenance note name the snapshot commit.
-    - Track them in `overlay.manifest` as overlay-owned, not as an upstream or vendor entry (assumption: management type `custom`).
-    - Tests: `check|count|index|rule` against a repository holding only `docs/wiki/evidence.md`, and lint with `bash -n`/`shellcheck` (`sh` and `awk` become runtime needs).
+    - Track them in `overlay.manifest` as overlay-owned, not as an upstream or vendor entry (management type `custom`).
+    - Home (L22): the repository directory `skills/_shared/evidence/` holds `evidence.sh`, `evidence-rules.md`, `LICENSE` and `PROVENANCE.md`. Deployed for Claude Code to `~/.claude/skills/_shared/evidence/`; the script finds `evidence-rules.md` beside itself (`dirname "$0"`), so the two keep their names and stay in one directory.
+    - Tests (L22): Go tests run by CI "Engine Tests" (`go test ./...` in `engine/`): the modes in `engine/shelltest/evidence_store_test.go`, against a temporary repository holding only `docs/wiki/evidence.md`, and the files, rows and deployed path in `engine/skills/evidence_store_artifact_test.go`; `sh -n` inside the Go tests, `shellcheck -s sh` run by the builder (`sh` and `awk` become runtime needs).
+    - Two commits, T2a and T2b (L22).
     - No open decision blocks it.
     - Risk expectation: item 5 (a deployed file and a new runtime dependency on `sh`/`awk`).
 - **S5** — Classifier carrier. One agent writes the evidence page from the S3 feed, following playbook `classify.md`: its rules, its central test ("would the rule of this kind have prevented this finding?"), its steps and its format. It never commits, pushes or changes git state, and it changes only the page. Constraint: the overlay `reviewer` role cannot carry it. Its body says "Never edit, run, or delegate", and its tools are `Read, Grep, Glob` (`engine/agentgen/roles.go`).
@@ -189,7 +191,7 @@ Order is execution order: the learning loop (T1, T19, T2-T6, T16, T17) first, pe
 
 - [x] T1 — S2-S3 — inline — findings feed: an engine function and a read-only verb (assumption: `labdrian review findings --feature <f> --stored <head12>-<n>.json`) that reads a stored result and its verdict through the existing store readers. It prints the kept findings with the review identifier and the left-out findings with their reason. Tests cover each skip rule and an unreadable result. Help text and `odd/review-results/README.md` are updated. Depends on no open decision. Risk expectation: none (adds a command; reuses the result/verdict readers `check` uses, so it must not change them) — shaped: L6 — commit: T1a 0afaf0cf; T1b is the commit that adds `engine/cmd/review_findings.go` (its SHA is not knowable inside its own commit, see L15)
 - [x] T19 — S3 — inline — align the findings feed with `reviewverdict.Decide` and pin its help: a fourth skip rule (a BLOCKER or CRITICAL of `unknown` disposition whose verdict found it on base, reason `verdict base-reproduced` as assumption) listed in the engine and wrapper help, `README.md` and `odd/review-results/README.md`; the wrapper parity test cut to the findings block of `bin/lib/usage.sh`, pinning `HEAD12-N.json` and `NAME/HEAD12-N` vs `<feature>/<head12>-<n>`; a test tying the README `findings` entry. Tests RED first, detail in S3 (T19 detail) and L18. Risk expectation: item 3; own commit — shaped: L18 — commit: -
-- [ ] T2 — S2, S4, S9 — inline — evidence store: absorb `evidence.sh` and `evidence-rules.md` from snapshot `6de8566` as overlay-owned code, with tests; detail in S4 (T2 detail) and L8. Risk expectation: item 5 — shaped: L8 — commit: -
+- [ ] T2 — S2, S4, S9 — inline — evidence store: absorb `evidence.sh` and `evidence-rules.md` from snapshot `6de8566` into `skills/_shared/evidence/` as overlay-owned code with `LICENSE` and `PROVENANCE.md`, four `custom` manifest rows, and Go tests; two commits, T2a (absorb, rows, artifact test) then T2b (mode tests); detail in S4 (T2 detail), L8 and L22. Risk expectation: item 5 for T2a, none for T2b — shaped: L22 — commit: -
 - [ ] T3 — S5 — inline — add the new `classifier` role (working name) outside the role chain, from `roles/classifier/body.md` through `engine/agentgen`; detail in S5 (T3 detail), L9 and L10. Risk expectation: item 5; own commit — shaped: L10 — commit: -
 - [ ] T4 — S6 — inline — lifecycle trigger: a step in `skills/role-chain/SKILL.md`. After `record` / `verify`, when T1 keeps findings, the parent launches the classifier with T1's output and the repository root. `labdrian review stop-hook` asks once per session and commit for an unclassified result with kept findings, in its existing reason format. Tests cover: asked, not asked when no finding is kept, not asked when an Evidence row carries the identifier, and exit 0 on unreadable input. Depends on T1-T3. Risk expectation: item 3 (stop-hook behavior and the role-chain skill are contracts others consume); own commit — shaped: L6 — commit: -
 - [ ] T5 — S7 — inline — rule injection through `gate-task`: when the call's `subagent_type` is the builder or the reviewer, append the T2 `index` text and the `rule <kind>` command (absolute paths) to the prompt, in the same single rewrite as the memory instructions block. Nothing is appended when the index is empty. A reviewer body line says injected rules are review criteria inside its lens rows, with the reply shape unchanged. Measure and report the added size. Extend the gate-task golden tests. Blocked for its cap by OD-11, and for runtimes other than Claude Code by OD-7. Risk expectation: item 3 (gate-task contract pinned by `testdata/contract-golden`, reviewer prompt contract); own commit — shaped: L6 — commit: -
@@ -524,3 +526,87 @@ Order is execution order: the learning loop (T1, T19, T2-T6, T16, T17) first, pe
     - `docs/wiki` does not exist in this worktree, so no wiki page was read or written.
     - Open decisions from L6 to L13 are unchanged; this delivery answered none of them.
   - The memorycard mirror `odd/merge-playbook-into-sdd-overlay/tasks` was refreshed from this file on disk after this entry.
+- **L21** (2026-11-22, foreman): owner decisions and state since L20. (1) On 2026-11-21 the owner stopped OpenCode and Hermes work: "quiero dejar de hacer cambios para opencode y hermes y eso.y quedarnos con lo que verdaderamente importa el merge del.playbook las mejoras nuestro labdrian luego el lanzamiento de trysm" (memorycard #6184). (2) The carried SUGGESTION F1 (CHANGELOG reason strings of `labdrian review findings`) is resolved by feature `roadmap-order-and-findings-changelog`, PR #792, merge `14f7a6dc`. (3) The owner authorized T2 next: "si dale para delante". (4) OD-7 answered: asked "¿a qué runtimes se despliegan la wiki y el bucle de aprendizaje del playbook?" with the options Claude Code only, Claude Code + Codex, Claude Code + Codex + Pi, the owner chose, verbatim: "Solo Claude Code (Recommended)". Deploy targets for the wiki and the learning loop: Claude Code only; T10, T11, T12, T15 and T5 are no longer blocked by OD-7, and T5 needs no other runtime. (5) The T2 builder (workflow `merge-playbook-into-sdd-overlay-t2`) returned blocked before any edit: S4 and L8 name no repository path for `evidence.sh` and `evidence-rules.md`, no home for the MIT LICENSE and provenance note, and no shell test runner; manifest rows are skill-relative, so the path decides what deploys (builder report; `engine/skills/ondisk.go`, `manifest.go`, `routes.go`). T2 goes back to the shaper.
+- **L22** (2026-11-22, shaper): Design of T2 completed: the three gaps of the T2 builder (L21 item 5), for Claude Code only (OD-7, L21 item 4). This entry replaces L8 as T2's design entry; L8's decision on OD-4 stands. S4 (T2 detail) and the T2 line were rewritten; no other spec or task changed.
+
+  **Sources read:**
+  - overlay at `14f7a6dc`: `overlay.manifest`; `engine/skills/routes.go` (`ReadManifestRows`, `ResolveRoutes`, `resolveRoute`), `engine/skills/ondisk.go` (`DeployableManifestPaths`, `DiffOnDisk`), `engine/skills/manifest.go` (`infraPrefixes` = `engine/`, `_shared/`), `engine/skills/skillsfs/tree.go` (`ScanSkillFiles` walks every subdirectory), `engine/skills/ondisk_test.go` (`skillsRepoRoot`, the real-repository on-disk check), `engine/skills/adhd_output_test.go` (LICENSE and manifest-row pins of an absorbed skill), `engine/shelltest/overlay_shell_test.go` (Go tests that drive shell, run by CI "Engine Tests"), `engine/overlaytest` (`RepoRoot`), `engine/pipkg/build.go` (Pi copies a named list of `_shared` files), `bin/lib/targets.sh` and `bin/lib/apply.sh` (deploy copies every row with a destination, per target), `.github/workflows/ci.yml` (Shell Lint covers `bin/` only, `shellcheck ... || true`; "Validate skills registry"), `.gitattributes` (`skills/** -text`), `skills/_shared/SKILL.md` (`disable-model-invocation: true`).
+  - snapshot `6de8566` working tree: `plugins/playbook-agents/evidence.sh` (215 lines), `plugins/playbook-agents/evidence-rules.md` (27 lines, 19 kinds), `LICENSE` (21 lines, "Copyright (c) 2026 Andres Frei").
+
+  **Gap 1, the home.** Repository directory `skills/_shared/evidence/`.
+  - Files: `skills/_shared/evidence/evidence.sh` and `skills/_shared/evidence/evidence-rules.md`.
+  - Deployed for Claude Code: `~/.claude/skills/_shared/evidence/evidence.sh` and `~/.claude/skills/_shared/evidence/evidence-rules.md` (`TARGET_PATHS[claude]` + row path, `routes.go` line 290). T3 writes this path where `classify.md` has `${CLAUDE_PLUGIN_ROOT}`; T5 injects `sh ~/.claude/skills/_shared/evidence/evidence.sh index` and `... rule <kind>` with the home directory expanded to an absolute path.
+  - Why it works: `_shared/` is an infra prefix, so `ManifestView` never wants a skill there (`manifest.go` line 12) and no registry entry or approval record is needed. The rows have a `/`, are not under `engine/`, and have no non-skill third column, so they take the skill route and deploy. `ScanSkillFiles` walks subdirectories, so the on-disk check sees the files and finds their rows.
+  - The two files keep their snapshot names and sit in one directory: `evidence.sh` line 59 finds `evidence-rules.md` with `dirname "$0"`, and line 139 tells the general file by its basename `evidence-rules.md`.
+  - No `SKILL.md` is added; `_shared/SKILL.md` already keeps the tree out of model invocation.
+
+  **Gap 2, LICENSE and provenance.** In the same directory, so they travel with the code (S9, R-015):
+  - `skills/_shared/evidence/LICENSE`: byte-identical to `git -C ~/.local/share/playbook show 6de8566:LICENSE`.
+  - `skills/_shared/evidence/PROVENANCE.md` (authored, about 10 lines): source repository `andresfrei/playbook`, commit `6de8566bf7f1150f49a75c1162c0f4cf87bf57c5`, tag `v3.6.0`, the source paths `plugins/playbook-agents/evidence.sh` and `plugins/playbook-agents/evidence-rules.md`, the MIT License in `LICENSE` beside it, the L8 decision that the files are this repository's own with no upstream tracked, and a list "Changed since the snapshot" that starts as "nothing" and that T6, T7 and T17 extend. It names "this repository", not the brand (S15 proposal).
+  - The copied files stay byte-identical to the snapshot in T2; the note is a separate file so the copy can be checked with `cmp` against `git show`.
+
+  **Manifest rows, verbatim**, inserted after the row `_shared/ingested-observation-contract.md custom`:
+
+  ```text
+  _shared/evidence/evidence.sh custom
+  _shared/evidence/evidence-rules.md custom
+  _shared/evidence/LICENSE custom
+  _shared/evidence/PROVENANCE.md custom
+  ```
+
+  **Gap 3, the test runner.** Go tests, run by CI "Engine Tests" (`go test ./...` in `engine/`), as `engine/shelltest` already does for shell. No new CI job and no `ci.yml` change. Each test that runs the script skips when `sh` or `awk` is not on `PATH`, as `overlaytest.RequireBash` does for bash.
+  - `engine/skills/evidence_store_artifact_test.go` (T2a), repository root from `skillsRepoRoot`:
+    - (A1) `overlay.manifest` holds the four rows above, each followed by a line end.
+    - (A2) `ResolveRoutes` over the real manifest, target `claude`, SkillsRoot `/s`, places `_shared/evidence/evidence.sh` at `/s/_shared/evidence/evidence.sh` and `_shared/evidence/evidence-rules.md` at `/s/_shared/evidence/evidence-rules.md`: the deployed file of S4.
+    - (A3) `LICENSE` holds "MIT License" and "Copyright (c) 2026 Andres Frei"; `PROVENANCE.md` holds `6de8566bf7f1150f49a75c1162c0f4cf87bf57c5`, `v3.6.0`, `andresfrei/playbook`, both source paths and "MIT".
+    - (A4) `sh -n skills/_shared/evidence/evidence.sh` exits 0.
+  - `engine/shelltest/evidence_store_test.go` (T2b). Each case copies the four files into `<tmp>/skills/_shared/evidence/` (the deployed layout), builds `<tmp>/repo` holding only `docs/wiki/evidence.md`, runs `sh <tmp>/skills/_shared/evidence/evidence.sh <mode> ...` with `<tmp>/repo` as working directory and `CLAUDE_PROJECT_DIR` unset unless the case sets it, and reads exit code, stdout and stderr apart:
+    - (B1) `check` on a valid page: exit 0, stdout ends with `evidence check passed: docs/wiki/evidence.md`, no `FAIL` line, so the shipped `evidence-rules.md` passes too.
+    - (B2) `check` on a malformed page (an Evidence kind with no Kinds row, a date `2026-02-30`, a level `0`): exit 1, one `FAIL evidence.md: ...` line per problem.
+    - (B3) `check` with no page: exit 0, `there is no evidence page at docs/wiki/evidence.md`.
+    - (B4) `count`: a kind with three distinct reviews prints `ready to consolidate: <kind> (level 1): 3 distinct reviews, last <date>`; a kind with the same review on two rows prints `not ready: ... 1 distinct reviews`; no page prints nothing, exit 0.
+    - (B5) `index`: the page's level-2+ kinds first, then the 19 general kinds of `evidence-rules.md`, each `- <kind> (level N): <applies when>`; a level-1 kind is absent.
+    - (B6) `rule <kind>`: a page kind prints its five lines; a kind only in `evidence-rules.md` prints from there; an unknown kind exits 1 with `evidence.sh: no kind "<kind>" in ...` on stderr and nothing on stdout.
+    - (B7) wiki directory: an explicit argument wins; with none, `CLAUDE_PROJECT_DIR=<tmp>/repo` run from another directory reads `<tmp>/repo/docs/wiki`; with neither, `docs/wiki` under the working directory.
+    - (B8) usage: no mode, an unknown mode, and `rule` with no kind each exit 2 with the usage on stderr.
+    - (B9) the script writes nothing: the file tree of `<tmp>` is the same before and after every mode, and the repository still holds only `docs/wiki/evidence.md` (S4 "no other wiki file").
+  - Lint: `sh -n` is A4. `shellcheck -s sh skills/_shared/evidence/evidence.sh` is run by the builder and reported with its exact output; CI's Shell Lint is not extended, since its shellcheck step ends in `|| true` and gates nothing.
+
+  **Commits.** Two, each reviewed on its own, in this order:
+  - T2a, `feat(evidence): absorb the playbook evidence store`: `evidence.sh`, `evidence-rules.md` and `LICENSE` copied byte-identical (copied, about 263 lines), `PROVENANCE.md`, the four rows, and A1-A4. Authored about 60-110 lines. Risk: item 5 (deployed files; `sh` and `awk` become runtime needs).
+  - T2b, `test(evidence): pin the modes of the evidence store`: B1-B9 only. Authored about 200-320 lines. Risk expectation: none (tests only).
+  - If T2b passes about 400 authored lines, the builder stops and reports `partial` (L13 decision (2)); the cut is B1-B3 and B9 (check and no-write) apart from B4-B8.
+
+  **Test-first.**
+  - T2a: A1-A3 are RED before the files and rows exist; A4 is RED with the script absent.
+  - T2b characterises absorbed code, so it cannot be RED before the code. Each case is shown load-bearing by a mutation in a scratch copy of the script, reverted after: `threshold=3` to `2` fails B4; dropping the `file != "evidence-rules.md"` condition fails B1; making `rule`'s not-found branch exit 0 fails B6; swapping the `CLAUDE_PROJECT_DIR` branch with the default fails B7; removing the `usage` exit fails B8. The builder reports each mutation with its failing test name.
+
+  **Checks**, run in `engine/` with exact results reported:
+  - `go test ./skills/ ./shelltest/ -run Evidence -count=1` after each commit.
+  - `go test ./skills/ -run 'OnDisk|Manifest' -count=1` after T2a (the real-repository on-disk check).
+  - `go run ./cmd/ skills validate --registry ../skills.registry.yaml --manifest ../overlay.manifest --source-root ../skills` after T2a.
+  - `cmp` of each copied file against `git -C ~/.local/share/playbook show 6de8566:<path>` after T2a.
+  - `go test ./... -count=1` and `gofmt -l .` once, after T2b.
+
+  **Steelman of the absorb.** The overlay gains the one working parser of the format, already tested in playbook and already following its own rule `format-parsed-differently-by-two-scripts`, for the cost of a copy. Under `skills/_shared/` the copy is deployed by the existing route with no engine change, no registry entry and no model-visible skill description, so it adds no session context.
+
+  **Options weighed.**
+  - (chosen) `skills/_shared/evidence/`: four rows, no engine change.
+  - A new skill directory with its own `SKILL.md`: needs a registry entry and an approval record, and its description joins the skill list every session loads; nothing invokes it as a skill, since T3 and T5 call the script by path.
+  - `engine/` or the repository root: tracked but never deployed (`routes.go` lines 235-241), so S4's "a deployed file" and T5's absolute path fail.
+
+  **Strongest counter-argument.** `_shared` is described as "Shared SDD references for installed skills": it holds reference text, and this puts executable code there that no skill cites, so nothing in the skill tooling says who reads it. Tradeoff accepted: T3's body and T5's injection name the path, and A2 pins where it deploys.
+
+  **Forecast** (method of L13): T2a 60-110 authored plus about 263 copied; T2b 200-320 authored; lines-ref n=7; low; 26-143 minutes agent-compute-time, `no-actuals n=0`.
+
+  **Risks, not decided here:**
+  - OD-7 (L21: "Solo Claude Code (Recommended)"): the skill route copies every row to the skills directory of each copy target, so `apply --target codex` or `--target all` also places these four inert files in `~/.codex/skills/_shared/evidence/` (`bin/lib/targets.sh` line 16, `routes.go` lines 275-291). Pi's package copies a named list of `_shared` files and does not take them (`engine/pipkg/build.go` lines 158-181). Nothing on Codex reads them. Keeping them off Codex needs a Claude-only route in the engine, which belongs to T11 (single install path to the OD-7 targets), not to T2.
+  - The copied header still names playbook mechanisms that do not exist here (line 26: "The SubagentStart hook gives this index"; ids such as `seed-evidence-31`). T2 keeps the bytes; T5 and T7 correct the text when they change behaviour, and `PROVENANCE.md` lists each change.
+  - The snapshot's file mode of `evidence.sh` was not checked; it is called through `sh`, so the mode does not matter, and the builder keeps whatever `git show` gives.
+  - The tests skip when `sh` or `awk` is missing; on CI's Ubuntu runner both are present (unverified).
+- **L23** (2026-11-22, builder): T2a built as designed in L22. S2, S4, S9 covered for the absorb, the rows, the deployed path and the provenance. T2's box stays `[ ]`: T2b (mode tests B1-B9) remains.
+  - Files: `skills/_shared/evidence/evidence.sh` (215 lines), `evidence-rules.md` (27), `LICENSE` (21), all copied with `git -C ~/.local/share/playbook show 6de8566:<path> > file`; `PROVENANCE.md` (13, authored); four `custom` rows in `overlay.manifest` after `_shared/ingested-observation-contract.md custom`; `engine/skills/evidence_store_artifact_test.go` (77, authored; A1-A4 as `TestEvidenceStore_ManifestHoldsFourCustomRows`, `_DeploysBesideEachOtherForClaude`, `_LicenseAndProvenanceTravelWithTheCode`, `_ScriptParsesAsPosixShell`).
+  - Lines: copied 263; authored 94 (77 test + 13 provenance + 4 manifest rows), inside the 60-110 forecast.
+  - Test-first: RED `go test ./skills/ -run Evidence -count=1` failed all four (no rows; Dest empty; LICENSE missing; `sh -n` cannot open the script). The first RED of A2 failed for a wrong reason (ResolveRoutes needs an AgentsRoot for the agent rows); the test was given `AgentsRoot: "/a"` and re-run to RED for the right reason before any file was added. GREEN after the files and rows: `ok .../engine/skills`. REFACTOR: none needed.
+  - Checks: `cmp` of the three copied files against `git show` printed nothing (identical); `shellcheck -s sh skills/_shared/evidence/evidence.sh` printed nothing, exit 0; `go test ./skills/ ./shelltest/ -run Evidence -count=1`: skills ok, shelltest `[no tests to run]` (T2b); `go test ./skills/ -run 'OnDisk|Manifest' -count=1`: ok; `skills validate`: "registry and manifest aligned (31 skills)", "skills/ on disk matches overlay.manifest (89 files)", "global skill approvals verified (31 skills: 31 approved)"; `gofmt -l skills/`: empty; `go test ./... -count=1` in `engine/`: every package ok (the run was executed twice by mistake; both clean, 87 `ok` lines on the second).
+  - Risk: item 5 (deployed files; `sh` and `awk` become runtime needs).
