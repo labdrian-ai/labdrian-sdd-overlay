@@ -102,7 +102,7 @@ func seededRoot(t *testing.T) string {
 	}
 	// Each skill a body names must be in the repository, so the root has a SKILL.md for each (empty: the
 	// generator checks that the file is there and reads nothing from it).
-	sources := []string{"foreman"}
+	sources := []string{"foreman", "classifier"}
 	for _, r := range wantRoles {
 		sources = append(sources, r.name)
 	}

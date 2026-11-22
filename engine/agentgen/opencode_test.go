@@ -165,8 +165,8 @@ func TestTheOpenCodeFileOfEveryAgentIsWrittenAfterTheFilesOfTheOtherRuntimes(t *
 	if got := paths[len(paths)-len(want):]; !slices.Equal(got, want) {
 		t.Errorf("the last artifacts are %v, want the OpenCode files %v", got, want)
 	}
-	if len(paths) != 34 {
-		t.Errorf("%d artifacts, want 34: 24 files of the eight roles, the Claude file of the foreman and the nine OpenCode files", len(paths))
+	if len(paths) != 35 {
+		t.Errorf("%d artifacts, want 35: 24 files of the eight roles, the Claude files of the classifier and the foreman and the nine OpenCode files", len(paths))
 	}
 }
 

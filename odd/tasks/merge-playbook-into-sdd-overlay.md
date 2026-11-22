@@ -72,26 +72,31 @@ Branch: `feat/playbook-merge` (from origin/main ce22eb3f) in the clone `~/labdri
     - Risk expectation: items 3 (the exit contract of `evidence.sh`, which T5 consumes) and 5 (a deployed file changes).
 - **S5** — Classifier carrier. One agent writes the evidence page from the S3 feed, following playbook `classify.md`: its rules, its central test ("would the rule of this kind have prevented this finding?"), its steps and its format. It never commits, pushes or changes git state, and it changes only the page. Constraint: the overlay `reviewer` role cannot carry it. Its body says "Never edit, run, or delegate", and its tools are `Read, Grep, Glob` (`engine/agentgen/roles.go`).
   - The owner answered OD-10: "necesitamos un rol nuevo" (L9). Classify becomes a new overlay role.
+  - Name, Decided by the owner on 2026-11-22 (L37). Asked "¿Con qué nombre lo creamos?", the owner answered "classifier (Recommended)". The role is `classifier`.
+  - Runtime, Decided by the owner (OD-7, L21): the learning loop deploys to "Solo Claude Code (Recommended)". The classifier is part of the loop, so it has a Claude Code agent file and no Pi, Codex or OpenCode file.
   - Assumptions pending the owner's confirmation:
-    - its name is `classifier`;
     - write maps to builder and review maps to reviewer, so there are no duplicate roles;
     - explore maps to a new read-only role, working name `explorer`, outside the chain (OD-10b answered in L12; see S14).
-  - Acceptance: the agent file is generated from `roles/<role>/body.md`, and `gadu-generate --check` passes (R-009).
-  - T3 detail (L9, L10):
-    - Source: `roles/classifier/body.md`, absorbed and adapted from playbook `classify.md` of snapshot `6de8566`, with `${CLAUDE_PLUGIN_ROOT}` replaced by the overlay path of T2 and a provenance note.
-    - Its row in `engine/agentgen/roles.go`, and the generated `agents/classifier.md`, `pi/agents/classifier.md` and `codex/agents/classifier.toml`.
-    - `gadu-generate --check` green in CI.
-    - Model and tools (proposal): sonnet, effort `medium`, as playbook `classify.md` declares. Tools: Read, Edit, Write, Grep, Glob, Bash, and no memorycard tool, so `role.body` drops the memory line (`roles.go` lines 226-237).
-    - Body: it writes only `docs/wiki/evidence.md` and runs only `evidence.sh`, and it never commits, pushes or changes git state.
-    - Enforcement: these limits are prompt-level only. The builder guard fails closed for the builder alone (`engine/cmd/roles_builder_guard.go`). `gate-task` appends the memory instructions block to every sub-agent, this one included, and T5's rule index does not reach it.
+  - Acceptance: the agent file is generated from `roles/<role>/body.md`, and `gadu-generate --check` passes (R-009). The generator emits `agents/classifier.md` and no `pi/agents/classifier.md`, `codex/agents/classifier.toml` or `opencode/agents/classifier.md`; the manifest deploys it to Claude Code and to no other target.
+  - T3 detail (L37, which replaces L9 and L10 as T3's design; L10's "va fuera" stands):
+    - Source: `roles/classifier/body.md`, adapted from playbook `plugins/playbook-agents/agents/classify.md` of snapshot `6de8566`. It starts with the core prefix of the role bodies. `<script>` is the deployed path `$HOME/.claude/skills/_shared/evidence/evidence.sh`, always run as `sh "<script>" ...`. The general kinds are read through the script's `index` and `rule <kind>` modes, not by reading `evidence-rules.md`. Exit 3 (no `awk`, L35) stops the run as blocked. The full draft is in L37.
+    - Beside it: `roles/classifier/LICENSE`, byte-identical to the snapshot `LICENSE`, and `roles/classifier/PROVENANCE.md`, which names the snapshot, the source path, MIT and what was changed (S9).
+    - Generator: a new list `claudeOnlyRoles` in `engine/agentgen/roles.go` holds the classifier row. `build` projects each entry with the existing `projectClaude`, after the eight roles and before the foreman. No Pi, Codex or OpenCode file is generated for it.
+    - Row: name `classifier`; tier mid (Claude alias `sonnet`, as playbook declares); no effort, because the Claude file takes none (`claudeKeys`); tools `Read, Grep, Glob, Bash, Edit, Write` in playbook's order. With no memorycard tool, `role.body` drops the memory line.
+    - Deploy: one manifest row `classifier.md custom agent`. The `agent` route goes to Claude Code alone (`engine/skills/routes.go` `agentRouteTargets`). With no `pi/agents/classifier.md`, the Pi package does not ship it (`engine/pipkg/build.go` `copyPiAgents`). No new route is added.
+    - `skills/role-chain/references/models.md`: the Mid line names `classifier`.
+    - Body: it writes only `<root>/docs/wiki/evidence.md` and runs only `evidence.sh`, and it never commits, pushes or changes git state.
+    - Enforcement: these limits are prompt-level only. The builder guard fails closed for the builder alone (`engine/cmd/roles_builder_guard.go`). `gate-task` appends the memory instructions block to every sub-agent, this one included. T5's rule index does not reach the classifier.
     - Position (CONFIRMED by the owner, L10: "va fuera"): outside the role chain, like the verifier, which `agentgen` generates but `engine/roles` does not list.
       - The parent launches it after `review record` / `verify` (T4).
       - `engine/roles` `Vocabulary`, `Catalog`, `optionalRole` and the chain transitions stay unchanged.
       - The in-chain alternative is dropped.
-    - Still assumptions: the name `classifier` (working name), and write -> builder / review -> reviewer.
+    - Still an assumption: write -> builder / review -> reviewer.
     - Differs from the reviewer: the reviewer is read-only (Read, Grep, Glob; "Never edit, run, or delegate") and judges a diff. The classifier writes one page and judges kinds, not code.
+    - Tests are listed in L37: G1 and G2 in `engine/agentgen`, K1 to K3 in `engine/skills`, and the edits to the existing agentgen pins.
+    - OD-5, OD-6, OD-8 and OD-11 do not change T3 (L37). The carried SUGGESTIONs F1 and F2 of `0178aa75ec87-5` go to T6, not T3 (L36).
     - No open decision of its own.
-    - Risk expectation: item 5 (a new agent generated for three runtimes and checked by CI's `gadu-generate --check`); own commit.
+    - Risk expectation: item 5 (a new agent deployed to Claude Code and checked by CI's `gadu-generate --check`); own commit.
 - **S6** — Lifecycle trigger. A stored result whose S3 feed keeps at least one finding is classified once. It counts as classified when the page holds an Evidence row whose Review is that result's identifier. This mirrors playbook `review-ran.sh`, which blocks once a review "that ended with findings and started no" classify. Acceptance: the parent of the role chain launches the classifier after `record` / `verify`. A branch commit whose result is unclassified gets asked for its classification once per session and commit by the existing `labdrian review stop-hook`. A result with no kept finding is never asked about. The hook keeps exiting 0 on anything it cannot tell.
 - **S7** — Rule injection. The index of level-2+ kinds (`evidence.sh index`: "- <kind> (level N): <applies when>"), and the command that prints one rule, reach the builder and the reviewer when they are launched, as playbook `rules-for-subagent.sh` does for write and review. Nothing reaches the other roles. Acceptance: with no level-2+ kind there is no text and no change to the prompt. The size the injection adds to a prompt is measured and reported, and the cap is OD-11. Injection never blocks or fails a launch. Injection by itself does not change the reviewer's JSON reply contract; the one change to that contract is the rule outcomes of S8 (b).
 - **S8** — Consolidation, promotion, level history and rule outcomes. The owner approved this scope: asked "¿Actualizo T6 del documento con esos dos puntos?", the owner answered "deacuerdo" (L7). Points (a) and (b) are adopted from arXiv 2611.18856 "Self-Improvement Memory" (SIM) and arXiv 2611.23476 "GUARD"; the shaper has not read either paper. The requirement is the owner's.
@@ -165,7 +170,7 @@ Branch: `feat/playbook-merge` (from origin/main ce22eb3f) in the clone `~/labdri
   - Assumptions: the working name `explorer`, and a position outside the chain, like the verifier and the classifier.
   - Acceptance: a mapping table exists with no unmapped agent, and `gadu-generate --check` is green in CI.
   - T14 detail (L12): the mapping table.
-    - classify maps to the new role, as decided in L9 (the name `classifier` is an assumption).
+    - classify maps to the new role, as decided in L9, named `classifier` by the owner (L37).
     - write maps to builder and review maps to reviewer, as assumptions pending confirmation.
     - explore maps to the new read-only role of T18, as decided in L12 (the name `explorer` is an assumption).
     - `models.conf` is reconciled with the model tiers of `engine/agentgen/roles.go`.
@@ -222,7 +227,7 @@ Order is execution order: the learning loop (T1, T19, T2, T20, T21, T22, T3-T6, 
 - [x] T20 — S4 — inline — keep the evidence store Claude-only: a `claude-skill` route in `engine/skills/routes.go`, the four `_shared/evidence/*` rows routed by it, and tests that pin the Claude destination and no Codex or OpenCode destination in the domain and through `bin/lib/apply.sh`; closes F1 of the T2a reviews and folds their F2 and F3; runs before T2b; detail in S4 (T20 detail) and L25. Risk expectation: items 3 and 5; own commit — shaped: L25 — commit: the commit `fix(skills): deploy the evidence store to Claude Code only` (its SHA is not knowable inside its own commit; see L27 and `git log --grep`)
 - [x] T21 — S4 — inline — pin the route column: a test that every third column of `overlay.manifest` is a known route (F1 of `d1e57b32f786-2`), the `Dest` texts of `engine/skills/routes.go` and `bin/lib/manifest_routes.sh` and the `RouteSkill` text naming `claude-skill` and OpenCode, and a test tying the `Dest` texts to `skillRouteTargets` (F2); and, from the review of T2b `8e035ddb49dc-2`, B10 refusing a stale `- Nothing.` and an untrue "byte-identical" (F1) and B9 seeing directories, links and writes under `TMPDIR` (F3); runs after T2b; detail in S4 (T21 detail), L29 and L32. Risk expectation: none; own commit — shaped: L32 — commit: the commit `test(skills): pin the route column and tighten the evidence store pins` (its SHA is not knowable inside its own commit; see L33 and `git log --grep`)
 - [x] T22 — S4 — inline — fail loud without awk: `evidence.sh` exits 3 with one stderr line in every mode but a usage error when `awk` is not on `PATH` (F2 of `8e035ddb49dc-2`), `PROVENANCE.md` names the change, and a test B11 pins it; folds the three SUGGESTIONs of `7b634ced2367-2` (the `/tmp` scan in `newEvidenceWorld`, the License line keyed on `LICENSE`'s blob, the `resolveRoute` comment pinned); runs after T21 and before T5; detail in S4 (T22 detail), L32 and L34. Risk expectation: items 3 and 5; own commit — shaped: L34 — commit: the commit `fix(evidence): fail loud when awk is missing` (its SHA is not knowable inside its own commit; see L35 and `git log --grep`)
-- [ ] T3 — S5 — inline — add the new `classifier` role (working name) outside the role chain, from `roles/classifier/body.md` through `engine/agentgen`; detail in S5 (T3 detail), L9 and L10. Risk expectation: item 5; own commit — shaped: L10 — commit: -
+- [x] T3 — S5, S9 — inline — add the new `classifier` role (named by the owner, L37) outside the role chain, for Claude Code only (OD-7): `roles/classifier/body.md` adapted from playbook `classify.md` with `LICENSE` and `PROVENANCE.md`, a `claudeOnlyRoles` entry in `engine/agentgen` that generates `agents/classifier.md` alone, the manifest row `classifier.md custom agent`, and tests G1, G2, K1-K3; detail in S5 (T3 detail) and L37. Risk expectation: item 5; own commit — shaped: L37 — commit: the commit `feat(agents): add the classifier role for Claude Code` (its SHA is not knowable inside its own commit; see L38 and `git log --grep`)
 - [ ] T4 — S6 — inline — lifecycle trigger: a step in `skills/role-chain/SKILL.md`. After `record` / `verify`, when T1 keeps findings, the parent launches the classifier with T1's output and the repository root. `labdrian review stop-hook` asks once per session and commit for an unclassified result with kept findings, in its existing reason format. Tests cover: asked, not asked when no finding is kept, not asked when an Evidence row carries the identifier, and exit 0 on unreadable input. Depends on T1-T3. Risk expectation: item 3 (stop-hook behavior and the role-chain skill are contracts others consume); own commit — shaped: L6 — commit: -
 - [ ] T5 — S7 — inline — rule injection through `gate-task`: when the call's `subagent_type` is the builder or the reviewer, append the T2 `index` text and the `rule <kind>` command (absolute paths) to the prompt, in the same single rewrite as the memory instructions block. Nothing is appended when the index is empty. A reviewer body line says injected rules are review criteria inside its lens rows, with the reply shape unchanged. Measure and report the added size. Extend the gate-task golden tests. Blocked for its cap by OD-11, and for runtimes other than Claude Code by OD-7. Risk expectation: item 3 (gate-task contract pinned by `testdata/contract-golden`, reviewer prompt contract); own commit — shaped: L6 — commit: -
 - [ ] T6 — S8 — inline — consolidation at close with a per-kind level history, run by the parent; detail in S8 (T6 detail) and L7. Risk expectation: items 1 and 3; own commit — shaped: L7 — commit: -
@@ -1028,3 +1033,244 @@ Order is execution order: the learning loop (T1, T19, T2, T20, T21, T22, T3-T6, 
   **CI gate.** `labdrian review ci --landing 0178aa75ec8789fe9a82f475b0a0d592a8354bdb --head 0178aa75ec8789fe9a82f475b0a0d592a8354bdb`: exit 1, stderr: `error: review ci: the tree of the landing 0178aa75ec8789fe9a82f475b0a0d592a8354bdb holds CI markers: .github/workflows/ci.yml, .github/workflows/release.yml; the repository has remotes: origin; the no-CI closure does not apply`. The CI job "Engine Tests" has not run; it is not run here and is still to be confirmed after the foreman's push.
 
   **Unfinished at close:** T3 to T18 and T7 to T15 (listed above); the CI run of this head (see CI gate); push, PR and merge, which are the foreman's under the owner's standing ok.
+- **L37** (2026-11-22, shaper): T3 redesigned on branch `feat/playbook-classifier-role` at `54a4ff7e` (origin/main after PR #793 merged T2, T20, T21 and T22), workflow `merge-playbook-into-sdd-overlay-t3`. This entry replaces L9 and L10 as T3's design entry. L9's decision ("necesitamos un rol nuevo") and L10's ("va fuera") stand. S5 (name, runtime, acceptance and T3 detail), the T14 detail's name clause in S14, and the T3 line changed. No other spec or task changed.
+
+  **Owner decision, verbatim, recorded here.** On 2026-11-22 the owner was asked "¿Con qué nombre lo creamos?" about the new role and answered "classifier (Recommended)". Decided by the owner and relayed to the shaper in its brief. The name `classifier` is no longer an assumption.
+
+  **Sources read:**
+  - The document up to `## Log`, plus L9, L10, L12, L21-L36.
+  - Snapshot `~/.local/share/playbook` (6de8566, not fetched): `plugins/playbook-agents/agents/classify.md`, 70 lines (frontmatter `tools: Read, Grep, Glob, Bash, Edit, Write`, `model: sonnet`, `effort: medium`; `<script>` is `${CLAUDE_PLUGIN_ROOT}/evidence.sh`, line 11; step 2 reads `${CLAUDE_PLUGIN_ROOT}/evidence-rules.md`, line 32).
+  - At the worktree, through codegraph first:
+    - `engine/agentgen/agentgen.go`: `build` lines 53-117 (the eight roles give Claude, Pi and Codex files, then the foreman's Claude file, then the OpenCode files), `Check`, `Artifacts`.
+    - `engine/agentgen/roles.go`: the whole file (`roles`, `foreman`, `body`, `project`, `claudeFile`, and `projectClaude` lines 309-321, the Claude-only projection the foreman already uses).
+    - Tests in `engine/agentgen`:
+      - `artifacts_test.go`, whole. `TestEveryRoleSourceOfTheRepositoryIsProjected` special-cases `foreman`.
+      - `foreman_test.go`, whole. The count 34; the foreman is the tenth artifact from the end.
+      - `roles_test.go` lines 1-310: `wantRoles`, `seededRoot`, `wantBody`.
+      - `messages_pin_test.go` lines 1-50: `allPaths`, and `TestCheckNamesEveryArtifactThatIsMissingInTheOrderOfTheTable`.
+      - `opencode_test.go` lines 145-171 (count 34) and 280-330.
+      - `ci_test.go`.
+    - `engine/skills/role_agents_artifact_test.go`: `roleCorePrefix` lines 29-41, and lines 825-949. Its manifest-row tests loop over `roleAgentSpecs()`, which does not hold the classifier.
+    - `engine/skills/evidence_store_artifact_test.go`, function list: `gitBlobID` line 116 and `evidenceSnapshotBlobs` line 108. The snapshot `LICENSE` blob is `b6f9c476b8c3982bfd1b4368d61c83ea53e22dad` (L30).
+    - `overlay.manifest` lines 105-148, and `bin/lib/targets.sh` (claude skills `$HOME/.claude/skills`, agents `$HOME/.claude/agents`).
+    - From grep: `engine/skills/routes.go` line 190, where `agentRouteTargets` maps `RouteAgent` to Claude alone, and `engine/pipkg/build.go` lines 230-247, where `copyPiAgents` ships every `pi/agents/*.md`.
+    - `skills/_shared/evidence/evidence.sh` lines 1-70 (modes, the exit-3 guard) and `PROVENANCE.md`.
+    - `skills/role-chain/references/models.md`, `roles/reviewer/body.md`, and `engine/cmd/review_launch_test.go` lines 70-101 (it reads only `codex/agents/reviewer.toml` from the table).
+  - No command was run.
+
+  **How T3 honours OD-7.** OD-7 sends the wiki and the learning loop to Claude Code only. The classifier is the loop's writer, so it gets a Claude Code agent file and nothing for Pi, Codex or OpenCode. No new route is needed for the agent:
+  - The `agent` route already deploys to Claude Code alone (`agentRouteTargets`).
+  - Pi takes an agent only when a `pi/agents/<name>.md` file exists.
+  - Codex and OpenCode take one only from a `codex-agent` or `opencode-agent` row.
+  - So "Claude-only" means that the generator emits one file and the manifest has one `agent` row. T20's `claude-skill` route stays for `skills/` rows and is not used here.
+
+  **Steelman of the idea.** The classifier is the one agent that writes the loop's evidence, and it follows playbook's tested classify rules through the one parser T2 absorbed. Being off the chain, it changes no chain contract. Being Claude-only, it adds exactly one deployed file through a route that already exists. The foreman already uses `projectClaude`, so the generator learns nothing new: it gets one more caller of an existing projection.
+
+  **Options weighed for the generator.**
+  - (chosen) A list `claudeOnlyRoles` in `roles.go`, projected by the existing `projectClaude`. It costs about 20 engine lines, and `roles` (the eight chain roles, pinned by `wantRoles`) is unchanged.
+  - A `runtimes` field on `role` inside the one `roles` table. It is general, but every three-file test that loops over the roles (`roles_test.go`, `opencode_test.go`, `allPaths`) would need a filter. That is more churn for one row.
+  - Generate all four files and leave out the Codex and OpenCode rows. Pi would still ship `pi/agents/classifier.md` (`copyPiAgents` globs that directory), against OD-7, and two generated files would go unused.
+  - Hand-write `agents/classifier.md`. That breaks S5's acceptance and R-009, which require the file to be generated from `roles/classifier/body.md`.
+
+  **Strongest counter-argument.** After this change the generator knows runtime shapes in three places: the `roles` table, the `foreman` variable and `claudeOnlyRoles`. A `runtimes` field would state once which runtimes host each agent. T18 (explorer) may need the same shape, since L21 unblocked T15 under OD-7. Tradeoff accepted: the smaller diff, following the foreman precedent. If T18 or T15 adds a third shape, the next shaper folds the three into a `runtimes` field.
+
+  **T3 design.**
+  - `engine/agentgen/roles.go`:
+    - Add `var claudeOnlyRoles = []role{{name: "classifier", description: classifierDescription-text, tier: tierMid, tools: []string{"Read", "Grep", "Glob", "Bash", "Edit", "Write"}}}`, with no `effort`.
+    - Its comment says: off the role chain (L10); Claude Code only (OD-7, L21), so no Pi, Codex or OpenCode file; no effort, because the Claude file takes none (`claudeKeys`); no memorycard tool, so `body` drops the memory line.
+    - The `projectClaude` comment names the foreman and the Claude-only roles.
+  - The description, verbatim (ASCII): `Classifier role, off the role chain: writes the findings one review kept (send them, the review identifier and the repository root) as rows of docs/wiki/evidence.md by the classify rules; never changes git state.`
+  - `engine/agentgen/agentgen.go`:
+    - In `build`, between the loop over `roles` and the foreman: for each `r` of `claudeOnlyRoles`, run `source(r)`, then `checkSkillsNamed`, then `r.projectClaude`, and append the result to `table`. A failure becomes a `sourceError` with the verb `projecting`, as for the foreman.
+    - The package comment (lines 4-16) and the comments of `build`, `Artifacts` and `Check` name the Claude-only roles.
+    - Order of the table: the 24 files of the eight roles, `agents/classifier.md`, `agents/foreman.md`, then the nine OpenCode files. That is 35 files, and the foreman stays tenth from the end.
+  - `roles/classifier/body.md` is ASCII only. The builder refines the wording under test; the anchors that K1 pins are fixed. Draft:
+
+    ````text
+    You are the classifier sub-agent of a labdrian workflow. Do the work yourself; never launch sub-agents.
+    Read every artifact the prompt locates (file path, or memorycard topic via mem_search, then mem_get) before acting. A missing required locator is a blocker: report it, never substitute another store.
+    Write only the artifacts and paths the prompt names; for any other path, stop and report it.
+    Report only commands you ran and their exact results; an unrun check is "not run", never a pass.
+    End with the return envelope as text, never a tool call: status success|partial|blocked, summary, artifacts, next, risks, skill_resolution.
+    Artifacts are in English.
+
+    You store the findings of one review as evidence on the project's evidence page, by the criteria below. You receive the findings the review kept, a review identifier, and the root of the reviewed tree. When no root is given, stop and say so.
+
+    In what follows `<root>` is that root, `<script>` is `$HOME/.claude/skills/_shared/evidence/evidence.sh`, and `<page>` is `<root>/docs/wiki/evidence.md`. Run the script only as `sh "<script>" ...`, so the shell expands `$HOME`.
+
+    ## Rules
+
+    - Change only `<page>`, by its absolute path. Create it when it is missing, as the format below says. Never commit, push, or change git state.
+    - Only add rows. Never delete, edit, reorder, or consolidate a row, and never rename a kind. Consolidation is proposed to the owner at the close of a work.
+    - A kind names the mistake, not the place: `test-passes-when-broken`, not `auth-bug`. It is kebab-case, and its rule fits in one sentence a step can act on.
+    - Write no secret and no customer data in a row. A finding is one general line.
+    - A script counts. Never count in your head or write a count in the page.
+    - When the script exits 3, `awk` is missing: show its stderr line and stop with status blocked.
+
+    ## Gotchas
+
+    - Two kinds that look close, such as `missing-test` and `test-passes-when-broken`, are settled by the central test: "write the test" does not prevent a test that exists and misses the failure, so they are two kinds.
+    - A review that lists the same mistake in several places gives one row per place, all with the same review identifier. The script counts that review once. Do not merge the rows.
+    - A finding the review marks as not real, dismissed, or already fixed before the review is not evidence. Skip it.
+    - A kind with no rule is at level 1. A kind whose rule at level k did not prevent the finding gets the row at level k, the kind's current level.
+    - Never copy the example rows of the format into the page.
+
+    ## Steps
+
+    1. Run `sh "<script>" check "<root>/docs/wiki"`. When the page is missing, create it with the title, the two headings, and the two table headers of the format, and no rows. When the check fails for any other reason, show its output and stop.
+    2. Read `<page>`: the Kinds and the Evidence tables. Run `sh "<script>" index "<root>/docs/wiki"` for the kinds of level 2 and up, of the page and of the general kinds; run `sh "<script>" rule <kind> "<root>/docs/wiki"` for the rule of a kind you may use.
+    3. For each real finding, apply the central test: would the rule of this kind have prevented this finding?
+       - Yes for a kind of the page: use that kind, at its current level in Kinds.
+       - Yes for a general kind that the page lacks: add that kind to Kinds at the level `rule` prints, with its rule copied, Source `evidence-rules.md`, and Scope `general`; then use it at that level.
+       - No for every kind: create a kind at level 1, with Rule, Applies when, Source (the review identifier), and Scope filled. Scope is `project` when understanding the rule needs the project's business, otherwise `general`.
+    4. Append one row to Evidence per finding: Kind, Level, Review (the identifier given), Date (the review's date when given, else today, `YYYY-MM-DD`), Finding.
+    5. Run `check` again; when it fails, fix your rows. Then run `sh "<script>" count "<root>/docs/wiki"`.
+
+    ## Format
+
+    (classify.md lines 42-63 verbatim: the empty page and the two example rows, in their own markdown fences)
+
+    ## Output
+
+    - The rows added, and the kinds created with their scope ("None" when there are none).
+    - The `count` lines of the kinds touched.
+    - Any finding skipped, with the reason.
+    ````
+
+    Changes from `classify.md`, each listed in `PROVENANCE.md`:
+    - The core prefix comes first.
+    - `<script>` is the deployed path, under `$HOME`. A `~` inside quotes would not expand.
+    - Step 2 reads the general kinds through `index` and `rule <kind>` instead of reading `evidence-rules.md`. The agent cannot name the Read path without the home directory, and this keeps the one parser.
+    - Step 3 takes the level of a general kind from `rule`.
+    - The exit-3 rule is new (L35).
+    - "You receive the findings the review kept" names T1's feed.
+  - `roles/classifier/LICENSE`: written with `git -C ~/.local/share/playbook show 6de8566:LICENSE`, so it is byte-identical (21 lines, copied).
+  - `roles/classifier/PROVENANCE.md`, about 14 lines, authored:
+    - the source repository `andresfrei/playbook`, commit `6de8566bf7f1150f49a75c1162c0f4cf87bf57c5`, tag `v3.6.0`;
+    - the source path `plugins/playbook-agents/agents/classify.md`;
+    - MIT, in `LICENSE` beside it; the L8 decision (no upstream tracked);
+    - `## Changed since the snapshot`, listing the changes above.
+    - It names "this repository", not the brand (S15).
+  - Generated by `gadu-generate`: `agents/classifier.md`, about 80 lines.
+  - `overlay.manifest`: the row `classifier.md               custom   agent`, after `verifier.md` and before `foreman.md`, aligned like its neighbours.
+  - `skills/role-chain/references/models.md` line 6: the Mid line reads `builder, polisher, prototyper, sweeper, classifier`.
+  - Not changed: `engine/roles` (`Vocabulary`, `Catalog`, chain), `engine/skills/routes.go`, `bin/lib/apply.sh`, `engine/pipkg`, the eight role bodies, the foreman's body, and `skills/_shared/evidence/*`.
+
+  **Tests**, RED first where marked. Each test is shown to matter by a mutation, which is reverted afterwards; the builder reports the failing test names.
+  - New file `engine/agentgen/classifier_test.go` (package `agentgen_test`):
+    - (G1, RED) `TestTheClassifierHasAClaudeFileAndNoOther`.
+      - Over `seededRoot`, the table holds `agents/classifier.md` exactly once, directly before `agents/foreman.md`.
+      - It holds none of `pi/agents/classifier.md`, `codex/agents/classifier.toml` and `opencode/agents/classifier.md`.
+      - Pins: OD-7 in the generator.
+      - Mutation Mx1: move the row from `claudeOnlyRoles` into `roles`. G1 fails on the Pi, Codex and OpenCode paths.
+    - (G2, RED) `TestTheClaudeFileOfTheClassifierIsItsFrontmatterAndItsBody`.
+      - The file equals exactly `"---\nname: classifier\ndescription: " + description + "\nmodel: sonnet\ntools: Read, Grep, Glob, Bash, Edit, Write\n---\n\n" + source` with `memoryLine + "\n"` removed. The source must hold that line exactly once.
+      - `effortField` (foreman_test.go) finds no effort field, and every byte is printable ASCII or `\n`.
+      - Pins: the mid tier, the tool list, and the dropped memory line.
+      - Mutation Mx2: add `mcp__memorycard__mem_search` to its tools. G2 fails, because the tools differ and the memory line is kept.
+      - Mutation Mx3: set the tier to `tierFrontier`. G2 fails on `model: opus`.
+  - Edits to existing pins in `engine/agentgen`. They are RED with the new source and before the generator change, and GREEN after.
+    - `allPaths` adds `agents/classifier.md` before `agents/foreman.md`.
+    - `TestCheckNamesEveryArtifactThatIsMissingInTheOrderOfTheTable` adds `roles/classifier/body.md: missing (...)` between the roles and the foreman.
+    - The counts of `TestTheForemanHasNoPiOrCodexFileAndItsClaudeFileFollowsTheRoles` and `TestTheOpenCodeFileOfEveryAgentIsWrittenAfterTheFilesOfTheOtherRuntimes` go from 34 to 35, and their messages name the classifier's Claude file. The foreman stays tenth from the end.
+    - `TestEveryRoleSourceOfTheRepositoryIsProjected` treats `classifier` as Claude-only: it asserts that its Pi, Codex and OpenCode files are absent. The foreman keeps its own case.
+    - `seededRoot` adds `classifier` to the sources whose skills it stubs.
+    - The message of `TestTheCommittedFilesOfTheRolesAreWhatTheGeneratorWrites` names the classifier.
+  - New file `engine/skills/classifier_artifact_test.go` (package `skills`):
+    - (K1, RED) `TestClassifierBodyIsTheClassifyAgentAdapted`, over `roles/classifier/body.md`:
+      - Its first six lines are `roleCorePrefix("classifier")`.
+      - It holds `$HOME/.claude/skills/_shared/evidence/evidence.sh`, `sh "<script>"`, `would the rule of this kind have prevented this finding?`, `Never commit, push, or change git state.`, `Only add rows.`, `exits 3`, `` `index` `` and `` `rule <kind>` ``.
+      - It holds no `CLAUDE_PLUGIN_ROOT`, no `~/.claude`, and no `engram` (case-insensitive).
+      - Pins: the deployed path of T2 and the classify rules.
+      - Mutation Mx4: restore `${CLAUDE_PLUGIN_ROOT}/evidence.sh`. K1 fails.
+      - Mutation Mx5: write `~/.claude/skills/...` in place of `$HOME`. K1 fails.
+    - (K2, RED) `TestClassifierIsDeployedToClaudeAlone`, over the real `overlay.manifest`:
+      - The rows named `classifier.md` are exactly `{classifier.md custom agent}`.
+      - `ResolveRoutes` for `claude` gives `Dest` `/h/.claude/agents/classifier.md`; for `codex`, `opencode` and `pi` it gives an empty `Dest`.
+      - No row names `codex/agents/classifier.toml` or `opencode/agents/classifier.md`.
+      - `agents/classifier.md` exists in the repository, and `pi/agents/classifier.md`, `codex/agents/classifier.toml` and `opencode/agents/classifier.md` do not. A Pi file would be shipped by `copyPiAgents`.
+      - Mutation Mx6: add the row `codex/agents/classifier.toml custom codex-agent`. K2 fails.
+      - Mutation Mx7: create an empty `pi/agents/classifier.md`. K2 fails.
+    - (K3, RED) `TestClassifierLicenseAndProvenanceTravelWithTheSource`:
+      - `gitBlobID` of `roles/classifier/LICENSE` equals `evidenceSnapshotBlobs["LICENSE"]`.
+      - `PROVENANCE.md` holds the full commit, `v3.6.0`, `andresfrei/playbook`, `plugins/playbook-agents/agents/classify.md` and `MIT`.
+      - Its `## Changed since the snapshot` section is non-empty and is not `- Nothing.`.
+      - Mutation Mx8: append a newline to `roles/classifier/LICENSE`. K3 fails.
+  - A RED that is a build failure is fixed and re-run to RED for the right reason before any code changes (L27 precedent).
+
+  **Checks**, in `engine/`, with exact results reported:
+  - `go test ./agentgen/ ./skills/ -count=1`.
+  - `OVERLAY_DIR=<worktree> go run ./cmd/ gadu-generate`, then `go run ./cmd/ gadu-generate --check`.
+  - `go test ./pipkg/ ./runtime/ -count=1`, to show that Pi ships no classifier.
+  - `go run ./cmd/ skills validate --registry ../skills.registry.yaml --manifest ../overlay.manifest --source-root ../skills`. The expected line is "89 files": agent rows are not skills rows (assumption).
+  - `rg -nP '[^\x00-\x7F]' ../roles/classifier/body.md ../agents/classifier.md` prints nothing (the Write tool can turn `\u` escapes into characters).
+  - `cmp ../roles/classifier/LICENSE` against `git -C ~/.local/share/playbook show 6de8566:LICENSE`.
+  - `gofmt -l agentgen/ skills/`.
+  - Once, before the commit: `go test ./... -count=1`.
+
+  **Commit** `feat(agents): add the classifier role for Claude Code`, with `Risk: 5` (a new agent deployed to Claude Code; CI checks it with `gadu-generate --check`). No item 3: the `engine/roles` vocabulary and the chain are unchanged, and the only readers of `agentgen.Artifacts` outside its package (`review_launch_test.go`, `codexexec_test.go`, `runtime/opencode_server_rules_test.go`) look up named paths that do not change.
+
+  **Forecast** (shaper estimate, no actuals, low confidence):
+  - Authored, 270-360 lines in total:
+    - body about 75;
+    - `PROVENANCE.md` about 14;
+    - engine about 40 (roles.go about 20, agentgen.go about 20);
+    - manifest and models.md 2;
+    - G1 and G2 about 55;
+    - existing pin edits about 20;
+    - K1-K3 about 110.
+  - Generated `agents/classifier.md`, about 80 lines, and copied `LICENSE`, 21 lines, are reported apart.
+  - If the attempt ledger counts the generated file, the total is 350-460.
+  - Past about 400 authored lines (generated and copied files excluded), the builder stops with `partial` (L13 decision (2)). The cut:
+    - T3a: engine, body, `LICENSE`, `PROVENANCE.md`, generated file, row, models line, G1, G2, the pin edits and K2. The license files stay in the first commit, as S9 requires.
+    - T3b: K1 and K3.
+
+  **OD-5, OD-6, OD-8, OD-11 against T3:**
+  - OD-5 (L26, wiki format extended for decision ids): T3 writes only `docs/wiki/evidence.md` in the format of `evidence.sh` and adds no decision id. No change.
+  - OD-6 (L24, the overlay gate wins): the classifier never commits, so it never meets a gate. No change.
+  - OD-8 (L28, word budgets of the session-start text): the classifier body is a sub-agent prompt, not session-start text. No change.
+  - OD-11 (L28, a 150-word cap on what `gate-task` injects into builder and reviewer prompts): nothing is injected into the classifier. No change.
+  - The carried F1 and F2 of `0178aa75ec87-5` stay with T6 (L36); T3 touches neither `route_column_pins_test.go` nor `skills/_shared/evidence/PROVENANCE.md`.
+
+  **Risks, not decided here:**
+  - The write limits are prompt-level only. No guard enforces "only `<page>`, never commit".
+  - `gate-task` appends the memory instructions block to the classifier, which holds no memorycard tool. The block's effect on it was not checked.
+  - Playbook's `classify.md` declares `effort: medium` in a Claude agent file. The overlay's comment says Claude Code takes no effort from the file (`foreman_test.go` lines 83-84). Which is true is unverified, and T3 keeps the generator's four keys.
+  - The deployed path assumes `$HOME/.claude`, the root `bin/lib/targets.sh` uses. A Claude Code run with another config directory would find no script and stop blocked. Not checked.
+  - MIT notice: `LICENSE` sits beside the source in `roles/classifier/`. The deployed `~/.claude/agents/classifier.md`, an adapted copy, carries no notice of its own; the notice is deployed beside the evidence store (`~/.claude/skills/_shared/evidence/LICENSE`). Whether that is enough is unverified, and the owner can decide it if needed.
+  - T18's detail still says the explorer is generated for three runtimes, "mirroring T3". After this entry T3 is Claude-only, and whether OD-7 also covers the explorer is for T18's shaper to settle with the owner. Not changed here.
+  - Whether `skills validate` counts agent rows was not checked; the builder reports the line it prints.
+  - Write -> builder and review -> reviewer stay assumptions (T14).
+  - No product decision of T3 is open.
+- **L38** (2026-11-22, builder): T3 built as designed in L37, on branch `feat/playbook-classifier-role` from `54a4ff7e`, workflow `merge-playbook-into-sdd-overlay-t3`, in one commit (no split: authored lines stayed under 400). Commit `feat(agents): add the classifier role for Claude Code` (its SHA is not knowable inside its own commit; `git log --grep`), `Risk: 5`. S5 (acceptance: the generator emits `agents/classifier.md` and no Pi, Codex or OpenCode file; one manifest row) and S9 (`LICENSE` byte-identical to the snapshot, `PROVENANCE.md` with the changes) covered. The uncommitted document edits of L37 (S5, the S14 clause, the T3 line, L37) are in the same commit.
+
+  **One departure from L37, a gap the design did not see.** L37 changes `skills/role-chain/references/models.md` line 6 (the Mid line names `classifier`). That file belongs to the `role-chain` skill, and editing it made `skills validate` fail with `[APPROVAL_STALE] role-chain: ... the skill changed after approval` and `TestRegistryLockE2E_ValidateLeavesTheRealTreeUntouched` fail. The approval record is a human act (`labdrian skills approve --id role-chain --approver <name>`), so the builder reverted the edit and did not approve. The classifier still gets the Mid model, because `classifier` is a row of `claudeOnlyRoles` with `tier: tierMid`; only the prose list of roles in models.md is missing it. Open for the foreman and the owner: either the owner approves a models.md edit (then the Mid line gains `classifier`), or the line stays as is. Nothing else reads that list: no test pins it.
+
+  **Commands run, from `engine/` unless noted, with exact results:**
+  - RED 1, tests only, no source yet: `go test ./agentgen/ ./skills/ -count=1` printed 53 `--- FAIL` lines (the sources `roles/classifier/*` were absent, and `seededRoot` reads `roles/classifier/body.md`). That is a failure for a missing source, not the right reason for the generator; so RED 2.
+  - RED 2, with `roles/classifier/{body.md,LICENSE,PROVENANCE.md}`, the manifest row and no generator change: 13 `--- FAIL` lines, all for the right reason (the generator emits no `agents/classifier.md`): agentgen `TestArtifactsAreTheThreeFilesOfEachRoleAndNothingElseInTheOrderTheyAreWrittenAndReported`, `TestEveryRoleSourceOfTheRepositoryIsProjected`, `TestTheCommittedFilesOfTheRolesAreWhatTheGeneratorWrites`, `TestTheClassifierHasAClaudeFileAndNoOther`, `TestTheClaudeFileOfTheClassifierIsItsFrontmatterAndItsBody`, `TestTheForemanHasNoPiOrCodexFileAndItsClaudeFileFollowsTheRoles`, `TestCheckNamesEveryArtifactThatIsMissingInTheOrderOfTheTable`, `TestGenerateWritesEveryArtifactAndPutsBackWhatWasEdited`, `TestTheOpenCodeFileOfEveryAgentIsWrittenAfterTheFilesOfTheOtherRuntimes`; skills `TestClassifierBodyIsTheClassifyAgentAdapted` (the body wording did not yet hold the anchors `` `index` `` and `` `rule <kind>` ``, refined in the body), `TestClassifierIsDeployedToClaudeAlone`, `TestRegistryLockE2E_ValidateLeavesTheRealTreeUntouched`, `TestEveryManifestRowExistsInTheRepository` (the last two fail while the row has no file).
+  - GREEN: `OVERLAY_DIR=<worktree> go run ./cmd/ gadu-generate` wrote `agents/classifier.md` (75 lines) and the others unchanged; `OVERLAY_DIR=<worktree> go run ./cmd/ gadu-generate --check` printed `gadu-generate --check: OK (committed artifacts match generator output)`; `go test ./agentgen/ ./skills/ -count=1` printed `ok` for both (after the models.md edit was reverted; with it, `skills` failed as said above).
+  - `go test ./pipkg/ ./runtime/ -count=1`: `ok` for both (Pi ships no classifier).
+  - `go run ./cmd/ skills validate --registry ../skills.registry.yaml --manifest ../overlay.manifest --source-root ../skills` printed `registry and manifest aligned (31 skills)`, `skills/ on disk matches overlay.manifest (89 files)` and `global skill approvals verified (31 skills: 31 approved)`. So `skills validate` does not count agent rows: the new `classifier.md` row left it at 89 files, as L37 assumed.
+  - `rg -nP '[^\x00-\x7F]' ../roles/classifier/body.md ../agents/classifier.md` printed nothing (exit 1). `cmp ../roles/classifier/LICENSE <(git -C ~/.local/share/playbook show 6de8566:LICENSE)` printed nothing (identical). `gofmt -l agentgen/ skills/` printed nothing.
+  - Full `go test ./... -count=1`: every package `ok`, no failure (run once for the result; a second run only to filter non-`ok` lines printed nothing).
+
+  **Test-first and mutation table** (every mutation applied to a file backed up first, and reverted by copying the backup back, then `cmp` against the backup; no `git checkout`):
+
+  | Test | RED first | Mutation | Failing test or message |
+  |------|-----------|----------|-------------------------|
+  | G1 `TestTheClassifierHasAClaudeFileAndNoOther` | yes (RED 1, RED 2) | Mx1: the row moved into `roles` | G1 fails: "agents/classifier.md is not directly before agents/foreman.md" and the table holds the Pi, Codex and OpenCode paths |
+  | G2 `TestTheClaudeFileOfTheClassifierIsItsFrontmatterAndItsBody` | yes | Mx2: `mcp__memorycard__mem_search` added to its tools | G2 fails (tools differ, memory line kept) |
+  | G2 | yes | Mx3: tier `tierFrontier` | G2 fails on `model: opus` |
+  | K1 `TestClassifierBodyIsTheClassifyAgentAdapted` | yes (RED 1, RED 2) | Mx4: `${CLAUDE_PLUGIN_ROOT}/evidence.sh` restored | K1 fails: no `$HOME/...` anchor, holds `claude_plugin_root` |
+  | K1 | yes | Mx5: `~/.claude/skills/...` in place of `$HOME` | K1 fails: no `$HOME/...` anchor, holds `~/.claude` |
+  | K2 `TestClassifierIsDeployedToClaudeAlone` | yes (RED 1, RED 2) | Mx6: row `codex/agents/classifier.toml custom codex-agent` | K2 fails: "the manifest has a row for codex/agents/classifier.toml" |
+  | K2 | yes | Mx7: empty `pi/agents/classifier.md` | K2 fails: "pi/agents/classifier.md exists" |
+  | K3 `TestClassifierLicenseAndProvenanceTravelWithTheSource` | yes (RED 1) | Mx8: a newline appended to `roles/classifier/LICENSE` | K3 fails: blob `392e44e5...`, want `b6f9c476...` |
+  | Pin edits (`allPaths`, Check order, counts 34 to 35, `TestEveryRoleSourceOfTheRepositoryIsProjected`, `seededRoot`) | RED 2 (nine agentgen tests) | none | GREEN after the generator change |
+
+  K1 and K3 first failed (RED 1) because the sources were absent; RED 2 kept K1 red for its own reason (the `index` and `rule <kind>` anchors) and K3 turned green once the sources existed, as it checks the sources and not the generator.
+
+  **Lines.** Authored, 334 added (347 changed counting the 13 removed): body 69, `PROVENANCE.md` 18, `engine/agentgen` code 37 added (`agentgen.go` 22, `roles.go` 15), existing pin edits 16 added (`artifacts_test.go` 8, `foreman_test.go` 2, `messages_pin_test.go` 3, `opencode_test.go` 2, `roles_test.go` 1), new tests 193 (`classifier_test.go` 81, `classifier_artifact_test.go` 112), manifest row 1. Generated, reported apart: `agents/classifier.md` 75. Copied, reported apart: `roles/classifier/LICENSE` 21. The document edits (S5, S14, T3 line, L37, this entry) are not counted here. L37 forecast 270-360; 334 is inside it.
+
+  **Left as designed, not checked here (L37 risks):** the write limits are prompt-level only; the effect of the `gate-task` memory block on a role with no memorycard tool; whether Claude Code reads `effort` from an agent file; the `$HOME/.claude` root; the MIT notice on the deployed agent. Nothing new was found beyond the models.md approval gap above.

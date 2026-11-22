@@ -22,7 +22,8 @@ func allPaths() []string {
 	}
 	// The foreman is the parent, not a role of the chain: it has a Claude file after the roles and no Pi or Codex file (S5), and the
 	// nine OpenCode files come last: the eight roles, then the foreman.
-	paths = append(paths, "agents/foreman.md")
+	// The classifier, off the chain and for Claude Code alone, has its Claude file directly before the foreman's.
+	paths = append(paths, "agents/classifier.md", "agents/foreman.md")
 	for _, r := range wantRoles {
 		paths = append(paths, "opencode/agents/"+r.name+".md")
 	}
@@ -41,6 +42,7 @@ func TestCheckNamesEveryArtifactThatIsMissingInTheOrderOfTheTable(t *testing.T) 
 	for _, r := range wantRoles {
 		want += "\n  roles/" + r.name + "/body.md: missing (the source of the role is not in the repository)"
 	}
+	want += "\n  roles/classifier/body.md: missing (the source of the role is not in the repository)"
 	want += "\n  roles/foreman/body.md: missing (the source of the role is not in the repository)"
 	want += "\n  skills/role-chain/references/models.md: missing (the tier table of the models is not in the repository)"
 	if err == nil || err.Error() != want {

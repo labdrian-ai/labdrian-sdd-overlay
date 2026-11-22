@@ -169,6 +169,19 @@ var foreman = role{
 	},
 }
 
+// claudeOnlyRoles are the roles that have a Claude file and no Pi, Codex or OpenCode file. The classifier
+// is off the role chain (L10 of odd/tasks/merge-playbook-into-sdd-overlay.md) and Claude Code only (OD-7,
+// L21): the learning loop is deployed there alone. It has no effort, because the Claude file takes none
+// (claudeKeys), and no memorycard tool, so body drops the line of the core prefix that sends a role there.
+var claudeOnlyRoles = []role{
+	{
+		name:        "classifier",
+		description: "Classifier role, off the role chain: writes the findings one review kept (send them, the review identifier and the repository root) as rows of docs/wiki/evidence.md by the classify rules; never changes git state.",
+		tier:        tierMid,
+		tools:       []string{"Read", "Grep", "Glob", "Bash", "Edit", "Write"},
+	},
+}
+
 // piToolNames translates a tool of Claude Code into the tool of Pi that does the same.
 //
 // Verified on 2026-10-22 by reading the installed sources (Pi 1.3.0, gentle-pi 4.3.0), not by running
@@ -306,8 +319,8 @@ func (r role) claudeFile(model, body string) string {
 		"\ntools: " + strings.Join(r.tools, ", ") + "\n---\n\n" + body
 }
 
-// projectClaude makes the Claude file of a role that has no Pi or Codex file (the foreman): its source, the
-// model of its tier from the table, and no Pi or Codex file.
+// projectClaude makes the Claude file of a role that has no Pi or Codex file (the foreman and the roles
+// of claudeOnlyRoles): its source, the model of its tier from the table, and no Pi or Codex file.
 func (r role) projectClaude(source string, models ModelTable) (Artifact, error) {
 	model, err := models.ID(r.tier, runtimeClaude)
 	if err != nil {

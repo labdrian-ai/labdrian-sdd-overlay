@@ -127,6 +127,7 @@ sweeper.md               custom   agent
 delivery.md              custom   agent
 reviewer.md              custom   agent
 verifier.md              custom   agent
+classifier.md            custom   agent
 foreman.md               custom   agent
 labdrian.md              custom   output-style
 codex/agents/builder.toml    custom   codex-agent
