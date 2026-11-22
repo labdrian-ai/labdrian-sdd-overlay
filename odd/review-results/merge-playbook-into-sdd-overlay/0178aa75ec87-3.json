@@ -1,0 +1,54 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "7b634ced2367375a2e8f4d1572e06aaa59d67db8",
+    "head": "0178aa75ec8789fe9a82f475b0a0d592a8354bdb",
+    "diff_sha256": "5bc3f78fb1aeea339efbfe8e8a198e3115648651425d27b8e77bef6b7cd9cf40",
+    "paths": [
+      "engine/shelltest/evidence_store_test.go",
+      "engine/skills/evidence_store_artifact_test.go",
+      "engine/skills/route_column_pins_test.go",
+      "engine/skills/routes.go",
+      "odd/review-results/merge-playbook-into-sdd-overlay/7b634ced2367-1.sweep.json",
+      "odd/review-results/merge-playbook-into-sdd-overlay/7b634ced2367-2.json",
+      "odd/tasks/merge-playbook-into-sdd-overlay.md",
+      "skills/_shared/evidence/PROVENANCE.md",
+      "skills/_shared/evidence/evidence.sh"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "7b634ced2367375a2e8f4d1572e06aaa59d67db8",
+      "head": "0178aa75ec8789fe9a82f475b0a0d592a8354bdb",
+      "diff_sha256": "5bc3f78fb1aeea339efbfe8e8a198e3115648651425d27b8e77bef6b7cd9cf40"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/shelltest/evidence_store_test.go",
+        "engine/skills/evidence_store_artifact_test.go",
+        "engine/skills/route_column_pins_test.go",
+        "engine/skills/routes.go",
+        "odd/review-results/merge-playbook-into-sdd-overlay/7b634ced2367-1.sweep.json",
+        "odd/review-results/merge-playbook-into-sdd-overlay/7b634ced2367-2.json",
+        "odd/tasks/merge-playbook-into-sdd-overlay.md",
+        "skills/_shared/evidence/PROVENANCE.md",
+        "skills/_shared/evidence/evidence.sh"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "Read the full diff (t22.diff, 438 lines, 9 paths); no commands run.",
+      "evidence.sh lines 1-120: the awk guard at lines 53-56 comes after the mode parse, so a usage error still exits 2; it comes before the wiki and page setup and before every awk call (run_awk, line 69). With no awk, every valid mode prints one stderr line and exits 3.",
+      "The header comment (lines 30-34) matches the new behaviour. PROVENANCE.md Changed entry names the change, as B10 requires.",
+      "evidence.sh outside odd/ appears only in the script, its rules file, PROVENANCE.md, overlay.manifest and the two test files; no hook or script consumes the exit code yet.",
+      "evidence.sh has no /tmp, mktemp or TMPDIR, so the /tmp scan in newEvidenceWorld does not trip on the real script.",
+      "The /tmp scan runs in newEvidenceWorld, which every evidence test calls before its first run; B9 keeps its tree checks.",
+      "B10 License check compares the LICENSE blob with exact line constants in both states. The routes.go change is comment-only, and block R pins it."
+    ]
+  }
+}

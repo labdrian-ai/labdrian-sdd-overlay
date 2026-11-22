@@ -995,3 +995,36 @@ Order is execution order: the learning loop (T1, T19, T2, T20, T21, T22, T3-T6, 
   - Checks, in `engine/`: `gofmt -l shelltest/ skills/` printed nothing; `shellcheck -s sh ../skills/_shared/evidence/evidence.sh` printed nothing, exit 0; `go test ./shelltest/ ./skills/ -count=1`: both ok; `go run ./cmd/ skills validate --registry ../skills.registry.yaml --manifest ../overlay.manifest --source-root ../skills`: "skills/ on disk matches overlay.manifest (89 files)"; `go test ./... -count=1` (once): exit 0, 87 `ok` lines, and two `[no test files]` lines (`enginetest`, `repotest`).
   - Tests use no real HOME: the script runs with `HOME=<tmp>` and `TMPDIR=<tmp>/tmpdir`. `/tmp/evidence-probe` was absent after X13.
   - Risk: items 3 (the exit contract of `evidence.sh`, which T5 consumes) and 5 (a deployed file changes).
+- **L36** (2026-11-22, delivery): delivery of branch `feat/playbook-evidence-store` at head `0178aa75ec8789fe9a82f475b0a0d592a8354bdb` (`0178aa75`), onto `origin/main` (`14f7a6dc`). The feature is NOT finished: T3 to T18 and T7 to T15 stay open. This entry closes nothing else; the document is not closed.
+
+  **State at close.**
+  - Delivered on this branch, `[x]`, each with its commit: T2 (T2a `62604473`, T2b `8e035ddb`), T20 (`d1e57b32`), T21 (`7b634ced`), T22 (`0178aa75`). T1 and T19 were delivered before base `b4d60151` and are `[x]` in their lines.
+  - Open, `[ ]`, unfinished: T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18.
+  - Specs covered by the delivered commits: S2 and S4 (through T2, T20, T21, T22); S15 held as a constraint.
+  - Commits on the branch over `origin/main`: `62604473` feat(evidence) absorb; `d1e57b32` fix(skills) Claude-only; `8e035ddb` test(evidence) pin the modes; `7b634ced` test(skills) pin the route column; `0178aa75` fix(evidence) fail loud when awk is missing.
+
+  **Review records** (all under `odd/review-results/merge-playbook-into-sdd-overlay/` unless named):
+  - `62604473`: `626044733022-3.json`, `626044733022-4.json`, with sweeps `-1.sweep.json`, `-2.sweep.json` and polishers `-5.polisher.json`, `-6.polisher.json`.
+  - `d1e57b32`: `d1e57b32f786-2.json`, `d1e57b32f786-3.json`, with `-1.sweep.json`, `-4.polisher.json`, `-5.polisher.json`.
+  - `8e035ddb`: `8e035ddb49dc-2.json`, with `-1.sweep.json`.
+  - `7b634ced`: `7b634ced2367-2.json`, with `-1.sweep.json`.
+  - `0178aa75`: `0178aa75ec87-3.json`, `0178aa75ec87-5.json`, with `-1.sweep.json`, `-2.polisher.json`, `-4.polisher.json`; committed by this delivery (they were untracked until then).
+  - Base `b4d60151`: `odd/review-results/consolidation-phase9/b4d601515f79-1.sweep.json`, committed by this delivery.
+
+  **Review check.** `labdrian review check --feature merge-playbook-into-sdd-overlay --head 0178aa75ec8789fe9a82f475b0a0d592a8354bdb --onto origin/main`: exit 0, `"outcome": "clear"`. Exemptions: none printed. Ranges and results it printed:
+  - `14f7a6dc..b4d60151`: none.
+  - `b4d60151..62604473`: `626044733022-3` (fix F1; carry F2 to F6), `626044733022-4` (fix F1; carry F2).
+  - `62604473..d1e57b32`: `d1e57b32f786-2` (carry F1, F2), `d1e57b32f786-3`.
+  - `d1e57b32..8e035ddb`: `8e035ddb49dc-2` (carry F1 to F3).
+  - `8e035ddb..7b634ced`: `7b634ced2367-2` (carry F1 to F3).
+  - `7b634ced..0178aa75`: `0178aa75ec87-3`, `0178aa75ec87-5` (carry F1, F2).
+
+  **Suggestions carried (review `0178aa75ec87-5`; carried, not declined):**
+  - F1: the block R route-name check of `TestRouteTexts_NameEveryReasonADestIsEmpty` (`engine/skills/route_column_pins_test.go`) is non-load-bearing, because its anchor line holds `claude-skill`. Carried to T6, the first task of this feature that changes the evidence store and its tests. If T6 does not touch `route_column_pins_test.go`, it carries again to the next task that does.
+  - F2: the Changed entry at `skills/_shared/evidence/PROVENANCE.md:13` omits the count and the check. Carried to T6, which changes `evidence.sh` (history mode and `check`), so B10 requires that entry to name the change.
+
+  **Test run.** `cd engine && go test ./... -count=1`: exit 0, 87 `ok` lines, no `FAIL`. Run at `0178aa75`, the worktree clean apart from the untracked review records.
+
+  **CI gate.** `labdrian review ci --landing 0178aa75ec8789fe9a82f475b0a0d592a8354bdb --head 0178aa75ec8789fe9a82f475b0a0d592a8354bdb`: exit 1, stderr: `error: review ci: the tree of the landing 0178aa75ec8789fe9a82f475b0a0d592a8354bdb holds CI markers: .github/workflows/ci.yml, .github/workflows/release.yml; the repository has remotes: origin; the no-CI closure does not apply`. The CI job "Engine Tests" has not run; it is not run here and is still to be confirmed after the foreman's push.
+
+  **Unfinished at close:** T3 to T18 and T7 to T15 (listed above); the CI run of this head (see CI gate); push, PR and merge, which are the foreman's under the owner's standing ok.

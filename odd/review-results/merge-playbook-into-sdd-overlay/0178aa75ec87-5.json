@@ -1,0 +1,81 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "7b634ced2367375a2e8f4d1572e06aaa59d67db8",
+    "head": "0178aa75ec8789fe9a82f475b0a0d592a8354bdb",
+    "diff_sha256": "5bc3f78fb1aeea339efbfe8e8a198e3115648651425d27b8e77bef6b7cd9cf40",
+    "paths": [
+      "engine/shelltest/evidence_store_test.go",
+      "engine/skills/evidence_store_artifact_test.go",
+      "engine/skills/route_column_pins_test.go",
+      "engine/skills/routes.go",
+      "odd/review-results/merge-playbook-into-sdd-overlay/7b634ced2367-1.sweep.json",
+      "odd/review-results/merge-playbook-into-sdd-overlay/7b634ced2367-2.json",
+      "odd/tasks/merge-playbook-into-sdd-overlay.md",
+      "skills/_shared/evidence/PROVENANCE.md",
+      "skills/_shared/evidence/evidence.sh"
+    ]
+  },
+  "rows": [
+    "recall",
+    "hunt"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "7b634ced2367375a2e8f4d1572e06aaa59d67db8",
+      "head": "0178aa75ec8789fe9a82f475b0a0d592a8354bdb",
+      "diff_sha256": "5bc3f78fb1aeea339efbfe8e8a198e3115648651425d27b8e77bef6b7cd9cf40"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/shelltest/evidence_store_test.go",
+        "engine/skills/evidence_store_artifact_test.go",
+        "engine/skills/route_column_pins_test.go",
+        "engine/skills/routes.go",
+        "odd/review-results/merge-playbook-into-sdd-overlay/7b634ced2367-1.sweep.json",
+        "odd/review-results/merge-playbook-into-sdd-overlay/7b634ced2367-2.json",
+        "odd/tasks/merge-playbook-into-sdd-overlay.md",
+        "skills/_shared/evidence/PROVENANCE.md",
+        "skills/_shared/evidence/evidence.sh"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "engine/skills/route_column_pins_test.go:117-145",
+        "severity": "SUGGESTION",
+        "claim": "Block R's check that the comment names every route of skillRouteTargets can never fail. linesBetween returns lines[i:j], so the block includes its start line, which must contain \"// The skill route, claude-skill\", and claude-skill is the only key of skillRouteTargets (routes.go:197-199). If claude-skill is removed from the rest of the comment, the test still passes; only the \"opencode\" and \"every target\" checks are load-bearing. Possible fix: check route names only in the lines after the anchor.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/skills/route_column_pins_test.go:74-91",
+          "engine/skills/route_column_pins_test.go:117-119",
+          "engine/skills/routes.go:197-199"
+        ]
+      },
+      {
+        "id": "F2",
+        "location": "skills/_shared/evidence/PROVENANCE.md:13",
+        "severity": "SUGGESTION",
+        "claim": "The new Changed entry describes what the snapshot did without awk but leaves out count and check: count also exited 0 silently, and check exited 1. A reader auditing the exit contract T5 consumes gets a partial account of the old behaviour. Possible fix: name count and check, or say \"every mode\" with each old exit.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "skills/_shared/evidence/PROVENANCE.md:13",
+          "odd/tasks/merge-playbook-into-sdd-overlay.md:384"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full diff t22.diff (437 lines, 9 paths); no commands run",
+      "evidence.sh lines 1-80: the awk guard (53-56) runs after the mode parse, so usage errors still exit 2; it runs before any awk, dirname or wiki use; the header states exit 3",
+      "evidence_store_test.go lines 1-200: the /tmp scan is in newEvidenceWorld before the copy; B11's PATH comes last and wins; B11 asserts exit, stdout and exact stderr for the five modes plus a usage error",
+      "The only other use of evidence.sh in engine/ is sh -n in evidence_store_artifact_test.go:100",
+      "B10 License check exact-line keyed on the LICENSE blob covers both states",
+      "routes.go diff touches comment lines only",
+      "T22 criteria met; F1-F3 of 7b634ced2367-2 resolved; mutation results per builder record only"
+    ]
+  }
+}
