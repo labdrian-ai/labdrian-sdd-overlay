@@ -21,10 +21,12 @@ import (
 // effect of moving the code.
 
 // The routes of a row, the value of its third column. A row with no third column takes RouteSkill.
-// A value outside these is not refused (except under longterm-mem/, see UnroutedRowError): the row
-// takes the skill route and keeps the value as its name.
+// A value outside these is not refused by the routing (except under longterm-mem/, see
+// UnroutedRowError): the row takes the skill route, keeps the value as its name and is copied like a
+// skill row. overlay.manifest holds no such value: TestOverlayManifest_EveryThirdColumnIsAKnownRoute
+// fails on one, so a misspelt route is caught before it is deployed.
 const (
-	// RouteSkill copies a row from skills/ to the skills directory of every target.
+	// RouteSkill copies a row from skills/ to the skills directory of Claude Code and of Codex; OpenCode reads the skills of Claude Code, so no copy is made for it (see resolveRoute).
 	RouteSkill = "skill"
 	// RouteClaudeSkill copies a row from skills/ to the skills directory of Claude Code alone; no other target takes it.
 	RouteClaudeSkill = "claude-skill"
@@ -126,7 +128,9 @@ type ResolvedRoute struct {
 	// is never deployed.
 	RepoSource string
 	// Dest is the absolute path the file is copied to for the target; empty when the row goes
-	// nowhere for it (a native agent of another runtime, an mcp row, a row never deployed).
+	// nowhere for it: a native agent or an output style of another runtime, a skill row for OpenCode
+	// (it reads the skills of Claude Code), a row of a skills route scoped to another runtime
+	// (claude-skill for any target but Claude Code), an mcp row, a row never deployed.
 	Dest string
 }
 

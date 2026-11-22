@@ -132,7 +132,8 @@ func changedSinceTheSnapshot(t *testing.T, provenance string) string {
 
 func TestEvidenceStore_CopiesMatchTheSnapshotOrAreListedAsChanged(t *testing.T) {
 	root := skillsRepoRoot(t)
-	section := changedSinceTheSnapshot(t, readRepoFile(t, root, evidenceDirRel+"/PROVENANCE.md"))
+	provenance := readRepoFile(t, root, evidenceDirRel+"/PROVENANCE.md")
+	section := changedSinceTheSnapshot(t, provenance)
 	changed := 0
 	for name, blob := range evidenceSnapshotBlobs {
 		equal := gitBlobID(readRepoFile(t, root, evidenceDirRel+"/"+name)) == blob
@@ -149,5 +150,28 @@ func TestEvidenceStore_CopiesMatchTheSnapshotOrAreListedAsChanged(t *testing.T) 
 	}
 	if changed == 0 && section != "- Nothing." {
 		t.Errorf("all three copies equal the snapshot, so the Changed section is exactly %q, got %q", "- Nothing.", section)
+	}
+	if changed > 0 {
+		for _, line := range strings.Split(section, "\n") {
+			if strings.TrimSpace(line) == "- Nothing." {
+				t.Errorf("%d copies differ from the snapshot, so the Changed section must not say %q", changed, "- Nothing.")
+			}
+		}
+	}
+
+	// The License line says LICENSE is byte-identical to the snapshot; that holds only while its blob is.
+	licenseLine, found := "", false
+	for _, line := range strings.Split(provenance, "\n") {
+		if strings.HasPrefix(line, "- License:") {
+			licenseLine, found = line, true
+			break
+		}
+	}
+	if !found {
+		t.Errorf("PROVENANCE.md has no %q line", "- License:")
+	} else if strings.Contains(licenseLine, "byte-identical") {
+		if got, want := gitBlobID(readRepoFile(t, root, evidenceDirRel+"/LICENSE")), evidenceSnapshotBlobs["LICENSE"]; got != want {
+			t.Errorf("PROVENANCE.md says LICENSE is byte-identical to the snapshot, but its blob is %s, not %s", got, want)
+		}
 	}
 }

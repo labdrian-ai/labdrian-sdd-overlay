@@ -36,8 +36,10 @@
 #                knows it on the branches (skills/<path> for a skill)
 #   repo_source  the absolute path it is copied from; empty when non-deployable
 #   dest         the absolute path it is copied to for <target>; empty when it
-#                goes nowhere for that target (an agent for opencode or codex,
-#                an mcp row, a row that is never deployed)
+#                goes nowhere for that target (an agent or output style for
+#                another runtime, a skill row for opencode, a claude-skill
+#                row for any target but claude, an mcp row, a row that is
+#                never deployed)
 #
 # An empty column is never followed by one that is not, so `IFS=$'\t' read -r`
 # (which drops empty trailing fields) reads every line whole. Callers skip a

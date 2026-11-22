@@ -1,0 +1,96 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "d1e57b32f7862dcdadf0687e49ccf0ed61bebeb0",
+    "head": "8e035ddb49dc9fdd2f60c8ab1ece56ef1cd9382c",
+    "diff_sha256": "3f0decd2b2fd90b482c8ae6d43add9b21836f93c6e4d93a33bf817bb70a96337",
+    "paths": [
+      "engine/overlaytest/overlaytest.go",
+      "engine/shelltest/evidence_store_test.go",
+      "engine/skills/evidence_store_artifact_test.go",
+      "odd/review-results/merge-playbook-into-sdd-overlay/626044733022-5.polisher.json",
+      "odd/review-results/merge-playbook-into-sdd-overlay/626044733022-6.polisher.json",
+      "odd/review-results/merge-playbook-into-sdd-overlay/d1e57b32f786-1.sweep.json",
+      "odd/review-results/merge-playbook-into-sdd-overlay/d1e57b32f786-2.json",
+      "odd/review-results/merge-playbook-into-sdd-overlay/d1e57b32f786-3.json",
+      "odd/review-results/merge-playbook-into-sdd-overlay/d1e57b32f786-4.polisher.json",
+      "odd/review-results/merge-playbook-into-sdd-overlay/d1e57b32f786-5.polisher.json",
+      "odd/tasks/merge-playbook-into-sdd-overlay.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "hunt"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "d1e57b32f7862dcdadf0687e49ccf0ed61bebeb0",
+      "head": "8e035ddb49dc9fdd2f60c8ab1ece56ef1cd9382c",
+      "diff_sha256": "3f0decd2b2fd90b482c8ae6d43add9b21836f93c6e4d93a33bf817bb70a96337"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/overlaytest/overlaytest.go",
+        "engine/shelltest/evidence_store_test.go",
+        "engine/skills/evidence_store_artifact_test.go",
+        "odd/review-results/merge-playbook-into-sdd-overlay/626044733022-5.polisher.json",
+        "odd/review-results/merge-playbook-into-sdd-overlay/626044733022-6.polisher.json",
+        "odd/review-results/merge-playbook-into-sdd-overlay/d1e57b32f786-1.sweep.json",
+        "odd/review-results/merge-playbook-into-sdd-overlay/d1e57b32f786-2.json",
+        "odd/review-results/merge-playbook-into-sdd-overlay/d1e57b32f786-3.json",
+        "odd/review-results/merge-playbook-into-sdd-overlay/d1e57b32f786-4.polisher.json",
+        "odd/review-results/merge-playbook-into-sdd-overlay/d1e57b32f786-5.polisher.json",
+        "odd/tasks/merge-playbook-into-sdd-overlay.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "engine/skills/evidence_store_artifact_test.go:322-342",
+        "severity": "SUGGESTION",
+        "claim": "B10 only partly closes F4 of 626044733022-3. When at least one copy differs from the snapshot, the test does not check the rest of the Changed section, so a stale '- Nothing.' line can stay beside a listed file and the test still passes. PROVENANCE.md line 8 says LICENSE is 'byte-identical' to the snapshot; nothing ties that sentence to LICENSE's blob id. Possible fixes: refuse '- Nothing.' whenever changed > 0, and either check line 8 against LICENSE's blob equality or drop the duplicate claim from line 8.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/skills/evidence_store_artifact_test.go:339-341",
+          "skills/_shared/evidence/PROVENANCE.md:8"
+        ]
+      },
+      {
+        "id": "F2",
+        "location": "engine/overlaytest/overlaytest.go:60-73",
+        "severity": "SUGGESTION",
+        "claim": "F6 of 626044733022-3 is resolved on the test side only. On a host with sh but no awk, 'index' sends awk's 'command not found' to /dev/null (evidence.sh:202) and exits 0 (evidence.sh:204); T5's injection would read that as 'no rules'. L25 scoped F6 to the test pin, so this is a residual in absorbed code. Possible fix: a 'command -v awk' guard in the script that exits nonzero, recorded in PROVENANCE.md's Changed list.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "pre-existing",
+        "proof_refs": [
+          "skills/_shared/evidence/evidence.sh:199-205",
+          "odd/tasks/merge-playbook-into-sdd-overlay.md:683-685"
+        ]
+      },
+      {
+        "id": "F3",
+        "location": "engine/shelltest/evidence_store_test.go:226-258",
+        "severity": "SUGGESTION",
+        "claim": "B9's no-write check records regular files under <tmp> only, so a mode that creates an empty directory passes, and a write outside <tmp> (TMPDIR, /tmp) passes too. Possible fix: record directory entries in fileTree, and point TMPDIR at a directory inside <tmp> in run().",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/shelltest/evidence_store_test.go:230-233",
+          "engine/shelltest/evidence_store_test.go:119"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full diff t2b.diff (762 lines, 11 paths); no commands run",
+      "Traced each B1-B9 expected output against evidence.sh at head",
+      "B10 section parse isolates '- Nothing.'",
+      "Read F4 and F6 of 626044733022-3.json, L22, L25 and L30",
+      "Assertions are observable; listed mutations each change asserted output",
+      "RequireShAndAwk follows the CI=='true' precedent; A4 Fatalf on missing sh",
+      "Blob-id constants not independently verified"
+    ]
+  }
+}

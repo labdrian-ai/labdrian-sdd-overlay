@@ -70,8 +70,10 @@ func newEvidenceWorld(t *testing.T, page string) evidenceWorld {
 		writeEvidenceFile(t, filepath.Join(tmp, "skills", "_shared", "evidence", name), string(data))
 	}
 	w := evidenceWorld{t: t, tmp: tmp, repo: filepath.Join(tmp, "repo"), script: filepath.Join(tmp, "skills", "_shared", "evidence", "evidence.sh")}
-	if err := os.MkdirAll(w.repo, 0o755); err != nil {
-		t.Fatal(err)
+	for _, dir := range []string{w.repo, filepath.Join(tmp, "tmpdir")} {
+		if err := os.MkdirAll(dir, 0o755); err != nil {
+			t.Fatal(err)
+		}
 	}
 	if page != "" {
 		writeEvidenceFile(t, filepath.Join(w.repo, "docs", "wiki", "evidence.md"), page)
@@ -79,12 +81,13 @@ func newEvidenceWorld(t *testing.T, page string) evidenceWorld {
 	return w
 }
 
-// run runs the script under sh from dir with a home of its own and CLAUDE_PROJECT_DIR unset, plus extra.
+// run runs the script under sh from dir with a home of its own, a TMPDIR inside the watched tree and
+// CLAUDE_PROJECT_DIR unset, plus extra.
 func (w evidenceWorld) run(dir string, extra []string, args ...string) overlaytest.Result {
 	w.t.Helper()
 	cmd := exec.Command("sh", append([]string{w.script}, args...)...)
 	cmd.Dir = dir
-	cmd.Env = append([]string{"HOME=" + w.tmp, "PATH=" + os.Getenv("PATH")}, extra...)
+	cmd.Env = append([]string{"HOME=" + w.tmp, "PATH=" + os.Getenv("PATH"), "TMPDIR=" + filepath.Join(w.tmp, "tmpdir")}, extra...)
 	return overlaytest.Capture(w.t, cmd)
 }
 
@@ -191,18 +194,32 @@ func TestEvidenceStoreUsageErrorsExitTwo(t *testing.T) {
 	}
 }
 
-// fileTree is every file under dir with its content, by path relative to dir.
+// fileTree is every entry under dir but dir itself, by path relative to dir: a regular file as "file "
+// and its content, a directory as "dir", a symbolic link as "link " and its target, anything else as
+// "other " and its type.
 func fileTree(t *testing.T, dir string) map[string]string {
 	t.Helper()
 	tree := map[string]string{}
 	err := filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
-		if err != nil || d.IsDir() {
+		if err != nil || path == dir {
 			return err
 		}
-		data, err := os.ReadFile(path)
 		rel, _ := filepath.Rel(dir, path)
-		tree[rel] = string(data)
-		return err
+		switch {
+		case d.IsDir():
+			tree[rel] = "dir"
+		case d.Type()&fs.ModeSymlink != 0:
+			target, err := os.Readlink(path)
+			tree[rel] = "link " + target
+			return err
+		case d.Type().IsRegular():
+			data, err := os.ReadFile(path)
+			tree[rel] = "file " + string(data)
+			return err
+		default:
+			tree[rel] = "other " + d.Type().String()
+		}
+		return nil
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -213,7 +230,20 @@ func fileTree(t *testing.T, dir string) map[string]string {
 // B9: no mode writes a file, and the repository needs no wiki file but the page (S4).
 func TestEvidenceStoreWritesNothingAndNeedsNoOtherWikiFile(t *testing.T) {
 	w := newEvidenceWorld(t, evidencePage(stdKinds, stdEvidence))
-	if got, want := fileTree(t, w.repo), map[string]string{filepath.Join("docs", "wiki", "evidence.md"): evidencePage(stdKinds, stdEvidence)}; !reflect.DeepEqual(got, want) {
+	// A temporary file made under /tmp would escape the watched tree, so a literal /tmp is refused before any mode runs.
+	script, err := os.ReadFile(w.script)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(script), "/tmp") {
+		t.Fatalf("%s names /tmp: a write there is outside the tree this test watches", w.script)
+	}
+	want := map[string]string{
+		"docs":                        "dir",
+		filepath.Join("docs", "wiki"): "dir",
+		filepath.Join("docs", "wiki", "evidence.md"): "file " + evidencePage(stdKinds, stdEvidence),
+	}
+	if got := fileTree(t, w.repo); !reflect.DeepEqual(got, want) {
 		t.Fatalf("the repository holds %v, want only docs/wiki/evidence.md", got)
 	}
 	before := fileTree(t, w.tmp)
