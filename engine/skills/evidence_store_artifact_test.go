@@ -1,10 +1,15 @@
 package skills
 
 import (
+	"crypto/sha1"
+	"encoding/hex"
+	"fmt"
 	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/overlaytest"
 )
 
 // The evidence store (S4, T2) is absorbed from the playbook snapshot into skills/_shared/evidence/
@@ -87,12 +92,62 @@ func TestEvidenceStore_LicenseAndProvenanceTravelWithTheCode(t *testing.T) {
 }
 
 func TestEvidenceStore_ScriptParsesAsPosixShell(t *testing.T) {
+	overlaytest.RequireShAndAwk(t)
 	sh, err := exec.LookPath("sh")
 	if err != nil {
-		t.Skip("sh is not on PATH")
+		t.Fatalf("sh: %v", err)
 	}
 	script := filepath.Join(skillsRepoRoot(t), evidenceDirRel, "evidence.sh")
 	if out, err := exec.Command(sh, "-n", script).CombinedOutput(); err != nil {
 		t.Fatalf("sh -n %s: %v\n%s", script, err, out)
+	}
+}
+
+// The git blob ids of the three files copied from the snapshot 6de8566 (v3.6.0), from
+// `git -C ~/.local/share/playbook rev-parse 6de8566:<path>`. The snapshot never changes, so neither do these.
+var evidenceSnapshotBlobs = map[string]string{
+	"evidence.sh":       "09b44a09878454b0f96f81ca00431236b142fd59",
+	"evidence-rules.md": "48c4bf91cda2322dc71f4fb080c9add7f6233031",
+	"LICENSE":           "b6f9c476b8c3982bfd1b4368d61c83ea53e22dad",
+}
+
+// gitBlobID is the id git gives a file's bytes: SHA-1 of "blob <size>\0<bytes>". skills/** is -text, so the
+// bytes on disk are the bytes of the blob.
+func gitBlobID(content string) string {
+	sum := sha1.Sum([]byte(fmt.Sprintf("blob %d\x00%s", len(content), content)))
+	return hex.EncodeToString(sum[:])
+}
+
+// changedSinceTheSnapshot is the text under "## Changed since the snapshot" of PROVENANCE.md, up to the next
+// heading or the end of the file.
+func changedSinceTheSnapshot(t *testing.T, provenance string) string {
+	t.Helper()
+	_, after, ok := strings.Cut(provenance, "## Changed since the snapshot\n")
+	if !ok {
+		t.Fatal(`PROVENANCE.md has no "## Changed since the snapshot" section`)
+	}
+	section, _, _ := strings.Cut(after, "\n## ")
+	return strings.TrimSpace(section)
+}
+
+func TestEvidenceStore_CopiesMatchTheSnapshotOrAreListedAsChanged(t *testing.T) {
+	root := skillsRepoRoot(t)
+	section := changedSinceTheSnapshot(t, readRepoFile(t, root, evidenceDirRel+"/PROVENANCE.md"))
+	changed := 0
+	for name, blob := range evidenceSnapshotBlobs {
+		equal := gitBlobID(readRepoFile(t, root, evidenceDirRel+"/"+name)) == blob
+		listed := strings.Contains(section, "`"+name+"`")
+		switch {
+		case equal && listed:
+			t.Errorf("%s equals the snapshot but the Changed section names it", name)
+		case !equal && !listed:
+			t.Errorf("%s differs from the snapshot and the Changed section does not name it", name)
+		}
+		if !equal {
+			changed++
+		}
+	}
+	if changed == 0 && section != "- Nothing." {
+		t.Errorf("all three copies equal the snapshot, so the Changed section is exactly %q, got %q", "- Nothing.", section)
 	}
 }

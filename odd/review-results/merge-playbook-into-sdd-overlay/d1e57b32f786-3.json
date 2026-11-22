@@ -1,0 +1,68 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "62604473302240043e301ed5ed6b810b09f70e8d",
+    "head": "d1e57b32f7862dcdadf0687e49ccf0ed61bebeb0",
+    "diff_sha256": "4339ee3e7d7503ccb81a7f5f6189735c6a782b5e24aeced8afcc4b400394ec1e",
+    "paths": [
+      "CHANGELOG.md",
+      "README.md",
+      "bin/lib/manifest_routes.sh",
+      "engine/cmd/usage.go",
+      "engine/installer/routing_claude_skill_test.go",
+      "engine/skills/evidence_store_artifact_test.go",
+      "engine/skills/ondisk.go",
+      "engine/skills/ondisk_test.go",
+      "engine/skills/routes.go",
+      "engine/skills/routes_test.go",
+      "odd/review-results/merge-playbook-into-sdd-overlay/626044733022-1.sweep.json",
+      "odd/review-results/merge-playbook-into-sdd-overlay/626044733022-2.sweep.json",
+      "odd/review-results/merge-playbook-into-sdd-overlay/626044733022-3.json",
+      "odd/review-results/merge-playbook-into-sdd-overlay/626044733022-4.json",
+      "odd/tasks/merge-playbook-into-sdd-overlay.md",
+      "overlay.manifest"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "62604473302240043e301ed5ed6b810b09f70e8d",
+      "head": "d1e57b32f7862dcdadf0687e49ccf0ed61bebeb0",
+      "diff_sha256": "4339ee3e7d7503ccb81a7f5f6189735c6a782b5e24aeced8afcc4b400394ec1e"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "README.md",
+        "bin/lib/manifest_routes.sh",
+        "engine/cmd/usage.go",
+        "engine/installer/routing_claude_skill_test.go",
+        "engine/skills/evidence_store_artifact_test.go",
+        "engine/skills/ondisk.go",
+        "engine/skills/ondisk_test.go",
+        "engine/skills/routes.go",
+        "engine/skills/routes_test.go",
+        "odd/review-results/merge-playbook-into-sdd-overlay/626044733022-1.sweep.json",
+        "odd/review-results/merge-playbook-into-sdd-overlay/626044733022-2.sweep.json",
+        "odd/review-results/merge-playbook-into-sdd-overlay/626044733022-3.json",
+        "odd/review-results/merge-playbook-into-sdd-overlay/626044733022-4.json",
+        "odd/tasks/merge-playbook-into-sdd-overlay.md",
+        "overlay.manifest"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "Read the diff t20.diff; review-results JSON and odd/tasks lines past 534 not read",
+      "resolveRoute: a claude-skill row returns an empty Dest for any target other than claude; the OpenCode early return stays before the new check",
+      "bin/lib/sync_check.sh and status.sh skip a row with an empty dest",
+      "route_tar_path: unknown route falls to the default .claude path; capture, restore and bootstrap use managed rows only",
+      "Only the mcp route is branched on by name in bin/lib",
+      "ondisk.go: claude-skill left out of nonSkillRoutes on purpose; the longterm-mem route guard rejects claude-skill",
+      "Nothing was run"
+    ]
+  }
+}

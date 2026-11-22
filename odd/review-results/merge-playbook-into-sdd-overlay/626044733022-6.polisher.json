@@ -1,0 +1,20 @@
+{
+  "kind": "polisher",
+  "base": "b4d601515f7980c6a60d20943b08705600ea84f1",
+  "head": "62604473302240043e301ed5ed6b810b09f70e8d",
+  "diff_sha256": "7b0a5bb9b3a92be26c7280d9c103720308e030021684aab06ab9194999034f17",
+  "findings": {
+    "findings": [],
+    "evidence": [
+      "Read the whole diff t2a.diff (b4d60151..62604473): skills/_shared/evidence/{evidence.sh,evidence-rules.md,LICENSE,PROVENANCE.md}, four custom rows, evidence_store_artifact_test.go, L22/L23",
+      "Declared risk 5: bin/lib/apply.sh:172-201 copy every routed row with ensure_parent (common.sh:91-95), so the nested directory is created on deploy",
+      "engine/skills/manifest.go:12 lists _shared/ in infraPrefixes; engine/skillregistry/skillregistry.go:127 leaves _shared out of the registry, so no model-visible skill is added",
+      "engine/pipkg/shared_citations.go matches only one path element, so Pi does not take the nested files; engine/runtime/opencode_agents.go:163-175 skips directories starting with _",
+      "The Codex deploy is recorded in L22 as an accepted risk deferred to T11; nothing on Codex reads these files",
+      "evidence.sh never writes a file; exit codes defined; dirname lookup holds in the deployed layout; POSIX awk only",
+      "LICENSE carries the full MIT notice beside the code; PROVENANCE.md names the snapshot commit, tag and source paths",
+      "Tests A1-A4 match L22",
+      "Not run: go test, shellcheck, cmp, skills validate"
+    ]
+  }
+}
