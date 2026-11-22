@@ -10,19 +10,27 @@ import (
 const script = `sh "` + classifierguard.ScriptPath + `" `
 
 func bash(cmd string) classifierguard.Call {
-	return classifierguard.Call{Tool: "Bash", Command: cmd}
+	return classifierguard.Call{Tool: "Bash", Root: "/r", Command: cmd}
 }
 
 func write(tool, path string) classifierguard.Call {
-	return classifierguard.Call{Tool: tool, FilePath: path}
+	return classifierguard.Call{Tool: tool, Root: "/r", FilePath: path}
 }
 
-// The classifier may read, write its one page and run its one script in four forms; everything else is blocked.
+func read(path string) classifierguard.Call {
+	return classifierguard.Call{Tool: "Read", Root: "/r", FilePath: path}
+}
+
+// The classifier may read under its root, write its one page and run its one script in four forms on its own
+// wiki; everything else is blocked.
 func TestDecideAllowsOnlyTheClassifiersOwnCalls(t *testing.T) {
 	allowed := []classifierguard.Call{
-		{Tool: "Read", FilePath: "/anything"},
-		{Tool: "Grep", Command: "whatever"},
-		{Tool: "Glob"},
+		read("/r/odd/review-results/x.json"),
+		read("/r"),
+		{Tool: "Grep", Root: "/r", Command: "whatever"},
+		{Tool: "Grep", Root: "/r", Path: "/r/docs"},
+		{Tool: "Glob", Root: "/r"},
+		{Tool: "Glob", Root: "/r", Pattern: "docs/**/*.md"},
 		write("Write", "/r/docs/wiki/evidence.md"),
 		write("Edit", "/r/docs/wiki/evidence.md"),
 		bash(script + `check "/r/docs/wiki"`),
@@ -46,13 +54,14 @@ func TestDecideAllowsOnlyTheClassifiersOwnCalls(t *testing.T) {
 		{"dot-dot before the page", write("Write", "/r/../docs/wiki/evidence.md"), classifierguard.ReasonPage},
 		{"relative page", write("Write", "docs/wiki/evidence.md"), classifierguard.ReasonPage},
 		{"no root", write("Write", "/docs/wiki/evidence.md"), classifierguard.ReasonPage},
+		{"page of another root", write("Write", "/s/docs/wiki/evidence.md"), classifierguard.ReasonPage},
 		{"readme", write("Edit", "/r/README.md"), classifierguard.ReasonPage},
 		{"git config", write("Write", "/r/.git/config"), classifierguard.ReasonPage},
 		{"MultiEdit", write("MultiEdit", "/r/docs/wiki/evidence.md"), classifierguard.ReasonTool},
-		{"NotebookEdit", classifierguard.Call{Tool: "NotebookEdit", NotebookPath: "/r/docs/wiki/evidence.md"}, classifierguard.ReasonTool},
-		{"Agent", classifierguard.Call{Tool: "Agent"}, classifierguard.ReasonTool},
-		{"mcp tool", classifierguard.Call{Tool: "mcp__memorycard__mem_save"}, classifierguard.ReasonTool},
-		{"empty tool", classifierguard.Call{}, classifierguard.ReasonTool},
+		{"NotebookEdit", classifierguard.Call{Tool: "NotebookEdit", Root: "/r", NotebookPath: "/r/docs/wiki/evidence.md"}, classifierguard.ReasonTool},
+		{"Agent", classifierguard.Call{Tool: "Agent", Root: "/r"}, classifierguard.ReasonTool},
+		{"mcp tool", classifierguard.Call{Tool: "mcp__memorycard__mem_save", Root: "/r"}, classifierguard.ReasonTool},
+		{"empty tool", classifierguard.Call{Root: "/r"}, classifierguard.ReasonTool},
 		{"git commit", bash("git commit -m x"), classifierguard.ReasonCommand},
 		{"semicolon", bash(ok + "; git push"), classifierguard.ReasonCommand},
 		{"and", bash(ok + " && rm -rf /r"), classifierguard.ReasonCommand},
@@ -68,6 +77,34 @@ func TestDecideAllowsOnlyTheClassifiersOwnCalls(t *testing.T) {
 		{"quote in root", bash(script + `check "/r/a"b/docs/wiki"`), classifierguard.ReasonCommand},
 		{"tilde script", bash(`sh ~/.claude/skills/_shared/evidence/evidence.sh check "/r/docs/wiki"`), classifierguard.ReasonCommand},
 		{"no wiki argument", bash(script + "check"), classifierguard.ReasonCommand},
+		{"wiki of another root", bash(script + `check "/s/docs/wiki"`), classifierguard.ReasonCommand},
+		{"root holding a quote runs no script", classifierguard.Call{Tool: "Bash", Root: `/r"x`, Command: script + `check "/r"x/docs/wiki"`}, classifierguard.ReasonCommand},
+		{"read outside the root", read("/etc/passwd"), classifierguard.ReasonRead},
+		{"read dot-dot", read("/r/../s/x"), classifierguard.ReasonRead},
+		{"read of a sibling prefix", read("/rs/x"), classifierguard.ReasonRead},
+		{"read relative", read("docs/x"), classifierguard.ReasonRead},
+		{"grep outside", classifierguard.Call{Tool: "Grep", Root: "/r", Path: "/home"}, classifierguard.ReasonRead},
+		{"grep dot-dot", classifierguard.Call{Tool: "Grep", Root: "/r", Path: "/r/../x"}, classifierguard.ReasonRead},
+		{"glob path /", classifierguard.Call{Tool: "Glob", Root: "/r", Path: "/"}, classifierguard.ReasonRead},
+		{"glob absolute pattern", classifierguard.Call{Tool: "Glob", Root: "/r", Pattern: "/etc/*"}, classifierguard.ReasonRead},
+		{"glob home pattern", classifierguard.Call{Tool: "Glob", Root: "/r", Pattern: "~/x"}, classifierguard.ReasonRead},
+		{"glob dollar pattern", classifierguard.Call{Tool: "Glob", Root: "/r", Pattern: "$HOME/x"}, classifierguard.ReasonRead},
+		{"glob leading dot-dot", classifierguard.Call{Tool: "Glob", Root: "/r", Pattern: "../x"}, classifierguard.ReasonRead},
+		{"glob inner dot-dot", classifierguard.Call{Tool: "Glob", Root: "/r", Pattern: "**/../x"}, classifierguard.ReasonRead},
+	}
+	for _, root := range []string{"", "docs", "/r/", "/", "/r/../r", "/r\n"} {
+		blocked = append(blocked,
+			struct {
+				name string
+				call classifierguard.Call
+				want string
+			}{"read, root " + root, classifierguard.Call{Tool: "Read", Root: root, FilePath: "/r/x"}, classifierguard.ReasonRoot},
+			struct {
+				name string
+				call classifierguard.Call
+				want string
+			}{"script, root " + root, classifierguard.Call{Tool: "Bash", Root: root, Command: ok}, classifierguard.ReasonRoot},
+		)
 	}
 	for _, tc := range blocked {
 		v := classifierguard.Decide(tc.call)
@@ -84,12 +121,13 @@ func TestDecideAllowsOnlyTheClassifiersOwnCalls(t *testing.T) {
 // Each reason is one line, names what is allowed and says it is a speed bump.
 func TestEveryReasonIsOneLineAndNamesWhatIsAllowed(t *testing.T) {
 	for name, reason := range map[string]string{
-		"page": classifierguard.ReasonPage, "command": classifierguard.ReasonCommand, "tool": classifierguard.ReasonTool,
+		"root": classifierguard.ReasonRoot, "read": classifierguard.ReasonRead, "page": classifierguard.ReasonPage,
+		"command": classifierguard.ReasonCommand, "tool": classifierguard.ReasonTool,
 	} {
 		if reason == "" || strings.Contains(reason, "\n") {
 			t.Errorf("%s reason is empty or has a newline: %q", name, reason)
 		}
-		for _, want := range []string{"labdrian classifier guard", "speed bump", "Read, Grep, Glob", classifierguard.PageSuffix} {
+		for _, want := range []string{"labdrian classifier guard", "speed bump", "working directory", "Read, Grep and Glob", classifierguard.PageSuffix} {
 			if !strings.Contains(reason, want) {
 				t.Errorf("%s reason lacks %q: %q", name, want, reason)
 			}

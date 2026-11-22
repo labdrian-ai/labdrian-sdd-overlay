@@ -22,12 +22,17 @@ func runClassifierGuard(stdin string, args ...string) (codes []int, stdout, stde
 }
 
 func TestRolesClassifierGuardAnswersByExitStatusAndFailsClosed(t *testing.T) {
-	codes, out, errText := runClassifierGuard(`{"tool_name":"Read","tool_input":{"file_path":"/r/x"}}`)
+	codes, out, errText := runClassifierGuard(`{"tool_name":"Read","cwd":"/r","tool_input":{"file_path":"/r/x"}}`)
 	if len(codes) != 1 || codes[0] != 0 || out != "" || errText != "" {
 		t.Errorf("Read: codes=%v stdout=%q stderr=%q, want exit 0 and no output", codes, out, errText)
 	}
 
-	codes, out, errText = runClassifierGuard(`{"tool_name":"Bash","tool_input":{"command":"git push"}}`)
+	codes, out, errText = runClassifierGuard(`{"tool_name":"Read","tool_input":{"file_path":"/r/x"}}`)
+	if len(codes) != 1 || codes[0] != 2 || out != "" || errText != classifierguard.ReasonRoot+"\n" {
+		t.Errorf("Read with no cwd: codes=%v stdout=%q stderr=%q, want exit 2 and the root reason", codes, out, errText)
+	}
+
+	codes, out, errText = runClassifierGuard(`{"tool_name":"Bash","cwd":"/r","tool_input":{"command":"git push"}}`)
 	if len(codes) != 1 || codes[0] != 2 || out != "" || errText != classifierguard.ReasonCommand+"\n" {
 		t.Errorf("git push: codes=%v stdout=%q stderr=%q, want exit 2 and the command reason", codes, out, errText)
 	}
@@ -39,6 +44,9 @@ func TestRolesClassifierGuardAnswersByExitStatusAndFailsClosed(t *testing.T) {
 		{"not JSON", "not json", nil},
 		{"tool_input not an object", `{"tool_name":"Read","tool_input":"x"}`, nil},
 		{"over the bound", strings.Repeat(" ", hookwire.MaxToolCallBytes+1), nil},
+		{"a repeated command, the last allowed", `{"tool_name":"Bash","cwd":"/r","tool_input":{"command":"git push","command":"sh \"` +
+			classifierguard.ScriptPath + `\" check \"/r/docs/wiki\""}}`, nil},
+		{"a key that differs in case", `{"tool_name":"Write","cwd":"/r","tool_input":{"File_Path":"/r/docs/wiki/evidence.md"}}`, nil},
 		{"an argument", `{"tool_name":"Read","tool_input":{}}`, []string{"x"}},
 	}
 	for _, f := range failures {
@@ -49,6 +57,11 @@ func TestRolesClassifierGuardAnswersByExitStatusAndFailsClosed(t *testing.T) {
 		if strings.Count(errText, "\n") != 1 || !strings.HasSuffix(errText, "\n") || !strings.Contains(errText, "classifier-guard") {
 			t.Errorf("%s: stderr %q is not one line naming the verb", f.name, errText)
 		}
+	}
+	// A repeated key is refused by the decoding, not judged by the last value.
+	_, _, errText = runClassifierGuard(failures[len(failures)-3].stdin)
+	if !strings.Contains(errText, "cannot decode") {
+		t.Errorf("repeated command: stderr %q does not say it cannot decode the input", errText)
 	}
 }
 
@@ -77,10 +90,28 @@ func TestDocsDescribeTheClassifierGuard(t *testing.T) {
 		{"the wrapper help", docSection(t, wrapper, "classifier-guard", "review <verb>")},
 		{"the README section", docSection(t, readme, "gentle-ai-overlay roles classifier-guard", "overlay --help")},
 	} {
-		for _, want := range []string{"classifier-guard", "agents/classifier.md", "fails closed"} {
+		for _, want := range []string{"classifier-guard", "agents/classifier.md"} {
 			if !strings.Contains(doc.text, want) {
 				t.Errorf("%s does not say %q", doc.name, want)
 			}
 		}
+		// The verb exits 2 on what it cannot judge; that is said with its scope, never as a bare "fails closed".
+		if strings.Contains(doc.text, "fails closed") {
+			t.Errorf("%s says \"fails closed\" without a scope", doc.name)
+		}
+	}
+	for _, doc := range []struct{ name, text string }{
+		{"the engine usage", docSection(t, engine, "engine roles classifier-guard", "engine shaper assess")},
+		{"the README section", docSection(t, readme, "gentle-ai-overlay roles classifier-guard", "overlay --help")},
+	} {
+		for _, want := range []string{"exit 2", "working directory", "repeated key", "missing binary"} {
+			if !strings.Contains(doc.text, want) {
+				t.Errorf("%s does not say %q", doc.name, want)
+			}
+		}
+	}
+	changelog := strings.Join(strings.Fields(readRepositoryFile(t, "CHANGELOG.md")), " ")
+	if line := docSection(t, changelog, "`labdrian roles classifier-guard`", "- `labdrian workflow goal-base"); strings.Contains(line, "fails closed") {
+		t.Errorf("the CHANGELOG line says \"fails closed\" without a scope")
 	}
 }

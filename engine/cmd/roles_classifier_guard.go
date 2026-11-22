@@ -5,11 +5,13 @@ package main
 // one a person runs: the PreToolUse hook in the frontmatter of agents/classifier.md starts it, hands it the tool
 // call as JSON on stdin, and reads its exit status.
 //
-// The decision is engine/classifierguard's, a pure function of the call; this file only reads stdin (bounded by
-// hookwire.MaxToolCallBytes), has hookwire decode it, and answers with hookwire.ExitReply: exit 0 and no output to
-// allow, exit 2 with the reason on stderr to block. It fails closed: an argument, a failing stdin, input that does
-// not decode, input over the bound and a recovered panic each exit 2 with one line on stderr. That is safe because
-// the hook is declared only in the classifier's own file, so a block never reaches another agent.
+// The decision is engine/classifierguard's, a pure function of the call and of its root, the working directory
+// the hook input names in cwd. This file only reads stdin (bounded by hookwire.MaxToolCallBytes), has
+// hookwire.DecodeScopedToolCall decode it strictly, and answers with hookwire.ExitReply: exit 0 and no output to
+// allow, exit 2 with the reason on stderr to block. The verb exits 2 on every input it cannot judge: an argument,
+// a failing stdin, input that does not decode (a repeated key included), input over the bound, an unknown working
+// directory and a recovered panic. That holds only once the verb runs: Claude Code treats any other non-zero exit,
+// such as 127 for a missing binary, as non-blocking. The hook is declared only in the classifier's own file.
 
 import (
 	"fmt"
@@ -46,13 +48,14 @@ func runRolesClassifierGuard(args []string, stdin io.Reader, stdout, stderr io.W
 		blockLine("cannot read the hook input (%s)", oneLine(err.Error()))
 		return
 	}
-	call, err := hookwire.DecodeToolCall(raw)
+	call, err := hookwire.DecodeScopedToolCall(raw)
 	if err != nil {
 		blockLine("cannot decode the hook input (%s)", oneLine(err.Error()))
 		return
 	}
 	verdict := classifierguard.Decide(classifierguard.Call{
-		Tool: call.Name, Command: call.Command, FilePath: call.FilePath, NotebookPath: call.NotebookPath,
+		Tool: call.Name, Root: call.Cwd, Command: call.Command, FilePath: call.FilePath,
+		NotebookPath: call.NotebookPath, Path: call.Path, Pattern: call.Pattern,
 	})
 	reply := hookwire.ExitReply{Block: verdict.Block, Message: verdict.Reason}
 	_, _ = stderr.Write(reply.MessageLine())

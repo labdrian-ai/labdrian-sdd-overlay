@@ -1,0 +1,120 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "7704d28b967815d44d5be1b774a3588efb9c5d1d",
+    "head": "f66e524dfbd18d641a7a2270b4413990f7c75257",
+    "diff_sha256": "977c4b018b5eccf9924fbfaf9c227d4429a7af8599670be95cd6b82fe7299401",
+    "paths": [
+      "CHANGELOG.md",
+      "README.md",
+      "bin/lib/usage.sh",
+      "engine/architecture_test.go",
+      "engine/classifierguard/classifierguard.go",
+      "engine/classifierguard/classifierguard_test.go",
+      "engine/cmd/roles.go",
+      "engine/cmd/roles_classifier_guard.go",
+      "engine/cmd/roles_classifier_guard_test.go",
+      "engine/cmd/usage.go",
+      "odd/review-results/merge-playbook-into-sdd-overlay/7704d28b9678-1.sweep.json",
+      "odd/review-results/merge-playbook-into-sdd-overlay/7704d28b9678-2.json",
+      "odd/review-results/merge-playbook-into-sdd-overlay/7704d28b9678-3.polisher.json",
+      "odd/review-results/merge-playbook-into-sdd-overlay/7704d28b9678-4.polisher.json",
+      "odd/review-results/merge-playbook-into-sdd-overlay/7704d28b9678-5.json",
+      "odd/tasks/merge-playbook-into-sdd-overlay.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "hunt"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "7704d28b967815d44d5be1b774a3588efb9c5d1d",
+      "head": "f66e524dfbd18d641a7a2270b4413990f7c75257",
+      "diff_sha256": "977c4b018b5eccf9924fbfaf9c227d4429a7af8599670be95cd6b82fe7299401"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "README.md",
+        "bin/lib/usage.sh",
+        "engine/architecture_test.go",
+        "engine/classifierguard/classifierguard.go",
+        "engine/classifierguard/classifierguard_test.go",
+        "engine/cmd/roles.go",
+        "engine/cmd/roles_classifier_guard.go",
+        "engine/cmd/roles_classifier_guard_test.go",
+        "engine/cmd/usage.go",
+        "odd/review-results/merge-playbook-into-sdd-overlay/7704d28b9678-1.sweep.json",
+        "odd/review-results/merge-playbook-into-sdd-overlay/7704d28b9678-2.json",
+        "odd/review-results/merge-playbook-into-sdd-overlay/7704d28b9678-3.polisher.json",
+        "odd/review-results/merge-playbook-into-sdd-overlay/7704d28b9678-4.polisher.json",
+        "odd/review-results/merge-playbook-into-sdd-overlay/7704d28b9678-5.json",
+        "odd/tasks/merge-playbook-into-sdd-overlay.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "engine/cmd/roles_classifier_guard.go:49-56",
+        "severity": "WARNING",
+        "claim": "The guard decides allow from hookwire.DecodeToolCall, which uses encoding/json: keys match without regard to case and the last repeated key wins (engine/hookwire/guard.go:37-39). Claude Code reads tool_input case-sensitively. A Write input {\"file_path\":\"/r/.git/hooks/pre-commit\",\"FILE_PATH\":\"/r/docs/wiki/evidence.md\"} or a Bash input {\"command\":\"git push\",\"Command\":\"sh \\\"$HOME/.claude/skills/_shared/evidence/evidence.sh\\\" check \\\"/r/docs/wiki\\\"\"} makes the guard see the allowed value and exit 0 while the tool runs the other. Reachability depends on whether Claude Code forwards case-variant keys in tool_input to hooks, which this review could not verify. No test covers a duplicate or case-variant key.",
+        "evidence_class": "inferential",
+        "causal_disposition": "behavior-activated",
+        "proof_refs": [
+          "engine/hookwire/guard.go:28-35",
+          "engine/hookwire/guard.go:37-58",
+          "engine/classifierguard/classifierguard.go:127-143",
+          "engine/cmd/roles_classifier_guard_test.go:395-424"
+        ]
+      },
+      {
+        "id": "F2",
+        "location": "engine/cmd/roles.go:66-68",
+        "severity": "WARNING",
+        "claim": "The verb blocks on any error only once the dispatcher reaches runRolesClassifierGuard. An installed engine binary from before this commit has no classifier-guard case: 'roles classifier-guard' prints 'unknown verb' and exits 1, which Claude Code treats as a non-blocking hook error, so the tool call goes ahead. If the T3c-b agent file is deployed before the binary is updated, or beside a stale binary, the guard fails open. Nothing pins a non-zero, non-2 exit for this path.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/cmd/roles.go:64-69",
+          "odd/tasks/merge-playbook-into-sdd-overlay.md:1285"
+        ]
+      },
+      {
+        "id": "F3",
+        "location": "engine/classifierguard/classifierguard.go:145-158",
+        "severity": "SUGGESTION",
+        "claim": "isPage and isScriptCall accept any clean absolute path ending in /docs/wiki/evidence.md or /docs/wiki and do not tie it to the repository root the classifier was launched for, so an injected finding can make the classifier write another project's evidence page. The tests only use the root /r.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/classifierguard/classifierguard.go:146-148",
+          "engine/classifierguard/classifierguard.go:156-157"
+        ]
+      },
+      {
+        "id": "F4",
+        "location": "engine/classifierguard/classifierguard.go:129-130",
+        "severity": "SUGGESTION",
+        "claim": "Read, Grep and Glob are allowed with any input, so the classifier can read any file the user can read and Write it into the evidence page, which the parent may commit and push. This exfiltration path is not among the documented limits in README.md or the package comment.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/classifierguard/classifierguard.go:128-130",
+          "README.md:1632-1633"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full diff t3ca.diff (1070 lines)",
+      "Read engine/hookwire/guard.go in full",
+      "Read engine/cmd/roles.go lines 1-75 and dispatch.go lines 1-60 (unknown verb exits 1)",
+      "Bash regex checked by hand: chaining, redirection, env prefix, second line, trailing newline and tilde script all fail",
+      "isPage checked: relative, unclean, missing root and .bak suffix blocked; MultiEdit, NotebookEdit, mcp tool, empty tool name, null and empty stdin block",
+      "verb: argument, read error, decode error, oversized input and recovered panic each exit 2",
+      "No command was run"
+    ]
+  }
+}
