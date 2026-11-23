@@ -1,0 +1,25 @@
+{
+  "verdicts": [
+    {
+      "id": "F1",
+      "result": "reproduced",
+      "command": "cd <scratch>/vf-t4j/{head,base}/engine && HOME=$(mktemp -d) go test ./review/app/ -run TestVFProbe4F1 -v -count=1 (the probe file vfprobe_test.go was added to the archived head and base copies under /tmp/claude-1000/-home-labdrian-labdrian-sdd-overlay/45673332-5a42-429f-889a-50c9d8bcb1fc/scratchpad/vf-t4j and removed afterwards; setup: classifyWorld with one unclassified result and fakeClassified; Stop called 3 times in session-1)",
+      "output": "head: stop 1: block=true classify=[own-rdd/333333333333-1] portCalls=1; stop 2: block=false portCalls=2; stop 3: block=false portCalls=3. So the port is asked at every stop, including stops that do not block. base: stop 1: block=true portCalls=1; stop 2: block=false portCalls=1; stop 3: block=false portCalls=1. ok on both.",
+      "base_result": "not-reproduced"
+    },
+    {
+      "id": "F2",
+      "result": "reproduced",
+      "command": "cd <scratch>/vf-t4j/{head,base}/engine && HOME=$(mktemp -d) go test ./review/app/ -run 'TestVFProbe4F2' -v -count=1 (three probes: (a) good result 333333333333-1 plus result -2 with store.fail[\"Read 333333333333-2.verifier.json\"]=permission denied, 3 stops; (b) the same read failing only from the classification pass of stop 1 on (wrapper on Standing count), 2 stops; (c) good result plus a stray junk file 333333333333-9.json, 3 stops); then rg -n on engine/cmd/review_stop_hook.go, and rg WithClassified -g '!*_test.go' on engine/cmd",
+      "output": "head (a): every stop: block=false, err=find the results with kept findings: read odd/review-results/own-rdd/333333333333-2.verifier.json: permission denied, portCalls=[] (good result never asked). (b): stops 1 and 2: same error, portCalls=[]. (c): every stop: block=false, err=find the results with kept findings: odd/review-results/own-rdd/333333333333-9.json: review: invalid stored file: invalid character 'j' looking for beginning of value, portCalls=[]. base: (a), (b) and (c): stop 1 block=true classify=[own-rdd/333333333333-1] err=<nil> with the port asked about the good result; later stops: no block, no error. Stop hook (identical file on head and base): review_stop_hook.go:96-98 returns Stop's err with no block; :60 stopHookAnswer, :62 fmt.Fprintf(p.stderr, \"review %s: %v\\n\", ...), :67 p.exit(0). So the error goes to stderr only, exit 0, and nothing is blocked. Caveat: rg finds no WithClassified call in engine/cmd outside tests on head or base, so the production stop hook does not run the classification pass yet. The probe shows the defect in app.Service.Stop only, not through the hook today.",
+      "base_result": "not-reproduced"
+    },
+    {
+      "id": "F3",
+      "result": "reproduced",
+      "command": "cd <scratch>/vf-t4j/{head,base}/engine && HOME=$(mktemp -d) go test ./review/app/ -run TestVFProbe4F3 -v -count=1 (two results -1 and -2, port says both classified, Asked wrapper whose Add fails with 'disk full' only for classified-<sha16 of own-rdd/333333333333-1>)",
+      "output": "head: block=false classify=[] err=record that own-rdd/333333333333-1 is classified: disk full; portCalls=[\"/work/wt/feature own-rdd/333333333333-1\"]. -2 was not asked in that stop. put=map[]. base: block=false err=<nil> portCalls=[-1, -2] put=map[]. Base has no classified- key, so the defect cannot occur there.",
+      "base_result": "not-reproduced"
+    }
+  ]
+}

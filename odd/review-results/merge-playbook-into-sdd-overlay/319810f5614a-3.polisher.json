@@ -1,0 +1,17 @@
+{
+  "kind": "polisher",
+  "base": "3a141be270b83f1d6d246bea0395660381267d3c",
+  "head": "319810f5614a97c4e93a89c45c37bcc515c52077",
+  "diff_sha256": "dd72d0144f3218829645c6d56c1ee61c65dbb76be6d4c91d4dd13c901d5ddfe6",
+  "findings": {
+    "findings": [],
+    "evidence": [
+      "Read the full diff t4j.diff and classify.go:95-153",
+      "classifyRuling: Has(classifiedKey), the port, Add(classifiedKey) when classified; every lacking result goes to once; traced stop 1, stop 2 and a lost record; matches J6 and J7",
+      "once (stop.go:110-130) blocks only when a classify- key is new and records missing keys before returning",
+      "classified- plus 16 hex is 27 bytes, within fsstore/asked.go key rules",
+      "A Stop error never forms a block in review_stop_hook.go",
+      "Not run: tests"
+    ]
+  }
+}

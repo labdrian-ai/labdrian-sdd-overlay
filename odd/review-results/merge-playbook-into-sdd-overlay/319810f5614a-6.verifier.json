@@ -1,0 +1,18 @@
+{
+  "verdicts": [
+    {
+      "id": "F1",
+      "result": "reproduced",
+      "command": "cd <scratch>/vf-t4j/{head,base}/engine && HOME=$(mktemp -d) go test ./review/app/ -run TestVFProbe6F1 -v -count=1 (classifyWorld with one kept result; port answers true on its first call and false afterwards; Stop twice in session-1)",
+      "output": "head: stop 1: block=false err=<nil> portCalls=1; stop 2: block=false err=<nil> portCalls=1. The port is not asked again, and the removed row goes unseen. base: stop 1: block=false portCalls=1; stop 2: block=true classify=[own-rdd/333333333333-1] err=<nil> portCalls=2.",
+      "base_result": "not-reproduced"
+    },
+    {
+      "id": "F2",
+      "result": "reproduced",
+      "command": "same probes as 319810f5614a-4 F2: cd <scratch>/vf-t4j/{head,base}/engine && HOME=$(mktemp -d) go test ./review/app/ -run 'TestVFProbe4F2' -v -count=1",
+      "output": "head: one unreadable verdict (permission denied) or one stray junk 333333333333-9.json makes Stop return 'find the results with kept findings: ...' with no block at every stop, and the good result 333333333333-1 is never asked (portCalls=[]). base: the good result is asked and blocks at stop 1 with no error. The production hook does not wire WithClassified (no match in engine/cmd outside tests).",
+      "base_result": "not-reproduced"
+    }
+  ]
+}

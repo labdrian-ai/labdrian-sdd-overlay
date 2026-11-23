@@ -1,0 +1,84 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "3a141be270b83f1d6d246bea0395660381267d3c",
+    "head": "319810f5614a97c4e93a89c45c37bcc515c52077",
+    "diff_sha256": "dd72d0144f3218829645c6d56c1ee61c65dbb76be6d4c91d4dd13c901d5ddfe6",
+    "paths": [
+      "engine/review/app/check.go",
+      "engine/review/app/classify.go",
+      "engine/review/app/classify_test.go",
+      "engine/review/app/export_test.go",
+      "engine/review/app/findings.go",
+      "engine/review/app/stop.go",
+      "odd/tasks/merge-playbook-into-sdd-overlay.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "hunt"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "3a141be270b83f1d6d246bea0395660381267d3c",
+      "head": "319810f5614a97c4e93a89c45c37bcc515c52077",
+      "diff_sha256": "dd72d0144f3218829645c6d56c1ee61c65dbb76be6d4c91d4dd13c901d5ddfe6"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/review/app/check.go",
+        "engine/review/app/classify.go",
+        "engine/review/app/classify_test.go",
+        "engine/review/app/export_test.go",
+        "engine/review/app/findings.go",
+        "engine/review/app/stop.go",
+        "odd/tasks/merge-playbook-into-sdd-overlay.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "engine/review/app/classify.go:141",
+        "severity": "SUGGESTION",
+        "claim": "New behavior: once the port says a result is classified, the session records the classified- key, and classifyRuling never asks the port about that result again in the session (classify.go:129-135). Before this change the port was asked at every stop. If the page later stops holding the result's Evidence row in the same session (the agent reverts or edits docs/wiki, or a consolidation deletes the row, a case L67 names for T6), the result has a kept finding the page lacks, but the stop hook stays silent until a new session starts. No test pins or documents this case: the Stop doc (stop.go:52-54) says only that the result is not asked of the port again. Failure mode: port returns true at stop 1, the row is removed, and stop 2 does not block although the page now lacks the result.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/review/app/classify.go:129",
+          "engine/review/app/stop.go:52",
+          "odd/tasks/merge-playbook-into-sdd-overlay.md:3184"
+        ]
+      },
+      {
+        "id": "F2",
+        "location": "engine/review/app/classify.go:78",
+        "severity": "SUGGESTION",
+        "claim": "keptResultsOf now returns on the first stored result it cannot read, hold or bind, in any feature of the tree and any branch commit. So one corrupt or unreadable file, for example a verdict that cannot be read, suppresses the classification question for every other result of the branch at every stop until it is fixed, and the only signal is a stderr line that shows in verbose mode only. This is the tradeoff L67 accepted under choice 1 and lists under Risks. The code, its doc comment and J1/J3 match the design. The cost is reported because it is a new failure mode on the stop hook's path: collecting the per-result errors and still asking for the results that do hold would keep both the signal and the other questions.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/review/app/classify.go:76",
+          "engine/review/app/classify.go:120",
+          "odd/tasks/merge-playbook-into-sdd-overlay.md:3042",
+          "odd/tasks/merge-playbook-into-sdd-overlay.md:3181"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full diff t4j.diff (7 paths) and, in the worktree at head, classify.go, stop.go, check.go:1-224, export_test.go (via grep) and fsstore/asked.go checkKey.",
+      "d8f981b110fc-4 F1 and -5 F2 (WARNING, swallowed errors): resolved. keptResultsOf returns heldResult's error (classify.go:76-79) and skips only !binds or no kept finding. The doc comment (classify.go:42-45) no longer contradicts itself. J1 (7 cases) and J3 pin this.",
+      "d8f981b110fc-4 F2 (untested error branches): resolved. J4 covers Has failing, J1 (e)-(g) cover the Features/Standing/Names errors, and J5 covers Add failing for both the classify- and the classified- key.",
+      "d8f981b110fc-4 F3 and -5 F3 (port at every stop, re-read): resolved per L67 choice 3. A classified- key is recorded (classify.go:140-144), keptOf and its second read are gone, and heldResult reads once. The per-stop bind cost stays as L67's stated bound. J6, SH3 and SH4 pin this.",
+      "d8f981b110fc-5 F4 and ae0d6bb0b2e5-4.polisher (partly recorded block): resolved. The classify- Has filter before the port is removed, and every lacking result goes to once, so a block names them all. J7 pins this.",
+      "d8f981b110fc-5 F1 (stopReason reads only Question): assigned to T4w by L67 (lines 3059, 3169-3173). Not in this diff, as designed.",
+      "ae0d6bb0b2e5-2.sweeper (exported KeptResults with no production caller): resolved. KeptResults is moved to export_test.go, and a Grep of engine/ for KeptResults finds it only in _test.go files.",
+      "heldResult/reviewedResult refactor: the wrapper keeps the same errors, the same false-with-nil for another commit and the same Reviewed fields. Check, cleared and links are unchanged.",
+      "classifiedKey is 27 bytes of [a-z0-9-] and does not start with '-', which fsstore checkKey accepts (asked.go:95-105).",
+      "Hexagonal check: the changed production files are all in engine/review/app. They import only fmt, errors, engine/review, engine/reviewresult, engine/reviewverdict and engine/sha256hex. There is no adapter code, and the Classified and Asked ports are declared in app.",
+      "Task document: the T4j line is marked done with its commit and the passive 3a141be2. The L68 builder record matches the diff's file list. L68's test and mutation results are the builder's claims; I did not verify them.",
+      "Not run: no build, test, vet or mutation (reviewer contract: never run)."
+    ]
+  }
+}
