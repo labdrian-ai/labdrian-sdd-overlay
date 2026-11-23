@@ -1628,28 +1628,6 @@ gentle-ai-overlay roles builder-guard
     the document can forge the mark together with a false shaper entry, and it guards Claude Code only: launches of the
     builder from Codex and Pi are not guarded.
 
-gentle-ai-overlay roles classifier-guard
-    Internal hook command: a person does not run it. The PreToolUse hook in the frontmatter of `agents/classifier.md`
-    runs it before every tool call of the classifier agent, on the installed engine binary, and no other agent is
-    hooked. It reads the hook JSON on stdin and decides from its text, against one root: the working directory
-    that the hook input names in `cwd`, which is the directory the classifier was launched in. A root that is not
-    a clean absolute path (or is `/`) blocks every call. Read, Grep and Glob are allowed only within the root;
-    Edit and Write only on `<root>/docs/wiki/evidence.md`; Bash only as
-    `sh "$HOME/.claude/skills/_shared/evidence/evidence.sh"` with `check`, `count`, `index` or `rule <kind>`, then
-    exactly the quoted `"<root>/docs/wiki"`, with nothing before or after (no `;`, `&&`, pipe, redirection,
-    variable prefix or second line). A root that holds a quote, a dollar sign, a backtick or a backslash runs no
-    script. Every other tool is blocked. A block is exit 2 with the reason on stderr; an allow is exit 0 with no
-    output.
-    The verb exits 2 on every input it cannot judge: an argument, a stdin that fails, input over 8 MiB, input that
-    does not decode (a repeated key, or a key that differs from an expected one only in case, included), an unknown
-    working directory and an internal error, each with one line on stderr. That holds only once the verb runs:
-    Claude Code treats any other non-zero exit as non-blocking, such as 127 for a missing binary or 1 for a
-    binary without this verb.
-    Limits: it is a speed bump that matches text, not a security boundary. It does not follow symbolic links, so a
-    link under the root can lead a read elsewhere, and a file under the root that holds a secret, such as an
-    untracked `.env`, can still be read into the page. It does not cover a hand-edited or missing agent file, or
-    a hook that times out (what Claude Code does then is unverified).
-
 overlay --help
     Show this help.
 ```

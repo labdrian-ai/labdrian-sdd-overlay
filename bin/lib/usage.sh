@@ -269,10 +269,6 @@ Commands:
                                              role chain hands the work to the builder (run workflow open,
                                              or append the hop the chain waits for)
                                              (exit 0 always, 1 usage error)
-                                   classifier-guard                           not run by a person: the PreToolUse hook in agents/classifier.md;
-                                             allows the classifier its page and its evidence script only, and
-                                             reads only within its working directory; exits 2 (block) on every
-                                             input it cannot judge, once the verb runs
   review <verb>                    Forward review binding and storage verbs to the engine unchanged.
                                    bind --base REV --head REV [--cwd REPO]
                                              bind a candidate: full SHAs, diff_sha256 and changed paths as JSON; make
