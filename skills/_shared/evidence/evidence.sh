@@ -80,7 +80,7 @@ else
   wiki=docs/wiki
 fi
 page=$wiki/evidence.md
-general="$(cd "$(dirname "$0")" 2>/dev/null && pwd)/evidence-rules.md"
+general="$(cd "$(dirname -- "$0")" 2>/dev/null && pwd)/evidence-rules.md"
 
 # run_awk <file> <label>: reads one page in the mode of this run.
 run_awk() {
@@ -197,7 +197,7 @@ case $mode in
     rc=0
     for f in "$general" "$page"; do
       [ -f "$f" ] || continue
-      label=$(basename "$f")
+      label=$(basename -- "$f")
       out=$(run_awk "$f" "$label") || rc=1
       [ -z "$out" ] || printf '%s\n' "$out"
     done
@@ -216,7 +216,7 @@ case $mode in
     out=
     for f in "$page" "$general"; do
       [ -f "$f" ] || continue
-      r=$(run_awk "$f" "$(basename "$f")" 2>/dev/null)
+      r=$(run_awk "$f" "$(basename -- "$f")" 2>/dev/null)
       [ -z "$r" ] || out="$out$r
 "
     done
@@ -226,7 +226,7 @@ case $mode in
   index)
     for f in "$page" "$general"; do
       [ -f "$f" ] || continue
-      run_awk "$f" "$(basename "$f")" 2>/dev/null
+      run_awk "$f" "$(basename -- "$f")" 2>/dev/null
     done
     exit 0
     ;;
@@ -236,7 +236,7 @@ case $mode in
     if [ ! -e "$page" ] && [ ! -L "$page" ]; then
       up=$page
       while :; do
-        parent=$(dirname "$up")
+        parent=$(dirname -- "$up")
         if [ -e "$parent" ] || [ -L "$parent" ]; then
           if [ -d "$parent" ] && [ -x "$parent" ]; then exit 1; fi
           break
@@ -257,6 +257,8 @@ case $mode in
         yes) exit 0 ;;
         no) exit 1 ;;
       esac
+      printf 'evidence.sh: awk gave no answer on %s; reviewed cannot answer\n' "$page" >&2
+      exit 4
     fi
     printf 'evidence.sh: awk failed on %s (exit %s); reviewed cannot answer\n' "$page" "$rc" >&2
     exit 4
@@ -264,7 +266,7 @@ case $mode in
   rule)
     for f in "$page" "$general"; do
       [ -f "$f" ] || continue
-      r=$(run_awk "$f" "$(basename "$f")" 2>/dev/null)
+      r=$(run_awk "$f" "$(basename -- "$f")" 2>/dev/null)
       [ -z "$r" ] || { printf '%s\n' "$r"; exit 0; }
     done
     printf 'evidence.sh: no kind "%s" in %s or %s\n' "$want" "$page" "$general" >&2

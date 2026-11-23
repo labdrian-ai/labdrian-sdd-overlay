@@ -271,7 +271,7 @@ func problemLine(p *sourceError) string {
 	case p.verb == "reading" && errors.Is(p.err, errEmptyNotice):
 		return fmt.Sprintf("%s: empty (%s has no text)", p.path, p.subject)
 	case p.verb == "reading" && errors.As(p.err, &firstLine):
-		return fmt.Sprintf("%s: wrong first line (%s must start with %q)", p.path, p.subject, firstLine.want)
+		return fmt.Sprintf("%s: wrong first line (the first line of %s must be %q)", p.path, p.subject, firstLine.want)
 	case p.verb == "reading" && errors.Is(p.err, fs.ErrNotExist):
 		return fmt.Sprintf("%s: missing (%s is not in the repository)", p.path, p.subject)
 	case p.verb == "reading":

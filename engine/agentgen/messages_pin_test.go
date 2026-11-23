@@ -212,12 +212,13 @@ func TestCheckCallsAnUnreadableNoticeTheLicenseNotice(t *testing.T) {
 // A notice file whose first line, as its bytes before the first line break, is not the role's license name is a problem
 // Check names, and Generate refuses it and writes nothing, so Generate never writes a file ClaudeInstructions refuses
 // (T4g, L62 choice 3, reviews 00564ea07ad9-3 F1 and -5 F2).
-func TestCheckNamesANoticeThatDoesNotStartWithItsLicense(t *testing.T) {
+func TestCheckNamesANoticeWhoseFirstLineIsNotItsLicenseName(t *testing.T) {
 	for _, c := range []struct{ name, text string }{
 		{"byte order mark", "\xef\xbb\xbfMIT License\n\ntext\n"},
 		{"blank first line", "\nMIT License\n"},
 		{"CR", "MIT License\r\n\r\ntext\r\n"},
 		{"another name", "Another License\n"},
+		{"the name and more", "MIT License (Expat)\n"},
 	} {
 		t.Run(c.name, func(t *testing.T) {
 			root := seededRoot(t)
@@ -228,7 +229,7 @@ func TestCheckNamesANoticeThatDoesNotStartWithItsLicense(t *testing.T) {
 			checkErr := agentgen.Check(root)
 			generateErr := agentgen.Generate(root)
 
-			const want = "\n  roles/classifier/LICENSE: wrong first line (the license notice of the role must start with \"MIT License\")"
+			const want = "\n  roles/classifier/LICENSE: wrong first line (the first line of the license notice of the role must be \"MIT License\")"
 			if checkErr == nil || !strings.Contains(checkErr.Error(), want) {
 				t.Errorf("Check error = %v, want it to hold %q", checkErr, want)
 			}

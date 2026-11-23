@@ -189,6 +189,10 @@ func TestEvidenceStoreReadsTheWikiDirectoryFromArgumentThenEnvironmentThenWorkin
 	wantResult(t, "the argument wins over the variable and the directory", w.run(w.repo, env, "count", filepath.Join(w.tmp, "other", "wiki")), 0, line("from-arg"), "")
 	wantResult(t, "the variable, from another directory", w.run(elsewhere, env, "count"), 0, line("from-env"), "")
 	wantResult(t, "neither: docs/wiki of the working directory", w.inRepo("count"), 0, line("from-default"), "")
+
+	// An argument that starts with a dash is a path, not an option of dirname or basename.
+	writeEvidenceFile(t, filepath.Join(w.repo, "-w", "evidence.md"), onePage("from-dash"))
+	wantResult(t, "an argument that starts with a dash", w.inRepo("check", "-w"), 0, "evidence check passed: -w/evidence.md\n", "")
 }
 
 // B8: a call the script cannot read exits 2 with the usage on stderr and nothing on stdout.
@@ -250,6 +254,7 @@ func TestEvidenceStoreReviewedAnswersByExitWhetherAnEvidenceRowHoldsTheReview(t 
 		t.Fatal(err)
 	}
 	wantResult(t, "an empty wiki directory", empty.inRepo("reviewed", "f/aaaa-1"), 1, "", "")
+	wantResult(t, "a wiki argument that starts with a dash and holds nothing", empty.inRepo("reviewed", "f/aaaa-1", "-w"), 1, "", "")
 
 	// A page that fails a check of check answers 1 even when a row holds the identifier (T4f, L60 choice 2). The
 	// first five pages hold a row with f/aaaa-1, so only the check makes them answer 1; the last two have no
@@ -345,7 +350,30 @@ func TestEvidenceStoreReviewedCannotAnswerForAPageItCannotRead(t *testing.T) {
 	t.Run("an awk that gives no answer", func(t *testing.T) {
 		w := newEvidenceWorld(t, onePage("alpha-kind"))
 		env := stubAwk(w, "exit 0\n")
-		wantResult(t, "reviewed", w.run(w.repo, env, "reviewed", "f/aaaa-1"), 4, "", "evidence.sh: awk failed on docs/wiki/evidence.md (exit 0); reviewed cannot answer\n")
+		wantResult(t, "reviewed", w.run(w.repo, env, "reviewed", "f/aaaa-1"), 4, "", "evidence.sh: awk gave no answer on docs/wiki/evidence.md; reviewed cannot answer\n")
+	})
+	t.Run("a wiki argument that starts with a dash and cannot be searched", func(t *testing.T) {
+		if os.Geteuid() == 0 {
+			t.Skip("root searches a directory of mode 600")
+		}
+		w := newEvidenceWorld(t, "")
+		dash := filepath.Join(w.repo, "-w")
+		if err := os.Mkdir(dash, 0o600); err != nil {
+			t.Fatal(err)
+		}
+		t.Cleanup(func() { _ = os.Chmod(dash, 0o755) })
+		wantResult(t, "reviewed", w.inRepo("reviewed", "f/aaaa-1", "-w"), 4, "", "evidence.sh: cannot read -w/evidence.md; reviewed cannot answer\n")
+	})
+	t.Run("a regular file where the wiki directory should be", func(t *testing.T) {
+		// Mode 755 so that [ -x ] alone holds; only [ -d ] refuses it. Root is not skipped: -d is false for root too.
+		w := newEvidenceWorld(t, "")
+		if err := os.MkdirAll(filepath.Join(w.repo, "docs"), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(w.repo, "docs", "wiki"), []byte("not a directory\n"), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		wantResult(t, "reviewed", w.inRepo("reviewed", "f/aaaa-1"), 4, "", cannotRead)
 	})
 }
 

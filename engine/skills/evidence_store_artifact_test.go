@@ -194,10 +194,42 @@ func TestEvidenceStore_CopiesMatchTheSnapshotOrAreListedAsChanged(t *testing.T) 
 // review 00564ea07ad9-5 F4, T4g, L62 choice 4).
 func TestEvidenceStore_NamesNoSectionTaskOrLogEntryOfATaskDocument(t *testing.T) {
 	root := skillsRepoRoot(t)
-	pattern := regexp.MustCompile(`\b(S|T|L)[0-9]+\b|\bOD-[0-9]+\b`)
 	for _, name := range evidenceStoreNames {
-		if match := pattern.FindString(readRepoFile(t, root, evidenceDirRel+"/"+name)); match != "" {
+		if match := taskDocumentIdentifier.FindString(readRepoFile(t, root, evidenceDirRel+"/"+name)); match != "" {
 			t.Errorf("%s names %q, a reference into a task document that the deployed file cannot carry", name, match)
+		}
+	}
+}
+
+// taskDocumentIdentifier is the pattern of the lint above and of its table test: S, T or L and a number, with an
+// optional letter suffix and dashed parts (T4g, T3c-f), or OD- and a number (review 9b030f225615-5 F1, T4i, L64 choice 3).
+var taskDocumentIdentifier = regexp.MustCompile(`\b[STL][0-9]+[a-z]*(-[a-z0-9]+)*\b|\bOD-[0-9]+[a-z]*\b`)
+
+func TestTheTaskDocumentPatternMatchesEveryIdentifierForm(t *testing.T) {
+	for _, id := range []string{"S6", "T4g", "T3c-f", "L64", "OD-11"} {
+		if got := taskDocumentIdentifier.FindString("see " + id + " here"); got != id {
+			t.Errorf("the pattern finds %q in %q, want %q", got, "see "+id+" here", id)
+		}
+	}
+	for _, text := range []string{"ES2015", "SHA-256", "UTF-8", "level 2"} {
+		if got := taskDocumentIdentifier.FindString(text); got != "" {
+			t.Errorf("the pattern finds %q in %q, want no match", got, text)
+		}
+	}
+}
+
+// Every dirname and basename of the script ends its options, so a path that starts with "-" is read as a path (review
+// 9b030f225615-2 F1, T4i, L64 choice 1). Comment lines are not code and are skipped.
+func TestEvidenceStore_EveryDirnameAndBasenameEndsItsOptions(t *testing.T) {
+	word := regexp.MustCompile(`\b(dirname|basename)\b`)
+	for i, line := range strings.Split(readRepoFile(t, skillsRepoRoot(t), evidenceDirRel+"/evidence.sh"), "\n") {
+		if strings.HasPrefix(strings.TrimSpace(line), "#") {
+			continue
+		}
+		for _, at := range word.FindAllStringIndex(line, -1) {
+			if !strings.HasPrefix(line[at[1]:], " -- ") {
+				t.Errorf("evidence.sh line %d: %q is not followed by \" -- \": %s", i+1, line[at[0]:at[1]], strings.TrimSpace(line))
+			}
 		}
 	}
 }
