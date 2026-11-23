@@ -194,7 +194,8 @@ func TestEvidenceStoreReadsTheWikiDirectoryFromArgumentThenEnvironmentThenWorkin
 // B8: a call the script cannot read exits 2 with the usage on stderr and nothing on stdout.
 func TestEvidenceStoreUsageErrorsExitTwo(t *testing.T) {
 	w := newEvidenceWorld(t, evidencePage(stdKinds, stdEvidence))
-	for name, args := range map[string][]string{"no mode": nil, "an unknown mode": {"bogus"}, "rule with no kind": {"rule"}, "reviewed with no identifier": {"reviewed"}} {
+	for name, args := range map[string][]string{"no mode": nil, "an unknown mode": {"bogus"}, "rule with no kind": {"rule"}, "reviewed with no identifier": {"reviewed"},
+		"reviewed with a blank identifier": {"reviewed", " "}, "reviewed with a leading space": {"reviewed", " f/aaaa-1"}, "reviewed with a trailing tab": {"reviewed", "f/aaaa-1\t"}} {
 		wantResult(t, name, w.inRepo(args...), 2, "", evidenceUsage)
 	}
 }
@@ -221,7 +222,7 @@ func TestEvidenceStoreWithoutAwkSaysSoAndExitsThree(t *testing.T) {
 // same text in a Kinds Source cell, or as the start of a longer identifier, does not.
 func TestEvidenceStoreReviewedAnswersByExitWhetherAnEvidenceRowHoldsTheReview(t *testing.T) {
 	kinds := stdKinds + "| source-kind | 1 | | | f/src-1 | project |\n"
-	evidence := stdEvidence + "| alpha-kind | 1 | f/xxxx-10 | 2026-04-01 | prefix |\n| alpha-kind | 1 |  f/spaced-1  | 2026-04-02 | spaced |\n| alpha-kind | 1 | f/a\\|b-1 | 2026-04-03 | pipe |\n"
+	evidence := stdEvidence + "| alpha-kind | 1 | f/xxxx-10 | 2026-04-01 | prefix |\n| alpha-kind | 1 |  f/spaced-1  | 2026-04-02 | spaced |\n| alpha-kind | 1 | f/a\\|b-1 | 2026-04-03 | pipe |\n| alpha-kind | 1 | f/a\\b-1 | 2026-04-04 | backslash |\n"
 	w := newEvidenceWorld(t, evidencePage(kinds, evidence))
 	for _, c := range []struct {
 		what, id string
@@ -235,6 +236,7 @@ func TestEvidenceStoreReviewedAnswersByExitWhetherAnEvidenceRowHoldsTheReview(t 
 		{"an identifier that is only in a Kinds Source cell", "f/src-1", 1},
 		{"a cell with spaces around it", "f/spaced-1", 0},
 		{"an escaped pipe in the cell", "f/a|b-1", 0},
+		{"a backslash in the cell, read as the bytes given", `f/a\b-1`, 0},
 	} {
 		wantResult(t, c.what, w.inRepo("reviewed", c.id), c.exit, "", "")
 	}
@@ -243,6 +245,56 @@ func TestEvidenceStoreReviewedAnswersByExitWhetherAnEvidenceRowHoldsTheReview(t 
 	wantResult(t, "the wiki directory argument", w.inRepo("reviewed", "f/aaaa-1", filepath.Join(w.tmp, "other", "wiki")), 0, "", "")
 	wantResult(t, "the wiki directory argument, another page", w.inRepo("reviewed", "f/bbbb-1", filepath.Join(w.tmp, "other", "wiki")), 1, "", "")
 	wantResult(t, "no page", newEvidenceWorld(t, "").inRepo("reviewed", "f/aaaa-1"), 1, "", "")
+
+	// A page that fails a check of check answers 1 even when a row holds the identifier (T4f, L60 choice 2).
+	const kind = "| alpha-kind | 1 | | | | project |\n"
+	for name, page := range map[string]string{
+		"the matching row at level 0":           evidencePage(kind, "| alpha-kind | 0 | f/aaaa-1 | 2026-01-01 | x |\n"),
+		"the matching row with date 2026/01/01": evidencePage(kind, "| alpha-kind | 1 | f/aaaa-1 | 2026/01/01 | x |\n"),
+		"the matching row's kind not in Kinds":  evidencePage(kind, "| ghost-kind | 1 | f/aaaa-1 | 2026-01-01 | x |\n"),
+		"a row after the Evidence table ended":  evidencePage(kind, "| alpha-kind | 1 | f/aaaa-1 | 2026-01-01 | x |\n\n| alpha-kind | 1 | f/bbbb-1 | 2026-01-02 | y |\n"),
+		"no # Evidence title":                   strings.TrimPrefix(evidencePage(kind, "| alpha-kind | 1 | f/aaaa-1 | 2026-01-01 | x |\n"), "# Evidence\n\n"),
+		"no ## Evidence heading":                kindsHead + kind,
+		"the ## Evidence heading and no table":  kindsHead + kind + "\n## Evidence\n\nnothing yet\n",
+	} {
+		wantResult(t, name, newEvidenceWorld(t, page).inRepo("reviewed", "f/aaaa-1"), 1, "", "")
+	}
+
+	// The wiki directory comes from CLAUDE_PROJECT_DIR when there is no argument.
+	writeEvidenceFile(t, filepath.Join(w.tmp, "proj", "docs", "wiki", "evidence.md"), onePage("from-env"))
+	elsewhere := filepath.Join(w.tmp, "elsewhere")
+	if err := os.MkdirAll(elsewhere, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	wantResult(t, "the variable, from another directory", w.run(elsewhere, []string{"CLAUDE_PROJECT_DIR=" + filepath.Join(w.tmp, "proj")}, "reviewed", "f/aaaa-1"), 0, "", "")
+}
+
+// B13: reviewed never answers for a page it cannot read: it exits 4 with one line on stderr, and 2 stays the
+// usage error. A page that is a file but not readable stops before awk runs; an awk that fails on a readable
+// page stops after (T4f, L60 choice 1).
+func TestEvidenceStoreReviewedCannotAnswerForAPageItCannotRead(t *testing.T) {
+	t.Run("a page that cannot be read", func(t *testing.T) {
+		if os.Geteuid() == 0 {
+			t.Skip("root reads a page of mode 000")
+		}
+		w := newEvidenceWorld(t, "# Evidence\n")
+		page := filepath.Join(w.repo, "docs", "wiki", "evidence.md")
+		if err := os.Chmod(page, 0); err != nil {
+			t.Fatal(err)
+		}
+		t.Cleanup(func() { _ = os.Chmod(page, 0o644) })
+		wantResult(t, "reviewed", w.inRepo("reviewed", "f/aaaa-1"), 4, "", "evidence.sh: cannot read docs/wiki/evidence.md; reviewed cannot answer\n")
+	})
+	t.Run("an awk that fails on the page", func(t *testing.T) {
+		w := newEvidenceWorld(t, onePage("alpha-kind"))
+		stub := filepath.Join(w.tmp, "stubawk")
+		writeEvidenceFile(t, filepath.Join(stub, "awk"), "#!/bin/sh\nexit 2\n")
+		if err := os.Chmod(filepath.Join(stub, "awk"), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		env := []string{"PATH=" + stub + string(os.PathListSeparator) + os.Getenv("PATH")}
+		wantResult(t, "reviewed", w.run(w.repo, env, "reviewed", "f/aaaa-1"), 4, "", "evidence.sh: awk failed on docs/wiki/evidence.md (exit 2); reviewed cannot answer\n")
+	})
 }
 
 // fileTree is every entry under dir but dir itself, by path relative to dir: a regular file as "file "

@@ -54,7 +54,7 @@ const (
 )
 
 // errEmptyNotice is the error of a license notice file that has no text, or only blank space (T4s, L55).
-var errEmptyNotice = errors.New("the file is empty")
+var errEmptyNotice = errors.New("the file has no text")
 
 func (e *sourceError) Error() string { return e.verb + " " + e.path + ": " + e.err.Error() }
 func (e *sourceError) Unwrap() error { return e.err }
@@ -86,7 +86,7 @@ func build(repoRoot string) (table []Artifact, problems []*sourceError) {
 			problems = append(problems, &sourceError{path: r.noticePath(), subject: subjectNotice, verb: "reading", err: err})
 			return "", false
 		}
-		if strings.TrimSpace(string(data)) == "" {
+		if strings.TrimSpace(strings.TrimPrefix(string(data), "\xef\xbb\xbf")) == "" {
 			problems = append(problems, &sourceError{path: r.noticePath(), subject: subjectNotice, verb: "reading", err: errEmptyNotice})
 			return "", false
 		}

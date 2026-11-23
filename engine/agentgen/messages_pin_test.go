@@ -216,6 +216,7 @@ func TestCheckNamesAnEmptyNotice(t *testing.T) {
 	for _, c := range []struct{ name, text string }{
 		{"empty", ""},
 		{"blank space", "\n \n"},
+		{"byte order mark", "\xef\xbb\xbf\n"},
 	} {
 		t.Run(c.name, func(t *testing.T) {
 			root := seededRoot(t)
@@ -230,11 +231,14 @@ func TestCheckNamesAnEmptyNotice(t *testing.T) {
 			if checkErr == nil || !strings.Contains(checkErr.Error(), "\n"+want) {
 				t.Errorf("Check error = %v, want it to hold\n%s", checkErr, want)
 			}
-			if generateErr == nil || !strings.HasPrefix(generateErr.Error(), "reading roles/classifier/LICENSE: ") {
-				t.Errorf("Generate error = %v, want one that starts %q", generateErr, "reading roles/classifier/LICENSE: ")
+			const generateWant = "reading roles/classifier/LICENSE: the file has no text"
+			if generateErr == nil || !strings.Contains(generateErr.Error(), generateWant) {
+				t.Errorf("Generate error = %v, want it to hold %q", generateErr, generateWant)
 			}
-			if _, err := os.Stat(filepath.Join(root, "agents", "classifier.md")); err == nil {
-				t.Error("Generate wrote agents/classifier.md although the notice is empty")
+			for _, p := range allPaths() {
+				if _, err := os.Stat(filepath.Join(root, filepath.FromSlash(p))); err == nil {
+					t.Errorf("Generate wrote %s although the notice has no text", p)
+				}
 			}
 		})
 	}

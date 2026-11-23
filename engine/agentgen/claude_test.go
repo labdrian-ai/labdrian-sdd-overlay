@@ -65,10 +65,18 @@ func TestClaudeInstructionsRefusesAFileTheGeneratorDidNotWrite(t *testing.T) {
 	const keys = "name: reviewer\ndescription: d\nmodel: sonnet\ntools: Read, Grep, Glob\n"
 	const foremanKeys = "name: foreman\ndescription: d\nmodel: sonnet\ntools: Read, Grep, Glob\n"
 	const classifierKeys = "name: classifier\ndescription: d\nmodel: sonnet\ntools: Read, Grep, Glob\n"
+	classifier, ok := noticeRole("classifier")
+	if !ok {
+		t.Fatal("the classifier carries no notice")
+	}
+	header := classifier.noticeHeader()
 	for _, c := range []struct{ name, file, want string }{
 		{"a comment line in the file of a role with no notice", "---\n# x\n" + keys + "---\n\nbody\n", "carries no license notice"},
 		{"a comment line in the file of the foreman", "---\n# x\n" + foremanKeys + "---\n\nbody\n", "carries no license notice"},
 		{"comment lines that do not start with the notice header", "---\n# another header\n#\n" + classifierKeys + "---\n\nbody\n", "notice header"},
+		{"the classifier's keys with no comment line", "---\n" + classifierKeys + "---\n\nbody\n", "no notice comment lines"},
+		{"the notice header then a second line that is not a hash", "---\n" + header + "\n# x\n# " + classifier.licenseName + "\n" + classifierKeys + "---\n\nbody\n", "are not the notice"},
+		{"the notice header, a hash, then another license name", "---\n" + header + "\n#\n# Another License\n" + classifierKeys + "---\n\nbody\n", "are not the notice"},
 		{"an empty file", "", "opening"},
 		{"no opening fence", keys + "---\n\nbody\n", "opening"},
 		{"no closing fence", "---\n" + keys + "\nbody\n", "tools"},

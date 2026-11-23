@@ -28,12 +28,16 @@
 # - rule <kind>: the level, rule, applies when, and source of that kind, at any
 #   level, from the page first and then evidence-rules.md; when the kind is in
 #   neither, a message on stderr and exit 1 (seed-evidence-31).
-# - reviewed <identifier>: prints nothing; exits 0 when a row of the Evidence
-#   table of the page has the identifier as its Review cell, exactly (a cell is
-#   trimmed, and "\|" in it is read as "|"), and 1 when none does or there is
-#   no page. The Kinds table is not read, and neither is evidence-rules.md.
-#   Without an identifier it is a usage error.
-# count, rules, and index exit 0, but with no awk on PATH every mode prints
+# - reviewed <identifier>: prints nothing; exits 0 when the page passes every
+#   check of "check" and a row of its Evidence table has the identifier as its
+#   Review cell, exactly (a cell is trimmed, "\|" in it is read as "|", and the
+#   identifier is compared as the bytes given); 1 when none does, when the page
+#   fails a check, or when there is no page; 4, with one stderr line, when the
+#   page cannot be read or awk fails on it. evidence-rules.md is not read. An
+#   identifier that is missing, or holds a space, a tab or a line break, is a
+#   usage error.
+# count, rules, and index exit 0 (reviewed also exits 4, see above), but with no
+# awk on PATH every mode prints
 # "evidence.sh: awk is not on PATH; <mode> cannot run" on stderr and exits 3
 # (a usage error still exits 2). A cell may hold "|" written as "\|". Not
 # read: a table inside a code block. A row after a line that ends the table
@@ -53,6 +57,11 @@ case $mode in
   rule | reviewed)
     want=${2:-}
     [ -n "$want" ] || { printf '%s\n' "$usage" >&2; exit 2; }
+    if [ "$mode" = reviewed ]; then
+      case $want in
+        *[[:space:]]*) printf '%s\n' "$usage" >&2; exit 2 ;;
+      esac
+    fi
     dirarg=${3:-}
     ;;
   *) printf '%s\n' "$usage" >&2; exit 2 ;;
@@ -73,7 +82,8 @@ general="$(cd "$(dirname "$0")" 2>/dev/null && pwd)/evidence-rules.md"
 
 # run_awk <file> <label>: reads one page in the mode of this run.
 run_awk() {
-  awk -v mode="$mode" -v want="$want" -v file="$2" -v threshold="$threshold" '
+  # The identifier or kind goes through the environment, which awk reads without escape processing; -v would turn "\b" into a backspace.
+  EVIDENCE_WANT=$want awk -v mode="$mode" -v file="$2" -v threshold="$threshold" '
   function trim(s) { sub(/^[ \t]+/, "", s); sub(/[ \t\r]+$/, "", s); return s }
   function fail(msg) { bad = 1; if (mode == "check") print "FAIL " file ": " msg }
   # Splits a table row into cells[1..ncell], with "\|" kept as "|".
@@ -96,7 +106,7 @@ run_awk() {
     else if (m == 2) mx = ((y % 4 == 0 && y % 100 != 0) || y % 400 == 0) ? 29 : 28
     return dd <= mx
   }
-  BEGIN { sec = ""; kh = "Kind|Level|Rule|Applies when|Source|Scope"; eh = "Kind|Level|Review|Date|Finding" }
+  BEGIN { want = ENVIRON["EVIDENCE_WANT"]; sec = ""; kh = "Kind|Level|Rule|Applies when|Source|Scope"; eh = "Kind|Level|Review|Date|Finding" }
   /^```/ { fence = !fence; next }
   fence { next }
   /^# / { if (trim(substr($0, 3)) == "Evidence") title = 1; next }
@@ -146,7 +156,7 @@ run_awk() {
   }
   { if (sec == "K" && rowK > 0) doneK = 1; if (sec == "E" && rowE > 0) doneE = 1 }
   END {
-    if (mode == "check") {
+    if (mode == "check" || mode == "reviewed") {
       if (!title) fail("missing the heading \"# Evidence\"")
       if (!hasK) fail("missing the heading \"## Kinds\"")
       else if (rowK == 0) fail("Kinds has no table")
@@ -155,7 +165,7 @@ run_awk() {
         else if (rowE == 0) fail("Evidence has no table")
         for (i = 1; i <= ne; i++) if (!(ek[i] in kind)) fail("evidence of kind \"" ek[i] "\" has no row in Kinds")
       }
-      exit bad
+      if (mode == "check") exit bad
     }
     if (mode == "count") {
       for (i = 1; i <= ng; i++) {
@@ -175,7 +185,7 @@ run_awk() {
       }
       exit 0
     }
-    if (mode == "reviewed") exit found ? 0 : 1
+    if (mode == "reviewed") exit (found && !bad) ? 0 : 1
     for (i = 1; i <= nr; i++) printf "- %s (level %s; applies when: %s): %s\n", rk[i], rl[i], ra[i], rr[i]
   }' "$1"
 }
@@ -220,8 +230,15 @@ case $mode in
     ;;
   reviewed)
     [ -f "$page" ] || exit 1
+    [ -r "$page" ] || {
+      printf 'evidence.sh: cannot read %s; reviewed cannot answer\n' "$page" >&2
+      exit 4
+    }
     run_awk "$page" evidence.md
-    exit $?
+    rc=$?
+    case $rc in 0 | 1) exit "$rc" ;; esac
+    printf 'evidence.sh: awk failed on %s (exit %s); reviewed cannot answer\n' "$page" "$rc" >&2
+    exit 4
     ;;
   rule)
     for f in "$page" "$general"; do
