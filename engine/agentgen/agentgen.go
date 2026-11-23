@@ -56,6 +56,15 @@ const (
 // errEmptyNotice is the error of a license notice file that has no text, or only blank space (T4s, L55).
 var errEmptyNotice = errors.New("the file has no text")
 
+// noticeFirstLineError is the error of a license notice file whose first line, the bytes before its first line
+// break with nothing dropped or trimmed, is not the license name of the role (T4g, L62 choice 3): the file would be
+// one that ClaudeInstructions refuses.
+type noticeFirstLineError struct{ want string }
+
+func (e noticeFirstLineError) Error() string {
+	return fmt.Sprintf("the first line is not %q", e.want)
+}
+
 func (e *sourceError) Error() string { return e.verb + " " + e.path + ": " + e.err.Error() }
 func (e *sourceError) Unwrap() error { return e.err }
 
@@ -88,6 +97,10 @@ func build(repoRoot string) (table []Artifact, problems []*sourceError) {
 		}
 		if strings.TrimSpace(strings.TrimPrefix(string(data), "\xef\xbb\xbf")) == "" {
 			problems = append(problems, &sourceError{path: r.noticePath(), subject: subjectNotice, verb: "reading", err: errEmptyNotice})
+			return "", false
+		}
+		if first, _, _ := strings.Cut(string(data), "\n"); first != r.licenseName {
+			problems = append(problems, &sourceError{path: r.noticePath(), subject: subjectNotice, verb: "reading", err: noticeFirstLineError{want: r.licenseName}})
 			return "", false
 		}
 		return r.noticeComments(string(data)), true
@@ -249,6 +262,7 @@ func Check(repoRoot string) error {
 // problemLine words a problem for Check. The subject is said only for an error of reading: an error of
 // projecting is always a projection problem, even when it wraps fs.ErrNotExist (T4s, L55).
 func problemLine(p *sourceError) string {
+	var firstLine noticeFirstLineError
 	switch {
 	case p.path == modelsPath && errors.Is(p.err, fs.ErrNotExist):
 		return fmt.Sprintf("%s: missing (the tier table of the models is not in the repository)", p.path)
@@ -256,6 +270,8 @@ func problemLine(p *sourceError) string {
 		return fmt.Sprintf("%s: cannot use the tier table of the models: %v", p.path, p.err)
 	case p.verb == "reading" && errors.Is(p.err, errEmptyNotice):
 		return fmt.Sprintf("%s: empty (%s has no text)", p.path, p.subject)
+	case p.verb == "reading" && errors.As(p.err, &firstLine):
+		return fmt.Sprintf("%s: wrong first line (%s must start with %q)", p.path, p.subject, firstLine.want)
 	case p.verb == "reading" && errors.Is(p.err, fs.ErrNotExist):
 		return fmt.Sprintf("%s: missing (%s is not in the repository)", p.path, p.subject)
 	case p.verb == "reading":

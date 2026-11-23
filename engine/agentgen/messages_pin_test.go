@@ -209,6 +209,42 @@ func TestCheckCallsAnUnreadableNoticeTheLicenseNotice(t *testing.T) {
 	}
 }
 
+// A notice file whose first line, as its bytes before the first line break, is not the role's license name is a problem
+// Check names, and Generate refuses it and writes nothing, so Generate never writes a file ClaudeInstructions refuses
+// (T4g, L62 choice 3, reviews 00564ea07ad9-3 F1 and -5 F2).
+func TestCheckNamesANoticeThatDoesNotStartWithItsLicense(t *testing.T) {
+	for _, c := range []struct{ name, text string }{
+		{"byte order mark", "\xef\xbb\xbfMIT License\n\ntext\n"},
+		{"blank first line", "\nMIT License\n"},
+		{"CR", "MIT License\r\n\r\ntext\r\n"},
+		{"another name", "Another License\n"},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			root := seededRoot(t)
+			if err := os.WriteFile(filepath.Join(root, "roles", "classifier", "LICENSE"), []byte(c.text), 0o644); err != nil {
+				t.Fatal(err)
+			}
+
+			checkErr := agentgen.Check(root)
+			generateErr := agentgen.Generate(root)
+
+			const want = "\n  roles/classifier/LICENSE: wrong first line (the license notice of the role must start with \"MIT License\")"
+			if checkErr == nil || !strings.Contains(checkErr.Error(), want) {
+				t.Errorf("Check error = %v, want it to hold %q", checkErr, want)
+			}
+			const generateWant = "reading roles/classifier/LICENSE: the first line is not \"MIT License\""
+			if generateErr == nil || !strings.Contains(generateErr.Error(), generateWant) {
+				t.Errorf("Generate error = %v, want it to hold %q", generateErr, generateWant)
+			}
+			for _, p := range allPaths() {
+				if _, err := os.Stat(filepath.Join(root, filepath.FromSlash(p))); err == nil {
+					t.Errorf("Generate wrote %s although the notice does not start with its license name", p)
+				}
+			}
+		})
+	}
+}
+
 // A license notice file that is empty, or holds only blank space, is a problem Check names as the empty license notice
 // of the role, and Generate refuses it and writes nothing: a role with `notice` set promises a notice (T4s, L55,
 // review 490a46c0b44b-3 F2).

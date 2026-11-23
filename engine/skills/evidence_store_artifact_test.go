@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -185,5 +186,18 @@ func TestEvidenceStore_CopiesMatchTheSnapshotOrAreListedAsChanged(t *testing.T) 
 		t.Errorf("LICENSE equals the snapshot, so the License line is exactly %q, got %q", licenseLineIdentical, licenseLine)
 	case got != want && licenseLine != licenseLineChanged:
 		t.Errorf("LICENSE differs from the snapshot (blob %s, not %s), so the License line is exactly %q, got %q", got, want, licenseLineChanged, licenseLine)
+	}
+}
+
+// The files of the evidence store are deployed beside the skills and read in another repository, which has no task
+// document: none of them names a section, task or log entry of one (S, T or L and a number, or OD- and a number;
+// review 00564ea07ad9-5 F4, T4g, L62 choice 4).
+func TestEvidenceStore_NamesNoSectionTaskOrLogEntryOfATaskDocument(t *testing.T) {
+	root := skillsRepoRoot(t)
+	pattern := regexp.MustCompile(`\b(S|T|L)[0-9]+\b|\bOD-[0-9]+\b`)
+	for _, name := range evidenceStoreNames {
+		if match := pattern.FindString(readRepoFile(t, root, evidenceDirRel+"/"+name)); match != "" {
+			t.Errorf("%s names %q, a reference into a task document that the deployed file cannot carry", name, match)
+		}
 	}
 }

@@ -32,10 +32,12 @@
 #   check of "check" and a row of its Evidence table has the identifier as its
 #   Review cell, exactly (a cell is trimmed, "\|" in it is read as "|", and the
 #   identifier is compared as the bytes given); 1 when none does, when the page
-#   fails a check, or when there is no page; 4, with one stderr line, when the
-#   page cannot be read or awk fails on it. evidence-rules.md is not read. An
-#   identifier that is missing, or holds a space, a tab or a line break, is a
-#   usage error.
+#   fails a check, or when nothing is at the page's path under a directory that
+#   can be searched; 4, with one stderr line, for anything else at the path that
+#   is not a readable regular file, for a directory on the way that cannot be
+#   searched, and for an awk that fails or gives no answer (its own stderr is
+#   dropped). evidence-rules.md is not read. An identifier that is missing, or
+#   holds a space, a tab or a line break, is a usage error.
 # count, rules, and index exit 0 (reviewed also exits 4, see above), but with no
 # awk on PATH every mode prints
 # "evidence.sh: awk is not on PATH; <mode> cannot run" on stderr and exits 3
@@ -185,7 +187,7 @@ run_awk() {
       }
       exit 0
     }
-    if (mode == "reviewed") exit (found && !bad) ? 0 : 1
+    if (mode == "reviewed") { print ((found && !bad) ? "yes" : "no"); exit 0 }
     for (i = 1; i <= nr; i++) printf "- %s (level %s; applies when: %s): %s\n", rk[i], rl[i], ra[i], rr[i]
   }' "$1"
 }
@@ -229,14 +231,33 @@ case $mode in
     exit 0
     ;;
   reviewed)
-    [ -f "$page" ] || exit 1
-    [ -r "$page" ] || {
+    # No page is nothing at the path, under the nearest path above it that exists when that is a directory that
+    # can be searched; anything else that is not a readable regular file cannot be answered.
+    if [ ! -e "$page" ] && [ ! -L "$page" ]; then
+      up=$page
+      while :; do
+        parent=$(dirname "$up")
+        if [ -e "$parent" ] || [ -L "$parent" ]; then
+          if [ -d "$parent" ] && [ -x "$parent" ]; then exit 1; fi
+          break
+        fi
+        [ "$parent" != "$up" ] || break
+        up=$parent
+      done
+    fi
+    if [ ! -f "$page" ] || [ ! -r "$page" ]; then
       printf 'evidence.sh: cannot read %s; reviewed cannot answer\n' "$page" >&2
       exit 4
-    }
-    run_awk "$page" evidence.md
+    fi
+    # awk answers with one word on stdout, yes or no, and exits 0; its exit status alone never answers.
+    out=$(run_awk "$page" evidence.md 2>/dev/null)
     rc=$?
-    case $rc in 0 | 1) exit "$rc" ;; esac
+    if [ "$rc" -eq 0 ]; then
+      case $out in
+        yes) exit 0 ;;
+        no) exit 1 ;;
+      esac
+    fi
     printf 'evidence.sh: awk failed on %s (exit %s); reviewed cannot answer\n' "$page" "$rc" >&2
     exit 4
     ;;

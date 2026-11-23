@@ -245,8 +245,15 @@ func TestEvidenceStoreReviewedAnswersByExitWhetherAnEvidenceRowHoldsTheReview(t 
 	wantResult(t, "the wiki directory argument", w.inRepo("reviewed", "f/aaaa-1", filepath.Join(w.tmp, "other", "wiki")), 0, "", "")
 	wantResult(t, "the wiki directory argument, another page", w.inRepo("reviewed", "f/bbbb-1", filepath.Join(w.tmp, "other", "wiki")), 1, "", "")
 	wantResult(t, "no page", newEvidenceWorld(t, "").inRepo("reviewed", "f/aaaa-1"), 1, "", "")
+	empty := newEvidenceWorld(t, "")
+	if err := os.MkdirAll(filepath.Join(empty.repo, "docs", "wiki"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	wantResult(t, "an empty wiki directory", empty.inRepo("reviewed", "f/aaaa-1"), 1, "", "")
 
-	// A page that fails a check of check answers 1 even when a row holds the identifier (T4f, L60 choice 2).
+	// A page that fails a check of check answers 1 even when a row holds the identifier (T4f, L60 choice 2). The
+	// first five pages hold a row with f/aaaa-1, so only the check makes them answer 1; the last two have no
+	// Evidence table, so they hold no such row and cover the page checks (they answer 1 with or without the check).
 	const kind = "| alpha-kind | 1 | | | | project |\n"
 	for name, page := range map[string]string{
 		"the matching row at level 0":           evidencePage(kind, "| alpha-kind | 0 | f/aaaa-1 | 2026-01-01 | x |\n"),
@@ -270,9 +277,20 @@ func TestEvidenceStoreReviewedAnswersByExitWhetherAnEvidenceRowHoldsTheReview(t 
 }
 
 // B13: reviewed never answers for a page it cannot read: it exits 4 with one line on stderr, and 2 stays the
-// usage error. A page that is a file but not readable stops before awk runs; an awk that fails on a readable
-// page stops after (T4f, L60 choice 1).
+// usage error. Anything at the page's path that is not a readable regular file, or a directory on the way that
+// cannot be searched, stops before awk runs; an awk that fails, or gives no answer, on a readable page stops
+// after, with awk's own stderr dropped (T4f, L60 choice 1; T4g, L62 choices 1 and 2).
 func TestEvidenceStoreReviewedCannotAnswerForAPageItCannotRead(t *testing.T) {
+	const cannotRead = "evidence.sh: cannot read docs/wiki/evidence.md; reviewed cannot answer\n"
+	// stubAwk puts an awk that runs body first on PATH and returns the environment that says so.
+	stubAwk := func(w evidenceWorld, body string) []string {
+		stub := filepath.Join(w.tmp, "stubawk")
+		writeEvidenceFile(t, filepath.Join(stub, "awk"), "#!/bin/sh\n"+body)
+		if err := os.Chmod(filepath.Join(stub, "awk"), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		return []string{"PATH=" + stub + string(os.PathListSeparator) + os.Getenv("PATH")}
+	}
 	t.Run("a page that cannot be read", func(t *testing.T) {
 		if os.Geteuid() == 0 {
 			t.Skip("root reads a page of mode 000")
@@ -283,17 +301,51 @@ func TestEvidenceStoreReviewedCannotAnswerForAPageItCannotRead(t *testing.T) {
 			t.Fatal(err)
 		}
 		t.Cleanup(func() { _ = os.Chmod(page, 0o644) })
-		wantResult(t, "reviewed", w.inRepo("reviewed", "f/aaaa-1"), 4, "", "evidence.sh: cannot read docs/wiki/evidence.md; reviewed cannot answer\n")
+		wantResult(t, "reviewed", w.inRepo("reviewed", "f/aaaa-1"), 4, "", cannotRead)
+	})
+	t.Run("a page path that is a directory", func(t *testing.T) {
+		w := newEvidenceWorld(t, "")
+		if err := os.MkdirAll(filepath.Join(w.repo, "docs", "wiki", "evidence.md"), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		wantResult(t, "reviewed", w.inRepo("reviewed", "f/aaaa-1"), 4, "", cannotRead)
+	})
+	t.Run("a page path that is a symbolic link to a missing file", func(t *testing.T) {
+		w := newEvidenceWorld(t, "")
+		if err := os.MkdirAll(filepath.Join(w.repo, "docs", "wiki"), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.Symlink(filepath.Join(w.tmp, "missing.md"), filepath.Join(w.repo, "docs", "wiki", "evidence.md")); err != nil {
+			t.Fatal(err)
+		}
+		wantResult(t, "reviewed", w.inRepo("reviewed", "f/aaaa-1"), 4, "", cannotRead)
+	})
+	t.Run("a wiki directory that cannot be searched", func(t *testing.T) {
+		if os.Geteuid() == 0 {
+			t.Skip("root searches a directory of mode 600")
+		}
+		w := newEvidenceWorld(t, onePage("alpha-kind"))
+		wiki := filepath.Join(w.repo, "docs", "wiki")
+		if err := os.Chmod(wiki, 0o600); err != nil {
+			t.Fatal(err)
+		}
+		t.Cleanup(func() { _ = os.Chmod(wiki, 0o755) })
+		wantResult(t, "reviewed", w.inRepo("reviewed", "f/aaaa-1"), 4, "", cannotRead)
 	})
 	t.Run("an awk that fails on the page", func(t *testing.T) {
 		w := newEvidenceWorld(t, onePage("alpha-kind"))
-		stub := filepath.Join(w.tmp, "stubawk")
-		writeEvidenceFile(t, filepath.Join(stub, "awk"), "#!/bin/sh\nexit 2\n")
-		if err := os.Chmod(filepath.Join(stub, "awk"), 0o755); err != nil {
-			t.Fatal(err)
-		}
-		env := []string{"PATH=" + stub + string(os.PathListSeparator) + os.Getenv("PATH")}
+		env := stubAwk(w, "echo 'awk: fatal: simulated' >&2\nexit 2\n")
 		wantResult(t, "reviewed", w.run(w.repo, env, "reviewed", "f/aaaa-1"), 4, "", "evidence.sh: awk failed on docs/wiki/evidence.md (exit 2); reviewed cannot answer\n")
+	})
+	t.Run("an awk that exits 1", func(t *testing.T) {
+		w := newEvidenceWorld(t, onePage("alpha-kind"))
+		env := stubAwk(w, "echo 'awk: fatal: simulated' >&2\nexit 1\n")
+		wantResult(t, "reviewed", w.run(w.repo, env, "reviewed", "f/aaaa-1"), 4, "", "evidence.sh: awk failed on docs/wiki/evidence.md (exit 1); reviewed cannot answer\n")
+	})
+	t.Run("an awk that gives no answer", func(t *testing.T) {
+		w := newEvidenceWorld(t, onePage("alpha-kind"))
+		env := stubAwk(w, "exit 0\n")
+		wantResult(t, "reviewed", w.run(w.repo, env, "reviewed", "f/aaaa-1"), 4, "", "evidence.sh: awk failed on docs/wiki/evidence.md (exit 0); reviewed cannot answer\n")
 	})
 }
 
