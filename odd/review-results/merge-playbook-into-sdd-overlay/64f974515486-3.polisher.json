@@ -1,0 +1,30 @@
+{
+  "kind": "polisher",
+  "base": "97a13d2a615723e0e1bcbb6b849a5fa6bc98665b",
+  "head": "64f97451548670768b4e8b01c227e4f70ead43f0",
+  "diff_sha256": "79915bafa6901a60470543b787bfe97fac8c17cddaa850d5ea81a9a9b3a4749b",
+  "findings": {
+    "findings": [
+      {
+        "location": "roles/classifier/body.md:24",
+        "claim": "The Gotchas still say \"The script counts that review once\"; the agent has no Bash tool and is told to run no command, contradicting the Rules line; the body test pins the stale line verbatim.",
+        "severity": "SUGGESTION",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "evidence": [
+          "tools changed from Read, Grep, Glob, Bash, Edit, Write to Read, Grep, Glob",
+          "Rules line: Change no file and run no command",
+          "classifierGotchas pins the line"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full diff",
+      "LICENSE matches the notice lines",
+      "Kinds rows and Evidence rows contract is consistent with the Format and the shelltest",
+      "engine/agentgen/claude.go strict ClaudeInstructions inverse requires the four keys directly after ---; only claude_test.go calls it; not checked whether it iterates the classifier",
+      "No other production consumer of agents/classifier.md frontmatter",
+      "No tests run"
+    ]
+  }
+}
