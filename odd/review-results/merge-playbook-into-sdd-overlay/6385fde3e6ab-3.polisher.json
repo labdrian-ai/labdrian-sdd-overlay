@@ -1,0 +1,16 @@
+{
+  "kind": "polisher",
+  "base": "8bdf09f34ca407397300cd59cd5a81cfafe5d102",
+  "head": "6385fde3e6abcca96b3c032ac6e352c421d032d3",
+  "diff_sha256": "4123f799573abb7569306704c84be6b9a3721cd8cf3a7957eb951d4acd33cfd9",
+  "findings": {
+    "findings": [],
+    "evidence": [
+      "Read the full diff t3cr.diff: deletes engine/classifierguard, hookwire/scoped.go with its tests, roles_classifier_guard.go with its tests, and the usage, README, CHANGELOG and arch-ring entries",
+      "Grepped the worktree outside odd/ for classifier-guard, classifierguard, DecodeScopedToolCall and ScopedToolCall: no matches",
+      "agents/classifier.md frontmatter declares no PreToolUse hook, so no hook calls a missing verb; its tools line is unchanged, which is outside this commit's declared scope",
+      "oneLine went with its only user; docSection and readRepositoryFile are still defined in other test files",
+      "Declared Risk: 2 fits a deletion of unreleased, never-wired code; build and tests not run"
+    ]
+  }
+}
