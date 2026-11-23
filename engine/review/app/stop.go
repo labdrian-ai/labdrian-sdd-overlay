@@ -29,6 +29,10 @@ type Ruling struct {
 	// NoDefault says that the question is that the repository does not tell its default branch, so the commits of the
 	// branch that need a review cannot be told.
 	NoDefault bool
+	// Classify are the stored results of the branch's commits whose kept findings the evidence page does not hold yet
+	// (KeptResults, Classified), when the block asks for their classification (S6). It is set only when no review
+	// question blocks, and then Question is empty.
+	Classify []KeptResult
 }
 
 // Stop decides whether the stop of the agent of session is blocked, in the repository that holds dir (absolute):
@@ -42,6 +46,11 @@ type Ruling struct {
 // whole question, the needs already asked included. A stop is not blocked on what cannot be told or cannot be
 // remembered: the error is returned with no block, since a block that could not be recorded would be asked again at
 // every stop. The questions are the Asked port's: a Service made without one (WithAsked) cannot run Stop.
+//
+// When no review question blocks and the Service has a Classified port (WithClassified), the stop is blocked once for each
+// session and stored result of the branch's commits that has a kept finding the evidence page lacks (KeptResults, S6):
+// Ruling.Classify names those results, each keyed classify- and a digest of its identifier. A result whose question the
+// session holds is not asked of the port again. A Service without the port is as it was.
 func (s Service) Stop(dir, session string, continuing bool) (Ruling, error) {
 	if s.asked == nil {
 		return Ruling{}, errors.New("review: the stop hook has no store of the questions it has put")
@@ -49,6 +58,16 @@ func (s Service) Stop(dir, session string, continuing bool) (Ruling, error) {
 	if continuing {
 		return Ruling{}, nil
 	}
+	ruling, err := s.stopReview(dir, session)
+	if err != nil || ruling.Block || s.classified == nil {
+		return ruling, err
+	}
+	return s.classifyRuling(dir, session)
+}
+
+// stopReview is the part of Stop that asks for a review: the question of the first commit of the branch that lacks
+// anything, or that the repository does not tell its default branch.
+func (s Service) stopReview(dir, session string) (Ruling, error) {
 	question, ask, err := s.NextUnreviewed(dir)
 	var noDefault *NoDefaultBranchError
 	switch {

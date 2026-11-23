@@ -78,15 +78,29 @@ func (s Service) Findings(dir, feature, stored string) (Findings, error) {
 	if err != nil {
 		return Findings{}, err
 	}
-	out := Findings{Review: feature + "/" + strings.TrimSuffix(stored, ".json"), Verdict: verdictPath, Kept: []reviewresult.Finding{}, LeftOut: []LeftOut{}}
+	kept, leftOut := keptFindings(result, verdicts)
+	return Findings{Review: reviewID(feature, stored), Verdict: verdictPath, Kept: kept, LeftOut: leftOut}, nil
+}
+
+// reviewID is the identifier of the stored result called stored in feature, <feature>/<head12>-<n>: the name of the
+// stored file without its ending.
+func reviewID(feature, stored string) string {
+	return feature + "/" + strings.TrimSuffix(stored, ".json")
+}
+
+// keptFindings splits the findings of result in the ones that count as evidence and the ones that do not, each of those
+// with its reason, both in the order the reviewer wrote them and never nil. It is the one rule of what is evidence: the
+// listing of Findings and the question of the stop hook (KeptResults) both read it, so they cannot disagree.
+func keptFindings(result reviewresult.Result, verdicts []reviewverdict.Verdict) (kept []reviewresult.Finding, leftOut []LeftOut) {
+	kept, leftOut = []reviewresult.Finding{}, []LeftOut{}
 	for _, f := range result.Findings {
 		if reason := leftOutReason(f, verdicts); reason != "" {
-			out.LeftOut = append(out.LeftOut, LeftOut{ID: f.ID, Severity: f.Severity, Reason: reason})
+			leftOut = append(leftOut, LeftOut{ID: f.ID, Severity: f.Severity, Reason: reason})
 			continue
 		}
-		out.Kept = append(out.Kept, f)
+		kept = append(kept, f)
 	}
-	return out, nil
+	return kept, leftOut
 }
 
 // leftOutReason is why f is not evidence, or "" when it is.

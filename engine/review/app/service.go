@@ -31,6 +31,8 @@ type Service struct {
 	results Results
 	sleep   func(time.Duration)
 	asked   Asked
+	// classified is the port Stop asks whether a result with kept findings is classified; WithClassified sets it.
+	classified Classified
 	// analyzers and copies are the ports of the sweep; WithSweep sets both.
 	analyzers Analyzers
 	copies    Copies
