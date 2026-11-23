@@ -38,12 +38,20 @@ type Artifact struct {
 }
 
 // sourceError is a role source that could not be turned into files: the path of the source, under
-// the root of the repository, what was being done to it and why that failed.
+// the root of the repository, what that file is (the subject, said by Check when the file is missing or
+// cannot be read), what was being done to it and why that failed.
 type sourceError struct {
-	path string
-	verb string
-	err  error
+	path    string
+	subject string
+	verb    string
+	err     error
 }
+
+// The subjects of a file a role is made from.
+const (
+	subjectSource = "the source of the role"
+	subjectNotice = "the license notice of the role"
+)
 
 func (e *sourceError) Error() string { return e.verb + " " + e.path + ": " + e.err.Error() }
 func (e *sourceError) Unwrap() error { return e.err }
@@ -59,23 +67,26 @@ func build(repoRoot string) (table []Artifact, problems []*sourceError) {
 	source := func(r role) (string, bool) {
 		data, err := os.ReadFile(filepath.Join(repoRoot, filepath.FromSlash(r.sourcePath())))
 		if err != nil {
-			problems = append(problems, &sourceError{path: r.sourcePath(), verb: "reading", err: err})
+			problems = append(problems, &sourceError{path: r.sourcePath(), subject: subjectSource, verb: "reading", err: err})
 			return "", false
 		}
 		return string(data), true
 	}
-	// notice is the license text a role carries in its file (empty for a role with none); a notice that cannot
-	// be read is a problem, named after the source of the role.
-	notice := func(r role) (string, bool) {
+	// notice is the comment lines of the license text a Claude-only role carries in its file (empty for a role
+	// with none); a notice that cannot be read is a problem, named as the license notice of the role.
+	notice := func(r claudeOnlyRole) (string, bool) {
 		if r.notice == "" {
 			return "", true
 		}
 		data, err := os.ReadFile(filepath.Join(repoRoot, filepath.FromSlash(r.noticePath())))
 		if err != nil {
-			problems = append(problems, &sourceError{path: r.noticePath(), verb: "reading", err: err})
+			problems = append(problems, &sourceError{path: r.noticePath(), subject: subjectNotice, verb: "reading", err: err})
 			return "", false
 		}
-		return string(data), true
+		if len(data) == 0 {
+			return "", true
+		}
+		return r.noticeComments(string(data)), true
 	}
 	// The OpenCode files come last, after the Claude file of the foreman: the eight roles, then the foreman.
 	var openCode []Artifact
@@ -103,14 +114,14 @@ func build(repoRoot string) (table []Artifact, problems []*sourceError) {
 	}
 	// The Claude-only roles come after the eight roles and before the foreman, with their Claude file alone (OD-7).
 	for _, r := range claudeOnlyRoles {
-		data, ok := source(r)
-		license, noticeOK := notice(r)
+		data, ok := source(r.role)
+		comments, noticeOK := notice(r)
 		if !ok || !noticeOK || modelsErr != nil {
 			continue
 		}
-		file, err := r.projectClaude(data, license, models)
+		file, err := r.projectClaude(data, comments, models)
 		if err == nil {
-			err = checkSkillsNamed(repoRoot, r, data)
+			err = checkSkillsNamed(repoRoot, r.role, data)
 		}
 		if err != nil {
 			problems = append(problems, &sourceError{path: r.sourcePath(), verb: "projecting", err: err})
@@ -228,9 +239,9 @@ func Check(repoRoot string) error {
 		case p.path == modelsPath:
 			errs = append(errs, fmt.Sprintf("%s: cannot use the tier table of the models: %v", p.path, p.err))
 		case errors.Is(p.err, fs.ErrNotExist):
-			errs = append(errs, fmt.Sprintf("%s: missing (the source of the role is not in the repository)", p.path))
+			errs = append(errs, fmt.Sprintf("%s: missing (%s is not in the repository)", p.path, p.subject))
 		case p.verb == "reading":
-			errs = append(errs, fmt.Sprintf("%s: cannot read the source of the role: %v", p.path, p.err))
+			errs = append(errs, fmt.Sprintf("%s: cannot read %s: %v", p.path, p.subject, p.err))
 		default:
 			errs = append(errs, fmt.Sprintf("%s: cannot be projected: %v", p.path, p.err))
 		}

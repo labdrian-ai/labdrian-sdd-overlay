@@ -43,18 +43,21 @@ func TestClassifierBodyIsTheClassifyAgentAdapted(t *testing.T) {
 		"would the rule of this kind have prevented this finding?",
 		"Return one Evidence row per finding",
 		"Check each row against the Format",
+		"one Kinds row per kind, never for a kind `<page>` already has",
+		"a rule in every Kinds row at level 2 or more",
+		"for the kind of every Evidence row",
 	} {
 		if !strings.Contains(steps, anchor) {
 			t.Errorf("the Steps of roles/classifier/body.md do not hold %q", anchor)
 		}
 	}
-	for _, anchor := range []string{"<rules>", "Kinds rows:", "Evidence rows:"} {
+	for _, anchor := range []string{"<rules>", "Kinds rows:", "Evidence rows:", "When one of the three is not given, stop and say so.", "<failed>"} {
 		if !strings.Contains(body, anchor) {
 			t.Errorf("roles/classifier/body.md does not hold %q", anchor)
 		}
 	}
 	lower := strings.ToLower(body)
-	for _, banned := range []string{"claude_plugin_root", "~/.claude", "$home", `sh "`, "evidence.sh", "engram"} {
+	for _, banned := range []string{"claude_plugin_root", "~/.claude", "$home", `sh "`, "evidence.sh", "engram", "script counts that review"} {
 		if strings.Contains(lower, banned) {
 			t.Errorf("roles/classifier/body.md holds %q", banned)
 		}
@@ -89,15 +92,15 @@ var classifierRules = []string{
 
 var classifierGotchas = []string{
 	"- Two kinds that look close, such as `missing-test` and `test-passes-when-broken`, are settled by the central test: \"write the test\" does not prevent a test that exists and misses the failure, so they are two kinds.",
-	"- A review that lists the same mistake in several places gives one row per place, all with the same review identifier. The script counts that review once. Do not merge the rows.",
+	"- A review that lists the same mistake in several places gives one row per place, all with the same review identifier. The parent's count takes that review once. Do not merge the rows.",
 	"- A finding the review marks as not real, dismissed, or already fixed before the review is not evidence. Skip it.",
 	"- A kind with no rule is at level 1. A kind whose rule at level k did not prevent the finding gets the row at level k, the kind's current level.",
 	"- Never return the example rows of the format.",
 }
 
 var classifierOutput = []string{
-	"- A line `Kinds rows:`, then one markdown fence with the Kinds rows to add, one per line, with no header; an empty fence when there are none.",
-	"- A line `Evidence rows:`, then one markdown fence with the Evidence rows to add, the same way.",
+	"- A line `Kinds rows:`, then one fence opened by ```markdown with the Kinds rows to add, one per line, with no header; an empty fence when there are none.",
+	"- A line `Evidence rows:`, then one fence opened by ```markdown with the Evidence rows to add, the same way.",
 	"- Any finding skipped, with the reason.",
 }
 
@@ -167,5 +170,19 @@ func TestClassifierLicenseAndProvenanceTravelWithTheSource(t *testing.T) {
 	}
 	if section := changedSinceTheSnapshot(t, provenance); section == "" || section == "- Nothing." {
 		t.Errorf("the Changed section of roles/classifier/PROVENANCE.md is %q, want the list of changes", section)
+	}
+	// The Changed line that says the body names the feed quotes the body: the quoted text is in it (T3c-f, F4).
+	const feedLineEnd = " names the feed of the evidence store."
+	quoted := ""
+	for _, line := range strings.Split(provenance, "\n") {
+		if strings.HasSuffix(line, feedLineEnd) {
+			_, rest, _ := strings.Cut(line, `"`)
+			quoted, _, _ = strings.Cut(rest, `"`)
+		}
+	}
+	if quoted == "" {
+		t.Errorf("roles/classifier/PROVENANCE.md has no Changed line that quotes the body and ends with %q", feedLineEnd)
+	} else if body := readRepoFile(t, root, "roles/classifier/body.md"); !strings.Contains(body, quoted) {
+		t.Errorf("roles/classifier/PROVENANCE.md quotes %q, which roles/classifier/body.md does not hold", quoted)
 	}
 }

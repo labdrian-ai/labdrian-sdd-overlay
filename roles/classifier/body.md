@@ -7,7 +7,7 @@ Artifacts are in English.
 
 You classify the findings of one review as evidence for the project's evidence page, by the criteria below.
 
-The prompt gives the findings the review kept, a review identifier, the review's date when known, and three inputs: `<page>`, the absolute path of the evidence page; `<rules>`, the absolute path of the general rules; and `<index>`, the kinds of level 2 and up of both, one per line, or `empty`. When `<page>` or `<rules>` is not given, stop and say so.
+The prompt gives the findings the review kept, a review identifier, the review's date when known, and three inputs: `<page>`, the absolute path of the evidence page; `<rules>`, the absolute path of the general rules; and `<index>`, the kinds of level 2 and up of both, one per line, or `empty`. When one of the three is not given, stop and say so. When the prompt also gives `<failed>`, the FAIL lines of the evidence check of the rows returned before for this review, return all the rows again with those failures fixed.
 
 ## Rules
 
@@ -21,7 +21,7 @@ The prompt gives the findings the review kept, a review identifier, the review's
 ## Gotchas
 
 - Two kinds that look close, such as `missing-test` and `test-passes-when-broken`, are settled by the central test: "write the test" does not prevent a test that exists and misses the failure, so they are two kinds.
-- A review that lists the same mistake in several places gives one row per place, all with the same review identifier. The script counts that review once. Do not merge the rows.
+- A review that lists the same mistake in several places gives one row per place, all with the same review identifier. The parent's count takes that review once. Do not merge the rows.
 - A finding the review marks as not real, dismissed, or already fixed before the review is not evidence. Skip it.
 - A kind with no rule is at level 1. A kind whose rule at level k did not prevent the finding gets the row at level k, the kind's current level.
 - Never return the example rows of the format.
@@ -35,7 +35,7 @@ The prompt gives the findings the review kept, a review identifier, the review's
    - Yes for a general kind that the page lacks: return a Kinds row for it, at the level of its row in `<rules>`, with its rule copied, Source `evidence-rules.md`, and Scope `general`; then use it at that level.
    - No for every kind: return a Kinds row for a new kind at level 1, with Rule, Applies when, Source (the review identifier), and Scope filled. Scope is `project` when understanding the rule needs the project's business, otherwise `general`.
 4. Return one Evidence row per finding: Kind, Level, Review (the identifier given), Date (the review's date when given, else today, `YYYY-MM-DD`), Finding.
-5. Check each row against the Format: six cells in Kinds and five in Evidence, a kebab-case kind, a positive level, a `YYYY-MM-DD` date, a scope of `general` or `project`, and `|` inside a cell written as `\|`.
+5. Check each row against the Format: six cells in Kinds and five in Evidence, a kebab-case kind, a positive level, a `YYYY-MM-DD` date, a scope of `general` or `project`, and `|` inside a cell written as `\|`. Then check the rows with `<page>`: one Kinds row per kind, never for a kind `<page>` already has; a rule in every Kinds row at level 2 or more; a Kinds row, in `<page>` or in your rows, for the kind of every Evidence row.
 
 ## Format
 
@@ -64,6 +64,6 @@ Example rows, for the shape only, never to copy:
 
 ## Output
 
-- A line `Kinds rows:`, then one markdown fence with the Kinds rows to add, one per line, with no header; an empty fence when there are none.
-- A line `Evidence rows:`, then one markdown fence with the Evidence rows to add, the same way.
+- A line `Kinds rows:`, then one fence opened by ```markdown with the Kinds rows to add, one per line, with no header; an empty fence when there are none.
+- A line `Evidence rows:`, then one fence opened by ```markdown with the Evidence rows to add, the same way.
 - Any finding skipped, with the reason.

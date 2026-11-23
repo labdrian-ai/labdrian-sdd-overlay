@@ -1,13 +1,16 @@
 package agentgen
 
 import (
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 )
 
 // The body ClaudeInstructions reads out of the Claude file of every role is the body the generator wrote, the one
-// CodexInstructions reads out of the Codex file of the same role.
+// CodexInstructions reads out of the Codex file of the same role. The foreman and each Claude-only role have no Codex
+// file: their body is the source of roles/<name>/body.md as the role projects it, and a Claude-only role's file carries
+// notice comment lines before name: (T3c-f, L51).
 func TestClaudeInstructionsIsTheBodyOfTheClaudeFileOfEveryRole(t *testing.T) {
 	artifacts, err := Artifacts(filepath.Join("..", ".."))
 	if err != nil {
@@ -20,6 +23,30 @@ func TestClaudeInstructionsIsTheBodyOfTheClaudeFileOfEveryRole(t *testing.T) {
 	for _, r := range roles {
 		t.Run(r.name, func(t *testing.T) {
 			want, err := CodexInstructions([]byte(files["codex/agents/"+r.name+".toml"]))
+			if err != nil {
+				t.Fatal(err)
+			}
+			got, err := ClaudeInstructions([]byte(files["agents/"+r.name+".md"]))
+			if err != nil || got != want {
+				t.Errorf("ClaudeInstructions = %q, %v; want %q", got, err, want)
+			}
+		})
+	}
+	type projected struct {
+		name string
+		body func(source string) (string, error)
+	}
+	withoutCodex := []projected{{foreman.name, foreman.body}}
+	for _, r := range claudeOnlyRoles {
+		withoutCodex = append(withoutCodex, projected{r.name, r.body})
+	}
+	for _, r := range withoutCodex {
+		t.Run(r.name, func(t *testing.T) {
+			source, err := os.ReadFile(filepath.Join("..", "..", "roles", r.name, "body.md"))
+			if err != nil {
+				t.Fatal(err)
+			}
+			want, err := r.body(string(source))
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -42,6 +69,9 @@ func TestClaudeInstructionsRefusesAFileTheGeneratorDidNotWrite(t *testing.T) {
 		{"keys out of order", "---\ndescription: d\nname: reviewer\nmodel: sonnet\ntools: Read\n---\n\nbody\n", "name"},
 		{"a fifth key", "---\n" + keys + "thinking: high\n---\n\nbody\n", "closing"},
 		{"no blank line after the fence", "---\n" + keys + "---\nbody\n", "blank"},
+		{"a comment line with no space after the hash", "---\n#x\n" + keys + "---\n\nbody\n", "name"},
+		{"a key line before name", "---\nfoo: bar\n" + keys + "---\n\nbody\n", "name"},
+		{"a comment line between two keys", "---\nname: reviewer\n# c\ndescription: d\nmodel: sonnet\ntools: Read\n---\n\nbody\n", "description"},
 	} {
 		t.Run(c.name, func(t *testing.T) {
 			got, err := ClaudeInstructions([]byte(c.file))

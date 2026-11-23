@@ -15,5 +15,6 @@ The classifier role of this repository: `body.md`, adapted from the classify age
 - The general kinds come from the `<index>` the prompt gives and from the rules file read by the path `<rules>` the prompt gives, instead of `${CLAUDE_PLUGIN_ROOT}/evidence-rules.md`. The script path and the exit-3 rule are gone from the body.
 - Step 3 takes the level of a general kind from its row in `<rules>`, where the snapshot copied it at "the same level".
 - The output is the two fenced row lists, `Kinds rows:` and `Evidence rows:`, then the skipped findings.
-- "You receive the findings the review kept" names the feed of the evidence store.
+- "The prompt gives the findings the review kept" names the feed of the evidence store.
+- When the prompt gives `<failed>`, the FAIL lines of the parent's check, the agent returns its rows again, corrected, where the snapshot's agent ran the check and fixed the rows itself.
 - The generated agent file carries the MIT notice of `LICENSE` as comment lines of its frontmatter.

@@ -43,7 +43,7 @@ func TestCheckNamesEveryArtifactThatIsMissingInTheOrderOfTheTable(t *testing.T) 
 		want += "\n  roles/" + r.name + "/body.md: missing (the source of the role is not in the repository)"
 	}
 	want += "\n  roles/classifier/body.md: missing (the source of the role is not in the repository)"
-	want += "\n  roles/classifier/LICENSE: missing (the source of the role is not in the repository)"
+	want += "\n  roles/classifier/LICENSE: missing (the license notice of the role is not in the repository)"
 	want += "\n  roles/foreman/body.md: missing (the source of the role is not in the repository)"
 	want += "\n  skills/role-chain/references/models.md: missing (the tier table of the models is not in the repository)"
 	if err == nil || err.Error() != want {
@@ -183,5 +183,28 @@ func TestGenerateWritesEveryArtifactAndPutsBackWhatWasEdited(t *testing.T) {
 	}
 	if err := agentgen.Check(root); err != nil {
 		t.Errorf("Check of what Generate wrote: %v", err)
+	}
+}
+
+// A license notice that cannot be read is said to be the license notice of the role, not the source of the
+// role: the path of the problem is the notice's (T3c-f, review 64f974515486-5 F5).
+func TestCheckCallsAnUnreadableNoticeTheLicenseNotice(t *testing.T) {
+	root := seededRoot(t)
+	notice := filepath.Join(root, "roles", "classifier", "LICENSE")
+	if err := os.Remove(notice); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Mkdir(notice, 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	err := agentgen.Check(root)
+
+	const path = "roles/classifier/LICENSE"
+	if err == nil || !strings.Contains(err.Error(), path+": cannot read the license notice of the role:") {
+		t.Errorf("Check error = %v, want it to hold %q", err, path+": cannot read the license notice of the role:")
+	}
+	if err != nil && strings.Contains(err.Error(), path+": cannot read the source of the role") {
+		t.Errorf("Check error = %v, want it not to call %s the source of the role", err, path)
 	}
 }

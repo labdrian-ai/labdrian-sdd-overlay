@@ -1,6 +1,7 @@
 package shelltest
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -34,6 +35,35 @@ func markdownFencesAfter(body, heading string) [][]string {
 	return fences
 }
 
+// formatFences are the markdown fences of the Format of the classifier body: the empty page and the two example
+// rows. A body with another shape is an error that says what it holds, never a panic (T3c-f, review 64f974515486-5 F8).
+func formatFences(body string) ([][]string, error) {
+	fences := markdownFencesAfter(body, "## Format")
+	switch {
+	case len(fences) != 2:
+		return nil, fmt.Errorf("the Format of roles/classifier/body.md holds %d markdown fences, want the empty page and two example rows", len(fences))
+	case len(fences[1]) != 2:
+		return nil, fmt.Errorf("the Format of roles/classifier/body.md holds 2 markdown fences, the second with %d lines, want the empty page and two example rows", len(fences[1]))
+	}
+	return fences, nil
+}
+
+// The guard of K4 names a Format with no fence or one fence, and does not panic.
+func TestTheFormatGuardNamesABodyWithoutFences(t *testing.T) {
+	for _, c := range []struct{ name, body, want string }{
+		{"no fence", "x\n\n## Format\n\ntext\n", "0 markdown fences"},
+		{"one fence", "x\n\n## Format\n\n```markdown\na\n```\n", "1 markdown fences"},
+		{"no Format heading", "x\n", "0 markdown fences"},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			fences, err := formatFences(c.body)
+			if err == nil || !strings.Contains(err.Error(), c.want) || fences != nil {
+				t.Errorf("formatFences = %v, %v; want an error naming %q", fences, err, c.want)
+			}
+		})
+	}
+}
+
 // K4 (R2-F1, L47): the Format of the body of the classifier is what evidence.sh check accepts. The empty
 // page of the first fence passes, and passes again with the two example rows of the second fence under
 // their tables, so a renamed header or a malformed example fails here and not in a deployed run.
@@ -42,9 +72,9 @@ func TestTheFormatOfTheClassifierBodyPassesEvidenceCheck(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	fences := markdownFencesAfter(string(body), "## Format")
-	if len(fences) != 2 || len(fences[1]) != 2 {
-		t.Fatalf("the Format of roles/classifier/body.md holds %d markdown fences (the second with %d lines), want the empty page and two example rows", len(fences), len(fences[len(fences)-1]))
+	fences, err := formatFences(string(body))
+	if err != nil {
+		t.Fatal(err)
 	}
 	empty := strings.Join(fences[0], "\n") + "\n"
 

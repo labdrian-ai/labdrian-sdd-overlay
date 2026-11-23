@@ -63,10 +63,23 @@ type role struct {
 	// openCodeSkill keeps the skill tool of OpenCode for a role whose Claude list names no Skill tool: only the
 	// foreman, whose recorded OpenCode run loads a skill body in its session (S7, S13).
 	openCodeSkill bool
+}
+
+// claudeOnlyRole is a role with a Claude file alone, and the only kind of role that can carry a license
+// notice (T3c-f of odd/tasks/merge-playbook-into-sdd-overlay.md, L51): a role of roles or the foreman cannot
+// set the fields, because the type of those has none.
+type claudeOnlyRole struct {
+	role
 	// notice is the name of a license file in roles/<name>/ whose text the Claude file carries as comment
-	// lines of its frontmatter (T3c-b of odd/tasks/merge-playbook-into-sdd-overlay.md, L47): the license of
-	// the source travels with the copy and adds no prompt text. Only the classifier sets it.
+	// lines of its frontmatter (T3c-b, L47): the license of the source travels with the copy and adds no
+	// prompt text.
 	notice string
+	// origin is the source repository the material of the notice comes from, as roles/<name>/PROVENANCE.md
+	// names it on its Source repository line. The header of the notice names it (L52).
+	origin string
+	// licenseName is the name of the license as the first line of the notice file states it. The header of
+	// the notice names it (L52).
+	licenseName string
 }
 
 // roles are the eight roles in the order of the table of per-role design v3, section 2.
@@ -179,13 +192,17 @@ var foreman = role{
 // (claudeKeys), and no memorycard tool, so body drops the line of the core prefix that sends a role there.
 // The classifier is read-only by its tools (owner, L47): Claude Code enforces it, and its rows are appended
 // by the parent (T4). Its file carries the MIT notice of roles/classifier/LICENSE as frontmatter comments.
-var claudeOnlyRoles = []role{
+var claudeOnlyRoles = []claudeOnlyRole{
 	{
-		name:        "classifier",
-		description: "Classifier role, off the role chain, read-only: classifies the findings one review kept (send them, the review identifier and date, the evidence page path, the general rules path and the evidence index) by the classify rules, and returns the Kinds and Evidence rows for the parent to append to docs/wiki/evidence.md.",
-		tier:        tierMid,
-		tools:       []string{"Read", "Grep", "Glob"},
+		role: role{
+			name:        "classifier",
+			description: "Classifier role, off the role chain, read-only: classifies the findings one review kept (send them, the review identifier and date, the evidence page path, the general rules path and the evidence index) by the classify rules, and returns the Kinds and Evidence rows for the parent to append to docs/wiki/evidence.md.",
+			tier:        tierMid,
+			tools:       []string{"Read", "Grep", "Glob"},
+		},
 		notice:      "LICENSE",
+		origin:      "andresfrei/playbook",
+		licenseName: "MIT License",
 	},
 }
 
@@ -233,7 +250,7 @@ func (r role) sourcePath() string { return "roles/" + r.name + "/body.md" }
 
 // noticePath is where the license file of the role is, as a slash-separated path under the repository
 // root; it is empty when the role carries no notice.
-func (r role) noticePath() string {
+func (r claudeOnlyRole) noticePath() string {
 	if r.notice == "" {
 		return ""
 	}
@@ -241,9 +258,10 @@ func (r role) noticePath() string {
 }
 
 // noticeComments are the frontmatter comment lines that carry the license text: a header line that names
-// the origin, a "#" line, then each line of the text as "# " plus the line, or "#" for a blank one.
-func (r role) noticeComments(text string) string {
-	out := "# This agent includes material from andresfrei/playbook under the MIT License below; see roles/" + r.name + "/PROVENANCE.md in the source repository.\n#\n"
+// the origin and the license, taken from the origin and licenseName fields of the role (L52), a "#" line,
+// then each line of the text as "# " plus the line, or "#" for a blank one.
+func (r claudeOnlyRole) noticeComments(text string) string {
+	out := "# This agent includes material from " + r.origin + " under the " + r.licenseName + " below; see roles/" + r.name + "/PROVENANCE.md in the source repository.\n#\n"
 	for _, line := range strings.Split(strings.TrimSuffix(text, "\n"), "\n") {
 		if line == "" {
 			out += "#\n"
@@ -344,21 +362,17 @@ func (r role) project(source string, models ModelTable) ([]Artifact, error) {
 }
 
 // claudeFile is the Claude agent file: the four keys of claudeKeys, a blank line and the body. A role
-// with a license text carries it as comment lines right after the opening ---; with none, the file is as
-// it was before notices.
-func (r role) claudeFile(model, license, body string) string {
-	notice := ""
-	if license != "" {
-		notice = r.noticeComments(license)
-	}
+// with a license notice carries its comment lines (claudeOnlyRole.noticeComments, empty for none) right
+// after the opening ---; with none, the file is as it was before notices.
+func (r role) claudeFile(model, notice, body string) string {
 	return "---\n" + notice + "name: " + r.name + "\ndescription: " + r.description + "\nmodel: " + model +
 		"\ntools: " + strings.Join(r.tools, ", ") + "\n---\n\n" + body
 }
 
 // projectClaude makes the Claude file of a role that has no Pi or Codex file (the foreman and the roles
-// of claudeOnlyRoles): its source, the license text of its notice (empty for none), the model of its tier
+// of claudeOnlyRoles): its source, the comment lines of its notice (empty for none), the model of its tier
 // from the table, and no Pi or Codex file.
-func (r role) projectClaude(source, license string, models ModelTable) (Artifact, error) {
+func (r role) projectClaude(source, notice string, models ModelTable) (Artifact, error) {
 	model, err := models.ID(r.tier, runtimeClaude)
 	if err != nil {
 		return Artifact{}, err
@@ -367,7 +381,7 @@ func (r role) projectClaude(source, license string, models ModelTable) (Artifact
 	if err != nil {
 		return Artifact{}, err
 	}
-	return Artifact{Path: "agents/" + r.name + ".md", Content: r.claudeFile(model, license, body)}, nil
+	return Artifact{Path: "agents/" + r.name + ".md", Content: r.claudeFile(model, notice, body)}, nil
 }
 
 // codexFile is the Codex agent file: the four fields of the design in the order it lists them, and no
