@@ -1,0 +1,78 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "5c0bd28fb9f116c0eeb0039322c371ed93ee9cf5",
+    "head": "41a6814e9c086d155f0bc20ca3deb3e86c542a51",
+    "diff_sha256": "64a06c9cbfe1960b4a6d67dfec1d8fce615d9a076c07c70754a018cf36670b14",
+    "paths": [
+      "engine/shelltest/evidence_store_test.go",
+      "odd/tasks/merge-playbook-into-sdd-overlay.md",
+      "skills/_shared/evidence/PROVENANCE.md",
+      "skills/_shared/evidence/evidence.sh"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "5c0bd28fb9f116c0eeb0039322c371ed93ee9cf5",
+      "head": "41a6814e9c086d155f0bc20ca3deb3e86c542a51",
+      "diff_sha256": "64a06c9cbfe1960b4a6d67dfec1d8fce615d9a076c07c70754a018cf36670b14"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/shelltest/evidence_store_test.go",
+        "odd/tasks/merge-playbook-into-sdd-overlay.md",
+        "skills/_shared/evidence/PROVENANCE.md",
+        "skills/_shared/evidence/evidence.sh"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "skills/_shared/evidence/evidence.sh:76",
+        "severity": "SUGGESTION",
+        "claim": "The identifier reaches awk via -v, which processes backslash escapes; an identifier with a backslash would compare changed and give a false exit 1. Review identifiers contain none.",
+        "evidence_class": "inferential",
+        "causal_disposition": "behavior-activated",
+        "proof_refs": [
+          "skills/_shared/evidence/evidence.sh:76",
+          "skills/_shared/evidence/evidence.sh:136"
+        ]
+      },
+      {
+        "id": "F2",
+        "location": "skills/_shared/evidence/evidence.sh:136",
+        "severity": "SUGGESTION",
+        "claim": "found is set before the row checks and reviewed never runs check, so a malformed row with the identifier counts as classified and suppresses the question while the page fails validation; B12 does not cover it.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "skills/_shared/evidence/evidence.sh:133",
+          "skills/_shared/evidence/evidence.sh:178"
+        ]
+      },
+      {
+        "id": "F3",
+        "location": "skills/_shared/evidence/evidence.sh:221",
+        "severity": "SUGGESTION",
+        "claim": "An unreadable page or awk runtime error exits 2, the same as the usage error; the T4w caller must treat any exit other than 0 and 1 as unknown; neither the mode comment nor PROVENANCE says so and no test covers an unreadable page.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "skills/_shared/evidence/evidence.sh:221",
+          "engine/shelltest/evidence_store_test.go:38"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full diff and the whole evidence.sh at head",
+      "Checked prefix, Kinds-Source, escaped-pipe, trimmed-cell, no-page, no-identifier and no-awk behaviour against B12",
+      "want and rv compare as strings",
+      "Not run: tests, shellcheck"
+    ]
+  }
+}

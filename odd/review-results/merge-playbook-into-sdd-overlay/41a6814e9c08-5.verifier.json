@@ -1,0 +1,46 @@
+{
+  "verdicts": [
+    {
+      "id": "F1",
+      "result": "reproduced",
+      "base_result": "not-reproduced",
+      "command": "head and base from git archive: printf '# Evidence\\n' > $d/evidence.md; chmod 000 $d/evidence.md; env -u CLAUDE_PROJECT_DIR HOME=$W sh skills/_shared/evidence/evidence.sh reviewed X $d; echo exit=$? (uid 1000)",
+      "output": "Head: awk fatal cannot open file ... Permission denied, exit=2, the usage-error code (evidence.sh:35-38); evidence.sh:222-224 passes awk's status through. Base: usage text, exit=2, no reviewed mode, the page is never read."
+    },
+    {
+      "id": "F2",
+      "result": "reproduced",
+      "base_result": "not-reproduced",
+      "command": "page with Evidence row '| k-a | x | BADLV | 2026-13-40 | f |': evidence.sh reviewed BADLV $d; evidence.sh check $d",
+      "output": "Head: reviewed exit=0 while check prints two FAIL lines (level x, date 2026-13-40) and exits 1; found=1 at evidence.sh:136 precedes the row checks. Base: reviewed usage exit=2; check same FAIL lines."
+    },
+    {
+      "id": "F3",
+      "result": "reproduced",
+      "base_result": "not-reproduced",
+      "command": "page with literal Review cell r\\n1: evidence.sh reviewed 'r\\n1' $d; check $d",
+      "output": "Head: exit=1 although the cell holds the identifier; check passes; awk -v at evidence.sh:76 turns \\n into a newline. Base: usage exit=2."
+    },
+    {
+      "id": "F4",
+      "result": "reproduced",
+      "base_result": "not-reproduced",
+      "command": "valid page with row R1: evidence.sh reviewed ' ' $d; reviewed ' R1 ' $d; reviewed R1 $d",
+      "output": "Head: ' ' exit=1, ' R1 ' exit=1, R1 exit=0; the guard at evidence.sh:55 accepts blanks and want is never trimmed. Base: every id usage exit=2."
+    },
+    {
+      "id": "F5",
+      "result": "reproduced",
+      "base_result": "not-reproduced",
+      "command": "rg -n 'reviewed|stop hook|hook' skills/_shared/evidence/PROVENANCE.md (head, base); rg -n '\"reviewed\"|Classified|evidence\\.sh' engine --glob '!engine/shelltest/**' (head)",
+      "output": "Head: PROVENANCE.md:14 says the stop hook reads it; no engine code outside shelltest runs evidence.sh reviewed; the consumer is planned in T4h/T4w (task document :286, :2598, :2605). Base: no such text."
+    },
+    {
+      "id": "F6",
+      "result": "reproduced",
+      "base_result": "not-reproduced",
+      "command": "rg -n 'func Test|reviewed|CLAUDE_PROJECT_DIR|chmod|000' engine/shelltest/evidence_store_test.go (head); read lines 175-246; rg -c 'reviewed|B12' (base)",
+      "output": "Head: B12 (evidence_store_test.go:219-246) has no CLAUDE_PROJECT_DIR case (B7 runs only count), no page without an Evidence table, no unreadable page, no row check rejects. Base: B12 does not exist."
+    }
+  ]
+}
