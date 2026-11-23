@@ -1,0 +1,79 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "239b17a699c443f2e2683a3d91d103c32f584f12",
+    "head": "c0b641e0eb82a3936b4952c8239a9bb3f318c39b",
+    "diff_sha256": "a28b1c93fed44e7a994d3215e430acfbc3eda09aa52115983ea17f6522cdda06",
+    "paths": [
+      "agents/classifier.md",
+      "engine/agentgen/agentgen.go",
+      "engine/agentgen/claude.go",
+      "engine/agentgen/claude_test.go",
+      "engine/agentgen/messages_pin_test.go",
+      "engine/agentgen/problem_line_internal_test.go",
+      "engine/agentgen/roles.go",
+      "engine/skills/classifier_artifact_test.go",
+      "odd/tasks/merge-playbook-into-sdd-overlay.md",
+      "roles/classifier/body.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "239b17a699c443f2e2683a3d91d103c32f584f12",
+      "head": "c0b641e0eb82a3936b4952c8239a9bb3f318c39b",
+      "diff_sha256": "a28b1c93fed44e7a994d3215e430acfbc3eda09aa52115983ea17f6522cdda06"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "agents/classifier.md",
+        "engine/agentgen/agentgen.go",
+        "engine/agentgen/claude.go",
+        "engine/agentgen/claude_test.go",
+        "engine/agentgen/messages_pin_test.go",
+        "engine/agentgen/problem_line_internal_test.go",
+        "engine/agentgen/roles.go",
+        "engine/skills/classifier_artifact_test.go",
+        "odd/tasks/merge-playbook-into-sdd-overlay.md",
+        "roles/classifier/body.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "engine/agentgen/claude.go:126",
+        "severity": "SUGGESTION",
+        "claim": "ClaudeInstructions checks only the first notice comment line against the notice header; later comment lines before name: are accepted unchecked, weaker than the exact-inverse doc claim. Only tests call it; Check compares the committed file byte for byte.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/agentgen/claude.go:104",
+          "engine/agentgen/claude.go:126"
+        ]
+      },
+      {
+        "id": "F2",
+        "location": "engine/agentgen/agentgen.go:89",
+        "severity": "SUGGESTION",
+        "claim": "strings.TrimSpace does not strip a BOM, so a BOM-only notice passes the empty-notice check and yields empty comment lines; no test covers it. Committed LICENSE files are not blank.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/agentgen/agentgen.go:89"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full diff (10 paths)",
+      "build() returns false on an empty notice; Generate writes nothing for the role",
+      "ClaudeInstructions has no production caller",
+      "Body and agent file edits are the same two Output lines; skills test updated",
+      "problemLine keeps earlier wording and never calls a projecting error missing",
+      "No commands run"
+    ]
+  }
+}
