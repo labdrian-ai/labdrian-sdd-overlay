@@ -6,6 +6,7 @@ package app_test
 // of the whole branch (baseSHA to otherSHA) is the review of both commits, so no review question is put.
 
 import (
+	"bytes"
 	"errors"
 	"reflect"
 	"strings"
@@ -73,6 +74,29 @@ func memoKey(prefix, review, stamp string) string {
 
 func classifiedKey(review, stamp string) string { return memoKey("classified-", review, stamp) }
 func lackingKey(review, stamp string) string    { return memoKey("lacking-", review, stamp) }
+
+// addFailsFor is an Asked store whose Add of one key fails, and of no other.
+type addFailsFor struct {
+	*fakeAsked
+	key string
+	err error
+}
+
+func (a *addFailsFor) Add(session, key string) error {
+	if key == a.key {
+		return a.err
+	}
+	return a.fakeAsked.Add(session, key)
+}
+
+// reviewsOf names the results of a ruling.
+func reviewsOf(results []app.KeptResult) []string {
+	names := []string{}
+	for _, r := range results {
+		names = append(names, r.Review)
+	}
+	return names
+}
 
 // SH1: a result with a kept finding that the page lacks blocks the stop and is named.
 func TestStopAsksForTheClassificationOfAResultWithAKeptFinding(t *testing.T) {
@@ -267,6 +291,52 @@ func TestKeptResultsIsEmptyWhereThereAreNoBranchCommitsToRead(t *testing.T) {
 	}
 }
 
+// M1: a result that cannot be read, hold or bind is refused, and the results that hold are still listed beside it, as
+// 'review check' refuses the same file; it is never skipped.
+func TestKeptResultsListsWhatHoldsBesideWhatItRefuses(t *testing.T) {
+	cause := errors.New("boom")
+	for _, tc := range []struct {
+		name    string
+		setup   func(t *testing.T, g *fakeGit, store *fakeResults)
+		want    []string // the results that hold
+		refused int
+		wraps   error
+		names   string
+	}{
+		{"a file that is not a result", func(t *testing.T, g *fakeGit, store *fakeResults) {
+			store.put("own-rdd", "333333333333-9.json", []byte("not a result"))
+		}, []string{otherReview}, 1, review.ErrInvalidStored, "333333333333-9.json"},
+		{"the verdict cannot be read", func(t *testing.T, g *fakeGit, store *fakeResults) {
+			reviewed(t, store, baseSHA, otherSHA, 2, warning("F2"))
+			store.fail["Read 333333333333-2.verifier.json"] = cause
+		}, []string{otherReview}, 1, cause, "333333333333-2.verifier.json"},
+		{"a result for a diff that is not the one that was reviewed", func(t *testing.T, g *fakeGit, store *fakeResults) {
+			name := reviewed(t, store, baseSHA, otherSHA, 2, warning("F2"))
+			sum := sha256Of([]byte(diffText))
+			store.put("own-rdd", name, bytes.ReplaceAll(store.files["own-rdd"][name], []byte(sum), []byte(strings.Repeat("0", len(sum)))))
+		}, []string{otherReview}, 1, review.ErrBindingDiffers, "333333333333-2.json"},
+		{"git cannot give the diff", func(t *testing.T, g *fakeGit, store *fakeResults) {
+			reviewed(t, store, baseSHA, otherSHA, 2, warning("F2"))
+			g.fail["Diff"] = cause
+		}, nil, 2, cause, "333333333333-2.json"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			g, store, _ := classifyWorld(t)
+			tc.setup(t, g, store)
+
+			got, refused, err := app.New(g, store).KeptResults(evidenceDir)
+
+			if err != nil || len(refused) != tc.refused || !reflect.DeepEqual(reviewsOf(got), append([]string{}, tc.want...)) {
+				t.Fatalf("KeptResults() = %+v, %v, %v; want %v, %d refusals and no error", got, refused, err, tc.want, tc.refused)
+			}
+			last := refused[len(refused)-1]
+			if !errors.Is(last, tc.wraps) || !strings.Contains(last.Error(), tc.names) {
+				t.Errorf("the last refusal = %v; want an error that wraps %v and names %q", last, tc.wraps, tc.names)
+			}
+		})
+	}
+}
+
 // J1: what the pass as a whole cannot tell is an error and no result, and no refusal.
 func TestKeptResultsRefusesWhatItCannotReadHoldOrBind(t *testing.T) {
 	cause := errors.New("boom")
@@ -449,5 +519,174 @@ func TestStopNamesAgainEveryResultThatALostRecordLeftUnasked(t *testing.T) {
 	}
 	if thirdErr != nil || third.Block {
 		t.Errorf("stop 3 = %+v, %v; want no block and no error", third, thirdErr)
+	}
+}
+
+const secondReview = "own-rdd/333333333333-2"
+
+// M2: a result the pass refuses does not hide the ones that hold: the stop asks for them, and the refusal is an error
+// beside the ruling at every stop of the session, whether the stop blocks or not.
+func TestStopAsksForTheResultsThatHoldBesideARefusedOne(t *testing.T) {
+	g, store, _ := classifyWorld(t)
+	store.put("own-rdd", "333333333333-9.json", []byte("not a result"))
+	port := newFakeClassified()
+	service := app.New(g, store).WithAsked(newFakeAsked()).WithClassified(port)
+
+	first, firstErr := service.Stop(evidenceDir, "session-1", false)
+	second, secondErr := service.Stop(evidenceDir, "session-1", false)
+
+	if !first.Block || !reflect.DeepEqual(reviewsOf(first.Classify), []string{otherReview}) {
+		t.Errorf("stop 1 = %+v; want a block that names %s", first, otherReview)
+	}
+	if !errors.Is(firstErr, review.ErrInvalidStored) || !strings.Contains(firstErr.Error(), "333333333333-9.json") {
+		t.Errorf("stop 1 error = %v; want one that wraps %v and names the refused file", firstErr, review.ErrInvalidStored)
+	}
+	if second.Block || secondErr == nil || secondErr.Error() != firstErr.Error() {
+		t.Errorf("stop 2 = %+v, %v; want no block and the same error", second, secondErr)
+	}
+	if len(port.calls) != 1 {
+		t.Errorf("port calls = %q, want one", port.calls)
+	}
+}
+
+// M3: every problem of the pass is on one line, in order, so the hook's stderr stays one line.
+func TestStopNamesEveryProblemOfThePassOnOneLine(t *testing.T) {
+	g, store, _ := classifyWorld(t)
+	store.put("own-rdd", "333333333333-8.json", []byte("not a result"))
+	store.put("own-rdd", "333333333333-9.json", []byte("not a result"))
+	port := newFakeClassified()
+	port.done[otherReview] = true
+	asked := &addFailsFor{fakeAsked: newFakeAsked(), key: classifiedKey(otherReview, port.stamp), err: errors.New("disk full")}
+
+	_, err := app.New(g, store).WithAsked(asked).WithClassified(port).Stop(evidenceDir, "session-1", false)
+
+	if err == nil {
+		t.Fatal("Stop() = no error; want one that names the three problems")
+	}
+	text := err.Error()
+	first, second, third := strings.Index(text, "-8.json"), strings.Index(text, "-9.json"), strings.Index(text, "disk full")
+	if strings.Contains(text, "\n") || !strings.HasPrefix(text, "classify the results with kept findings: ") || !strings.Contains(text, "; ") || first < 0 || second < first || third < second {
+		t.Errorf("Stop() error = %q; want one line that names -8.json, -9.json and the failed record in order, joined by '; '", text)
+	}
+}
+
+// M4: the port is asked once for each result and page state in a session, whatever it answers; a new page state asks
+// again, and so does another session.
+func TestStopAsksThePortOnceForEachResultAndPageState(t *testing.T) {
+	g, store, _ := classifyWorld(t)
+	port := newFakeClassified()
+	service := app.New(g, store).WithAsked(newFakeAsked()).WithClassified(port)
+
+	for i, step := range []struct {
+		session, stamp string
+		calls          int
+		block          bool
+	}{
+		{"session-1", "stamp-1", 1, true},
+		{"session-1", "stamp-1", 1, false},
+		{"session-1", "stamp-1", 1, false},
+		{"session-1", "stamp-2", 2, false}, // its classify- key is held
+		{"session-2", "stamp-2", 3, true},
+	} {
+		port.stamp = step.stamp
+		got, err := service.Stop(evidenceDir, step.session, false)
+		if err != nil || got.Block != step.block || len(port.calls) != step.calls {
+			t.Errorf("stop %d of %s at %s = %+v, %v with %d port calls; want block=%v, no error and %d calls", i+1, step.session, step.stamp, got, err, len(port.calls), step.block, step.calls)
+		}
+	}
+}
+
+// M5: a row removed from the page later in the session is seen at the next stop, because the stamp changed.
+func TestStopSeesARowRemovedLaterInTheSession(t *testing.T) {
+	t.Run("the page state changed", func(t *testing.T) {
+		g, store, _ := classifyWorld(t)
+		port := newFakeClassified()
+		port.done[otherReview] = true
+		service := app.New(g, store).WithAsked(newFakeAsked()).WithClassified(port)
+		if first, err := service.Stop(evidenceDir, "session-1", false); err != nil || first.Block {
+			t.Fatalf("setup: stop 1 = %+v, %v; want no block", first, err)
+		}
+		port.done[otherReview], port.stamp = false, "stamp-2"
+
+		got, err := service.Stop(evidenceDir, "session-1", false)
+
+		if err != nil || !got.Block || !reflect.DeepEqual(reviewsOf(got.Classify), []string{otherReview}) || len(port.calls) != 2 {
+			t.Errorf("stop 2 = %+v, %v with %d port calls; want a block that names %s and two calls", got, err, len(port.calls), otherReview)
+		}
+	})
+	t.Run("the page state is the same", func(t *testing.T) {
+		g, store, _ := classifyWorld(t)
+		port := newFakeClassified()
+		port.done[otherReview] = true
+		service := app.New(g, store).WithAsked(newFakeAsked()).WithClassified(port)
+		if first, err := service.Stop(evidenceDir, "session-1", false); err != nil || first.Block {
+			t.Fatalf("setup: stop 1 = %+v, %v; want no block", first, err)
+		}
+		port.done[otherReview] = false
+
+		got, err := service.Stop(evidenceDir, "session-1", false)
+
+		if err != nil || got.Block || len(port.calls) != 1 {
+			t.Errorf("stop 2 = %+v, %v with %d port calls; want no block and one call: equal stamps mean equal answers", got, err, len(port.calls))
+		}
+	})
+}
+
+// M6: a memory that cannot be recorded costs no answer: the pass goes on to the next result, and the failure is an error
+// beside the ruling.
+func TestStopGoesOnWhenItsMemoryCannotBeRecorded(t *testing.T) {
+	cause := errors.New("disk full")
+	t.Run("classified results", func(t *testing.T) {
+		g, store, _ := classifyWorld(t)
+		reviewed(t, store, baseSHA, otherSHA, 2, warning("F2"))
+		port := newFakeClassified()
+		port.done[otherReview], port.done[secondReview] = true, true
+		asked := &addFailsFor{fakeAsked: newFakeAsked(), key: classifiedKey(otherReview, port.stamp), err: cause}
+
+		got, err := app.New(g, store).WithAsked(asked).WithClassified(port).Stop(evidenceDir, "session-1", false)
+
+		wantCalls := []string{fakeRepo.Root + " " + otherReview, fakeRepo.Root + " " + secondReview}
+		if got.Block || !errors.Is(err, cause) || !strings.Contains(err.Error(), otherReview) || !reflect.DeepEqual(port.calls, wantCalls) {
+			t.Errorf("Stop() = %+v, %v with port calls %q; want no block, an error that wraps the cause and names %s, and calls %q", got, err, port.calls, otherReview, wantCalls)
+		}
+	})
+	t.Run("lacking results", func(t *testing.T) {
+		g, store, _ := classifyWorld(t)
+		reviewed(t, store, baseSHA, otherSHA, 2, warning("F2"))
+		port := newFakeClassified()
+		asked := &addFailsFor{fakeAsked: newFakeAsked(), key: lackingKey(otherReview, port.stamp), err: cause}
+
+		got, err := app.New(g, store).WithAsked(asked).WithClassified(port).Stop(evidenceDir, "session-1", false)
+
+		if !got.Block || !reflect.DeepEqual(reviewsOf(got.Classify), []string{otherReview, secondReview}) || !errors.Is(err, cause) {
+			t.Errorf("Stop() = %+v, %v; want a block that names both results and an error that wraps the cause", got, err)
+		}
+	})
+}
+
+// M7: a page whose state cannot be read is an error and no block, and the port is not asked.
+func TestStopDoesNotBlockWhenThePageStateCannotBeRead(t *testing.T) {
+	g, store, _ := classifyWorld(t)
+	port := newFakeClassified()
+	cause := errors.New("boom")
+	port.stampErr = cause
+
+	got, err := app.New(g, store).WithAsked(newFakeAsked()).WithClassified(port).Stop(evidenceDir, "session-1", false)
+
+	if !errors.Is(err, cause) || got.Block || len(port.calls) != 0 {
+		t.Errorf("Stop() = %+v, %v with %q asked of the port; want no block, an error that wraps the cause and no call", got, err, port.calls)
+	}
+}
+
+// M8: with no kept result the state of the page is not read.
+func TestStopReadsNoPageStateWithNoKeptResult(t *testing.T) {
+	g, store := sweptWorld(t)
+	reviewed(t, store, baseSHA, otherSHA, 1)
+	port := newFakeClassified()
+
+	got, err := app.New(g, store).WithAsked(newFakeAsked()).WithClassified(port).Stop(evidenceDir, "session-1", false)
+
+	if err != nil || got.Block || port.stamps != 0 {
+		t.Errorf("Stop() = %+v, %v with %d reads of the page state; want no block, no error and none", got, err, port.stamps)
 	}
 }
