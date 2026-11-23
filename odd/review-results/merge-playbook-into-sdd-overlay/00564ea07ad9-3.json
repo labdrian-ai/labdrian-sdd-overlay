@@ -1,0 +1,75 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "f7b48045ab1843efaa71afbc2b1e0b6ab7a78bdc",
+    "head": "00564ea07ad9a18a1ff96aaf7fabb50eaebe3c1c",
+    "diff_sha256": "6e1ecadd313511325820a3c462736ec59d64ae29c80c9308809d88379e9e4279",
+    "paths": [
+      "engine/agentgen/agentgen.go",
+      "engine/agentgen/claude.go",
+      "engine/agentgen/claude_test.go",
+      "engine/agentgen/messages_pin_test.go",
+      "engine/shelltest/evidence_store_test.go",
+      "odd/tasks/merge-playbook-into-sdd-overlay.md",
+      "skills/_shared/evidence/PROVENANCE.md",
+      "skills/_shared/evidence/evidence.sh"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "f7b48045ab1843efaa71afbc2b1e0b6ab7a78bdc",
+      "head": "00564ea07ad9a18a1ff96aaf7fabb50eaebe3c1c",
+      "diff_sha256": "6e1ecadd313511325820a3c462736ec59d64ae29c80c9308809d88379e9e4279"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/agentgen/agentgen.go",
+        "engine/agentgen/claude.go",
+        "engine/agentgen/claude_test.go",
+        "engine/agentgen/messages_pin_test.go",
+        "engine/shelltest/evidence_store_test.go",
+        "odd/tasks/merge-playbook-into-sdd-overlay.md",
+        "skills/_shared/evidence/PROVENANCE.md",
+        "skills/_shared/evidence/evidence.sh"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "engine/agentgen/claude.go:55",
+        "severity": "SUGGESTION",
+        "claim": "agentgen.go:89 now accepts a notice starting with a BOM or blank lines, which noticeComments copies as is (# \\uFEFFMIT License, or #), so Generate writes a file ClaudeInstructions refuses because the third comment line must equal # + licenseName; no test covers it. Strip the BOM on read or document that the notice starts with the license name.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/agentgen/agentgen.go:89",
+          "engine/agentgen/roles.go:279",
+          "engine/agentgen/claude.go:55"
+        ]
+      },
+      {
+        "id": "F2",
+        "location": "skills/_shared/evidence/evidence.sh:233",
+        "severity": "SUGGESTION",
+        "claim": "A page that is a dangling symlink or not a regular file (a directory) fails [ -f ] and exits 1 (not classified) instead of 4; only a regular unreadable file reaches 4; B13 pins only mode 000.",
+        "evidence_class": "inferential",
+        "causal_disposition": "worsened",
+        "proof_refs": [
+          "skills/_shared/evidence/evidence.sh:232"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full diff, evidence.sh and claude.go at head, roles.go noticeHeader and noticeComments",
+      "Checked ENVIRON passing and the exit mapping (0 and 1 pass through, anything else 4)",
+      "Checked the identifier whitespace guard and the END checks now run for reviewed",
+      "Severity not given by the reviewer; the foreman recorded SUGGESTION, the severity judge 1 gave the same class of gap",
+      "No commands run"
+    ]
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "kind": "polisher",
+  "base": "f7b48045ab1843efaa71afbc2b1e0b6ab7a78bdc",
+  "head": "00564ea07ad9a18a1ff96aaf7fabb50eaebe3c1c",
+  "diff_sha256": "6e1ecadd313511325820a3c462736ec59d64ae29c80c9308809d88379e9e4279",
+  "findings": {
+    "findings": [
+      {
+        "location": "skills/_shared/evidence/evidence.sh:231",
+        "severity": "SUGGESTION",
+        "claim": "reviewed exits 1 (not classified) instead of 4 when the page exists but its directory cannot be searched (docs/wiki without x): [ -f ] fails on stat before the [ -r ] check, so the hook asks again; B13 only chmods the page file.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "evidence": [
+          "Guard order: [ -f \"$page\" ] || exit 1, then [ -r \"$page\" ] exit 4",
+          "Not run; read from the diff and the script"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full diff t4f.diff",
+      "No set -e, so rc=$? after run_awk is reached",
+      "noticeHeader third comment line is # plus the LICENSE first line, matching the licenseName check; pinned by a repo test",
+      "ENVIRON passes the identifier bytes; the whitespace guard blocks line breaks",
+      "check still exits bad; reviewed reaches exit (found && !bad) ? 0 : 1",
+      "No commands run"
+    ]
+  }
+}
