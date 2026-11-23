@@ -105,7 +105,7 @@ func TestStopDoesNotAskForAResultWithNoKeptFinding(t *testing.T) {
 	}
 }
 
-// SH3: a result the page holds is not asked for, and is not remembered.
+// SH3: a result the page holds is not asked for, and is remembered only as classified.
 func TestStopDoesNotAskForAClassifiedResult(t *testing.T) {
 	g, store, _ := classifyWorld(t)
 	asked, port := newFakeAsked(), newFakeClassified()
@@ -113,12 +113,13 @@ func TestStopDoesNotAskForAClassifiedResult(t *testing.T) {
 
 	got, err := app.New(g, store).WithAsked(asked).WithClassified(port).Stop(evidenceDir, "session-1", false)
 
-	if err != nil || got.Block || len(asked.put) != 0 {
-		t.Errorf("Stop() = %+v, %v with %v remembered; want no block, no error and nothing remembered", got, err, asked.put)
+	if err != nil || got.Block || len(asked.put) != 1 || !asked.put["session-1 "+classifiedKey(otherReview)] {
+		t.Errorf("Stop() = %+v, %v with %v remembered; want no block, no error and only %s remembered", got, err, asked.put, classifiedKey(otherReview))
 	}
 }
 
-// SH4: the question is put once per session, and the port is not run for a result already asked.
+// SH4: the question is put once per session; the port is asked again at the next stop, which does not block, and a
+// result still lacking is named in another session.
 func TestStopAsksForAResultOnceForEachSession(t *testing.T) {
 	g, store, _ := classifyWorld(t)
 	asked, port := newFakeAsked(), newFakeClassified()
@@ -132,11 +133,11 @@ func TestStopAsksForAResultOnceForEachSession(t *testing.T) {
 	if againErr != nil || again.Block {
 		t.Errorf("the second Stop() of the session = %+v, %v; want no block and no error", again, againErr)
 	}
-	if len(port.calls) != 1 {
-		t.Errorf("port calls = %q, want one: the result was asked for already, so the script is not run again", port.calls)
+	if len(port.calls) != 2 {
+		t.Errorf("port calls = %q, want two: a result still lacking is asked of the port at every stop", port.calls)
 	}
 	other, otherErr := service.Stop(evidenceDir, "session-2", false)
-	if otherErr != nil || !other.Block || len(other.Classify) != 1 || len(port.calls) != 2 {
+	if otherErr != nil || !other.Block || len(other.Classify) != 1 || len(port.calls) != 3 {
 		t.Errorf("Stop() of another session = %+v, %v with %q asked of the port; want a block naming the result and a second call", other, otherErr, port.calls)
 	}
 }
@@ -243,19 +244,28 @@ func TestKeptResultsIsEmptyWhereThereAreNoBranchCommitsToRead(t *testing.T) {
 	}
 }
 
-// A result that cannot be read or does not bind its commit is skipped, as the links of NextUnreviewed skip it.
-func TestKeptResultsSkipsAResultThatCannotBeReadOrDoesNotBind(t *testing.T) {
+// J1: what the pass cannot read, hold or bind is an error and no result, as Check refuses the same file; it is never
+// skipped.
+func TestKeptResultsRefusesWhatItCannotReadHoldOrBind(t *testing.T) {
+	cause := errors.New("boom")
+	verdictName := "333333333333-1.verifier.json"
 	for _, tc := range []struct {
 		name  string
 		setup func(g *fakeGit, store *fakeResults)
-		want  []app.KeptResult
+		wraps error
+		names string
 	}{
 		{"a file that is not a result", func(g *fakeGit, store *fakeResults) {
 			store.put("own-rdd", "333333333333-2.json", []byte("not a result"))
-		}, []app.KeptResult{{Review: otherReview, Head: otherSHA, Kept: 1}}},
+		}, review.ErrInvalidStored, "333333333333-2.json"},
 		{"a result for a diff that is not the one git gives now", func(g *fakeGit, store *fakeResults) {
 			g.diff = []byte("diff --git a/other.go b/other.go\n")
-		}, nil},
+		}, review.ErrBindingDiffers, ""},
+		{"git cannot give the diff", func(g *fakeGit, store *fakeResults) { g.fail["Diff"] = cause }, cause, ""},
+		{"the verdict cannot be read", func(g *fakeGit, store *fakeResults) { store.fail["Read "+verdictName] = cause }, cause, verdictName},
+		{"the store cannot give the features", func(g *fakeGit, store *fakeResults) { store.fail["Features"] = cause }, cause, ""},
+		{"git cannot tell where HEAD stands", func(g *fakeGit, store *fakeResults) { g.fail["Standing"] = cause }, cause, ""},
+		{"the store cannot list the results", func(g *fakeGit, store *fakeResults) { store.fail["Names"] = cause }, cause, ""},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			g, store, _ := classifyWorld(t)
@@ -263,9 +273,170 @@ func TestKeptResultsSkipsAResultThatCannotBeReadOrDoesNotBind(t *testing.T) {
 
 			got, err := app.New(g, store).KeptResults(evidenceDir)
 
-			if want := tc.want; err != nil || !reflect.DeepEqual(got, want) {
-				t.Errorf("KeptResults() = %+v, %v; want %+v and no error", got, err, want)
+			if got != nil || err == nil || !errors.Is(err, tc.wraps) || !strings.Contains(err.Error(), tc.names) {
+				t.Errorf("KeptResults() = %+v, %v; want nothing and an error that wraps %v and names %q", got, err, tc.wraps, tc.names)
 			}
 		})
+	}
+}
+
+// J2: a result whose file is named for one commit and whose binding is about another is skipped with no error: only the
+// first 12 characters of its name said it was about otherSHA.
+func TestKeptResultsSkipsAResultAboutAnotherCommit(t *testing.T) {
+	g, store, _ := classifyWorld(t)
+	name := reviewed(t, store, baseSHA, headSHA, 1, warning("F1")) // 222222222222-1.json, bound to headSHA
+	store.put("own-rdd", "333333333333-2.json", store.files["own-rdd"][name])
+	delete(store.files["own-rdd"], name)
+
+	got, err := app.New(g, store).KeptResults(evidenceDir)
+
+	want := []app.KeptResult{{Review: otherReview, Head: otherSHA, Kept: 1}}
+	if err != nil || !reflect.DeepEqual(got, want) {
+		t.Errorf("KeptResults() = %+v, %v; want %+v and no error", got, err, want)
+	}
+}
+
+// flakyGit asks nothing different of git until Standing was asked twice: the review part of Stop binds fine and the
+// classification part is the second to ask.
+type flakyGit struct {
+	*fakeGit
+	standings int
+}
+
+func (f *flakyGit) Standing(repo app.Repository) (app.Standing, error) {
+	f.standings++
+	return f.fakeGit.Standing(repo)
+}
+
+// flakyResults cannot read one file once the classification part of Stop runs.
+type flakyResults struct {
+	*fakeResults
+	git  *flakyGit
+	name string
+}
+
+func (r *flakyResults) Read(root, feature, name string) ([]byte, error) {
+	if r.git.standings >= 2 && name == r.name {
+		return nil, errors.New("permission denied")
+	}
+	return r.fakeResults.Read(root, feature, name)
+}
+
+// J3: a result the classification pass cannot read is an error and no block, and the port is not asked.
+func TestStopDoesNotBlockWhenTheClassificationPassCannotRead(t *testing.T) {
+	g, store, _ := classifyWorld(t)
+	git := &flakyGit{fakeGit: g}
+	results := &flakyResults{fakeResults: store, git: git, name: "333333333333-1.verifier.json"}
+	port := newFakeClassified()
+
+	got, err := app.New(git, results).WithAsked(newFakeAsked()).WithClassified(port).Stop(evidenceDir, "session-1", false)
+
+	if err == nil || !strings.Contains(err.Error(), "333333333333-1.verifier.json") || got.Block || len(port.calls) != 0 {
+		t.Errorf("Stop() = %+v, %v with %q asked of the port; want no block, an error naming the verdict and no call", got, err, port.calls)
+	}
+}
+
+// J4: the questions of the session that cannot be read are an error and no block, and the port is not asked.
+func TestStopDoesNotBlockWhenTheQuestionsOfTheSessionCannotBeRead(t *testing.T) {
+	g, store, _ := classifyWorld(t)
+	asked, port := newFakeAsked(), newFakeClassified()
+	cause := errors.New("boom")
+	asked.fail["Has"] = cause
+
+	got, err := app.New(g, store).WithAsked(asked).WithClassified(port).Stop(evidenceDir, "session-1", false)
+
+	if !errors.Is(err, cause) || got.Block || len(port.calls) != 0 {
+		t.Errorf("Stop() = %+v, %v with %q asked of the port; want no block, an error that wraps the cause and no call", got, err, port.calls)
+	}
+}
+
+// J5: a question that cannot be recorded is an error and no block, for a result the page lacks and for one it holds.
+func TestStopDoesNotBlockWhenAQuestionCannotBeRecorded(t *testing.T) {
+	for _, tc := range []struct {
+		name  string
+		setup func(port *fakeClassified)
+	}{
+		{"an unclassified result", func(port *fakeClassified) {}},
+		{"a classified result", func(port *fakeClassified) { port.done[otherReview] = true }},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			g, store, _ := classifyWorld(t)
+			asked, port := newFakeAsked(), newFakeClassified()
+			tc.setup(port)
+			cause := errors.New("boom")
+			asked.fail["Add"] = cause
+
+			got, err := app.New(g, store).WithAsked(asked).WithClassified(port).Stop(evidenceDir, "session-1", false)
+
+			if !errors.Is(err, cause) || got.Block {
+				t.Errorf("Stop() = %+v, %v; want no block and an error that wraps the cause", got, err)
+			}
+		})
+	}
+}
+
+// classifiedKey is the key under which a session remembers that review is classified, written here without the code
+// under test.
+func classifiedKey(review string) string { return "classified-" + sha256Of([]byte(review))[:16] }
+
+// J6: a result found classified is asked of the port once for each session, and remembered under its own key.
+func TestStopAsksThePortAboutAClassifiedResultOnceForEachSession(t *testing.T) {
+	g, store, _ := classifyWorld(t)
+	asked, port := newFakeAsked(), newFakeClassified()
+	port.done[otherReview] = true
+	service := app.New(g, store).WithAsked(asked).WithClassified(port)
+
+	for i, step := range []struct {
+		session string
+		calls   int
+	}{{"session-1", 1}, {"session-1", 1}, {"session-2", 2}} {
+		got, err := service.Stop(evidenceDir, step.session, false)
+		if err != nil || got.Block || len(port.calls) != step.calls {
+			t.Errorf("stop %d of %s = %+v, %v with %d port calls; want no block, no error and %d calls", i+1, step.session, got, err, len(port.calls), step.calls)
+		}
+	}
+	if !asked.put["session-1 "+classifiedKey(otherReview)] || asked.put["session-1 "+classifyKey(otherReview)] {
+		t.Errorf("remembered = %v, want %s of session-1 and no classify- key", asked.put, classifiedKey(otherReview))
+	}
+}
+
+// secondAddFails is an Asked store whose second Add fails, once.
+type secondAddFails struct {
+	*fakeAsked
+	adds int
+}
+
+func (a *secondAddFails) Add(session, key string) error {
+	a.adds++
+	if a.adds == 2 {
+		return errors.New("disk full")
+	}
+	return a.fakeAsked.Add(session, key)
+}
+
+// J7: when the record of a block was lost half way, the next block names every result still lacking, the one asked
+// before included, and the stop after is not blocked.
+func TestStopNamesAgainEveryResultThatALostRecordLeftUnasked(t *testing.T) {
+	g, store, _ := classifyWorld(t)
+	reviewed(t, store, baseSHA, otherSHA, 2, warning("F1"), warning("F2"))
+	asked, port := &secondAddFails{fakeAsked: newFakeAsked()}, newFakeClassified()
+	service := app.New(g, store).WithAsked(asked).WithClassified(port)
+
+	first, firstErr := service.Stop(evidenceDir, "session-1", false)
+	second, secondErr := service.Stop(evidenceDir, "session-1", false)
+	third, thirdErr := service.Stop(evidenceDir, "session-1", false)
+
+	if firstErr == nil || first.Block {
+		t.Errorf("stop 1 = %+v, %v; want no block and an error", first, firstErr)
+	}
+	reviews := []string{}
+	for _, r := range second.Classify {
+		reviews = append(reviews, r.Review)
+	}
+	if secondErr != nil || !second.Block || !reflect.DeepEqual(reviews, []string{otherReview, "own-rdd/333333333333-2"}) {
+		t.Errorf("stop 2 = %+v, %v; want a block that names both results and no error", second, secondErr)
+	}
+	if thirdErr != nil || third.Block {
+		t.Errorf("stop 3 = %+v, %v; want no block and no error", third, thirdErr)
 	}
 }

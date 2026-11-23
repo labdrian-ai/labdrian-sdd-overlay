@@ -34,25 +34,18 @@ func (s Service) WithClassified(c Classified) Service {
 	return s
 }
 
-// KeptResults lists the stored results of the commits of the branch HEAD is on, in the repository that holds dir
-// (absolute), that have one kept finding or more (S6). The commits are those NextUnreviewed reads (Git.Standing),
-// oldest first; in each commit every feature of the tree in order, and in each feature the results of the commit by
-// number. A result counts when it is read back and binds its commit, as the links of NextUnreviewed count it; one that
-// cannot be read or does not bind is skipped, not an error, since the question is which results the page lacks and
-// 'review check' judges the rest. The findings are those of keptFindings, with the verdict stored beside the result.
+// keptResultsOf lists the stored results of the commits of the branch HEAD is on, in a repository already located,
+// that have one kept finding or more (S6). The commits are those NextUnreviewed reads (Git.Standing), oldest first; in
+// each commit every feature of the tree in order, and in each feature the results of the commit by number. The findings
+// are those of keptFindings, with the verdict stored beside the result, both read once (heldResult).
+//
+// Only a result that is about another commit than the one whose name it carries (its binding says so, and only the
+// first 12 characters of its name said it was about this one) and a result with no kept finding are skipped. A result
+// that cannot be read, that does not hold, or that does not bind its commit is an error with no result, as 'review
+// check' refuses the same file; so is whatever git or the store cannot tell.
 //
 // There is nothing in a tree that keeps no features, on a detached HEAD, on a repository that does not tell its
-// default branch, and on a branch with no commit of its own, and that is no error. What git or the store cannot tell is
-// an error. Nothing is stored.
-func (s Service) KeptResults(dir string) ([]KeptResult, error) {
-	repo, err := s.git.Locate(dir)
-	if err != nil {
-		return nil, fmt.Errorf("locate the repository of %s: %w", dir, err)
-	}
-	return s.keptResultsOf(repo)
-}
-
-// keptResultsOf is KeptResults for a repository already located.
+// default branch, and on a branch with no commit of its own, and that is no error. Nothing is stored.
 func (s Service) keptResultsOf(repo Repository) ([]KeptResult, error) {
 	features, err := s.results.Features(repo.Root)
 	if err != nil {
@@ -80,36 +73,22 @@ func (s Service) keptResultsOf(repo Repository) ([]KeptResult, error) {
 	for _, commit := range standing.Commits {
 		for _, listing := range listings {
 			for _, name := range review.ResultsOfHead(listing.names, commit) {
-				if _, binds, err := s.reviewedResult(repo, listing.feature, name, commit); err != nil || !binds {
+				h, binds, err := s.heldResult(repo, listing.feature, name, commit)
+				if err != nil {
+					return nil, err
+				}
+				if !binds {
 					continue
 				}
-				kept, err := s.keptOf(repo, listing.feature, name)
-				if err != nil || kept == 0 {
+				kept, _ := keptFindings(h.result, h.verdicts)
+				if len(kept) == 0 {
 					continue
 				}
-				out = append(out, KeptResult{Review: reviewID(listing.feature, name), Head: commit, Kept: kept})
+				out = append(out, KeptResult{Review: reviewID(listing.feature, name), Head: commit, Kept: len(kept)})
 			}
 		}
 	}
 	return out, nil
-}
-
-// keptOf is how many findings of the stored result called name count as evidence, with the verdict stored beside it.
-func (s Service) keptOf(repo Repository, feature, name string) (int, error) {
-	file, err := s.results.Read(repo.Root, feature, name)
-	if err != nil {
-		return 0, fmt.Errorf("read %s: %w", review.ResultPath(feature, name), err)
-	}
-	_, result, err := judged(file)
-	if err != nil {
-		return 0, fmt.Errorf("%s: %w", review.ResultPath(feature, name), err)
-	}
-	verdicts, _, err := s.verdictsOf(repo, feature, name, result)
-	if err != nil {
-		return 0, err
-	}
-	kept, _ := keptFindings(result, verdicts)
-	return len(kept), nil
 }
 
 // classifyKey names, in the questions of a session, the question that asks for the classification of the result
@@ -119,10 +98,20 @@ func classifyKey(review string) string {
 	return "classify-" + sha256hex.Sum([]byte(review))[:16]
 }
 
-// classifyRuling is the block that asks for the classification of the results of dir the session has not been asked
-// about and the page lacks, or no block. A result whose question the session holds is dropped before the port runs, so
-// no script runs for it; the port is asked for the rest, and what it says is not classified is asked once (once). An
-// error of KeptResults, of the port or of the store of the questions is returned with no block.
+// classifiedKey names, in the questions of a session, the finding that the page holds the classification of the result
+// called review: classified- and the first 16 hex digits of the SHA-256 of the identifier, 27 bytes of lowercase
+// letters, digits and dashes, a key of the same store as classifyKey's.
+func classifiedKey(review string) string {
+	return "classified-" + sha256hex.Sum([]byte(review))[:16]
+}
+
+// classifyRuling is the block that asks for the classification of the results of dir that the page lacks, or no block.
+// Each result of keptResultsOf is checked in order. One the session found classified (classifiedKey) is not asked of
+// the port again; the port is asked for the rest, and a result it says is classified is remembered for the session.
+// Every result still lacking goes to once with its classifyKey: the stop is blocked when one of those questions is new
+// to the session, and the block names every result still lacking, the ones asked before included, as a review
+// question names every need. An error of keptResultsOf (nothing a stored result could not give is skipped), of the
+// port or of the store of the questions is returned with no block.
 func (s Service) classifyRuling(dir, session string) (Ruling, error) {
 	repo, err := s.git.Locate(dir)
 	if err != nil {
@@ -137,21 +126,24 @@ func (s Service) classifyRuling(dir, session string) (Ruling, error) {
 		keys    []string
 	)
 	for _, result := range results {
-		key := classifyKey(result.Review)
-		before, err := s.asked.Has(session, key)
+		known, err := s.asked.Has(session, classifiedKey(result.Review))
 		if err != nil {
 			return Ruling{}, fmt.Errorf("read the questions asked in the session: %w", err)
 		}
-		if before {
+		if known {
 			continue
 		}
 		done, err := s.classified.Classified(repo.Root, result.Review)
 		if err != nil {
 			return Ruling{}, fmt.Errorf("tell whether %s is classified: %w", result.Review, err)
 		}
-		if !done {
-			lacking, keys = append(lacking, result), append(keys, key)
+		if done {
+			if err := s.asked.Add(session, classifiedKey(result.Review)); err != nil {
+				return Ruling{}, fmt.Errorf("record that %s is classified: %w", result.Review, err)
+			}
+			continue
 		}
+		lacking, keys = append(lacking, result), append(keys, classifyKey(result.Review))
 	}
 	if len(lacking) == 0 {
 		return Ruling{}, nil

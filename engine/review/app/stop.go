@@ -30,7 +30,7 @@ type Ruling struct {
 	// branch that need a review cannot be told.
 	NoDefault bool
 	// Classify are the stored results of the branch's commits whose kept findings the evidence page does not hold yet
-	// (KeptResults, Classified), when the block asks for their classification (S6). It is set only when no review
+	// (keptResultsOf, Classified), when the block asks for their classification (S6). It is set only when no review
 	// question blocks, and then Question is empty.
 	Classify []KeptResult
 }
@@ -48,9 +48,11 @@ type Ruling struct {
 // every stop. The questions are the Asked port's: a Service made without one (WithAsked) cannot run Stop.
 //
 // When no review question blocks and the Service has a Classified port (WithClassified), the stop is blocked once for each
-// session and stored result of the branch's commits that has a kept finding the evidence page lacks (KeptResults, S6):
-// Ruling.Classify names those results, each keyed classify- and a digest of its identifier. A result whose question the
-// session holds is not asked of the port again. A Service without the port is as it was.
+// session and stored result of the branch's commits that has a kept finding the evidence page lacks (keptResultsOf, S6):
+// Ruling.Classify names those results, each keyed classify- and a digest of its identifier. A result found classified is
+// remembered for the session (classified- and a digest) and is not asked of the port again in it; the block names every
+// result still lacking, the ones asked before included, so a lost record never hides a result. What the pass cannot
+// read, hold or bind is an error with no block. A Service without the port is as it was.
 func (s Service) Stop(dir, session string, continuing bool) (Ruling, error) {
 	if s.asked == nil {
 		return Ruling{}, errors.New("review: the stop hook has no store of the questions it has put")

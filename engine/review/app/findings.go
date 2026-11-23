@@ -90,7 +90,7 @@ func reviewID(feature, stored string) string {
 
 // keptFindings splits the findings of result in the ones that count as evidence and the ones that do not, each of those
 // with its reason, both in the order the reviewer wrote them and never nil. It is the one rule of what is evidence: the
-// listing of Findings and the question of the stop hook (KeptResults) both read it, so they cannot disagree.
+// listing of Findings and the question of the stop hook (keptResultsOf) both read it, so they cannot disagree.
 func keptFindings(result reviewresult.Result, verdicts []reviewverdict.Verdict) (kept []reviewresult.Finding, leftOut []LeftOut) {
 	kept, leftOut = []reviewresult.Finding{}, []LeftOut{}
 	for _, f := range result.Findings {
