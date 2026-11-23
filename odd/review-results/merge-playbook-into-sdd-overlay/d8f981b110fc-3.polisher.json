@@ -1,0 +1,15 @@
+{
+  "kind": "polisher",
+  "base": "ae0d6bb0b2e579b507f8bb8844f110a02c678357",
+  "head": "d8f981b110fc8f45bba9e60ca9c5e3f6e5972907",
+  "diff_sha256": "4df846e0557e9a51dab59b1305b8a420b17804105d1a98a652ca6bc477223661",
+  "findings": {
+    "findings": [],
+    "evidence": [
+      "Read the full diff t4h.diff, stop.go, unreviewed.go:55-152, check.go:153-203, ResultsOfHead",
+      "The only consumer of Stop and Ruling (review_stop_hook.go:60-139) does not call WithClassified; Ruling.Classify is additive",
+      "No commands run",
+      "The judge was given the range 88622bdc..d8f981b1; the finding is in ae0d6bb0 (classify.go); the no-finding judgment of the tests commit is recorded on d8f981b1"
+    ]
+  }
+}

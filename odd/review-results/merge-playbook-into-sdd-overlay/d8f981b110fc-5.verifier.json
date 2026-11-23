@@ -1,0 +1,32 @@
+{
+  "verdicts": [
+    {
+      "id": "F2",
+      "result": "reproduced",
+      "command": "Same as F1. Record d8f981b110fc-5.json F2 names the same defect at engine/review/app/classify.go:89. Head: cd $S/head/engine && HOME=$(mktemp -d) GOFLAGS=-mod=mod go test ./review/app/ -run 'TestProbeF1' -v -count=1 with $S/probe_f1_test.go. Base: HOME=$(mktemp -d) go vet ./review/app/ with the head probe, then HOME=$(mktemp -d) go test ./review/app/ -run TestProbeF1 -v -count=1 with $S/base_probe_test.go (S=/tmp/claude-1000/-home-labdrian-labdrian-sdd-overlay/45673332-5a42-429f-889a-50c9d8bcb1fc/scratchpad/vf-t4h)",
+      "output": "Head: KeptResults with Diff failing -> got=[] err=<nil>. KeptResults with the verdict read failing (permission denied) -> got=[] err=<nil>. Stop with a transient Diff failure in the classification pass -> {Block:false Classify:[]} err=<nil> portCalls=[]. Stop with a transient verdict read failure -> {Block:false Classify:[]} err=<nil> portCalls=[]. The control Stop with no failure blocks with Classify:[{own-rdd/333333333333-1 Kept:1}]. Result: ok ... 0.004s. The unreadable verdict and git diff failure are swallowed with no signal, as the record says. Base: the probe does not compile (undefined: classifyWorld), and the classification use case is absent. Base Stop on a branch with a kept WARNING returns {Block:false NoDefault:false} err=<nil>, and nothing is ever asked for classification.",
+      "base_result": "not-reproduced"
+    },
+    {
+      "id": "F1",
+      "result": "reproduced",
+      "command": "Head: I added run.vFmg/hd/engine/cmd/probe_f1_classify_test.go (package main), which calls stopReason(reviewapp.Ruling{Block:true, Classify:[]reviewapp.KeptResult{{Review:\"own-rdd/333333333333-1\", Head:\"3333...\", Kept:1}}}). Run: cd run.vFmg/hd/engine && HOME=$(mktemp -d) go test -count=1 -v -run TestProbeF1ClassifyReason ./cmd/. Base: the same file in run.vFmg/bs/engine/cmd, same command. Also: diff head/cmd/review_stop_hook.go base/cmd/review_stop_hook.go",
+      "output": "head: stopReason = \"Commit  of branch  has unfinished review steps. Before you stop, for that commit alone (base ):\\n\\n\\n\\n<feature> is the feature whose odd/tasks/<feature>.md holds the task of the commit. ...\". The commit, branch and base are empty and there is no need line. stopReason (review_stop_hook.go:108-123) reads only r.Question and r.NoDefault. Today stopHookAnswer:96 does not call WithClassified, so this is latent. The diff printed SAME: the hook file did not change. base: build failed with `unknown field Classify in struct literal of type ...app.Ruling` and `undefined: reviewapp.KeptResult`.",
+      "base_result": "not-reproduced"
+    },
+    {
+      "id": "F3",
+      "result": "reproduced",
+      "command": "Same as record 4 F3: TestProbeF3ClassifiedReasked in run.vFmg/head/review/app/probe_f3f4_test.go. Run: cd run.vFmg/head && HOME=$(mktemp -d) go test -count=1 -v -run 'TestProbeF3|TestProbeF4' ./review/app/. Base: the same command in run.vFmg/bs/engine.",
+      "output": "head: port calls were 1 after Stop(session-1), 2 after Stop(session-2) and 3 after a second Stop(session-1). Each Stop returned Block:false with a nil error, and the classified result is never remembered. base: build failed (`WithClassified undefined`, `undefined: classifyWorld`, `undefined: newFakeClassified`).",
+      "base_result": "not-reproduced"
+    },
+    {
+      "id": "F4",
+      "result": "reproduced",
+      "command": "Head: TestProbeF4PartialAdd in run.vFmg/head/review/app/probe_f3f4_test.go. It uses classifyWorld plus reviewed(..., 2, warning(\"F1\"), warning(\"F2\")), so two results are lacking. The Asked wrapper secondAddFails fails only the 2nd Add. The test then calls Stop on session-1 three times. Run: cd run.vFmg/head && HOME=$(mktemp -d) go test -count=1 -v -run 'TestProbeF3|TestProbeF4' ./review/app/. Base: the same command in run.vFmg/bs/engine.",
+      "output": "head: Stop#1 returned Block:false, err=`record the question asked in the session: disk full`, remembered=map[session-1 classify-cbe8ab7ede27cf36:true]. Stop#2 returned Block:true with Classify:[{Review:own-rdd/333333333333-2 ... Kept:2}] and a nil error. It names only result -2. Stop#3 returned Block:false with a nil error. Result own-rdd/333333333333-1 was never put in a block in that session. base: build failed (`WithClassified undefined`, `undefined: warning`, `undefined: classifyWorld`).",
+      "base_result": "not-reproduced"
+    }
+  ]
+}

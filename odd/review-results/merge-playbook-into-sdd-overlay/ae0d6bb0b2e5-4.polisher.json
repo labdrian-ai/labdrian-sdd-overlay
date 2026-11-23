@@ -1,0 +1,29 @@
+{
+  "kind": "polisher",
+  "base": "88622bdc140f01ee3019097448532e498ddb06c6",
+  "head": "ae0d6bb0b2e579b507f8bb8844f110a02c678357",
+  "diff_sha256": "6750aedceebb22a11a6ae469928a0ad2e5a7c1b0ff0cfdd92ed9fe0403ab4b63",
+  "findings": {
+    "findings": [
+      {
+        "location": "engine/review/app/classify.go:145",
+        "severity": "SUGGESTION",
+        "claim": "A partial Asked.Add failure leaves earlier classify keys recorded with no block, and classifyRuling filters by Has before once, so those results are never asked again that session; stopReview passes every key to once and re-puts the whole question, classifyRuling has no such fallback.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "evidence": [
+          "classify.go:147-152 skips a result when Has is true before adding it to lacking",
+          "stop.go:122-126 once adds keys in order and returns an error with no block on the first Add error",
+          "stop.go:75-84 stopReview sends every need key to once",
+          "Needs a failing Asked.Add (disk or permission error)"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full diff t4h.diff, stop.go, unreviewed.go:55-152, check.go:153-203, ResultsOfHead",
+      "The only consumer of Stop and Ruling (review_stop_hook.go:60-139) does not call WithClassified; Ruling.Classify is additive",
+      "No commands run",
+      "The judge was given the range 88622bdc..d8f981b1; the finding is in ae0d6bb0 (classify.go); the no-finding judgment of the tests commit is recorded on d8f981b1"
+    ]
+  }
+}
