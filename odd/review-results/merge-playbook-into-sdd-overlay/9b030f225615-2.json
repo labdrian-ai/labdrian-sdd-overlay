@@ -1,0 +1,61 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "ad8cfe87b4aa0cc79108532e9e022c5ec8926dc3",
+    "head": "9b030f225615af3feb4c2dd9acc802e690e6454e",
+    "diff_sha256": "092081cb2870933af0aeeffe85cf662c6254dfca8d914e7eb63753b23ca81b2f",
+    "paths": [
+      "engine/agentgen/agentgen.go",
+      "engine/agentgen/messages_pin_test.go",
+      "engine/shelltest/evidence_store_test.go",
+      "engine/skills/evidence_store_artifact_test.go",
+      "odd/tasks/merge-playbook-into-sdd-overlay.md",
+      "skills/_shared/evidence/PROVENANCE.md",
+      "skills/_shared/evidence/evidence.sh"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "ad8cfe87b4aa0cc79108532e9e022c5ec8926dc3",
+      "head": "9b030f225615af3feb4c2dd9acc802e690e6454e",
+      "diff_sha256": "092081cb2870933af0aeeffe85cf662c6254dfca8d914e7eb63753b23ca81b2f"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/agentgen/agentgen.go",
+        "engine/agentgen/messages_pin_test.go",
+        "engine/shelltest/evidence_store_test.go",
+        "engine/skills/evidence_store_artifact_test.go",
+        "odd/tasks/merge-playbook-into-sdd-overlay.md",
+        "skills/_shared/evidence/PROVENANCE.md",
+        "skills/_shared/evidence/evidence.sh"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "skills/_shared/evidence/evidence.sh:332",
+        "severity": "SUGGESTION",
+        "claim": "dirname is called without --; a wiki argument starting with - makes GNU dirname read the page path as an option, print an error and nothing, so the walk continues from . and exits 1 (no page) with an extra stderr line instead of 4. Only an odd caller-supplied wiki argument reaches it.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "skills/_shared/evidence/evidence.sh:329",
+          "skills/_shared/evidence/evidence.sh:82"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full diff (7 paths) and evidence.sh at head",
+      "reviewed stdout carries one word; fail prints only in check mode",
+      "Absent-page walk ends at . or /; dangling symlink, directory and file-as-parent exit 4; exit mapping of out consistent",
+      "The generator first-line check is consistent with ClaudeInstructions licenseName check",
+      "Tests not run"
+    ]
+  }
+}

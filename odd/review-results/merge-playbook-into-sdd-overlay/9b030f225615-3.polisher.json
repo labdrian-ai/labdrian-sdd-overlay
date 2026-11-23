@@ -1,0 +1,16 @@
+{
+  "kind": "polisher",
+  "base": "ad8cfe87b4aa0cc79108532e9e022c5ec8926dc3",
+  "head": "9b030f225615af3feb4c2dd9acc802e690e6454e",
+  "diff_sha256": "092081cb2870933af0aeeffe85cf662c6254dfca8d914e7eb63753b23ca81b2f",
+  "findings": {
+    "findings": [],
+    "evidence": [
+      "Read the full diff t4g.diff and evidence.sh lines 50-273",
+      "Traced reviewed by hand: missing page under a searchable dir exits 1; missing wiki dir walks to . or / and exits 1; unsearchable wiki dir exits 4; path under a regular file exits 4; dangling symlink or loop exits 4; directory at the page path exits 4; awk non-zero or zero with no output exits 4 with one stderr line; awk stderr dropped; stdout is exactly yes or no",
+      "agentgen first-line check runs after the empty-notice test and does not collide with problemLine cases",
+      "A wiki argument starting with - only matters when nothing exists at the path, so exit 1 stays correct; judged too minor",
+      "No commands run"
+    ]
+  }
+}
