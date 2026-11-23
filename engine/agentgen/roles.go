@@ -257,11 +257,27 @@ func (r claudeOnlyRole) noticePath() string {
 	return "roles/" + r.name + "/" + r.notice
 }
 
+// noticeHeader is the first comment line of the notice, with no line break: it names the origin and the license,
+// taken from the origin and licenseName fields of the role (L52).
+func (r claudeOnlyRole) noticeHeader() string {
+	return "# This agent includes material from " + r.origin + " under the " + r.licenseName + " below; see roles/" + r.name + "/PROVENANCE.md in the source repository."
+}
+
+// noticeRole is the Claude-only role of that name that carries a notice.
+func noticeRole(name string) (claudeOnlyRole, bool) {
+	for _, r := range claudeOnlyRoles {
+		if r.name == name && r.notice != "" {
+			return r, true
+		}
+	}
+	return claudeOnlyRole{}, false
+}
+
 // noticeComments are the frontmatter comment lines that carry the license text: a header line that names
 // the origin and the license, taken from the origin and licenseName fields of the role (L52), a "#" line,
 // then each line of the text as "# " plus the line, or "#" for a blank one.
 func (r claudeOnlyRole) noticeComments(text string) string {
-	out := "# This agent includes material from " + r.origin + " under the " + r.licenseName + " below; see roles/" + r.name + "/PROVENANCE.md in the source repository.\n#\n"
+	out := r.noticeHeader() + "\n#\n"
 	for _, line := range strings.Split(strings.TrimSuffix(text, "\n"), "\n") {
 		if line == "" {
 			out += "#\n"

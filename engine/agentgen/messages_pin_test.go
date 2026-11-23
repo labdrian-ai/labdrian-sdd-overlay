@@ -208,3 +208,34 @@ func TestCheckCallsAnUnreadableNoticeTheLicenseNotice(t *testing.T) {
 		t.Errorf("Check error = %v, want it not to call %s the source of the role", err, path)
 	}
 }
+
+// A license notice file that is empty, or holds only blank space, is a problem Check names as the empty license notice
+// of the role, and Generate refuses it and writes nothing: a role with `notice` set promises a notice (T4s, L55,
+// review 490a46c0b44b-3 F2).
+func TestCheckNamesAnEmptyNotice(t *testing.T) {
+	for _, c := range []struct{ name, text string }{
+		{"empty", ""},
+		{"blank space", "\n \n"},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			root := seededRoot(t)
+			if err := os.WriteFile(filepath.Join(root, "roles", "classifier", "LICENSE"), []byte(c.text), 0o644); err != nil {
+				t.Fatal(err)
+			}
+
+			checkErr := agentgen.Check(root)
+			generateErr := agentgen.Generate(root)
+
+			const want = "  roles/classifier/LICENSE: empty (the license notice of the role has no text)"
+			if checkErr == nil || !strings.Contains(checkErr.Error(), "\n"+want) {
+				t.Errorf("Check error = %v, want it to hold\n%s", checkErr, want)
+			}
+			if generateErr == nil || !strings.HasPrefix(generateErr.Error(), "reading roles/classifier/LICENSE: ") {
+				t.Errorf("Generate error = %v, want one that starts %q", generateErr, "reading roles/classifier/LICENSE: ")
+			}
+			if _, err := os.Stat(filepath.Join(root, "agents", "classifier.md")); err == nil {
+				t.Error("Generate wrote agents/classifier.md although the notice is empty")
+			}
+		})
+	}
+}

@@ -93,6 +93,6 @@ Example rows, for the shape only, never to copy:
 
 ## Output
 
-- A line `Kinds rows:`, then one fence opened by ```markdown with the Kinds rows to add, one per line, with no header; an empty fence when there are none.
-- A line `Evidence rows:`, then one fence opened by ```markdown with the Evidence rows to add, the same way.
+- A line `Kinds rows:`, then one fence opened by `` ```markdown `` with the Kinds rows to add, one per line, with no header; an empty fence when there are none.
+- A line `Evidence rows:`, then one fence opened by `` ```markdown `` with the Evidence rows to add, the same way.
 - Any finding skipped, with the reason.

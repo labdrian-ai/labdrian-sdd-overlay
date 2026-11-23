@@ -53,6 +53,9 @@ const (
 	subjectNotice = "the license notice of the role"
 )
 
+// errEmptyNotice is the error of a license notice file that has no text, or only blank space (T4s, L55).
+var errEmptyNotice = errors.New("the file is empty")
+
 func (e *sourceError) Error() string { return e.verb + " " + e.path + ": " + e.err.Error() }
 func (e *sourceError) Unwrap() error { return e.err }
 
@@ -83,8 +86,9 @@ func build(repoRoot string) (table []Artifact, problems []*sourceError) {
 			problems = append(problems, &sourceError{path: r.noticePath(), subject: subjectNotice, verb: "reading", err: err})
 			return "", false
 		}
-		if len(data) == 0 {
-			return "", true
+		if strings.TrimSpace(string(data)) == "" {
+			problems = append(problems, &sourceError{path: r.noticePath(), subject: subjectNotice, verb: "reading", err: errEmptyNotice})
+			return "", false
 		}
 		return r.noticeComments(string(data)), true
 	}
@@ -233,24 +237,32 @@ func Check(repoRoot string) error {
 		}
 	}
 	for _, p := range problems {
-		switch {
-		case p.path == modelsPath && errors.Is(p.err, fs.ErrNotExist):
-			errs = append(errs, fmt.Sprintf("%s: missing (the tier table of the models is not in the repository)", p.path))
-		case p.path == modelsPath:
-			errs = append(errs, fmt.Sprintf("%s: cannot use the tier table of the models: %v", p.path, p.err))
-		case errors.Is(p.err, fs.ErrNotExist):
-			errs = append(errs, fmt.Sprintf("%s: missing (%s is not in the repository)", p.path, p.subject))
-		case p.verb == "reading":
-			errs = append(errs, fmt.Sprintf("%s: cannot read %s: %v", p.path, p.subject, p.err))
-		default:
-			errs = append(errs, fmt.Sprintf("%s: cannot be projected: %v", p.path, p.err))
-		}
+		errs = append(errs, problemLine(p))
 	}
 
 	if len(errs) > 0 {
 		return fmt.Errorf("generated agent artifacts are stale or missing:\n  %s", strings.Join(errs, "\n  "))
 	}
 	return nil
+}
+
+// problemLine words a problem for Check. The subject is said only for an error of reading: an error of
+// projecting is always a projection problem, even when it wraps fs.ErrNotExist (T4s, L55).
+func problemLine(p *sourceError) string {
+	switch {
+	case p.path == modelsPath && errors.Is(p.err, fs.ErrNotExist):
+		return fmt.Sprintf("%s: missing (the tier table of the models is not in the repository)", p.path)
+	case p.path == modelsPath:
+		return fmt.Sprintf("%s: cannot use the tier table of the models: %v", p.path, p.err)
+	case p.verb == "reading" && errors.Is(p.err, errEmptyNotice):
+		return fmt.Sprintf("%s: empty (%s has no text)", p.path, p.subject)
+	case p.verb == "reading" && errors.Is(p.err, fs.ErrNotExist):
+		return fmt.Sprintf("%s: missing (%s is not in the repository)", p.path, p.subject)
+	case p.verb == "reading":
+		return fmt.Sprintf("%s: cannot read %s: %v", p.path, p.subject, p.err)
+	default:
+		return fmt.Sprintf("%s: cannot be projected: %v", p.path, p.err)
+	}
 }
 
 // writeFile writes content to path, creating parent directories as needed.

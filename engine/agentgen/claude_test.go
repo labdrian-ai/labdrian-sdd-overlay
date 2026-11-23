@@ -58,10 +58,17 @@ func TestClaudeInstructionsIsTheBodyOfTheClaudeFileOfEveryRole(t *testing.T) {
 	}
 }
 
-// A file the generator did not write is refused, and the error says what is not its shape.
+// A file the generator did not write is refused, and the error says what is not its shape. Comment lines before name:
+// belong only to the file of a Claude-only role with a notice, and only when the first of them is that role's notice
+// header (T4s, L55; reviews 490a46c0b44b-3 F1 and -5 F3).
 func TestClaudeInstructionsRefusesAFileTheGeneratorDidNotWrite(t *testing.T) {
 	const keys = "name: reviewer\ndescription: d\nmodel: sonnet\ntools: Read, Grep, Glob\n"
+	const foremanKeys = "name: foreman\ndescription: d\nmodel: sonnet\ntools: Read, Grep, Glob\n"
+	const classifierKeys = "name: classifier\ndescription: d\nmodel: sonnet\ntools: Read, Grep, Glob\n"
 	for _, c := range []struct{ name, file, want string }{
+		{"a comment line in the file of a role with no notice", "---\n# x\n" + keys + "---\n\nbody\n", "carries no license notice"},
+		{"a comment line in the file of the foreman", "---\n# x\n" + foremanKeys + "---\n\nbody\n", "carries no license notice"},
+		{"comment lines that do not start with the notice header", "---\n# another header\n#\n" + classifierKeys + "---\n\nbody\n", "notice header"},
 		{"an empty file", "", "opening"},
 		{"no opening fence", keys + "---\n\nbody\n", "opening"},
 		{"no closing fence", "---\n" + keys + "\nbody\n", "tools"},
