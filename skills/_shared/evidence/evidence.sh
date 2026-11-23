@@ -4,6 +4,7 @@
 # and prints its rules. It never writes a file.
 # Usage: sh evidence.sh check|count|rules|index [wiki directory]
 #        sh evidence.sh rule <kind> [wiki directory]
+#        sh evidence.sh reviewed <identifier> [wiki directory]
 # The wiki directory is "$CLAUDE_PROJECT_DIR/docs/wiki" when that variable is
 # set, else docs/wiki. The playbook's general rules are in evidence-rules.md,
 # next to this script.
@@ -27,6 +28,11 @@
 # - rule <kind>: the level, rule, applies when, and source of that kind, at any
 #   level, from the page first and then evidence-rules.md; when the kind is in
 #   neither, a message on stderr and exit 1 (seed-evidence-31).
+# - reviewed <identifier>: prints nothing; exits 0 when a row of the Evidence
+#   table of the page has the identifier as its Review cell, exactly (a cell is
+#   trimmed, and "\|" in it is read as "|"), and 1 when none does or there is
+#   no page. The Kinds table is not read, and neither is evidence-rules.md.
+#   Without an identifier it is a usage error.
 # count, rules, and index exit 0, but with no awk on PATH every mode prints
 # "evidence.sh: awk is not on PATH; <mode> cannot run" on stderr and exits 3
 # (a usage error still exits 2). A cell may hold "|" written as "\|". Not
@@ -38,12 +44,13 @@
 threshold=3
 
 usage='usage: sh evidence.sh check|count|rules|index [wiki directory]
-       sh evidence.sh rule <kind> [wiki directory]'
+       sh evidence.sh rule <kind> [wiki directory]
+       sh evidence.sh reviewed <identifier> [wiki directory]'
 mode=${1:-}
 want=
 case $mode in
   check | count | rules | index) dirarg=${2:-} ;;
-  rule)
+  rule | reviewed)
     want=${2:-}
     [ -n "$want" ] || { printf '%s\n' "$usage" >&2; exit 2; }
     dirarg=${3:-}
@@ -126,6 +133,7 @@ run_awk() {
       if (ncell != 5) { fail("a row of Evidence has " ncell " cells, not 5: " cell[1]); next }
       k = cell[1]; lv = cell[2]; rv = cell[3]; d = cell[4]
       ne++; ek[ne] = k
+      if (rv == want) found = 1
       if (lv !~ /^[1-9][0-9]*$/) fail("evidence of \"" k "\" has level \"" lv "\", not a positive integer")
       if (rv == "") fail("evidence of \"" k "\" has no review")
       if (!isdate(d)) fail("evidence of \"" k "\" has date \"" d "\", not YYYY-MM-DD")
@@ -167,6 +175,7 @@ run_awk() {
       }
       exit 0
     }
+    if (mode == "reviewed") exit found ? 0 : 1
     for (i = 1; i <= nr; i++) printf "- %s (level %s; applies when: %s): %s\n", rk[i], rl[i], ra[i], rr[i]
   }' "$1"
 }
@@ -208,6 +217,11 @@ case $mode in
       run_awk "$f" "$(basename "$f")" 2>/dev/null
     done
     exit 0
+    ;;
+  reviewed)
+    [ -f "$page" ] || exit 1
+    run_awk "$page" evidence.md
+    exit $?
     ;;
   rule)
     for f in "$page" "$general"; do

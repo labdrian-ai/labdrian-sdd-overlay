@@ -25,7 +25,7 @@ const (
 	// alpha has three distinct reviews; beta one review on two rows; gamma two distinct reviews.
 	stdEvidence = "| alpha-kind | 1 | f/aaaa-1 | 2026-01-05 | one |\n| alpha-kind | 1 | f/bbbb-1 | 2026-02-10 | two |\n| alpha-kind | 1 | f/cccc-1 | 2026-01-20 | three |\n| beta-kind | 2 | f/dddd-1 | 2026-03-01 | four |\n| beta-kind | 2 | f/dddd-1 | 2026-03-01 | five |\n| gamma-kind | 3 | f/eeee-1 | 2026-03-05 | six |\n| gamma-kind | 3 | f/ffff-1 | 2026-03-09 | seven |\n"
 
-	evidenceUsage = "usage: sh evidence.sh check|count|rules|index [wiki directory]\n       sh evidence.sh rule <kind> [wiki directory]\n"
+	evidenceUsage = "usage: sh evidence.sh check|count|rules|index [wiki directory]\n       sh evidence.sh rule <kind> [wiki directory]\n       sh evidence.sh reviewed <identifier> [wiki directory]\n"
 )
 
 func evidencePage(kinds, evidence string) string { return kindsHead + kinds + evidenceHead + evidence }
@@ -194,7 +194,7 @@ func TestEvidenceStoreReadsTheWikiDirectoryFromArgumentThenEnvironmentThenWorkin
 // B8: a call the script cannot read exits 2 with the usage on stderr and nothing on stdout.
 func TestEvidenceStoreUsageErrorsExitTwo(t *testing.T) {
 	w := newEvidenceWorld(t, evidencePage(stdKinds, stdEvidence))
-	for name, args := range map[string][]string{"no mode": nil, "an unknown mode": {"bogus"}, "rule with no kind": {"rule"}} {
+	for name, args := range map[string][]string{"no mode": nil, "an unknown mode": {"bogus"}, "rule with no kind": {"rule"}, "reviewed with no identifier": {"reviewed"}} {
 		wantResult(t, name, w.inRepo(args...), 2, "", evidenceUsage)
 	}
 }
@@ -209,11 +209,40 @@ func TestEvidenceStoreWithoutAwkSaysSoAndExitsThree(t *testing.T) {
 		t.Fatal(err)
 	}
 	env := []string{"PATH=" + noawk}
-	for _, args := range [][]string{{"check"}, {"count"}, {"rules"}, {"index"}, {"rule", "beta-kind"}} {
+	for _, args := range [][]string{{"check"}, {"count"}, {"rules"}, {"index"}, {"rule", "beta-kind"}, {"reviewed", "f/aaaa-1"}} {
 		wantResult(t, args[0]+" with no awk", w.run(w.repo, env, args...), 3, "",
 			"evidence.sh: awk is not on PATH; "+args[0]+" cannot run\n")
 	}
 	wantResult(t, "a usage error with no awk", w.run(w.repo, env, "bogus"), 2, "", evidenceUsage)
+}
+
+// B12: reviewed prints nothing and answers by its exit: 0 when an Evidence row's Review cell is the identifier
+// exactly (trimmed, "\|" read as "|"), 1 when none or when there is no page. The Review cell alone counts: the
+// same text in a Kinds Source cell, or as the start of a longer identifier, does not.
+func TestEvidenceStoreReviewedAnswersByExitWhetherAnEvidenceRowHoldsTheReview(t *testing.T) {
+	kinds := stdKinds + "| source-kind | 1 | | | f/src-1 | project |\n"
+	evidence := stdEvidence + "| alpha-kind | 1 | f/xxxx-10 | 2026-04-01 | prefix |\n| alpha-kind | 1 |  f/spaced-1  | 2026-04-02 | spaced |\n| alpha-kind | 1 | f/a\\|b-1 | 2026-04-03 | pipe |\n"
+	w := newEvidenceWorld(t, evidencePage(kinds, evidence))
+	for _, c := range []struct {
+		what, id string
+		exit     int
+	}{
+		{"a review of a row", "f/aaaa-1", 0},
+		{"a review held by two rows", "f/dddd-1", 0},
+		{"a review no row holds", "f/zzzz-1", 1},
+		{"an identifier that is the start of a row's", "f/xxxx-1", 1},
+		{"a row's identifier with a longer one asked", "f/aaaa-10", 1},
+		{"an identifier that is only in a Kinds Source cell", "f/src-1", 1},
+		{"a cell with spaces around it", "f/spaced-1", 0},
+		{"an escaped pipe in the cell", "f/a|b-1", 0},
+	} {
+		wantResult(t, c.what, w.inRepo("reviewed", c.id), c.exit, "", "")
+	}
+
+	writeEvidenceFile(t, filepath.Join(w.tmp, "other", "wiki", "evidence.md"), onePage("from-arg"))
+	wantResult(t, "the wiki directory argument", w.inRepo("reviewed", "f/aaaa-1", filepath.Join(w.tmp, "other", "wiki")), 0, "", "")
+	wantResult(t, "the wiki directory argument, another page", w.inRepo("reviewed", "f/bbbb-1", filepath.Join(w.tmp, "other", "wiki")), 1, "", "")
+	wantResult(t, "no page", newEvidenceWorld(t, "").inRepo("reviewed", "f/aaaa-1"), 1, "", "")
 }
 
 // fileTree is every entry under dir but dir itself, by path relative to dir: a regular file as "file "
@@ -261,7 +290,7 @@ func TestEvidenceStoreWritesNothingAndNeedsNoOtherWikiFile(t *testing.T) {
 		t.Fatalf("the repository holds %v, want only docs/wiki/evidence.md", got)
 	}
 	before := fileTree(t, w.tmp)
-	for _, args := range [][]string{{"check"}, {"count"}, {"rules"}, {"index"}, {"rule", "beta-kind"}, {"rule", "no-such-kind"}, {"bogus"}} {
+	for _, args := range [][]string{{"check"}, {"count"}, {"rules"}, {"index"}, {"rule", "beta-kind"}, {"rule", "no-such-kind"}, {"reviewed", "f/aaaa-1"}, {"reviewed", "f/none-1"}, {"bogus"}} {
 		w.inRepo(args...)
 		if after := fileTree(t, w.tmp); !reflect.DeepEqual(after, before) {
 			t.Fatalf("after %v the tree under %s changed:\n before %v\n after  %v", args, w.tmp, before, after)
