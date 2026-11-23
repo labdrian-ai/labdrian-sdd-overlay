@@ -11,8 +11,9 @@ The classifier role of this repository: `body.md`, adapted from the classify age
 ## Changed since the snapshot
 
 - The six lines of the core prefix of the role bodies come first, and the frontmatter is generated from the role table of `engine/agentgen`.
-- `<script>` is the deployed path `$HOME/.claude/skills/_shared/evidence/evidence.sh`, run as `sh "<script>" ...`, where the snapshot named `${CLAUDE_PLUGIN_ROOT}/evidence.sh`. A `~` inside quotes would not expand.
-- Step 2 reads the general kinds through the `index` and `rule <kind>` modes of the script instead of reading `evidence-rules.md`, so this repository keeps one parser.
-- Step 3 takes the level of a general kind from `rule`, where the snapshot copied it at "the same level".
-- New rule: when the script exits 3 (no `awk`), stop with status blocked.
+- The tools are `Read, Grep, Glob`, where the snapshot had `Read, Grep, Glob, Bash, Edit, Write`. The agent returns its rows and the parent appends them and runs the check, where the snapshot's agent wrote the page and ran the script.
+- The general kinds come from the `<index>` the prompt gives and from the rules file read by the path `<rules>` the prompt gives, instead of `${CLAUDE_PLUGIN_ROOT}/evidence-rules.md`. The script path and the exit-3 rule are gone from the body.
+- Step 3 takes the level of a general kind from its row in `<rules>`, where the snapshot copied it at "the same level".
+- The output is the two fenced row lists, `Kinds rows:` and `Evidence rows:`, then the skipped findings.
 - "You receive the findings the review kept" names the feed of the evidence store.
+- The generated agent file carries the MIT notice of `LICENSE` as comment lines of its frontmatter.

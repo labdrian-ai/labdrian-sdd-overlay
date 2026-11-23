@@ -63,6 +63,10 @@ type role struct {
 	// openCodeSkill keeps the skill tool of OpenCode for a role whose Claude list names no Skill tool: only the
 	// foreman, whose recorded OpenCode run loads a skill body in its session (S7, S13).
 	openCodeSkill bool
+	// notice is the name of a license file in roles/<name>/ whose text the Claude file carries as comment
+	// lines of its frontmatter (T3c-b of odd/tasks/merge-playbook-into-sdd-overlay.md, L47): the license of
+	// the source travels with the copy and adds no prompt text. Only the classifier sets it.
+	notice string
 }
 
 // roles are the eight roles in the order of the table of per-role design v3, section 2.
@@ -173,12 +177,15 @@ var foreman = role{
 // is off the role chain (L10 of odd/tasks/merge-playbook-into-sdd-overlay.md) and Claude Code only (OD-7,
 // L21): the learning loop is deployed there alone. It has no effort, because the Claude file takes none
 // (claudeKeys), and no memorycard tool, so body drops the line of the core prefix that sends a role there.
+// The classifier is read-only by its tools (owner, L47): Claude Code enforces it, and its rows are appended
+// by the parent (T4). Its file carries the MIT notice of roles/classifier/LICENSE as frontmatter comments.
 var claudeOnlyRoles = []role{
 	{
 		name:        "classifier",
-		description: "Classifier role, off the role chain: writes the findings one review kept (send them, the review identifier and the repository root) as rows of docs/wiki/evidence.md by the classify rules; never changes git state.",
+		description: "Classifier role, off the role chain, read-only: classifies the findings one review kept (send them, the review identifier and date, the evidence page path, the general rules path and the evidence index) by the classify rules, and returns the Kinds and Evidence rows for the parent to append to docs/wiki/evidence.md.",
 		tier:        tierMid,
-		tools:       []string{"Read", "Grep", "Glob", "Bash", "Edit", "Write"},
+		tools:       []string{"Read", "Grep", "Glob"},
+		notice:      "LICENSE",
 	},
 }
 
@@ -223,6 +230,29 @@ var piToolNames = map[string]string{
 
 // sourcePath is where the source of the role is, as a slash-separated path under the repository root.
 func (r role) sourcePath() string { return "roles/" + r.name + "/body.md" }
+
+// noticePath is where the license file of the role is, as a slash-separated path under the repository
+// root; it is empty when the role carries no notice.
+func (r role) noticePath() string {
+	if r.notice == "" {
+		return ""
+	}
+	return "roles/" + r.name + "/" + r.notice
+}
+
+// noticeComments are the frontmatter comment lines that carry the license text: a header line that names
+// the origin, a "#" line, then each line of the text as "# " plus the line, or "#" for a blank one.
+func (r role) noticeComments(text string) string {
+	out := "# This agent includes material from andresfrei/playbook under the MIT License below; see roles/" + r.name + "/PROVENANCE.md in the source repository.\n#\n"
+	for _, line := range strings.Split(strings.TrimSuffix(text, "\n"), "\n") {
+		if line == "" {
+			out += "#\n"
+		} else {
+			out += "# " + line + "\n"
+		}
+	}
+	return out
+}
 
 // hasMemoryTool says whether the role can reach memorycard: one of its tools is a tool of the
 // memorycard server.
@@ -303,7 +333,7 @@ func (r role) project(source string, models ModelTable) ([]Artifact, error) {
 	if err != nil {
 		return nil, err
 	}
-	claude := r.claudeFile(claudeModel, body)
+	claude := r.claudeFile(claudeModel, "", body)
 	pi := "---\nname: " + r.name + "\ndescription: " + r.description + "\nmodel: " + piModel +
 		"\nthinking: " + r.effort + "\ntools: " + piTools + "\n---\n\n" + body
 	return []Artifact{
@@ -313,15 +343,22 @@ func (r role) project(source string, models ModelTable) ([]Artifact, error) {
 	}, nil
 }
 
-// claudeFile is the Claude agent file: the four keys of claudeKeys, a blank line and the body.
-func (r role) claudeFile(model, body string) string {
-	return "---\nname: " + r.name + "\ndescription: " + r.description + "\nmodel: " + model +
+// claudeFile is the Claude agent file: the four keys of claudeKeys, a blank line and the body. A role
+// with a license text carries it as comment lines right after the opening ---; with none, the file is as
+// it was before notices.
+func (r role) claudeFile(model, license, body string) string {
+	notice := ""
+	if license != "" {
+		notice = r.noticeComments(license)
+	}
+	return "---\n" + notice + "name: " + r.name + "\ndescription: " + r.description + "\nmodel: " + model +
 		"\ntools: " + strings.Join(r.tools, ", ") + "\n---\n\n" + body
 }
 
 // projectClaude makes the Claude file of a role that has no Pi or Codex file (the foreman and the roles
-// of claudeOnlyRoles): its source, the model of its tier from the table, and no Pi or Codex file.
-func (r role) projectClaude(source string, models ModelTable) (Artifact, error) {
+// of claudeOnlyRoles): its source, the license text of its notice (empty for none), the model of its tier
+// from the table, and no Pi or Codex file.
+func (r role) projectClaude(source, license string, models ModelTable) (Artifact, error) {
 	model, err := models.ID(r.tier, runtimeClaude)
 	if err != nil {
 		return Artifact{}, err
@@ -330,7 +367,7 @@ func (r role) projectClaude(source string, models ModelTable) (Artifact, error) 
 	if err != nil {
 		return Artifact{}, err
 	}
-	return Artifact{Path: "agents/" + r.name + ".md", Content: r.claudeFile(model, body)}, nil
+	return Artifact{Path: "agents/" + r.name + ".md", Content: r.claudeFile(model, license, body)}, nil
 }
 
 // codexFile is the Codex agent file: the four fields of the design in the order it lists them, and no

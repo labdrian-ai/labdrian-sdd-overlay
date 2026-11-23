@@ -20,26 +20,85 @@ func TestClassifierBodyIsTheClassifyAgentAdapted(t *testing.T) {
 	if len(lines) < 6 || !reflect.DeepEqual(lines[:6], roleCorePrefix("classifier")) {
 		t.Errorf("the first six lines of roles/classifier/body.md are not the core prefix of the role bodies")
 	}
-	for _, anchor := range []string{
-		"$HOME/.claude/skills/_shared/evidence/evidence.sh",
-		`sh "<script>"`,
-		"would the rule of this kind have prevented this finding?",
-		"Never commit, push, or change git state.",
-		"Only add rows.",
-		"exits 3",
-		"`index`",
-		"`rule <kind>`",
+
+	// K1 (L47, R2-F1): the Rules, Gotchas and Output sections equal their want-lists line by line, so a
+	// reworded or deleted line fails the test.
+	for _, section := range []struct {
+		heading string
+		want    []string
+	}{
+		{"## Rules", classifierRules},
+		{"## Gotchas", classifierGotchas},
+		{"## Output", classifierOutput},
 	} {
+		if got := bodySectionLines(body, section.heading); !reflect.DeepEqual(got, section.want) {
+			t.Errorf("%s of roles/classifier/body.md =\n%q\nwant\n%q", section.heading, got, section.want)
+		}
+	}
+
+	steps := strings.Join(bodySectionLines(body, "## Steps"), "\n")
+	for _, anchor := range []string{
+		"Read `<page>`",
+		"<index>",
+		"would the rule of this kind have prevented this finding?",
+		"Return one Evidence row per finding",
+		"Check each row against the Format",
+	} {
+		if !strings.Contains(steps, anchor) {
+			t.Errorf("the Steps of roles/classifier/body.md do not hold %q", anchor)
+		}
+	}
+	for _, anchor := range []string{"<rules>", "Kinds rows:", "Evidence rows:"} {
 		if !strings.Contains(body, anchor) {
 			t.Errorf("roles/classifier/body.md does not hold %q", anchor)
 		}
 	}
 	lower := strings.ToLower(body)
-	for _, banned := range []string{"claude_plugin_root", "~/.claude", "engram"} {
+	for _, banned := range []string{"claude_plugin_root", "~/.claude", "$home", `sh "`, "evidence.sh", "engram"} {
 		if strings.Contains(lower, banned) {
 			t.Errorf("roles/classifier/body.md holds %q", banned)
 		}
 	}
+}
+
+// bodySectionLines are the non-blank lines of the section that starts at heading, up to the next "## ".
+func bodySectionLines(body, heading string) []string {
+	var out []string
+	in := false
+	for _, line := range strings.Split(body, "\n") {
+		switch {
+		case line == heading:
+			in = true
+		case strings.HasPrefix(line, "## "):
+			in = false
+		case in && line != "":
+			out = append(out, line)
+		}
+	}
+	return out
+}
+
+var classifierRules = []string{
+	"- Change no file and run no command: return the rows under Output, and the parent appends them to `<page>` and runs the evidence check.",
+	"- Only add rows. Never return a row that deletes, edits, reorders, or consolidates a row, and never rename a kind. Consolidation is proposed to the owner at the close of a work.",
+	"- A kind names the mistake, not the place: `test-passes-when-broken`, not `auth-bug`. It is kebab-case, and its rule fits in one sentence a step can act on.",
+	"- Write no secret and no customer data in a row. A finding is one general line.",
+	"- A script counts. Never count in your head or write a count in a row.",
+	"- A kind's level and rule come from `<page>` first, then from `<rules>`. A kind in neither has no level or rule to take.",
+}
+
+var classifierGotchas = []string{
+	"- Two kinds that look close, such as `missing-test` and `test-passes-when-broken`, are settled by the central test: \"write the test\" does not prevent a test that exists and misses the failure, so they are two kinds.",
+	"- A review that lists the same mistake in several places gives one row per place, all with the same review identifier. The script counts that review once. Do not merge the rows.",
+	"- A finding the review marks as not real, dismissed, or already fixed before the review is not evidence. Skip it.",
+	"- A kind with no rule is at level 1. A kind whose rule at level k did not prevent the finding gets the row at level k, the kind's current level.",
+	"- Never return the example rows of the format.",
+}
+
+var classifierOutput = []string{
+	"- A line `Kinds rows:`, then one markdown fence with the Kinds rows to add, one per line, with no header; an empty fence when there are none.",
+	"- A line `Evidence rows:`, then one markdown fence with the Evidence rows to add, the same way.",
+	"- Any finding skipped, with the reason.",
 }
 
 func TestClassifierIsDeployedToClaudeAlone(t *testing.T) {

@@ -64,6 +64,19 @@ func build(repoRoot string) (table []Artifact, problems []*sourceError) {
 		}
 		return string(data), true
 	}
+	// notice is the license text a role carries in its file (empty for a role with none); a notice that cannot
+	// be read is a problem, named after the source of the role.
+	notice := func(r role) (string, bool) {
+		if r.notice == "" {
+			return "", true
+		}
+		data, err := os.ReadFile(filepath.Join(repoRoot, filepath.FromSlash(r.noticePath())))
+		if err != nil {
+			problems = append(problems, &sourceError{path: r.noticePath(), verb: "reading", err: err})
+			return "", false
+		}
+		return string(data), true
+	}
 	// The OpenCode files come last, after the Claude file of the foreman: the eight roles, then the foreman.
 	var openCode []Artifact
 	for _, r := range roles {
@@ -91,10 +104,11 @@ func build(repoRoot string) (table []Artifact, problems []*sourceError) {
 	// The Claude-only roles come after the eight roles and before the foreman, with their Claude file alone (OD-7).
 	for _, r := range claudeOnlyRoles {
 		data, ok := source(r)
-		if !ok || modelsErr != nil {
+		license, noticeOK := notice(r)
+		if !ok || !noticeOK || modelsErr != nil {
 			continue
 		}
-		file, err := r.projectClaude(data, models)
+		file, err := r.projectClaude(data, license, models)
 		if err == nil {
 			err = checkSkillsNamed(repoRoot, r, data)
 		}
@@ -106,7 +120,7 @@ func build(repoRoot string) (table []Artifact, problems []*sourceError) {
 	}
 	// The foreman comes after them, with its Claude file and its OpenCode file only (S5).
 	if data, ok := source(foreman); ok && modelsErr == nil {
-		file, err := foreman.projectClaude(data, models)
+		file, err := foreman.projectClaude(data, "", models)
 		if err == nil {
 			err = checkSkillsNamed(repoRoot, foreman, data)
 		}

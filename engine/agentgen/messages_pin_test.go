@@ -43,6 +43,7 @@ func TestCheckNamesEveryArtifactThatIsMissingInTheOrderOfTheTable(t *testing.T) 
 		want += "\n  roles/" + r.name + "/body.md: missing (the source of the role is not in the repository)"
 	}
 	want += "\n  roles/classifier/body.md: missing (the source of the role is not in the repository)"
+	want += "\n  roles/classifier/LICENSE: missing (the source of the role is not in the repository)"
 	want += "\n  roles/foreman/body.md: missing (the source of the role is not in the repository)"
 	want += "\n  skills/role-chain/references/models.md: missing (the tier table of the models is not in the repository)"
 	if err == nil || err.Error() != want {

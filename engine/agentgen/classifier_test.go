@@ -14,9 +14,28 @@ import (
 )
 
 const (
-	classifierDescription = "Classifier role, off the role chain: writes the findings one review kept (send them, the review identifier and the repository root) as rows of docs/wiki/evidence.md by the classify rules; never changes git state."
-	classifierClaudeTools = "Read, Grep, Glob, Bash, Edit, Write"
+	classifierDescription = "Classifier role, off the role chain, read-only: classifies the findings one review kept (send them, the review identifier and date, the evidence page path, the general rules path and the evidence index) by the classify rules, and returns the Kinds and Evidence rows for the parent to append to docs/wiki/evidence.md."
+	classifierClaudeTools = "Read, Grep, Glob"
 )
+
+// classifierNoticeHeader is the first comment line of the notice: it names the origin and the license.
+const classifierNoticeHeader = "# This agent includes material from andresfrei/playbook under the MIT License below; see roles/classifier/PROVENANCE.md in the source repository."
+
+// classifierNotice is the notice comments of the file as the design of T3c-b writes them (L47, L39): the
+// header line, a "#" line, then each line of the license as "# " plus the line, or "#" for a blank one.
+func classifierNotice(t *testing.T, root string) string {
+	t.Helper()
+	license := strings.TrimSuffix(readText(t, filepath.Join(root, "roles", "classifier", "LICENSE")), "\n")
+	out := classifierNoticeHeader + "\n#\n"
+	for _, line := range strings.Split(license, "\n") {
+		if line == "" {
+			out += "#\n"
+		} else {
+			out += "# " + line + "\n"
+		}
+	}
+	return out
+}
 
 // The table holds agents/classifier.md exactly once, directly before the Claude file of the foreman, and
 // no Pi, Codex or OpenCode file for it (OD-7: the learning loop is for Claude Code alone).
@@ -62,7 +81,7 @@ func TestTheClaudeFileOfTheClassifierIsItsFrontmatterAndItsBody(t *testing.T) {
 
 	got := artifactContents(t, root)["agents/classifier.md"]
 
-	want := "---\nname: classifier\ndescription: " + classifierDescription + "\nmodel: sonnet\ntools: " + classifierClaudeTools + "\n---\n\n" +
+	want := "---\n" + classifierNotice(t, root) + "name: classifier\ndescription: " + classifierDescription + "\nmodel: sonnet\ntools: " + classifierClaudeTools + "\n---\n\n" +
 		strings.Replace(source, memoryLine+"\n", "", 1)
 	if got != want {
 		t.Errorf("agents/classifier.md =\n%s\nwant\n%s", got, want)
@@ -76,6 +95,40 @@ func TestTheClaudeFileOfTheClassifierIsItsFrontmatterAndItsBody(t *testing.T) {
 		if r != '\n' && (r < 0x20 || r > 0x7e) {
 			t.Errorf("agents/classifier.md holds the non-ASCII or control character %q at byte %d", r, i)
 			break
+		}
+	}
+}
+
+// The license of the source travels with the copy (R5-F2): every line of roles/classifier/LICENSE, in
+// order, is a comment line of the frontmatter before name:, so the notice adds no prompt text.
+func TestTheClassifierFileCarriesTheLicenseNoticeOfItsSource(t *testing.T) {
+	root := seededRoot(t)
+	got := artifactContents(t, root)["agents/classifier.md"]
+	lines := strings.Split(got, "\n")
+	nameAt := slices.Index(lines, "name: classifier")
+	if lines[0] != "---" || nameAt < 0 {
+		t.Fatalf("agents/classifier.md has no frontmatter that starts with --- and holds name: classifier:\n%s", got)
+	}
+	front := lines[1:nameAt]
+	if len(front) == 0 || front[0] != classifierNoticeHeader {
+		t.Fatalf("the first frontmatter line is not the notice header %q: %v", classifierNoticeHeader, front)
+	}
+	at := 1
+	for _, line := range strings.Split(strings.TrimSuffix(readText(t, filepath.Join(root, "roles", "classifier", "LICENSE")), "\n"), "\n") {
+		want := "# " + line
+		if line == "" {
+			want = "#"
+		}
+		next := slices.Index(front[at:], want)
+		if next < 0 {
+			t.Errorf("the license line %q is not a frontmatter comment line, in order, before name:", line)
+			continue
+		}
+		at += next + 1
+	}
+	for _, line := range front {
+		if !strings.HasPrefix(line, "#") {
+			t.Errorf("a frontmatter line before name: is not a comment: %q", line)
 		}
 	}
 }
