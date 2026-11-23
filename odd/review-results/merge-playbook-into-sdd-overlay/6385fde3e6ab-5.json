@@ -1,0 +1,64 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "8bdf09f34ca407397300cd59cd5a81cfafe5d102",
+    "head": "6385fde3e6abcca96b3c032ac6e352c421d032d3",
+    "diff_sha256": "4123f799573abb7569306704c84be6b9a3721cd8cf3a7957eb951d4acd33cfd9",
+    "paths": [
+      "CHANGELOG.md",
+      "README.md",
+      "bin/lib/usage.sh",
+      "engine/architecture_test.go",
+      "engine/classifierguard/classifierguard.go",
+      "engine/classifierguard/classifierguard_test.go",
+      "engine/cmd/roles.go",
+      "engine/cmd/roles_classifier_guard.go",
+      "engine/cmd/roles_classifier_guard_test.go",
+      "engine/cmd/usage.go",
+      "engine/hookwire/scoped.go",
+      "engine/hookwire/scoped_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "hunt"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "8bdf09f34ca407397300cd59cd5a81cfafe5d102",
+      "head": "6385fde3e6abcca96b3c032ac6e352c421d032d3",
+      "diff_sha256": "4123f799573abb7569306704c84be6b9a3721cd8cf3a7957eb951d4acd33cfd9"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "README.md",
+        "bin/lib/usage.sh",
+        "engine/architecture_test.go",
+        "engine/classifierguard/classifierguard.go",
+        "engine/classifierguard/classifierguard_test.go",
+        "engine/cmd/roles.go",
+        "engine/cmd/roles_classifier_guard.go",
+        "engine/cmd/roles_classifier_guard_test.go",
+        "engine/cmd/usage.go",
+        "engine/hookwire/scoped.go",
+        "engine/hookwire/scoped_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "Read the full diff (12 paths: 5 edited, 6 deleted, plus the architecture_test.go rings entry)",
+      "classifier-guard, classifierguard, ScopedToolCall, rolesClassifierGuard, runClassifierGuard appear only in odd/ history and stored review results",
+      "Nothing outside odd/ describes or wires the guard",
+      "agents/classifier.md has no hooks block and never mentions a guard; the hook was never deployed; broad tools left to T3c-b",
+      "tooLarge still used by other hookwire decoders; scanObject and stringValue were private; the removed oneLine had no other caller; docSection and readRepositoryFile still used in 13 test files",
+      "roles dispatch no longer has classifier-guard; unknown-verb message matches its tests",
+      "No leftover hookwire comment points to the removed decoder; rings no longer list classifierguard",
+      "The removed CHANGELOG entry sat under Unreleased > Added, so no Removed note is needed",
+      "Task file removal set fully present in the diff",
+      "Not run: go build, go vet, go test"
+    ]
+  }
+}

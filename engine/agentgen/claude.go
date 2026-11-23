@@ -9,12 +9,21 @@ import (
 var claudeKeys = []string{"name", "description", "model", "tools"}
 
 // ClaudeInstructions is the body of a Claude agent file, the exact inverse of the Claude file of project: the file must
-// be a `---` line, the four lines `name: `, `description: `, `model: ` and `tools: ` in that order, a `---` line, a blank
+// be a `---` line, the notice comment lines of a Claude-only role if any (each `#` or `# ` and text, as noticeComments
+// writes them, and only before name:), the four lines `name: `, `description: `, `model: ` and `tools: ` in that order, a `---` line, a blank
 // line and the body, and nothing else before the body. The error says what is not the generator's shape (C25 T4, L8).
 func ClaudeInstructions(data []byte) (string, error) {
 	rest, ok := strings.CutPrefix(string(data), "---\n")
 	if !ok {
 		return "", fmt.Errorf("not an agent file the generator wrote: no opening --- line")
+	}
+	// The notice comment lines of a Claude-only role come right after the opening line, before name:.
+	for {
+		line, after, found := strings.Cut(rest, "\n")
+		if !found || (line != "#" && !strings.HasPrefix(line, "# ")) {
+			break
+		}
+		rest = after
 	}
 	for _, key := range claudeKeys {
 		line, after, found := strings.Cut(rest, "\n")

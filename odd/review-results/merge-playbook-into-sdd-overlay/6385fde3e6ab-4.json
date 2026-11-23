@@ -1,0 +1,73 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "8bdf09f34ca407397300cd59cd5a81cfafe5d102",
+    "head": "6385fde3e6abcca96b3c032ac6e352c421d032d3",
+    "diff_sha256": "4123f799573abb7569306704c84be6b9a3721cd8cf3a7957eb951d4acd33cfd9",
+    "paths": [
+      "CHANGELOG.md",
+      "README.md",
+      "bin/lib/usage.sh",
+      "engine/architecture_test.go",
+      "engine/classifierguard/classifierguard.go",
+      "engine/classifierguard/classifierguard_test.go",
+      "engine/cmd/roles.go",
+      "engine/cmd/roles_classifier_guard.go",
+      "engine/cmd/roles_classifier_guard_test.go",
+      "engine/cmd/usage.go",
+      "engine/hookwire/scoped.go",
+      "engine/hookwire/scoped_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "8bdf09f34ca407397300cd59cd5a81cfafe5d102",
+      "head": "6385fde3e6abcca96b3c032ac6e352c421d032d3",
+      "diff_sha256": "4123f799573abb7569306704c84be6b9a3721cd8cf3a7957eb951d4acd33cfd9"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "README.md",
+        "bin/lib/usage.sh",
+        "engine/architecture_test.go",
+        "engine/classifierguard/classifierguard.go",
+        "engine/classifierguard/classifierguard_test.go",
+        "engine/cmd/roles.go",
+        "engine/cmd/roles_classifier_guard.go",
+        "engine/cmd/roles_classifier_guard_test.go",
+        "engine/cmd/usage.go",
+        "engine/hookwire/scoped.go",
+        "engine/hookwire/scoped_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "agents/classifier.md:5",
+        "severity": "SUGGESTION",
+        "claim": "After this removal the classifier agent file still declares tools Read, Grep, Glob, Bash, Edit, Write and has no PreToolUse hook, so until T3c-b narrows the tools the classifier can run arbitrary Bash and write any file with no guard. Not worsened by the commit (the file had no hook before it). The commit is safe only if T3c-b lands before any release; nothing in the diff enforces that order.",
+        "evidence_class": "inferential",
+        "causal_disposition": "pre-existing",
+        "proof_refs": [
+          "agents/classifier.md:5",
+          "odd/tasks/merge-playbook-into-sdd-overlay.md:86",
+          "odd/tasks/merge-playbook-into-sdd-overlay.md:102"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the whole diff (823 lines): only deletions plus doc and dispatch edits removing the classifier-guard verb",
+      "No references to classifier-guard, classifierguard or DecodeScopedToolCall outside odd/ at head",
+      "docSection, readRepositoryFile, hookwire.tooLarge still defined; the removed cmd oneLine has no other user",
+      "agents/classifier.md frontmatter has no hooks entry",
+      "T3c-r and L47 removal list matches the diff",
+      "Build and tests not run"
+    ]
+  }
+}

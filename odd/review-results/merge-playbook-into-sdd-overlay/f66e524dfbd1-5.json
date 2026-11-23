@@ -1,0 +1,106 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "7704d28b967815d44d5be1b774a3588efb9c5d1d",
+    "head": "f66e524dfbd18d641a7a2270b4413990f7c75257",
+    "diff_sha256": "977c4b018b5eccf9924fbfaf9c227d4429a7af8599670be95cd6b82fe7299401",
+    "paths": [
+      "CHANGELOG.md",
+      "README.md",
+      "bin/lib/usage.sh",
+      "engine/architecture_test.go",
+      "engine/classifierguard/classifierguard.go",
+      "engine/classifierguard/classifierguard_test.go",
+      "engine/cmd/roles.go",
+      "engine/cmd/roles_classifier_guard.go",
+      "engine/cmd/roles_classifier_guard_test.go",
+      "engine/cmd/usage.go",
+      "odd/review-results/merge-playbook-into-sdd-overlay/7704d28b9678-1.sweep.json",
+      "odd/review-results/merge-playbook-into-sdd-overlay/7704d28b9678-2.json",
+      "odd/review-results/merge-playbook-into-sdd-overlay/7704d28b9678-3.polisher.json",
+      "odd/review-results/merge-playbook-into-sdd-overlay/7704d28b9678-4.polisher.json",
+      "odd/review-results/merge-playbook-into-sdd-overlay/7704d28b9678-5.json",
+      "odd/tasks/merge-playbook-into-sdd-overlay.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "7704d28b967815d44d5be1b774a3588efb9c5d1d",
+      "head": "f66e524dfbd18d641a7a2270b4413990f7c75257",
+      "diff_sha256": "977c4b018b5eccf9924fbfaf9c227d4429a7af8599670be95cd6b82fe7299401"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "README.md",
+        "bin/lib/usage.sh",
+        "engine/architecture_test.go",
+        "engine/classifierguard/classifierguard.go",
+        "engine/classifierguard/classifierguard_test.go",
+        "engine/cmd/roles.go",
+        "engine/cmd/roles_classifier_guard.go",
+        "engine/cmd/roles_classifier_guard_test.go",
+        "engine/cmd/usage.go",
+        "odd/review-results/merge-playbook-into-sdd-overlay/7704d28b9678-1.sweep.json",
+        "odd/review-results/merge-playbook-into-sdd-overlay/7704d28b9678-2.json",
+        "odd/review-results/merge-playbook-into-sdd-overlay/7704d28b9678-3.polisher.json",
+        "odd/review-results/merge-playbook-into-sdd-overlay/7704d28b9678-4.polisher.json",
+        "odd/review-results/merge-playbook-into-sdd-overlay/7704d28b9678-5.json",
+        "odd/tasks/merge-playbook-into-sdd-overlay.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "engine/cmd/roles_classifier_guard.go:49",
+        "severity": "WARNING",
+        "claim": "The guard decodes the hook input with hookwire.DecodeToolCall (encoding/json): keys match case-insensitively and the last of a repeated key wins. If Claude Code hands the hook the model's raw tool_input, an input like {\"file_path\":\"/etc/x\",\"File_Path\":\"/r/docs/wiki/evidence.md\"} or {\"command\":\"git push\",\"Command\":\"sh \\\"$HOME/...evidence.sh\\\" check \\\"/r/docs/wiki\\\"\"} makes the guard see an allowed value while the tool acts on the other. Whether Claude Code strips unknown or differently cased keys before the hook is not shown. This is the first guard of a model-fed, write-capable agent that depends on the shared decoder.",
+        "evidence_class": "inferential",
+        "causal_disposition": "behavior-activated",
+        "proof_refs": [
+          "engine/hookwire/guard.go:37-58",
+          "engine/cmd/roles_classifier_guard.go:49-57"
+        ]
+      },
+      {
+        "id": "F2",
+        "location": "engine/classifierguard/classifierguard.go:146-158",
+        "severity": "WARNING",
+        "claim": "The page and the wiki directory are not tied to the repository the classifier works in. Edit and Write accept any clean absolute path ending in /docs/wiki/evidence.md, and Bash any root ending in /docs/wiki; Read, Grep and Glob are unrestricted, so a finding that injects instructions can read a secret and write it into a page outside the project. Nothing checks the root against the launch prompt.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/classifierguard/classifierguard.go:129-142",
+          "engine/classifierguard/classifierguard.go:146-158",
+          "engine/classifierguard/classifierguard_test.go:190-191"
+        ]
+      },
+      {
+        "id": "F3",
+        "location": "README.md:1637-1638",
+        "severity": "WARNING",
+        "claim": "README, engine usage and CHANGELOG say the guard 'fails closed' without saying this holds only while the verb runs. If the installed binary is missing or fails to start the shell exits 126 or 127, which Claude Code treats as non-blocking, so the call is allowed. The documented fail-closed contract is narrower than it reads.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "README.md:1631-1643",
+          "engine/hookwire/guard.go:90-92"
+        ]
+      }
+    ],
+    "evidence": [
+      "Severity was omitted by the reviewer; the foreman recorded each finding as WARNING, the higher of the severities other reviews gave the same defect, rather than soften it",
+      "Read the full diff, including all five review records and every hunk of the task document",
+      "Read classifierguard.go: regexp anchored ^ and $; argument class excludes quote, $, backtick, backslash and controls; path.Clean checks; tool switch",
+      "Read roles_classifier_guard.go: bounded stdin read, recover, exit after every blockLine",
+      "Read hookwire/guard.go DecodeToolCall and ExitReply",
+      "evidence.sh modes only read the page",
+      "No command, test or build was run"
+    ]
+  }
+}

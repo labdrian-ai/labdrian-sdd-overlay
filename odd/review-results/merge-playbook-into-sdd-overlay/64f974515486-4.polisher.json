@@ -1,0 +1,30 @@
+{
+  "kind": "polisher",
+  "base": "97a13d2a615723e0e1bcbb6b849a5fa6bc98665b",
+  "head": "64f97451548670768b4e8b01c227e4f70ead43f0",
+  "diff_sha256": "79915bafa6901a60470543b787bfe97fac8c17cddaa850d5ea81a9a9b3a4749b",
+  "findings": {
+    "findings": [
+      {
+        "location": "engine/shelltest/classifier_format_test.go:47",
+        "severity": "SUGGESTION",
+        "claim": "The guard message of TestTheFormatOfTheClassifierBodyPassesEvidenceCheck panics when the Format section has no markdown fence: with len(fences)==0 the Fatalf argument fences[len(fences)-1] is an index out of range, so the maintainer sees a panic instead of the intended diagnostic.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "evidence": [
+          "The branch is entered when len(fences) != 2, including 0",
+          "Go evaluates Fatalf arguments before the call"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full diff (9 paths)",
+      "Risk 3: body Output and Steps match L47; tools narrowed to Read, Grep, Glob",
+      "Step 5 cell rule matches evidence.sh cells() and check (6 and 5 cells)",
+      "No current caller of the classifier; the parent is T4",
+      "Risk 5: notice comments match LICENSE line by line; YAML comments before name:",
+      "No in-repo production parser of agents/*.md frontmatter affected",
+      "Not run: tests, gadu-generate --check; not confirmed on a live install that Claude Code loads frontmatter starting with comments"
+    ]
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "verdicts": [
+    {
+      "id": "F1",
+      "result": "reproduced",
+      "base_result": "not-reproduced",
+      "command": "git show <sha>:roles/classifier/body.md; rg -n 'script counts that review once|classifierGotchas' {base,head}/engine/skills/classifier_artifact_test.go; rg -n '^tools:' {base,head}/agents/classifier.md",
+      "output": "Head: body.md:24 'The script counts that review once.' while body.md:14 says run no command and tools are Read, Grep, Glob; classifier_artifact_test.go:92 pins the line. Base: the agent had Bash and ran the script, so the line was accurate."
+    },
+    {
+      "id": "F2",
+      "result": "reproduced",
+      "base_result": "not-reproduced",
+      "command": "rg -n -i 'notice|playbook|MIT Lic' {base,head}/engine/agentgen/roles.go",
+      "output": "Head: roles.go:245-246 noticeComments hard-codes andresfrei/playbook under the MIT License. Base: no noticeComments or notice."
+    },
+    {
+      "id": "F3",
+      "result": "not-reproduced",
+      "base_result": "not-reproduced",
+      "command": "Prototyper 2026-11-23, Claude Code 2.1.330, trusted scratch project, claude --print with controls; base: head -5 of base agents/classifier.md",
+      "output": "Head: the file with 23 comment lines loads and the sub-agent has only Read, Grep, Glob; control without tools: gets Bash, Edit, Write. Base: no comment lines."
+    }
+  ]
+}

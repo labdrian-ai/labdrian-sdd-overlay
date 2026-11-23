@@ -98,10 +98,14 @@ func TestEveryRoleSourceOfTheRepositoryIsProjected(t *testing.T) {
 			continue
 		}
 		paths := []string{"agents/" + entry.Name() + ".md", "pi/agents/" + entry.Name() + ".md", "codex/agents/" + entry.Name() + ".toml"}
-		if entry.Name() == "foreman" {
-			// The parent of the chain has no Pi or Codex file (S5): the other two are asserted absent.
+		if entry.Name() == "foreman" || entry.Name() == "classifier" {
+			// The parent of the chain has no Pi or Codex file (S5), and the classifier is for Claude Code
+			// alone (OD-7): the other two are asserted absent, and so is the OpenCode file of the classifier.
 			if projected[paths[1]] || projected[paths[2]] {
-				t.Errorf("roles/foreman/ is projected to Pi or Codex, want no Pi or Codex file")
+				t.Errorf("roles/%s/ is projected to Pi or Codex, want no Pi or Codex file", entry.Name())
+			}
+			if entry.Name() == "classifier" && projected["opencode/agents/classifier.md"] {
+				t.Errorf("roles/classifier/ is projected to OpenCode, want no OpenCode file")
 			}
 			paths = paths[:1]
 		}
@@ -187,7 +191,7 @@ func TestTheCommittedFilesOfTheRolesAreWhatTheGeneratorWrites(t *testing.T) {
 		t.Fatalf("Artifacts of the repository: %v", err)
 	}
 	if len(table) != len(allPaths()) {
-		t.Fatalf("the table of the repository holds %d files, want the %d of the eight roles and the foreman", len(table), len(allPaths()))
+		t.Fatalf("the table of the repository holds %d files, want the %d of the eight roles, the classifier and the foreman", len(table), len(allPaths()))
 	}
 
 	if err := agentgen.Check(root); err != nil {

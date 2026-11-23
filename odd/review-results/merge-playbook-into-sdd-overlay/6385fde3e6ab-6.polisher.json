@@ -1,0 +1,18 @@
+{
+  "kind": "polisher",
+  "base": "8bdf09f34ca407397300cd59cd5a81cfafe5d102",
+  "head": "6385fde3e6abcca96b3c032ac6e352c421d032d3",
+  "diff_sha256": "4123f799573abb7569306704c84be6b9a3721cd8cf3a7957eb951d4acd33cfd9",
+  "findings": {
+    "findings": [],
+    "evidence": [
+      "Read the full diff t3cr.diff: deletes engine/classifierguard, hookwire/scoped.go and test, roles_classifier_guard.go and test, the dispatch case, the rings entry and the doc blocks in usage.go, usage.sh, README.md and CHANGELOG.md",
+      "Risk 2 (security): no deployed protection is weakened; agents/classifier.md has no hooks frontmatter and was not touched; classifier_test.go expects exactly name, description, model and tools; the guard was never wired; tools narrowing belongs to T3c-b",
+      "No reference to the deleted code outside odd/",
+      "Shared helpers tooLarge, MaxToolCallBytes, ErrTooLarge, docSection and readRepositoryFile remain used; the removed oneLine was local",
+      "Builder-guard doc test sections only shorten; none of their required phrases came from the removed text",
+      "The removed CHANGELOG line sat under Unreleased",
+      "Not run: go build, go test, vet"
+    ]
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "kind": "polisher",
+  "base": "7704d28b967815d44d5be1b774a3588efb9c5d1d",
+  "head": "f66e524dfbd18d641a7a2270b4413990f7c75257",
+  "diff_sha256": "977c4b018b5eccf9924fbfaf9c227d4429a7af8599670be95cd6b82fe7299401",
+  "findings": {
+    "findings": [
+      {
+        "location": "engine/classifierguard/classifierguard.go:145-158",
+        "severity": "SUGGESTION",
+        "claim": "The guard does not tie the page or the script's wiki directory to the project the classifier was launched for. Edit/Write is allowed on any clean absolute path ending in /docs/wiki/evidence.md, and Bash on any clean absolute <root>/docs/wiki. An injected finding can make the classifier write rows into another repository's evidence page; S7 injects level-2+ rows of that page into the builder's and reviewer's prompts, so an injected rule would reach another project's prompts. The hook has CLAUDE_PROJECT_DIR in its environment and cwd in its input, so the verb could pass the root into Call and require equality.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "evidence": [
+          "isPage only checks absolute, clean, suffix and length; isScriptCall the same for the directory",
+          "engine/cmd/roles_classifier_guard.go:54-56 builds Call from name, command, file_path and notebook_path only",
+          "odd/tasks/merge-playbook-into-sdd-overlay.md S7: level-2+ rows reach the builder and reviewer at launch"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full diff t3ca.diff (1070 lines)",
+      "hookwire DecodeToolCall: case-insensitive, last key wins; ExitBlock=2",
+      "nothing before runRoles can exit 1 and fail open",
+      "evidence.sh every mode read-only",
+      "Bash regex anchors the whole command; quoted root excludes quote, $, backtick, backslash and controls; unknown tools blocked",
+      "argument, read error, decode error, oversized input and recovered panic exit 2",
+      "case-variant key decoding considered and not reported: depends on Claude Code passing unvalidated tool_input; pre-existing hookwire behaviour",
+      "No command was run"
+    ]
+  }
+}

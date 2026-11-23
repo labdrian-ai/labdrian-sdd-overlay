@@ -1,0 +1,31 @@
+{
+  "kind": "polisher",
+  "base": "7704d28b967815d44d5be1b774a3588efb9c5d1d",
+  "head": "f66e524dfbd18d641a7a2270b4413990f7c75257",
+  "diff_sha256": "977c4b018b5eccf9924fbfaf9c227d4429a7af8599670be95cd6b82fe7299401",
+  "findings": {
+    "findings": [
+      {
+        "location": "engine/classifierguard/classifierguard.go:145-158",
+        "severity": "SUGGESTION",
+        "claim": "The guard does not tie the write path or the script's wiki argument to the current project root. A classifier steered by injected text can Write or Edit <any absolute dir>/docs/wiki/evidence.md, for example another project's page, and run the script on any such directory. Read, Grep and Glob are also unrestricted.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "evidence": [
+          "isPage and isScriptCall only require an absolute, cleaned path with the right suffix; neither is compared to a project root, and Call carries no root",
+          "CHANGELOG and README call it a text-matching speed bump; residual reach limited to overwriting other projects' evidence pages",
+          "evidence.sh only reads; the page path must end in /docs/wiki/evidence.md; no other tool allowed"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the whole code change (first 612 lines of the diff); the rest is odd/review-results JSON and the task doc, not read",
+      "Bash regex anchored ^...$ without m flag; quoted argument excludes quote, $, backtick, backslash and C0 controls; rule kind kebab-case",
+      "hookwire DecodeToolCall bound 8 MiB; missing tool_name blocks; decode and read errors exit 2",
+      "verb: any argument, read error, decode error or recovered panic exits 2",
+      "evidence.sh never writes",
+      "Symlink following acknowledged as a known limitation",
+      "Not run: no tests, build or live hook invocation"
+    ]
+  }
+}

@@ -22,7 +22,8 @@ func allPaths() []string {
 	}
 	// The foreman is the parent, not a role of the chain: it has a Claude file after the roles and no Pi or Codex file (S5), and the
 	// nine OpenCode files come last: the eight roles, then the foreman.
-	paths = append(paths, "agents/foreman.md")
+	// The classifier, off the chain and for Claude Code alone, has its Claude file directly before the foreman's.
+	paths = append(paths, "agents/classifier.md", "agents/foreman.md")
 	for _, r := range wantRoles {
 		paths = append(paths, "opencode/agents/"+r.name+".md")
 	}
@@ -41,6 +42,8 @@ func TestCheckNamesEveryArtifactThatIsMissingInTheOrderOfTheTable(t *testing.T) 
 	for _, r := range wantRoles {
 		want += "\n  roles/" + r.name + "/body.md: missing (the source of the role is not in the repository)"
 	}
+	want += "\n  roles/classifier/body.md: missing (the source of the role is not in the repository)"
+	want += "\n  roles/classifier/LICENSE: missing (the license notice of the role is not in the repository)"
 	want += "\n  roles/foreman/body.md: missing (the source of the role is not in the repository)"
 	want += "\n  skills/role-chain/references/models.md: missing (the tier table of the models is not in the repository)"
 	if err == nil || err.Error() != want {
@@ -180,5 +183,28 @@ func TestGenerateWritesEveryArtifactAndPutsBackWhatWasEdited(t *testing.T) {
 	}
 	if err := agentgen.Check(root); err != nil {
 		t.Errorf("Check of what Generate wrote: %v", err)
+	}
+}
+
+// A license notice that cannot be read is said to be the license notice of the role, not the source of the
+// role: the path of the problem is the notice's (T3c-f, review 64f974515486-5 F5).
+func TestCheckCallsAnUnreadableNoticeTheLicenseNotice(t *testing.T) {
+	root := seededRoot(t)
+	notice := filepath.Join(root, "roles", "classifier", "LICENSE")
+	if err := os.Remove(notice); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Mkdir(notice, 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	err := agentgen.Check(root)
+
+	const path = "roles/classifier/LICENSE"
+	if err == nil || !strings.Contains(err.Error(), path+": cannot read the license notice of the role:") {
+		t.Errorf("Check error = %v, want it to hold %q", err, path+": cannot read the license notice of the role:")
+	}
+	if err != nil && strings.Contains(err.Error(), path+": cannot read the source of the role") {
+		t.Errorf("Check error = %v, want it not to call %s the source of the role", err, path)
 	}
 }

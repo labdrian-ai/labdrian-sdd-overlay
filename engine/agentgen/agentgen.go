@@ -12,6 +12,9 @@
 // The foreman, the parent of the roles, has one source too, roles/foreman/body.md, and two files,
 // agents/foreman.md and opencode/agents/foreman.md (S2, S5 of odd/tasks/labdrian-orchestrator-opencode.md).
 //
+// The Claude-only roles (claudeOnlyRoles, the classifier) have one source each and one file, agents/<role>.md:
+// they are off the role chain and hosted by Claude Code alone (OD-7 of odd/tasks/merge-playbook-into-sdd-overlay.md).
+//
 // None of these files is ever hand-edited. Use Generate to write them; use Check to assert they are
 // not stale.
 package agentgen
@@ -35,19 +38,27 @@ type Artifact struct {
 }
 
 // sourceError is a role source that could not be turned into files: the path of the source, under
-// the root of the repository, what was being done to it and why that failed.
+// the root of the repository, what that file is (the subject, said by Check when the file is missing or
+// cannot be read), what was being done to it and why that failed.
 type sourceError struct {
-	path string
-	verb string
-	err  error
+	path    string
+	subject string
+	verb    string
+	err     error
 }
+
+// The subjects of a file a role is made from.
+const (
+	subjectSource = "the source of the role"
+	subjectNotice = "the license notice of the role"
+)
 
 func (e *sourceError) Error() string { return e.verb + " " + e.path + ": " + e.err.Error() }
 func (e *sourceError) Unwrap() error { return e.err }
 
 // build makes the whole table of what the generator emits for the repository at repoRoot, in the
 // order Generate writes it and Check reports it: for each role, in the order of its table, its
-// Claude, Pi and Codex files. The sources of the roles are read from repoRoot; a role whose source
+// Claude, Pi and Codex files, then the Claude file of each Claude-only role, then the foreman's. The sources of the roles are read from repoRoot; a role whose source
 // cannot be read or projected has no files in the table and is returned as a problem, so that the
 // caller can say all of them.
 func build(repoRoot string) (table []Artifact, problems []*sourceError) {
@@ -56,10 +67,26 @@ func build(repoRoot string) (table []Artifact, problems []*sourceError) {
 	source := func(r role) (string, bool) {
 		data, err := os.ReadFile(filepath.Join(repoRoot, filepath.FromSlash(r.sourcePath())))
 		if err != nil {
-			problems = append(problems, &sourceError{path: r.sourcePath(), verb: "reading", err: err})
+			problems = append(problems, &sourceError{path: r.sourcePath(), subject: subjectSource, verb: "reading", err: err})
 			return "", false
 		}
 		return string(data), true
+	}
+	// notice is the comment lines of the license text a Claude-only role carries in its file (empty for a role
+	// with none); a notice that cannot be read is a problem, named as the license notice of the role.
+	notice := func(r claudeOnlyRole) (string, bool) {
+		if r.notice == "" {
+			return "", true
+		}
+		data, err := os.ReadFile(filepath.Join(repoRoot, filepath.FromSlash(r.noticePath())))
+		if err != nil {
+			problems = append(problems, &sourceError{path: r.noticePath(), subject: subjectNotice, verb: "reading", err: err})
+			return "", false
+		}
+		if len(data) == 0 {
+			return "", true
+		}
+		return r.noticeComments(string(data)), true
 	}
 	// The OpenCode files come last, after the Claude file of the foreman: the eight roles, then the foreman.
 	var openCode []Artifact
@@ -85,9 +112,26 @@ func build(repoRoot string) (table []Artifact, problems []*sourceError) {
 		}
 		openCode = append(openCode, file)
 	}
-	// The foreman comes after the eight roles, with its Claude file and its OpenCode file only (S5).
+	// The Claude-only roles come after the eight roles and before the foreman, with their Claude file alone (OD-7).
+	for _, r := range claudeOnlyRoles {
+		data, ok := source(r.role)
+		comments, noticeOK := notice(r)
+		if !ok || !noticeOK || modelsErr != nil {
+			continue
+		}
+		file, err := r.projectClaude(data, comments, models)
+		if err == nil {
+			err = checkSkillsNamed(repoRoot, r.role, data)
+		}
+		if err != nil {
+			problems = append(problems, &sourceError{path: r.sourcePath(), verb: "projecting", err: err})
+			continue
+		}
+		table = append(table, file)
+	}
+	// The foreman comes after them, with its Claude file and its OpenCode file only (S5).
 	if data, ok := source(foreman); ok && modelsErr == nil {
-		file, err := foreman.projectClaude(data, models)
+		file, err := foreman.projectClaude(data, "", models)
 		if err == nil {
 			err = checkSkillsNamed(repoRoot, foreman, data)
 		}
@@ -131,7 +175,7 @@ func checkSkillsNamed(repoRoot string, r role, body string) error {
 
 // Artifacts is the table of what the generator emits for the repository at repoRoot, in the order
 // Generate writes it and Check reports it: for each role, agents/<role>.md, pi/agents/<role>.md and
-// codex/agents/<role>.toml.
+// codex/agents/<role>.toml, then agents/<role>.md of each Claude-only role.
 //
 // Each call builds the table afresh, so no caller can change what the next one sees. It fails when
 // the source of a role cannot be read or projected.
@@ -195,9 +239,9 @@ func Check(repoRoot string) error {
 		case p.path == modelsPath:
 			errs = append(errs, fmt.Sprintf("%s: cannot use the tier table of the models: %v", p.path, p.err))
 		case errors.Is(p.err, fs.ErrNotExist):
-			errs = append(errs, fmt.Sprintf("%s: missing (the source of the role is not in the repository)", p.path))
+			errs = append(errs, fmt.Sprintf("%s: missing (%s is not in the repository)", p.path, p.subject))
 		case p.verb == "reading":
-			errs = append(errs, fmt.Sprintf("%s: cannot read the source of the role: %v", p.path, p.err))
+			errs = append(errs, fmt.Sprintf("%s: cannot read %s: %v", p.path, p.subject, p.err))
 		default:
 			errs = append(errs, fmt.Sprintf("%s: cannot be projected: %v", p.path, p.err))
 		}

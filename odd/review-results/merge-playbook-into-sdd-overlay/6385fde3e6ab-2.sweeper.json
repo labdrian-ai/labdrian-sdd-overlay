@@ -1,0 +1,195 @@
+{
+  "kind": "sweeper",
+  "base": "8bdf09f34ca407397300cd59cd5a81cfafe5d102",
+  "head": "6385fde3e6abcca96b3c032ac6e352c421d032d3",
+  "diff_sha256": "4123f799573abb7569306704c84be6b9a3721cd8cf3a7957eb951d4acd33cfd9",
+  "sweep": "6385fde3e6ab-1.sweep.json",
+  "commit": null,
+  "candidates": [
+    {
+      "candidate": "T1 path: engine/classifierguard/classifierguard.go",
+      "disposition": "live",
+      "evidence": "nothing left to sweep: the candidate was itself deleted by the reviewed commit 6385fde3, not by a sweep commit; deleted by 6385fde3; rg for classifier-guard, classifierguard, ScopedToolCall, roles_classifier finds no hits outside odd/ and openspec/"
+    },
+    {
+      "candidate": "T1 path: engine/classifierguard/classifierguard_test.go",
+      "disposition": "live",
+      "evidence": "nothing left to sweep: the candidate was itself deleted by the reviewed commit 6385fde3, not by a sweep commit; deleted by 6385fde3; rg for classifier-guard, classifierguard, ScopedToolCall, roles_classifier finds no hits outside odd/ and openspec/"
+    },
+    {
+      "candidate": "T1 path: engine/cmd/roles_classifier_guard.go",
+      "disposition": "live",
+      "evidence": "nothing left to sweep: the candidate was itself deleted by the reviewed commit 6385fde3, not by a sweep commit; deleted by 6385fde3; rg for classifier-guard, classifierguard, ScopedToolCall, roles_classifier finds no hits outside odd/ and openspec/"
+    },
+    {
+      "candidate": "T1 path: engine/cmd/roles_classifier_guard_test.go",
+      "disposition": "live",
+      "evidence": "nothing left to sweep: the candidate was itself deleted by the reviewed commit 6385fde3, not by a sweep commit; deleted by 6385fde3; rg for classifier-guard, classifierguard, ScopedToolCall, roles_classifier finds no hits outside odd/ and openspec/"
+    },
+    {
+      "candidate": "T1 path: engine/hookwire/scoped.go",
+      "disposition": "live",
+      "evidence": "nothing left to sweep: the candidate was itself deleted by the reviewed commit 6385fde3, not by a sweep commit; deleted by 6385fde3; rg for classifier-guard, classifierguard, ScopedToolCall, roles_classifier finds no hits outside odd/ and openspec/"
+    },
+    {
+      "candidate": "T1 path: engine/hookwire/scoped_test.go",
+      "disposition": "live",
+      "evidence": "nothing left to sweep: the candidate was itself deleted by the reviewed commit 6385fde3, not by a sweep commit; deleted by 6385fde3; rg for classifier-guard, classifierguard, ScopedToolCall, roles_classifier finds no hits outside odd/ and openspec/"
+    },
+    {
+      "candidate": "T1 name: --help",
+      "disposition": "live",
+      "evidence": "a separate live definition elsewhere (e.g. engine/skills/project_lock.go, engine/review/risk.go, engine/runtime/opencode_splice.go) or a common word with many unrelated live uses; no reference to the deleted code remains"
+    },
+    {
+      "candidate": "T1 name: Call",
+      "disposition": "live",
+      "evidence": "a separate live definition elsewhere (e.g. engine/skills/project_lock.go, engine/review/risk.go, engine/runtime/opencode_splice.go) or a common word with many unrelated live uses; no reference to the deleted code remains"
+    },
+    {
+      "candidate": "T1 name: Decide",
+      "disposition": "live",
+      "evidence": "a separate live definition elsewhere (e.g. engine/skills/project_lock.go, engine/review/risk.go, engine/runtime/opencode_splice.go) or a common word with many unrelated live uses; no reference to the deleted code remains"
+    },
+    {
+      "candidate": "T1 name: DecodeScopedToolCall",
+      "disposition": "live",
+      "evidence": "nothing left to sweep: the candidate was itself deleted by the reviewed commit 6385fde3, not by a sweep commit; no definition or reference left outside odd/ and openspec/; deadcode -test ./... and staticcheck ./... print nothing"
+    },
+    {
+      "candidate": "T1 name: PageSuffix",
+      "disposition": "live",
+      "evidence": "nothing left to sweep: the candidate was itself deleted by the reviewed commit 6385fde3, not by a sweep commit; no definition or reference left outside odd/ and openspec/; deadcode -test ./... and staticcheck ./... print nothing"
+    },
+    {
+      "candidate": "T1 name: Read",
+      "disposition": "live",
+      "evidence": "a separate live definition elsewhere (e.g. engine/skills/project_lock.go, engine/review/risk.go, engine/runtime/opencode_splice.go) or a common word with many unrelated live uses; no reference to the deleted code remains"
+    },
+    {
+      "candidate": "T1 name: ScopedToolCall",
+      "disposition": "live",
+      "evidence": "nothing left to sweep: the candidate was itself deleted by the reviewed commit 6385fde3, not by a sweep commit; no definition or reference left outside odd/ and openspec/; deadcode -test ./... and staticcheck ./... print nothing"
+    },
+    {
+      "candidate": "T1 name: ScriptPath",
+      "disposition": "live",
+      "evidence": "nothing left to sweep: the candidate was itself deleted by the reviewed commit 6385fde3, not by a sweep commit; no definition or reference left outside odd/ and openspec/; deadcode -test ./... and staticcheck ./... print nothing"
+    },
+    {
+      "candidate": "T1 name: TestDecideAllowsOnlyTheClassifiersOwnCalls",
+      "disposition": "live",
+      "evidence": "nothing left to sweep: the candidate was itself deleted by the reviewed commit 6385fde3, not by a sweep commit; no definition or reference left outside odd/ and openspec/; deadcode -test ./... and staticcheck ./... print nothing"
+    },
+    {
+      "candidate": "T1 name: TestDecodeScopedToolCallReadsWhatDecodeToolCallReads",
+      "disposition": "live",
+      "evidence": "nothing left to sweep: the candidate was itself deleted by the reviewed commit 6385fde3, not by a sweep commit; no definition or reference left outside odd/ and openspec/; deadcode -test ./... and staticcheck ./... print nothing"
+    },
+    {
+      "candidate": "T1 name: TestDecodeScopedToolCallRefusesInputAGuardCouldMisread",
+      "disposition": "live",
+      "evidence": "nothing left to sweep: the candidate was itself deleted by the reviewed commit 6385fde3, not by a sweep commit; no definition or reference left outside odd/ and openspec/; deadcode -test ./... and staticcheck ./... print nothing"
+    },
+    {
+      "candidate": "T1 name: TestDocsDescribeTheClassifierGuard",
+      "disposition": "live",
+      "evidence": "nothing left to sweep: the candidate was itself deleted by the reviewed commit 6385fde3, not by a sweep commit; no definition or reference left outside odd/ and openspec/; deadcode -test ./... and staticcheck ./... print nothing"
+    },
+    {
+      "candidate": "T1 name: TestEveryReasonIsOneLineAndNamesWhatIsAllowed",
+      "disposition": "live",
+      "evidence": "nothing left to sweep: the candidate was itself deleted by the reviewed commit 6385fde3, not by a sweep commit; no definition or reference left outside odd/ and openspec/; deadcode -test ./... and staticcheck ./... print nothing"
+    },
+    {
+      "candidate": "T1 name: TestRolesClassifierGuardAnswersByExitStatusAndFailsClosed",
+      "disposition": "live",
+      "evidence": "nothing left to sweep: the candidate was itself deleted by the reviewed commit 6385fde3, not by a sweep commit; no definition or reference left outside odd/ and openspec/; deadcode -test ./... and staticcheck ./... print nothing"
+    },
+    {
+      "candidate": "T1 name: TestRolesClassifierGuardBlocksARecoveredPanic",
+      "disposition": "live",
+      "evidence": "nothing left to sweep: the candidate was itself deleted by the reviewed commit 6385fde3, not by a sweep commit; no definition or reference left outside odd/ and openspec/; deadcode -test ./... and staticcheck ./... print nothing"
+    },
+    {
+      "candidate": "T1 name: Verdict",
+      "disposition": "live",
+      "evidence": "a separate live definition elsewhere (e.g. engine/skills/project_lock.go, engine/review/risk.go, engine/runtime/opencode_splice.go) or a common word with many unrelated live uses; no reference to the deleted code remains"
+    },
+    {
+      "candidate": "T1 name: allowed",
+      "disposition": "live",
+      "evidence": "a separate live definition elsewhere (e.g. engine/skills/project_lock.go, engine/review/risk.go, engine/runtime/opencode_splice.go) or a common word with many unrelated live uses; no reference to the deleted code remains"
+    },
+    {
+      "candidate": "T1 name: bash",
+      "disposition": "live",
+      "evidence": "a separate live definition elsewhere (e.g. engine/skills/project_lock.go, engine/review/risk.go, engine/runtime/opencode_splice.go) or a common word with many unrelated live uses; no reference to the deleted code remains"
+    },
+    {
+      "candidate": "T1 name: cleanRoot",
+      "disposition": "live",
+      "evidence": "a separate live definition elsewhere (e.g. engine/skills/project_lock.go, engine/review/risk.go, engine/runtime/opencode_splice.go) or a common word with many unrelated live uses; no reference to the deleted code remains"
+    },
+    {
+      "candidate": "T1 name: command",
+      "disposition": "live",
+      "evidence": "a separate live definition elsewhere (e.g. engine/skills/project_lock.go, engine/review/risk.go, engine/runtime/opencode_splice.go) or a common word with many unrelated live uses; no reference to the deleted code remains"
+    },
+    {
+      "candidate": "T1 name: oneLine",
+      "disposition": "live",
+      "evidence": "a separate live definition elsewhere (e.g. engine/skills/project_lock.go, engine/review/risk.go, engine/runtime/opencode_splice.go) or a common word with many unrelated live uses; no reference to the deleted code remains"
+    },
+    {
+      "candidate": "T1 name: read",
+      "disposition": "live",
+      "evidence": "a separate live definition elsewhere (e.g. engine/skills/project_lock.go, engine/review/risk.go, engine/runtime/opencode_splice.go) or a common word with many unrelated live uses; no reference to the deleted code remains"
+    },
+    {
+      "candidate": "T1 name: rolesClassifierGuardVerb",
+      "disposition": "live",
+      "evidence": "nothing left to sweep: the candidate was itself deleted by the reviewed commit 6385fde3, not by a sweep commit; no definition or reference left outside odd/ and openspec/; deadcode -test ./... and staticcheck ./... print nothing"
+    },
+    {
+      "candidate": "T1 name: runRolesClassifierGuard",
+      "disposition": "live",
+      "evidence": "nothing left to sweep: the candidate was itself deleted by the reviewed commit 6385fde3, not by a sweep commit; no definition or reference left outside odd/ and openspec/; deadcode -test ./... and staticcheck ./... print nothing"
+    },
+    {
+      "candidate": "T1 name: safePattern",
+      "disposition": "live",
+      "evidence": "nothing left to sweep: the candidate was itself deleted by the reviewed commit 6385fde3, not by a sweep commit; no definition or reference left outside odd/ and openspec/; deadcode -test ./... and staticcheck ./... print nothing"
+    },
+    {
+      "candidate": "T1 name: scanObject",
+      "disposition": "live",
+      "evidence": "a separate live definition elsewhere (e.g. engine/skills/project_lock.go, engine/review/risk.go, engine/runtime/opencode_splice.go) or a common word with many unrelated live uses; no reference to the deleted code remains"
+    },
+    {
+      "candidate": "T1 name: script",
+      "disposition": "live",
+      "evidence": "a separate live definition elsewhere (e.g. engine/skills/project_lock.go, engine/review/risk.go, engine/runtime/opencode_splice.go) or a common word with many unrelated live uses; no reference to the deleted code remains"
+    },
+    {
+      "candidate": "T1 name: stringValue",
+      "disposition": "live",
+      "evidence": "a separate live definition elsewhere (e.g. engine/skills/project_lock.go, engine/review/risk.go, engine/runtime/opencode_splice.go) or a common word with many unrelated live uses; no reference to the deleted code remains"
+    },
+    {
+      "candidate": "T1 name: wikiSuffix",
+      "disposition": "live",
+      "evidence": "nothing left to sweep: the candidate was itself deleted by the reviewed commit 6385fde3, not by a sweep commit; no definition or reference left outside odd/ and openspec/; deadcode -test ./... and staticcheck ./... print nothing"
+    },
+    {
+      "candidate": "T1 name: within",
+      "disposition": "live",
+      "evidence": "a separate live definition elsewhere (e.g. engine/skills/project_lock.go, engine/review/risk.go, engine/runtime/opencode_splice.go) or a common word with many unrelated live uses; no reference to the deleted code remains"
+    },
+    {
+      "candidate": "T1 name: write",
+      "disposition": "live",
+      "evidence": "a separate live definition elsewhere (e.g. engine/skills/project_lock.go, engine/review/risk.go, engine/runtime/opencode_splice.go) or a common word with many unrelated live uses; no reference to the deleted code remains"
+    }
+  ]
+}

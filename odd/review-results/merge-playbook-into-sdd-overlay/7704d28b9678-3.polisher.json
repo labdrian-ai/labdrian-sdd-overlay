@@ -1,0 +1,32 @@
+{
+  "kind": "polisher",
+  "base": "54a4ff7e8ceea8b078f2f77a63e85abd42c1d2d5",
+  "head": "7704d28b967815d44d5be1b774a3588efb9c5d1d",
+  "diff_sha256": "a290f6051b7f76e47ca5e8278b5f9b9db49664415345334357c2499462830f52",
+  "findings": {
+    "findings": [
+      {
+        "location": "skills/role-chain/references/models.md:6",
+        "severity": "SUGGESTION",
+        "claim": "L37 and the T3 detail say the Mid tier line of models.md names classifier. The commit sets the classifier to tier mid (sonnet) but leaves that line listing only builder, polisher, prototyper and sweeper. Documentation only; no generated or deployed behaviour depends on it.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "evidence": [
+          "models.md line 6 has no classifier",
+          "the diff has no hunk for models.md",
+          "T3 detail says the Mid line names classifier",
+          "roles.go sets tier: tierMid for the classifier"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the diff except the L37 log text",
+      "classifier projects through projectClaude after checkSkillsNamed, before the foreman; model errors use modelsErr",
+      "generated agents/classifier.md equals frontmatter plus body with the memory line dropped; no effort field",
+      "evidence.sh modes and exit 3 match body.md",
+      "no role-scope guard enumerates agent names",
+      "manifest row pinned to Claude Code only",
+      "No tests or commands were run"
+    ]
+  }
+}

@@ -60,8 +60,8 @@ func TestTheForemanHasNoPiOrCodexFileAndItsClaudeFileFollowsTheRoles(t *testing.
 			t.Errorf("the table holds %s: the foreman has no Pi or Codex file", p)
 		}
 	}
-	if len(paths) != 34 {
-		t.Errorf("%d artifacts, want 34: the three files of each of the eight roles, the Claude file of the foreman and the nine OpenCode files", len(paths))
+	if len(paths) != 35 {
+		t.Errorf("%d artifacts, want 35: the three files of each of the eight roles, the Claude files of the classifier and the foreman and the nine OpenCode files", len(paths))
 	}
 }
 

@@ -1,0 +1,104 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "f66e524dfbd18d641a7a2270b4413990f7c75257",
+    "head": "f1f0fa37ce5fdde769934860c4692c8acee3e4ca",
+    "diff_sha256": "d6d51c692c8a238445cd35fad746f5dabc2bbe60b8194f1b94552be8f49eaffc",
+    "paths": [
+      "CHANGELOG.md",
+      "README.md",
+      "bin/lib/usage.sh",
+      "engine/classifierguard/classifierguard.go",
+      "engine/classifierguard/classifierguard_test.go",
+      "engine/cmd/roles_classifier_guard.go",
+      "engine/cmd/roles_classifier_guard_test.go",
+      "engine/cmd/usage.go",
+      "engine/hookwire/scoped.go",
+      "engine/hookwire/scoped_test.go",
+      "odd/review-results/merge-playbook-into-sdd-overlay/f66e524dfbd1-1.sweep.json",
+      "odd/review-results/merge-playbook-into-sdd-overlay/f66e524dfbd1-2.polisher.json",
+      "odd/review-results/merge-playbook-into-sdd-overlay/f66e524dfbd1-3.json",
+      "odd/review-results/merge-playbook-into-sdd-overlay/f66e524dfbd1-4.polisher.json",
+      "odd/review-results/merge-playbook-into-sdd-overlay/f66e524dfbd1-5.json",
+      "odd/tasks/merge-playbook-into-sdd-overlay.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "f66e524dfbd18d641a7a2270b4413990f7c75257",
+      "head": "f1f0fa37ce5fdde769934860c4692c8acee3e4ca",
+      "diff_sha256": "d6d51c692c8a238445cd35fad746f5dabc2bbe60b8194f1b94552be8f49eaffc"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "README.md",
+        "bin/lib/usage.sh",
+        "engine/classifierguard/classifierguard.go",
+        "engine/classifierguard/classifierguard_test.go",
+        "engine/cmd/roles_classifier_guard.go",
+        "engine/cmd/roles_classifier_guard_test.go",
+        "engine/cmd/usage.go",
+        "engine/hookwire/scoped.go",
+        "engine/hookwire/scoped_test.go",
+        "odd/review-results/merge-playbook-into-sdd-overlay/f66e524dfbd1-1.sweep.json",
+        "odd/review-results/merge-playbook-into-sdd-overlay/f66e524dfbd1-2.polisher.json",
+        "odd/review-results/merge-playbook-into-sdd-overlay/f66e524dfbd1-3.json",
+        "odd/review-results/merge-playbook-into-sdd-overlay/f66e524dfbd1-4.polisher.json",
+        "odd/review-results/merge-playbook-into-sdd-overlay/f66e524dfbd1-5.json",
+        "odd/tasks/merge-playbook-into-sdd-overlay.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "engine/classifierguard/classifierguard.go:177-185",
+        "severity": "WARNING",
+        "claim": "cleanRoot rejects only \"/\", relative, unclean and control-character roots, so any broader directory is accepted as the root. Per L43 the hook cwd is the parent session's launch directory. If the parent runs in $HOME, /home or /tmp, Read, Grep and Glob are allowed over that whole tree (~/.ssh, ~/.claude.json), and Edit and Write target <root>/docs/wiki/evidence.md under it. The read confinement depends on how the session is launched and nothing bounds it. A launch from a subdirectory of the repository, or from the main checkout while work happens in a worktree, makes every call block or binds the guard to the wrong tree.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/classifierguard/classifierguard.go:177-185",
+          "odd/tasks/merge-playbook-into-sdd-overlay.md:1742"
+        ]
+      },
+      {
+        "id": "F2",
+        "location": "engine/classifierguard/classifierguard.go:192-196",
+        "severity": "WARNING",
+        "claim": "safePattern refuses a Glob pattern that starts with \"/\", \"~\" or \"$\" or contains \"..\", but not one that starts with a brace alternation such as {/etc/*,docs/*} or {~/.ssh/*,x}, or an absolute path inside a glob group. If Glob expands braces and honours absolute alternatives, which the code comment calls unverified, Glob can list files outside the root.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/classifierguard/classifierguard.go:146",
+          "engine/classifierguard/classifierguard.go:192-196"
+        ]
+      },
+      {
+        "id": "F3",
+        "location": "README.md:1632-1636",
+        "severity": "SUGGESTION",
+        "claim": "README, usage.go and the CHANGELOG say the root is the directory the classifier was launched in, and the task document keeps the line that T4 must launch the classifier with its working directory set to the root via the Agent tool's cwd. L43 shows the Agent cwd is absent or ignored and the hook cwd is the parent session's launch directory. The docs and S5 state a mechanism L43 refutes, and do not warn that a broad launch directory widens the read scope.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "README.md:1632-1636",
+          "odd/tasks/merge-playbook-into-sdd-overlay.md:107",
+          "odd/tasks/merge-playbook-into-sdd-overlay.md:1742"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the whole diff including the five review records and the task document hunks",
+      "Read classifierguard.go in the worktree (regex, Decide, cleanRoot, within, safePattern)",
+      "Read L43",
+      "DecodeScopedToolCall token walk and the Bash regex checked by reading",
+      "Not run: no tests, build or live hook invocation"
+    ]
+  }
+}

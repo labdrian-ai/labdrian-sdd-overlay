@@ -1,0 +1,173 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "97a13d2a615723e0e1bcbb6b849a5fa6bc98665b",
+    "head": "64f97451548670768b4e8b01c227e4f70ead43f0",
+    "diff_sha256": "79915bafa6901a60470543b787bfe97fac8c17cddaa850d5ea81a9a9b3a4749b",
+    "paths": [
+      "agents/classifier.md",
+      "engine/agentgen/agentgen.go",
+      "engine/agentgen/classifier_test.go",
+      "engine/agentgen/messages_pin_test.go",
+      "engine/agentgen/roles.go",
+      "engine/shelltest/classifier_format_test.go",
+      "engine/skills/classifier_artifact_test.go",
+      "roles/classifier/PROVENANCE.md",
+      "roles/classifier/body.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "hunt"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "97a13d2a615723e0e1bcbb6b849a5fa6bc98665b",
+      "head": "64f97451548670768b4e8b01c227e4f70ead43f0",
+      "diff_sha256": "79915bafa6901a60470543b787bfe97fac8c17cddaa850d5ea81a9a9b3a4749b"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "agents/classifier.md",
+        "engine/agentgen/agentgen.go",
+        "engine/agentgen/classifier_test.go",
+        "engine/agentgen/messages_pin_test.go",
+        "engine/agentgen/roles.go",
+        "engine/shelltest/classifier_format_test.go",
+        "engine/skills/classifier_artifact_test.go",
+        "roles/classifier/PROVENANCE.md",
+        "roles/classifier/body.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "roles/classifier/body.md:31",
+        "severity": "WARNING",
+        "claim": "The old Step 5 loop (run evidence.sh check, fix rows) is replaced by a self-check list that omits rules check enforces: no repeated kind (evidence.sh:113), a rule for level >= 2 (evidence.sh:117), every Evidence kind has a Kinds row (evidence.sh:148). Two findings mapping to one new kind, or a Kinds row for an existing kind, make the parent check in T4b fail, restore the page and leave the result unclassified; nothing returns the failure to the classifier.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "roles/classifier/body.md:31",
+          "skills/_shared/evidence/evidence.sh:113",
+          "skills/_shared/evidence/evidence.sh:117",
+          "skills/_shared/evidence/evidence.sh:148"
+        ]
+      },
+      {
+        "id": "F2",
+        "location": "engine/agentgen/claude.go:19",
+        "severity": "WARNING",
+        "claim": "Exported ClaudeInstructions, documented as the exact inverse of the Claude file, requires name: right after ---; claudeFile now writes notice comments there, so it rejects agents/classifier.md. Its test covers only the eight roles. No production caller today.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "behavior-activated",
+        "proof_refs": [
+          "engine/agentgen/claude.go:19",
+          "engine/agentgen/roles.go:323",
+          "agents/classifier.md:1"
+        ]
+      },
+      {
+        "id": "F3",
+        "location": "agents/classifier.md:1",
+        "severity": "WARNING",
+        "claim": "The read-only restriction rests only on tools: Read, Grep, Glob in a frontmatter that now starts with 23 YAML comment lines no generated agent had before; nothing shows Claude Code loads this file and applies the restricted tools.",
+        "evidence_class": "inferential",
+        "causal_disposition": "unknown",
+        "proof_refs": [
+          "agents/classifier.md:1"
+        ]
+      },
+      {
+        "id": "F4",
+        "location": "roles/classifier/PROVENANCE.md:18",
+        "severity": "SUGGESTION",
+        "claim": "PROVENANCE quotes \"You receive the findings the review kept\", wording the body no longer has (body.md:10).",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "roles/classifier/PROVENANCE.md:18",
+          "roles/classifier/body.md:10"
+        ]
+      },
+      {
+        "id": "F5",
+        "location": "engine/agentgen/agentgen.go:67",
+        "severity": "SUGGESTION",
+        "claim": "A notice that cannot be read is named after noticePath but Check reports it as the role source missing or unreadable (agentgen.go:230-233); messages_pin_test.go:237 pins the misleading text.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/agentgen/agentgen.go:67",
+          "engine/agentgen/agentgen.go:230",
+          "engine/agentgen/messages_pin_test.go:237"
+        ]
+      },
+      {
+        "id": "F6",
+        "location": "engine/agentgen/roles.go:333",
+        "severity": "SUGGESTION",
+        "claim": "role.notice works only for claudeOnlyRoles; project passes an empty license and build never reads notice for chain roles or the foreman, so a notice set there is silently dropped.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/agentgen/roles.go:333",
+          "engine/agentgen/agentgen.go:82"
+        ]
+      },
+      {
+        "id": "F7",
+        "location": "engine/agentgen/roles.go:290",
+        "severity": "SUGGESTION",
+        "claim": "noticeComments hard-codes andresfrei/playbook and the MIT License; a second role with another origin or licence would get a false attribution line.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/agentgen/roles.go:290"
+        ]
+      },
+      {
+        "id": "F8",
+        "location": "engine/shelltest/classifier_format_test.go:47",
+        "severity": "SUGGESTION",
+        "claim": "With no fences, the Fatalf argument fences[len(fences)-1] panics before the message, aborting the shelltest binary.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/shelltest/classifier_format_test.go:47"
+        ]
+      },
+      {
+        "id": "F9",
+        "location": "roles/classifier/body.md:67",
+        "severity": "SUGGESTION",
+        "claim": "Output asks for one markdown fence without naming the opener; L47 and T4b parsing expect a markdown-tagged fence.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "roles/classifier/body.md:67"
+        ]
+      },
+      {
+        "id": "F10",
+        "location": "roles/classifier/body.md:10",
+        "severity": "SUGGESTION",
+        "claim": "The body defines the stop for a missing page or rules and empty for an empty index, but nothing for a missing index.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "roles/classifier/body.md:10"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full diff (9 paths), body, PROVENANCE, agents/classifier.md, agentgen.go and claude.go",
+      "Only ClaudeInstructions parses agent frontmatter in engine/ and bin/",
+      "Compared body with playbook classify.md; changes match the L47 draft",
+      "Earlier 7704d28b9678-5 F1, -5 F2, -2 F1 and judge 2 page path resolved; K3 unchanged",
+      "Not run: gadu-generate --check, go tests"
+    ]
+  }
+}

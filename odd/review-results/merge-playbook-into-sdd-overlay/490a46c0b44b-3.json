@@ -1,0 +1,93 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "c5fc60b0c327ac3d69e503e146aa392a09cc2ab5",
+    "head": "490a46c0b44b02d1d791724a99f1259a111b4fb8",
+    "diff_sha256": "433dfac68450ce94998bae45b0a7a5127a809f36c29b5eed4ca7e68aa85c8fc1",
+    "paths": [
+      "agents/classifier.md",
+      "engine/agentgen/agentgen.go",
+      "engine/agentgen/classifier_notice_internal_test.go",
+      "engine/agentgen/claude.go",
+      "engine/agentgen/claude_test.go",
+      "engine/agentgen/messages_pin_test.go",
+      "engine/agentgen/roles.go",
+      "engine/shelltest/classifier_format_test.go",
+      "engine/skills/classifier_artifact_test.go",
+      "odd/tasks/merge-playbook-into-sdd-overlay.md",
+      "roles/classifier/PROVENANCE.md",
+      "roles/classifier/body.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "c5fc60b0c327ac3d69e503e146aa392a09cc2ab5",
+      "head": "490a46c0b44b02d1d791724a99f1259a111b4fb8",
+      "diff_sha256": "433dfac68450ce94998bae45b0a7a5127a809f36c29b5eed4ca7e68aa85c8fc1"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "agents/classifier.md",
+        "engine/agentgen/agentgen.go",
+        "engine/agentgen/classifier_notice_internal_test.go",
+        "engine/agentgen/claude.go",
+        "engine/agentgen/claude_test.go",
+        "engine/agentgen/messages_pin_test.go",
+        "engine/agentgen/roles.go",
+        "engine/shelltest/classifier_format_test.go",
+        "engine/skills/classifier_artifact_test.go",
+        "odd/tasks/merge-playbook-into-sdd-overlay.md",
+        "roles/classifier/PROVENANCE.md",
+        "roles/classifier/body.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "engine/agentgen/claude.go:21",
+        "severity": "SUGGESTION",
+        "claim": "ClaudeInstructions skips # comment lines after --- for every agent file, not only a Claude-only role with a notice, with no limit on count or text, so a notice-less role file with stray comments is accepted although the function is documented as the exact inverse of the generator. Tests cover only refused shapes, not a notice-less role.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/agentgen/claude.go:21",
+          "engine/agentgen/claude_test.go"
+        ]
+      },
+      {
+        "id": "F2",
+        "location": "engine/agentgen/agentgen.go:97",
+        "severity": "SUGGESTION",
+        "claim": "An empty LICENSE for a role whose notice is set silently yields a file with no license notice and Check reports nothing; pre-existing behaviour restated explicitly by the new len(data)==0 branch.",
+        "evidence_class": "inferential",
+        "causal_disposition": "pre-existing",
+        "proof_refs": [
+          "engine/agentgen/agentgen.go:97"
+        ]
+      },
+      {
+        "id": "F3",
+        "location": "roles/classifier/body.md:10",
+        "severity": "SUGGESTION",
+        "claim": "The optional <failed> input has no named format and no consumer until T4b; neither the frontmatter description nor anything else pins the parent wording against this sentence.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "roles/classifier/body.md:10",
+          "odd/tasks/merge-playbook-into-sdd-overlay.md"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full diff (12 paths)",
+      "agents/classifier.md notice header consistent with origin and licenseName; body line matches body.md",
+      "No other consumer of claudeOnlyRoles, ClaudeInstructions, noticeComments or notice beyond agentgen.go, claude.go, roles.go",
+      "Tests not run; L53 results are the builder claims"
+    ]
+  }
+}
