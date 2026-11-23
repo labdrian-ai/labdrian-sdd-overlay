@@ -70,7 +70,8 @@ Branch: `feat/playbook-merge` (from origin/main ce22eb3f) in the clone `~/labdri
     - Delivery of this branch: SUGGESTIONs a review of T22 raises carry to the next batch of this feature (its next task, such as T3 or T5) and do not block delivery; WARNINGs and defects are fixed before delivery.
     - Runs after T21, as its own commit; no open decision blocks it. The exit code 3 is an assumption (a code no mode uses today).
     - Risk expectation: items 3 (the exit contract of `evidence.sh`, which T5 consumes) and 5 (a deployed file changes).
-- **S5** — Classifier carrier. One agent writes the evidence page from the S3 feed, following playbook `classify.md`: its rules, its central test ("would the rule of this kind have prevented this finding?"), its steps and its format. It never commits, pushes or changes git state, and it changes only the page. Constraint: the overlay `reviewer` role cannot carry it. Its body says "Never edit, run, or delegate", and its tools are `Read, Grep, Glob` (`engine/agentgen/roles.go`).
+- **S5** — Classifier carrier. One agent classifies the findings of the S3 feed into rows of the evidence page, following playbook `classify.md`: its rules, its central test ("would the rule of this kind have prevented this finding?"), its steps and its format. Since L47 the agent is read-only: its tools are `Read, Grep, Glob`, it returns the rows, and the parent appends them to the page and runs `evidence.sh check` (S6, T4). Constraint: the overlay `reviewer` role cannot carry it. Its body says "Never edit, run, or delegate", and it judges a diff, not kinds (`engine/agentgen/roles.go`).
+  - Read-only, Decided by the owner on 2026-11-23 (L47). Asked whether to make the classifier read-only (tools Read, Grep, Glob; it returns its Evidence rows; the foreman appends them and runs `evidence.sh check`), noting that it reverses "Raíz fijada antes", the owner answered "Solo lectura (Recommended)". This supersedes the armed root of L45.
   - The owner answered OD-10: "necesitamos un rol nuevo" (L9). Classify becomes a new overlay role.
   - Name, Decided by the owner on 2026-11-22 (L37). Asked "¿Con qué nombre lo creamos?", the owner answered "classifier (Recommended)". The role is `classifier`.
   - Runtime, Decided by the owner (OD-7, L21): the learning loop deploys to "Solo Claude Code (Recommended)". The classifier is part of the loop, so it has a Claude Code agent file and no Pi, Codex or OpenCode file.
@@ -79,14 +80,14 @@ Branch: `feat/playbook-merge` (from origin/main ce22eb3f) in the clone `~/labdri
     - explore maps to a new read-only role, working name `explorer`, outside the chain (OD-10b answered in L12; see S14).
   - Acceptance: the agent file is generated from `roles/<role>/body.md`, and `gadu-generate --check` passes (R-009). The generator emits `agents/classifier.md` and no `pi/agents/classifier.md`, `codex/agents/classifier.toml` or `opencode/agents/classifier.md`; the manifest deploys it to Claude Code and to no other target.
   - T3 detail (L37, which replaces L9 and L10 as T3's design; L10's "va fuera" stands):
-    - Source: `roles/classifier/body.md`, adapted from playbook `plugins/playbook-agents/agents/classify.md` of snapshot `6de8566`. It starts with the core prefix of the role bodies. `<script>` is the deployed path `$HOME/.claude/skills/_shared/evidence/evidence.sh`, always run as `sh "<script>" ...`. The general kinds are read through the script's `index` and `rule <kind>` modes, not by reading `evidence-rules.md`. Exit 3 (no `awk`, L35) stops the run as blocked. The full draft is in L37.
+    - Source: `roles/classifier/body.md`, adapted from playbook `plugins/playbook-agents/agents/classify.md` of snapshot `6de8566`. It starts with the core prefix of the role bodies. `<script>` is the deployed path `$HOME/.claude/skills/_shared/evidence/evidence.sh`, always run as `sh "<script>" ...`. The general kinds are read through the script's `index` and `rule <kind>` modes, not by reading `evidence-rules.md`. Exit 3 (no `awk`, L35) stops the run as blocked. The full draft is in L37. T3c-b (L47) replaces the script calls: the parent runs the script and passes the `index` output and the paths of the page and of `evidence-rules.md`.
     - Beside it: `roles/classifier/LICENSE`, byte-identical to the snapshot `LICENSE`, and `roles/classifier/PROVENANCE.md`, which names the snapshot, the source path, MIT and what was changed (S9).
     - Generator: a new list `claudeOnlyRoles` in `engine/agentgen/roles.go` holds the classifier row. `build` projects each entry with the existing `projectClaude`, after the eight roles and before the foreman. No Pi, Codex or OpenCode file is generated for it.
-    - Row: name `classifier`; tier mid (Claude alias `sonnet`, as playbook declares); no effort, because the Claude file takes none (`claudeKeys`); tools `Read, Grep, Glob, Bash, Edit, Write` in playbook's order. With no memorycard tool, `role.body` drops the memory line.
+    - Row: name `classifier`; tier mid (Claude alias `sonnet`, as playbook declares); no effort, because the Claude file takes none (`claudeKeys`); tools `Read, Grep, Glob, Bash, Edit, Write` in playbook's order in T3, narrowed to `Read, Grep, Glob` by T3c-b (L47). With no memorycard tool, `role.body` drops the memory line.
     - Deploy: one manifest row `classifier.md custom agent`. The `agent` route goes to Claude Code alone (`engine/skills/routes.go` `agentRouteTargets`). With no `pi/agents/classifier.md`, the Pi package does not ship it (`engine/pipkg/build.go` `copyPiAgents`). No new route is added.
     - `skills/role-chain/references/models.md`: T3 did not add `classifier` to the Mid line, because that edit makes the `role-chain` approval stale (L38). The owner carried it to T4 with "Sumarla a T4 (Recommended)" (L39).
-    - Body: it writes only `<root>/docs/wiki/evidence.md` and runs only `evidence.sh`, and it never commits, pushes or changes git state.
-    - Enforcement: in T3 only the prompt enforced these limits (review `7704d28b9678-5` F1). T3c (L39) enforces them with a PreToolUse hook in the classifier's own frontmatter, which runs the engine verb `roles classifier-guard`. The builder guard still covers only the builder. `gate-task` appends the memory instructions block to every sub-agent, this one included. T5's rule index does not reach the classifier.
+    - Body: in T3 it wrote `<root>/docs/wiki/evidence.md` and ran `evidence.sh`. Since L47 (T3c-b) it changes no file and runs no command: it reads the page and the general rules by the paths the prompt names, and returns its rows.
+    - Enforcement: in T3 only the prompt enforced these limits (review `7704d28b9678-5` F1). Since L47, Claude Code enforces them: the generated `agents/classifier.md` declares `tools: Read, Grep, Glob`, so the agent has no Bash, Edit or Write. No hook and no guard verb is used; the guard of T3c-a and T3c-a2 is removed (T3c-r). `gate-task` appends the memory instructions block to every sub-agent, this one included. T5's rule index does not reach the classifier through `gate-task`; the parent passes the `index` output in the prompt (T4).
     - Position (CONFIRMED by the owner, L10: "va fuera"): outside the role chain, like the verifier, which `agentgen` generates but `engine/roles` does not list.
       - The parent launches it after `review record` / `verify` (T4).
       - `engine/roles` `Vocabulary`, `Catalog`, `optionalRole` and the chain transitions stay unchanged.
@@ -97,24 +98,42 @@ Branch: `feat/playbook-merge` (from origin/main ce22eb3f) in the clone `~/labdri
     - OD-5, OD-6, OD-8 and OD-11 do not change T3 (L37). The carried SUGGESTIONs F1 and F2 of `0178aa75ec87-5` go to T6, not T3 (L36).
     - No open decision of its own.
     - Risk expectation: item 5 (a new agent deployed to Claude Code and checked by CI's `gadu-generate --check`); own commit.
-  - T3c detail (L39): the fix round of the T3 reviews `7704d28b9678-2`, `-3`, `-4` and `-5`. It fixes the three WARNINGs and folds three SUGGESTIONs, in two commits:
-    - R5-F1 (enforcement): a new domain package `engine/classifierguard` decides each tool call of the classifier against its root: the working directory that the hook input names in `cwd` (L42). An unknown or unclean root blocks every call. Read is allowed only on the root or under it, and Grep and Glob only within it. Edit and Write are allowed only on exactly `<root>/docs/wiki/evidence.md`. Bash is allowed only for `sh "$HOME/.claude/skills/_shared/evidence/evidence.sh"` with `check`, `count`, `index` or `rule <kebab-kind>`, followed by exactly `"<root>/docs/wiki"`. Every other call is blocked. An internal verb `roles classifier-guard` adapts the domain to Claude Code. It decodes the hook input strictly (L42) and answers by exit status (2 blocks), and every input it cannot judge exits 2. The generated `agents/classifier.md` declares that verb as a PreToolUse hook in its own frontmatter, so the hook runs only inside the classifier. The hook's command turns every non-zero exit of the binary into 2 (L42). Premise P1 is confirmed (L41). Premise P2 (L42) is checked before T3c-a2.
-    - Fix round of T3c-a (L42), from the reviews `f66e524dfbd1-2` to `-5`:
+  - T3c detail (L39, re-shaped by L47): the fix round of the T3 reviews `7704d28b9678-2`, `-3`, `-4` and `-5`. Since L47 it follows the owner's "Solo lectura (Recommended)":
+    - R5-F1 (enforcement), L47: the classifier row's tools become `Read, Grep, Glob`, so Claude Code holds it read-only. It returns its rows in a fixed Output shape (below), and the parent appends them and runs `evidence.sh check` (T4). No hook, no guard verb and no armed root.
+    - Inputs, L47: the parent's prompt gives the findings the review kept, the review identifier, the review date when known, `<page>` (the absolute path of `<root>/docs/wiki/evidence.md`), `<rules>` (the absolute path of the deployed `evidence-rules.md`, `$HOME` expanded by the parent), and `<index>` (the stdout of `sh "<script>" index "<root>/docs/wiki"`, run by the parent, or the word `empty`). The classifier reads `<page>` and, for a general kind it may use, that kind's row of `<rules>`; a kind of the page wins over a general kind of the same name, as `rule <kind>` does.
+    - Output contract, L47: the body's `## Output` ends the reply with a line `Kinds rows:` and one ```` ```markdown ```` fence holding the new Kinds rows, then a line `Evidence rows:` and one fence holding the Evidence rows, each row one table line with no header; an empty fence when there is none. Then the findings skipped, with the reason. It writes no artifact.
+    - Removed by T3c-r (L47): `engine/classifierguard`, `engine/hookwire/scoped.go` (`DecodeScopedToolCall`, used by nothing else), the verb `roles classifier-guard`, its dispatch, its docs (`engine/cmd/usage.go`, `bin/lib/usage.sh`, `README.md`, the unreleased `CHANGELOG.md` line), its tests and its `rings` entry. Nothing of them stays.
+    - Superseded by L47 (history, kept for the record): the guard design of L39 and L42 below, and the armed root of L45 (T3c-a3, T3c-a4, T3c-a5, premise P3, the hook command and C3, C4 of T3c-b).
+    - Fix round of T3c-a (L42, superseded by L47; its WARNINGs are resolved by the removal T3c-r), from the reviews `f66e524dfbd1-2` to `-5`:
       - W1, a strict decode (`-3` F1, `-5` F1).
       - W2, the guard failing open when the verb is not reached (`-3` F2, `-5` F3).
       - W3, binding the guard to the root (`-5` F2, with `-3` F3 and the polishers `-2` and `-4`).
       - The SUGGESTION `-3` F4 is folded in: reads are confined to the root.
-      - T4 must launch the classifier with its working directory set to the root (the Agent tool's `cwd`, if P2 confirms that it reaches the hook).
-    - R5-F2 (license): the generator writes the MIT notice of `roles/classifier/LICENSE` into the deployed agent file as YAML comment lines of its frontmatter. The notice travels with the copy and adds no prompt text.
-    - R2-F1 (pins): the Format template and the example rows of the body are checked by running `evidence.sh check` on a page built from them. The Rules, Gotchas and Output sections are pinned line by line.
-    - Folded SUGGESTIONs: `7704d28b9678-2` F3 (the body says what exits 1 and 2 of the script mean); judge 2 of `7704d28b9678-4` (the body names `<page>` as the path this prompt names); `7704d28b9678-5` F3 (a test ties the script path of the body to the deploy route of `evidence.sh` and to the Claude skills root of `bin/lib/targets.sh`).
+      - L42's T4 note (launch with the Agent tool's `cwd` at the root) is void: L43 found that the Agent tool has no `cwd`. L45 replaces it, below.
+    - Fix round of T3c-a2 (L45, superseded by L47; its WARNINGs are resolved by the removal T3c-r), from the reviews `f1f0fa37ce5f-2` to `-5`:
+      - The root's source. Decided by the owner on 2026-11-23. Asked "¿De dónde sacamos la raíz?", the owner answered "Raíz fijada antes (Recommended)". The option read (relayed by the coordinator): before launching the classifier, the foreman arms the root with an engine command (e.g. `roles classifier-arm --root <worktree>`), and the guard accepts only that root, which must be the root of a git repository. It does not depend on the session's cwd and works with worktrees. Cost: new state with its lifecycle (arm, expire, clear), and one more commit of about 250-350 lines.
+      - W4, the armed root (`-5` F2, `-3` F1, `-2` first WARNING): `roles classifier-arm --root <dir>` records the root for the Claude Code session named by `CLAUDE_CODE_SESSION_ID`. The guard reads it by the hook input's `session_id`. The root must be the toplevel of a git worktree, not `/`, not `$HOME` and not an ancestor of `$HOME`. An arming expires 60 minutes after it is made (assumption), and `--clear` ends it. Grep and Glob without a `path` are allowed only when the session's `cwd` is the root.
+      - W5, glob metacharacters (`-5` F1, `-3` F2, `-2` second WARNING): a Glob pattern holds only ASCII letters, digits, `.`, `_`, `-`, `/`, `*` and `?`. So `{`, `}`, `[`, `]`, `,`, `!`, `\`, `~` and `$` are refused, whether or not Glob would expand them.
+      - Folded SUGGESTIONs: `-5` F3 and `-3` F3 (the docs and S5 no longer say that the root is where the classifier was launched); `-5` F4 (the C1 row is found by its name, not by its position); the third finding of `-2` (the T3c-b body tells the classifier the allowed forms of Read, Grep and Glob).
+      - How T4 uses it (recorded here, because the T4 line is not this shaper's):
+        - Before launching the classifier, the parent runs `labdrian roles classifier-arm --root <root>` in its own Bash. `<root>` is the git toplevel of the reviewed tree, such as the worktree.
+        - When that exits non-zero, the classifier is not launched, and the parent reports blocked with the stderr line.
+        - The parent launches the classifier with a prompt that names the same `<root>`.
+        - After the classifier returns, whatever its status, the parent runs `labdrian roles classifier-arm --clear`.
+        - It launches one classifier at a time per session, because a second arming replaces the first.
+    - R5-F2 (license), kept: the generator writes the MIT notice of `roles/classifier/LICENSE` into the deployed agent file as YAML comment lines of its frontmatter. The notice travels with the copy and adds no prompt text.
+    - R2-F1 (pins), kept: the Format template and the example rows of the body are checked by running `evidence.sh check` on a page built from them (K4). The Rules, Gotchas and Output sections are pinned line by line (K1).
+    - Folded SUGGESTIONs, as L47 places them: judge 2 of `7704d28b9678-4` is resolved in T3c-b (the prompt names `<page>` and `<rules>` as paths to read, and the body writes nothing). `7704d28b9678-2` F3 (the script's exits 1 and 2) and `7704d28b9678-5` F3 (the script path tied to its deploy route) move to T4, because the parent now runs the script and holds its path.
     - Carried to T4 by the owner ("Sumarla a T4 (Recommended)"): `7704d28b9678-2` F2, `7704d28b9678-5` F4 and judge 1 of `7704d28b9678-3`, all on the models.md Mid line.
     - Commits, in order:
       - T3c-a: the guard's domain, verb and docs (done, L40).
-      - T3c-a2: the strict decode, the root binding, the read confinement and the scope of the docs (L42).
-      - T3c-b: the generator with the exit-mapping hook command, the body and the pins (L39, L42).
-    - Risk expectation: item 2 for T3c-a and T3c-a2; items 2 and 5 for T3c-b.
-- **S6** — Lifecycle trigger. A stored result whose S3 feed keeps at least one finding is classified once. It counts as classified when the page holds an Evidence row whose Review is that result's identifier. This mirrors playbook `review-ran.sh`, which blocks once a review "that ended with findings and started no" classify. Acceptance: the parent of the role chain launches the classifier after `record` / `verify`. A branch commit whose result is unclassified gets asked for its classification once per session and commit by the existing `labdrian review stop-hook`. A result with no kept finding is never asked about. The hook keeps exiting 0 on anything it cannot tell.
+      - T3c-a2: the strict decode, the root binding, the read confinement and the scope of the docs (L42; done, L44).
+      - T3c-r: removal of the guard, its decoder, verb, docs and tests (L47).
+      - T3c-b: the read-only row, the notice comments, the body that returns rows, and the pins K1, K3, K4 (L39 and L47).
+      - T3c-a3, T3c-a4 and T3c-a5 (L45) are not built: superseded by L47.
+    - Risk expectation: item 2 for T3c-a, T3c-a2 and T3c-r; items 3 and 5 for T3c-b.
+  - Native re-evaluation (L46, owner question 1 of L46): answered by the owner, "Solo lectura (Recommended)" (L47).
+- **S6** — Lifecycle trigger. A stored result whose S3 feed keeps at least one finding is classified once. It counts as classified when the page holds an Evidence row whose Review is that result's identifier. This mirrors playbook `review-ran.sh`, which blocks once a review "that ended with findings and started no" classify. Acceptance: the parent of the role chain launches the classifier after `record` / `verify`, then appends the rows it returns to the page and runs `evidence.sh check`; a check that fails puts the page back as it was before the append, so the result stays unclassified (L47). A branch commit whose result is unclassified gets asked for its classification once per session and commit by the existing `labdrian review stop-hook`. A result with no kept finding is never asked about. The hook keeps exiting 0 on anything it cannot tell.
 - **S7** — Rule injection. The index of level-2+ kinds (`evidence.sh index`: "- <kind> (level N): <applies when>"), and the command that prints one rule, reach the builder and the reviewer when they are launched, as playbook `rules-for-subagent.sh` does for write and review. Nothing reaches the other roles. Acceptance: with no level-2+ kind there is no text and no change to the prompt. The size the injection adds to a prompt is measured and reported, and the cap is OD-11. Injection never blocks or fails a launch. Injection by itself does not change the reviewer's JSON reply contract; the one change to that contract is the rule outcomes of S8 (b).
 - **S8** — Consolidation, promotion, level history and rule outcomes. The owner approved this scope: asked "¿Actualizo T6 del documento con esos dos puntos?", the owner answered "deacuerdo" (L7). Points (a) and (b) are adopted from arXiv 2611.18856 "Self-Improvement Memory" (SIM) and arXiv 2611.23476 "GUARD"; the shaper has not read either paper. The requirement is the owner's.
   - Base. This follows playbook `prepare-project/references/evidence.md`:
@@ -181,6 +200,10 @@ Branch: `feat/playbook-merge` (from origin/main ce22eb3f) in the clone `~/labdri
 - **S11** — Decision-id links (R-003). Each ODD feature document links to the wiki decision ids it executes, and the builder guard still parses header, Specs, Tasks and Log. Acceptance: a feature document that carries decision ids passes the builder guard, and a wiki page resolves those ids.
 - **S12** — Single install and wiki deploy (R-004, R-005). One path (`labdrian apply` / install-hooks) installs both overlay and wiki capabilities, replacing the plugin-marketplace install. It deploys `docs/wiki` with `.format` 5, the commit check hook, the merge step hook, and the skills prepare-project, write-docs, init and doctor. Acceptance: one command yields both on a target runtime, and after deploy a project can run init/doctor and write wiki pages in format 5.
 - **S13** — Hooks and session text (R-006, R-007). There is one deduplicated set of Bash PreToolUse hooks (commit check, review hold, ask-before-delivery), as owned families in `~/.claude/settings.json`. One session-start text stays within playbook's word budgets (contract 270, rules 400, loaded at start 370/620) unless OD-8 relaxes them. Acceptance: no command triggers two hooks enforcing the same rule, hook families stay removable by owner, and a `verify.sh`-equivalent check passes on the merged text.
+  - Ask-before-delivery, Decided by the owner on 2026-11-23 (L47). Asked whether ask-before-delivery becomes `permissions.ask` rules instead of a hook (commit check and review hold stay hooks), with the cost that every push, merge or PR prompts, including merges the standing ok allows, the owner answered "Reglas permissions.ask". So the Bash PreToolUse hook families are two (commit check, review hold); ask-before-delivery is a set of `permissions.ask` rules that `engine/settings` writes and removes, as it writes the `permissions.deny` rule of the shaper clearance guard.
+  - Session text, Decided by the owner on 2026-11-23 (L47). Asked whether the static session text goes to CLAUDE.md (overlay rules plus playbook rules.md and Contract, under 200 lines) with hooks keeping only per-workflow text, the owner answered "Fijo a CLAUDE.md (Recommended)". So the merged static text is the owner rules block that apply writes into `~/.claude/CLAUDE.md`, under 200 lines and within the OD-8 budgets, which bind (L28: "Se aplican (Recommended)"). No hook injects static text; hooks keep only text computed per session or workflow, such as the memory instructions.
+  - Acceptance, as L47 narrows it: no command triggers two hooks enforcing the same rule; hook families and the ask rules stay removable by owner; each delivery command (`git push`, `gh pr create`, `gh pr merge`, `git merge`) asks once through a permission rule and no hook asks for it; the merged CLAUDE.md text passes a word and line check in CI.
+  - T12 and T13 detail: L47.
 - **S14** — One agent set (R-008, R-009). Playbook's explore, write, review and classify agents and `models.conf` are reconciled with the overlay's role agents. Every playbook agent is mapped to a role or explicitly dropped.
   - The owner answered OD-10b (L12): "metele un rol al explorer simple siguiendo las best practices de lla docu de claude".
   - Playbook `explore` becomes a new, simple, read-only overlay role, written following Claude's official documentation.
@@ -231,6 +254,7 @@ Branch: `feat/playbook-merge` (from origin/main ce22eb3f) in the clone `~/labdri
       - (c) `engine/agentgen/roles.go` lines 64-68 record the owner's tiers (D15): "frontier and mid think at medium, light at low". The existing haiku role (delivery) uses `low`, so the proposed `effort: medium` on haiku departs from that pattern.
       - (d) The draft does not open with the exact core prefix the other role bodies share (`roles/reviewer/body.md` lines 1-6; `roles.go` line 12 says "the core prefix every role body starts with"). `roles_test.go` requires the memory line only for roles without `mem_search`, so the test may accept it. The builder keeps or adopts the shared prefix under test.
       - (e) Whether `rg`, `fd`, `bat` and `eza` exist on every target is unverified.
+  - No Bash, Decided by the owner on 2026-11-23 (L47). Asked whether to drop Bash from the explorer, the owner answered "Sacar Bash (Recommended)". The explorer's tools are `Read, Glob, Grep, mcp__memorycard__mem_search, mcp__memorycard__mem_get, mcp__codegraph__codegraph_explore`, so Claude Code enforces its read-only limit. This replaces the tools of the PROPOSAL above and the body line that lists shell commands; note (a) is closed and note (e) no longer applies. Detail in L47. Unverified: whether a built-in Explore sub-agent already covers this role (https://code.claude.com/docs/en/sub-agents, tail read only as a summary); the role stays as the owner decided it (L12).
 - **S15** — Cross-cutting, every task. Base is origin/main in a separate clone, and the dev checkout `~/labdrian-sdd-overlay` is never written (R-011). Commits use Conventional Commits with no AI attribution or Co-Authored-By (R-012). Push, PR and merge happen only on the owner's explicit decision (R-014). Persisted artifacts hold no persona text (R-013).
   - PROPOSAL (L11, an inference from #6160 and #3305, not an owner decision): code and assets this merge adds keep brand strings in one place, so the later rename to trysm stays mechanical. The strings are `labdrian`, `~/.labdrian-overlay`, `LABDRIAN_*` env names and the `labdrian` binary name. #3305 measured a blast radius of 1,306 files and 7,600 occurrences.
 
@@ -245,20 +269,20 @@ Order is execution order: the learning loop (T1, T19, T2, T20, T21, T22, T3-T6, 
 - [x] T21 — S4 — inline — pin the route column: a test that every third column of `overlay.manifest` is a known route (F1 of `d1e57b32f786-2`), the `Dest` texts of `engine/skills/routes.go` and `bin/lib/manifest_routes.sh` and the `RouteSkill` text naming `claude-skill` and OpenCode, and a test tying the `Dest` texts to `skillRouteTargets` (F2); and, from the review of T2b `8e035ddb49dc-2`, B10 refusing a stale `- Nothing.` and an untrue "byte-identical" (F1) and B9 seeing directories, links and writes under `TMPDIR` (F3); runs after T2b; detail in S4 (T21 detail), L29 and L32. Risk expectation: none; own commit — shaped: L32 — commit: the commit `test(skills): pin the route column and tighten the evidence store pins` (its SHA is not knowable inside its own commit; see L33 and `git log --grep`)
 - [x] T22 — S4 — inline — fail loud without awk: `evidence.sh` exits 3 with one stderr line in every mode but a usage error when `awk` is not on `PATH` (F2 of `8e035ddb49dc-2`), `PROVENANCE.md` names the change, and a test B11 pins it; folds the three SUGGESTIONs of `7b634ced2367-2` (the `/tmp` scan in `newEvidenceWorld`, the License line keyed on `LICENSE`'s blob, the `resolveRoute` comment pinned); runs after T21 and before T5; detail in S4 (T22 detail), L32 and L34. Risk expectation: items 3 and 5; own commit — shaped: L34 — commit: the commit `fix(evidence): fail loud when awk is missing` (its SHA is not knowable inside its own commit; see L35 and `git log --grep`)
 - [x] T3 — S5, S9 — inline — add the new `classifier` role (named by the owner, L37) outside the role chain, for Claude Code only (OD-7): `roles/classifier/body.md` adapted from playbook `classify.md` with `LICENSE` and `PROVENANCE.md`, a `claudeOnlyRoles` entry in `engine/agentgen` that generates `agents/classifier.md` alone, the manifest row `classifier.md custom agent`, and tests G1, G2, K1-K3; detail in S5 (T3 detail) and L37. Risk expectation: item 5; own commit — shaped: L37 — commit: the commit `feat(agents): add the classifier role for Claude Code` (its SHA is not knowable inside its own commit; see L38 and `git log --grep`)
-- [ ] T3c — S5, S9 — inline — fix round of T3 (reviews `7704d28b9678-2` to `-5`): enforce the classifier's write and run limits with a guard verb `roles classifier-guard` (domain `engine/classifierguard`), run by a PreToolUse hook in the generated `agents/classifier.md` frontmatter, after premise P1 is confirmed (R5-F1). Carry the MIT notice as frontmatter comments of the deployed file (R5-F2). Pin the Format template by running `evidence.sh check` on it, and pin the Rules, Gotchas and Output lines (R2-F1). Fold `-2` F3, judge 2 of `-4` and `-5` F3. The models.md items go to T4. Fix round of T3c-a (reviews `f66e524dfbd1-2` to `-5`, L42), in T3c-a2: a strict decode of the hook input (W1); the guard tied to the root given by the hook input's `cwd`, with an unknown root blocking every call (W3); reads confined to the root (`-3` F4); the docs' "fails closed" narrowed to the verb. In T3c-b, a hook command that turns every non-zero exit into 2, pinned by a shell test (W2). P2 runs before T3c-a2. Three commits: T3c-a, then T3c-a2, then T3c-b; detail in S5 (T3c detail), L39 and L42. Risk expectation: item 2 (T3c-a, T3c-a2); items 2 and 5 (T3c-b) — shaped: L42 — commit: T3c-a: the commit `feat(agents): guard the tool calls of the classifier` (its SHA is not knowable inside its own commit, L40; `git log --grep`); T3c-a2: the commit `fix(agents): tie the classifier guard to its root and decode its input strictly` (its SHA is not knowable inside its own commit; `git log --grep`; L44); T3c-b: -
-- [ ] T4 — S6 — inline — lifecycle trigger: a step in `skills/role-chain/SKILL.md`. After `record` / `verify`, when T1 keeps findings, the parent launches the classifier with T1's output and the repository root. `labdrian review stop-hook` asks once per session and commit for an unclassified result with kept findings, in its existing reason format. Tests cover: asked, not asked when no finding is kept, not asked when an Evidence row carries the identifier, and exit 0 on unreadable input. Depends on T1-T3. Risk expectation: item 3 (stop-hook behavior and the role-chain skill are contracts others consume); own commit — shaped: L6 — commit: -
+- [ ] T3c — S5, S9 — inline — fix round of T3 (reviews `7704d28b9678-2` to `-5`), re-shaped by the owner's "Solo lectura (Recommended)" (L47): the classifier becomes read-only, so Claude Code enforces its limits (R5-F1), and returns its Kinds and Evidence rows for the parent to append and check (T4). T3c-a and T3c-a2 (the guard of L39 and L42) are done and now unused. T3c-r removes `engine/classifierguard`, `hookwire.DecodeScopedToolCall`, the verb `roles classifier-guard`, its dispatch, docs, tests and `rings` entry, which resolves the WARNINGs of `f66e524dfbd1` and `f1f0fa37ce5f`. T3c-b sets the row's tools to `Read, Grep, Glob`, writes the MIT notice as frontmatter comments (R5-F2), rewrites the body to read `<page>`, `<rules>` and `<index>` and return rows in a fixed Output shape (folds judge 2 of `-4`), and pins it with K1 line by line, K3 and K4 by `evidence.sh check` (R2-F1). `-2` F3, `-5` F3 and the models.md items go to T4. The armed root of L45 (T3c-a3 to T3c-a5, P3) is superseded and not built. Commits in order: T3c-a, T3c-a2, T3c-r, T3c-b; detail in S5 (T3c detail) and L47. Risk expectation: item 2 (T3c-a, T3c-a2, T3c-r); items 3 and 5 (T3c-b) — shaped: L47 — commit: T3c-a: the commit `feat(agents): guard the tool calls of the classifier` (its SHA is not knowable inside its own commit, L40; `git log --grep`); T3c-a2: the commit `fix(agents): tie the classifier guard to its root and decode its input strictly` (its SHA is not knowable inside its own commit; `git log --grep`; L44); T3c-r: the commit `refactor(agents): remove the classifier guard` (its SHA is not knowable inside its own commit; `git log --grep`; L49); T3c-b: -
+- [ ] T4 — S5, S6 — inline — lifecycle trigger, for the read-only classifier (L47), in two commits. T4a: a new `evidence.sh reviewed <identifier>` mode (exit 0 when an Evidence row's Review is the identifier, 1 when none), and `labdrian review stop-hook` asks once per session and commit for an unclassified result with kept findings, in its existing reason format, using that mode; tests cover asked, not asked when no finding is kept, not asked when an Evidence row carries the identifier, not asked twice, and exit 0 on unreadable input. T4b: a Classify step in `skills/role-chain/SKILL.md` run by the parent after `record` / `verify`: T1's kept findings, `check` and `index` by the parent, the launch with `<page>`, `<rules>` and `<index>`, then a backup of the page, the append of the returned rows, `check` again, the page put back on failure, and `count`; each exit 1, 2 and 3 of the script named (`7704d28b9678-2` F3); the script and rules paths tied to the deploy route (`7704d28b9678-5` F3); the models.md Mid line names `classifier` and a test pins it (`7704d28b9678-2` F2, `-5` F4, judge 1 of `-3`; the owner's "Sumarla a T4 (Recommended)"); no arm or clear. T4b needs the owner's re-approval of the `role-chain` skill before its commit. Depends on T1, T3c. Detail in L47. Risk expectation: items 3 and 5 (T4a: the stop-hook, and a deployed `evidence.sh` that gains a mode); item 3 (T4b: the role-chain skill and the classifier's Output contract) — shaped: L47 — commit: -
 - [ ] T5 — S7 — inline — rule injection through `gate-task`: when the call's `subagent_type` is the builder or the reviewer, append the T2 `index` text and the `rule <kind>` command (absolute paths) to the prompt, in the same single rewrite as the memory instructions block. Nothing is appended when the index is empty. A reviewer body line says injected rules are review criteria inside its lens rows, with the reply shape unchanged. Measure and report the added size. Extend the gate-task golden tests. Blocked for its cap by OD-11, and for runtimes other than Claude Code by OD-7. Risk expectation: item 3 (gate-task contract pinned by `testdata/contract-golden`, reviewer prompt contract); own commit — shaped: L6 — commit: -
 - [ ] T6 — S8 — inline — consolidation at close with a per-kind level history, run by the parent; detail in S8 (T6 detail) and L7. Risk expectation: items 1 and 3; own commit — shaped: L7 — commit: -
 - [ ] T16 — S8 — inline — rule outcomes (followed, violated, not-applicable) as an optional member of the reviewer reply contract; detail in S8 (T16 detail), L7 and L9. Blocked by OD-11. Risk expectation: items 1 and 3; own commit — shaped: L9 — commit: -
 - [ ] T17 — S8 — inline — the classifier records violated outcomes as findings and followed outcomes as exposure, with an `evidence.sh exposure` mode; detail in S8 (T17 detail), L7 and L9. Risk expectation: item 3; own commit — shaped: L9 — commit: -
-- [ ] T18 — S14 — inline — add the new read-only `explorer` role (working name) outside the role chain, mirroring T3; frontmatter and body draft in S14 (T18 detail) and L12. Risk expectation: item 5; own commit — shaped: L12 — commit: -
+- [ ] T18 — S14 — inline — add the new read-only `explorer` role (working name) outside the role chain, mirroring T3, with no Bash (the owner's "Sacar Bash (Recommended)", L47): tools `Read, Glob, Grep, mcp__memorycard__mem_search, mcp__memorycard__mem_get, mcp__codegraph__codegraph_explore`, and a body with no shell-command line; frontmatter and body draft in S14 (T18 detail), L12 and L47. Risk expectation: item 5; own commit — shaped: L47 — commit: -
 - [ ] T7 — S9 — inline — memory (roadmap slice S1): replace every Engram write target in absorbed playbook content with memorycard (in the snapshot only `plugins/playbook-agents/rules.md` names Engram). Check absorbed text for persona voice, and confirm the MIT notice and the provenance note cover every absorbed file. No open decision blocks it; it applies to what T2, T3 and T10 absorb, so it runs once content is absorbed. Risk expectation: none expected; item 3 if an imported skill already consumed by a runtime changes its memory calls — shaped: L8 — commit: -
 - [ ] T8 — S10 — inline — one review gate (roadmap slice S2): combine playbook `review-before-commit.sh` with the per-commit lifecycle so that one commit attempt yields one review decision, Risk trailer honored. Blocked by OD-6. Risk expectation: items 2 and 3 (a guard and the review gate others consume); own commit — shaped: L6 — commit: -
 - [ ] T9 — S11 — inline — decision-id links (roadmap slice S3): the feature-document place for wiki decision ids, builder guard parsing kept, and a resolver check against wiki pages. Blocked by OD-5. Risk expectation: item 3 (feature-document grammar read by the builder guard) — shaped: L6 — commit: -
 - [ ] T10 — S12 — inline — wiki capabilities absorbed (roadmap slice S4, part a): the playbook-wiki skills prepare-project, write-docs, init and doctor, `.format` 5, and the commit check and merge step hooks, taken from snapshot `6de8566` as overlay-owned code with the MIT notice and a provenance note. They are tracked in `overlay.manifest` as overlay-owned, and Engram references are handled per T7. Blocked by OD-7. Risk expectation: item 5 (deployed content) — shaped: L8 — commit: -
 - [ ] T11 — S12 — inline — single install path (roadmap slice S4, part b): `labdrian apply` / install-hooks deploys T10 and the T2/T3 loop pieces to the targets OD-7 names, replacing the marketplace install. Blocked by OD-7. Risk expectation: item 5 (installer and deploy); own commit — shaped: L6 — commit: -
-- [ ] T12 — S13 — inline — deduplicated hook families (roadmap slice S5, part a): one set of Bash PreToolUse hooks (commit check, review hold, ask-before-delivery) as owned families in `engine/settings`, removable by owner. Blocked by OD-6, OD-7. Risk expectation: items 3 and 5 (settings.json format and hooks others consume); own commit — shaped: L6 — commit: -
-- [ ] T13 — S13 — inline — session-start text (roadmap slice S5, part b): one merged text and a `verify.sh`-equivalent word check. Blocked by OD-8. Risk expectation: item 3 (session text every session loads) — shaped: L6 — commit: -
+- [ ] T12 — S13 — inline — deduplicated hooks and delivery asks (roadmap slice S5, part a), per the owner's "Reglas permissions.ask" (L47), in two commits. T12a: ask-before-delivery as `permissions.ask` rules (`git push`, `gh pr create`, `gh pr merge`, `git merge`) that `engine/settings` adds on install and removes on uninstall, beside the shaper clearance deny rule, with no hook; premise P4 runs first. T12b: the commit check and the review hold as one owned Bash PreToolUse family each, deduplicated against T8 and T10, removable by owner. OD-6 (L24) and OD-7 (L21) are answered. Depends on T8, T10. Detail in S13 and L47. Risk expectation: items 3 and 5 (settings.json format and hooks others consume) — shaped: L47 — commit: -
+- [ ] T13 — S13 — inline — session text in CLAUDE.md (roadmap slice S5, part b), per the owner's "Fijo a CLAUDE.md (Recommended)" (L47): the static merged text (overlay owner rules, playbook `rules.md` and Contract) goes into the Claude Code owner rules block of `~/.claude/CLAUDE.md`, under 200 lines and within the OD-8 budgets (bound, L28), with no hook injecting static text, and a Go word and line check in CI; Codex's block keeps its bytes. Depends on T7, T11. Detail in S13 and L47. Risk expectation: items 3 and 5 (text every session loads, deployed by apply); own commit — shaped: L47 — commit: -
 - [ ] T14 — S14 — inline — agent mapping table (roadmap slice S6, part a) of explore, write, review, classify and `models.conf`; detail in S14 (T14 detail) and L12. Risk expectation: none (documentation) — shaped: L12 — commit: -
 - [ ] T15 — S14 — inline — close the agent set (roadmap slice S6, part b): generate any mapped role not yet generated and keep `gadu-generate --check` green; detail in S14 (T15 detail) and L12. Blocked by OD-7. Risk expectation: item 5 — shaped: L12 — commit: -
 
@@ -1777,3 +1801,531 @@ Order is execution order: the learning loop (T1, T19, T2, T20, T21, T22, T3-T6, 
   | C2 `TestDocsDescribeTheClassifierGuard` | yes (10 lines) | Mw15: "It fails closed" put back in the README section | C2 |
 
   **Lines.** Authored, 400 added (463 changed counting 63 removed): `engine/hookwire/scoped.go` 132 and its test 97, `engine/classifierguard/classifierguard.go` 50 added and its test 50, `engine/cmd/roles_classifier_guard.go` 10 and its test 34, `usage.go` 6, `bin/lib/usage.sh` 2, `README.md` 18, `CHANGELOG.md` 1. The document edits and this entry are not counted. L42 forecast 330-410; 400 is inside it and not past 400.
+- **L45** (2026-11-23, shaper): the fix round of T3c-a2, on branch `feat/playbook-classifier-role` at head `f1f0fa37` (T3c-a2), workflow `merge-playbook-into-sdd-overlay-t3`. It designs three new commits, T3c-a3, T3c-a4 and T3c-a5, and changes T3c-b. Changes to the document: in the S5 T3c detail, the R5-F1 bullet, the replaced T4 note, a new fix-round bullet, the Commits list and the Risk expectation; and the T3c line, whose marker moves from L42 to this entry. L39 and L42 still stand as the designs of T3c-a, T3c-a2 and T3c-b wherever this entry does not change them. No other spec or task changed. The T4 line was not edited, because this shaper did not design T4; T4's shaper reads S5 and this entry.
+
+  **Owner rules and decision, verbatim as relayed by the coordinator.** WARNINGs are fixed before delivery, SUGGESTIONs carry, and nothing is declined. The owner prefers maximum decoupling and real enforcement. Decided by the owner on 2026-11-23: asked "¿De dónde sacamos la raíz?" (the root of the classifier guard), the owner answered "Raíz fijada antes (Recommended)". The option read: before launching the classifier, the foreman arms the root with an engine command (e.g. `roles classifier-arm --root <worktree>`), and the guard accepts only that root, which must be the root of a git repository. It does not depend on the session's cwd and works with worktrees. Cost: new state with its lifecycle (arm, expire, clear), and one more commit of about 250-350 lines.
+
+  **Sources read.**
+  - The document up to `## Log`, and L39 to L44.
+  - The review records `odd/review-results/merge-playbook-into-sdd-overlay/f1f0fa37ce5f-2.polisher.json` (judge 1: two WARNINGs and one SUGGESTION), `-3.json` (risk-line: F1 and F2 WARNING, F3 SUGGESTION), `-4.polisher.json` (judge 2: no finding; its live probe of this session's Glob returned no files for `{/etc/hostnam*,nomatchzz}`, `[/]etc/hostnam*` and `\/etc/hostnam*`, and `/etc/hostname` for `/etc/hostnam*`) and `-5.json` (recall, hunt: F1 and F2 WARNING, F3 and F4 SUGGESTION).
+  - memorycard #6195 (project `labdrian-sdd-overlay`): the Claude Code 2.1.330 facts of L41 and L43.
+  - In the worktree:
+    - `engine/classifierguard/classifierguard.go` (whole);
+    - `engine/cmd/roles_classifier_guard.go` and its test (whole);
+    - `engine/hookwire/scoped.go` lines 1-60;
+    - `engine/review/fsstore/asked.go` and the prompt store of `engine/cmd/state_stores.go` (through codegraph): per-session state as `<state home>/labdrian/<store>/<sha256 of the session>/...`;
+    - `engine/statestore/lastline.go` (whole: `AppendLine`, `LastLine`) and `statestore.go` lines 60-119 (`Home`, `HomeFrom`: `$XDG_STATE_HOME`, else `$HOME/.local/state`);
+    - `engine/gitprov/gitprov.go` lines 1-160: `Observe(root)` requires the root to resolve to exactly the worktree toplevel, and refuses a bare repository, `GIT_DIR`, `GIT_WORK_TREE` and `GIT_COMMON_DIR`, and a forged gitfile;
+    - `engine/architecture_test.go` lines 183-242 (the rings);
+    - `README.md` lines 1625-1654, `engine/cmd/usage.go` lines 340-369, `bin/lib/usage.sh` lines 255-279;
+    - `bin/lib/engine_verbs.sh` `cmd_roles`, which forwards `labdrian roles <verb>` to the engine binary unchanged;
+    - `docSection` in `engine/cmd/approve_guard_docs_test.go` (first `end` after `start`), and the builder guard's docs tests, which cut sections that end at `engine shaper assess` and `overlay --help`.
+  - The installed Claude Code binary `~/.local/share/claude/versions/2.1.330`, by grep, not run. The text shows a function that builds a child environment `{CLAUDECODE:"1",CLAUDE_CODE_SESSION_ID:e.sessionId,CLAUDE_CODE_CHILD_SESSION:"1",...}`, and a list of variables passed to the shell that holds `CLAUDE_CODE_SESSION_ID`. On a clear, `CLAUDE_CODE_SESSION_ID` is set to a new id. My inference: the Bash tool's process sees the session id. Not observed; premise P3 checks it.
+  - I ran no command beyond reads and greps.
+
+  **Steelman of the idea.** The guard's closed list is only as good as the root it is matched against. The hook's `cwd` is where the parent session was launched (L43). That can be `$HOME`, which turns the read confinement into "read the whole home directory". Or it can be the dev checkout while the work is in a worktree, which aims the page at the wrong tree. A root that the launcher sets on purpose, before the launch, checked once against git, and keyed to the session, removes the guess. It works the same for a worktree and for the main checkout, and it gives the parent one explicit step whose failure stops the launch rather than misdirecting it. The glob WARNING is the same kind of gap. Refusing every metacharacter that could build an alternative closes it without depending on how Glob expands patterns, which this design does not control.
+
+  **W4: the armed root. Options for the key of the state.**
+  - (a, chosen) The Claude Code session. The arm verb reads `CLAUDE_CODE_SESSION_ID` from its environment, and the guard reads `session_id` from the hook input. Two sessions never collide. A clear starts a new session id, so it leaves nothing armed, which blocks (fails safe).
+  - (b) The repository (its git common dir). Two workflows in worktrees of the same repository would collide. And the guard would have to find the repository from the hook's `cwd`, which is the value this round removes.
+  - (c) The agent (`agent_id`). It is not known before the launch, so the parent cannot arm it.
+  - (d) An Agent-tool settings hook that arms from the launch's input. It is a settings family, with install, status and goldens. The owner chose an engine command that the foreman runs.
+
+  **Strongest counter-argument to (a).** The design rests on two facts not yet observed: that the Bash tool's environment carries `CLAUDE_CODE_SESSION_ID`, and that a sub-agent's hook input carries the same id as `session_id`. Any process with Bash in the session (the parent, a builder) can re-arm another git toplevel. So the root is still only as trustworthy as the launcher, as in L39 and L42. The classifier itself cannot re-arm, because its Bash is limited to the script. The state adds a failure mode: a forgotten arm, or a run longer than the expiry, blocks the classifier. Tradeoff accepted: one more verb and per-session state, in exchange for a root that is checked against git, independent of the launch directory, and closed by default. If P3 fails, the domain and the store of T3c-a3 still stand, and only the source of the session key in T3c-a4 and T3c-a5 is redesigned in a new shaper entry.
+
+  **Premise P3, checked by the prototyper before the builder starts T3c-a3.** The setup and limits are those of L41 run 3 and L43: a scratch project at the trusted path, created and deleted, `claude -p --model haiku --no-session-persistence --debug hooks`, no write to `~/.claude`, no settings change, nothing remote.
+  - Q9: the parent runs `printenv CLAUDE_CODE_SESSION_ID` in its Bash. Expected: a non-empty id.
+  - Q10: the parent then launches a project agent `probe-session`, whose frontmatter hook writes its stdin to a log and exits 0, and the agent runs `true`. Expected: the hook input's `session_id` equals Q9's value.
+  - Q11: a second launch of `probe-session` in the same run. Expected: the same `session_id`.
+  - Q12 (recorded, not required): the `session_id` of a PreToolUse hook on the parent's own Bash call.
+  - If Q9 or Q10 fails, the builder starts only T3c-a3 (domain and store, which do not depend on the key's source). A shaper then redesigns the key before T3c-a4.
+
+  **T3c-a3 design: the armed root and its store** (commit `feat(agents): add the armed root of the classifier guard`, `Risk: 2`).
+  - Domain, a new file `engine/classifierguard/armed.go` (still pure: it imports only `path`, `strings`, `strconv` and `time`).
+    - `const TTL = 60 * time.Minute`, `const Skew = time.Minute`, `const MaxRootBytes = 4096`.
+    - `const ClearLine = "clear"`.
+    - `func ArmLine(root string, at time.Time) string` returns `arm <unix seconds> <root>`.
+    - `func CheckArmRoot(root, home string) error` refuses, with an error that names the rule and quotes the root:
+      - an empty root, a relative one, `/`, or an unclean one (`path.Clean(root) != root`);
+      - one longer than `MaxRootBytes`;
+      - one holding a control character (below 0x20, or 0x7f), `"`, `$`, a backtick or `\`, because no script call could quote it (L42);
+      - one equal to `home`, or an ancestor of `home` (`strings.HasPrefix(home, root+"/")`);
+      - any root at all when `home` is not a clean absolute path.
+    - `func ArmedRoot(last string, now time.Time) (string, bool)` reads the last line of the store.
+      - It gives `(root, true)` only for exactly `arm <digits> <root>`, where the digits are 1-19 ASCII digits and the root passes `CheckArmRoot`'s home-independent rules.
+      - `at <= now + Skew`, and `now < at + TTL`.
+      - Every other line gives `("", false)`: `""`, `clear`, a malformed line, an expired arming and one dated in the future.
+  - Adapter, a new package `engine/classifierguard/armstore` (ring `archguard.Adapter` in `engine/architecture_test.go`). It mirrors `review/fsstore.Asked` and the prompt store.
+    - `func New(stateHome string) (Store, error)` makes the checks of `statestore.RequireStore`.
+    - `func (Store) Append(session, line string) error` calls `statestore.AppendLine(dir, "armed", line)`.
+    - `func (Store) Last(session string) (string, error)` calls `statestore.LastLine` with a window of `MaxRootBytes + 64`. A missing directory or file gives `"", nil`, and makes nothing.
+    - `dir` is `<state home>/labdrian/classifier-root/<sha256 hex of the session>`, made 0700, with the file 0600, and no link followed (the statestore rules).
+    - An empty session is an error in both methods, and nothing is read or written.
+    - No cleanup: one small file for each session, as the review stop-hook and the prompt store keep.
+  - Not changed: `Decide`, the verb `roles classifier-guard`, `hookwire`, and any doc. The guard still uses the hook's `cwd` until T3c-a5.
+
+  **T3c-a3 tests**, RED first. Each mutation is applied to a backup copy, the focused tests are run, the backup is copied back and checked with `cmp` (as in L40 and L44). The builder reports the failing test names.
+  - A1 `TestCheckArmRootRefusesWhatCannotBeAClassifierRoot`, a table with `home` `/home/user`.
+    - Allowed: `/w/repo`, `/home/user/src/repo`, `/home/us` (a prefix of home's text, not its ancestor) and `/w/my repo`.
+    - Refused:
+      - `""`, `repo`, `/`, `/w/repo/`, `/w/../w/repo` and `/w//repo`;
+      - `/home/user` and `/home`;
+      - `/w/re"po`, `/w/re$po`, a backtick, `/w/re\po`, `/w/repo` plus a newline, and `/w/` plus 4,096 bytes of `a`;
+      - `/w/repo` with `home` `""`, and with `home` `rel`.
+    - Ma1: the ancestor test dropped. A1 fails on `/home`.
+    - Ma2: the equality with home dropped. A1 fails on `/home/user`.
+    - Ma3: the ancestor test made a plain prefix (`HasPrefix(home, root)`). A1 fails on `/home/us`.
+    - Ma4: the quote class dropped. A1 fails on the `"` row.
+  - A2 `TestArmedRootReadsOnlyAFreshArmLine`, with `t` fixed.
+    - `ArmLine("/w/repo", t)` gives `/w/repo` at `t`, at `t+59m59s`, and at `t-59s` (an arming within the skew).
+    - It gives nothing:
+      - at `t+60m`, and at `t-61s`;
+      - for `""`, `clear`, `arm x /w/repo`, `arm -1 /w/repo`, `arm  1 /w/repo`, `ARM 1 /w/repo`, `arm 1`, `arm 1 repo`, `arm 1 /w/repo/`, `arm 1 /w/re"po` and `arm 99999999999999999999 /w/repo`.
+    - Ma5: the expiry test dropped. A2 fails at `t+60m`.
+    - Ma6: `now < at+TTL` made `<=`. A2 fails at exactly `t+60m`.
+    - Ma7: the future test dropped. A2 fails at `t-61s`.
+    - Ma8: the root check dropped from the parse. A2 fails on `arm 1 /w/repo/`.
+  - A3 `TestArmLineRoundTrips`: for `/w/repo`, `/w/my repo` and `/home/user/src/r-1`, `ArmedRoot(ArmLine(r, t), t)` is `(r, true)`.
+  - S1 `TestStoreKeepsTheLastLineOfEachSession` (`armstore`, over `t.TempDir()`).
+    - `Last` of a session never written gives `""`, nil, and makes no directory.
+    - After `Append("s1", a)` and `Append("s1", b)`, `Last("s1")` is `b`, and `Last("s2")` is `""`.
+    - The file is `<home>/labdrian/classifier-root/<sha256("s1") hex>/armed`, mode 0600, in a directory of mode 0700.
+    - An `armed` that is a symbolic link makes `Last` fail.
+    - An empty session makes `Append` and `Last` fail, and writes nothing.
+    - Ms1: the session is used unhashed in the path. S1 fails on the path.
+    - Ms2: the empty-session check dropped. S1 fails on that row.
+  - Checks, in `engine/`: `go test ./classifierguard/... -count=1`, `go test . -run Architecture -count=1`, `gofmt -l classifierguard/` and `go vet ./classifierguard/...`.
+
+  **T3c-a4 design: the verb `roles classifier-arm`** (commit `feat(agents): arm the classifier's root with roles classifier-arm`, `Risk: 2,3`). It starts after T3c-a3, and after P3 passes Q9 and Q10.
+  - New file `engine/cmd/roles_classifier_arm.go`, dispatched in `engine/cmd/roles.go` beside `classifier-guard`, as `labdrian roles classifier-arm` (forwarded by `cmd_roles`).
+  - Usage: `classifier-arm --root <dir>` or `classifier-arm --clear`. Anything else exits 1 with the usage on stderr: no flag, both flags, a flag twice, an unknown flag, or an extra argument.
+  - `runRolesClassifierArm(args []string, env classifierArmEnv, stdout, stderr io.Writer, exit func(int))`. `classifierArmEnv` holds the injected ports:
+    - `getenv func(string) string` (production: `os.Getenv`);
+    - `now func() time.Time` (production: `time.Now`);
+    - `toplevel func(root string) (string, error)` (production: `gitprov.Observe(root)` and its `Toplevel`);
+    - `store func() (armStore, error)` (production: `statestore.Home`, then `armstore.New`), where `armStore` is a two-method interface in `cmd` (`Append`, `Last`).
+  - `--root <dir>`, in order. The first failure exits 2 with one stderr line, `roles classifier-arm: <what>; nothing is armed.`, and nothing is written.
+    - The session is `getenv("CLAUDE_CODE_SESSION_ID")`. It must be non-empty, at most 256 bytes, with no control character. Otherwise the line says that the verb runs only inside a Claude Code session.
+    - `CheckArmRoot(root, getenv("HOME"))`.
+    - `toplevel(root)` must succeed and return exactly `root`. A subdirectory, a path through a symbolic link, a bare repository or a non-repository is refused, and git's error is made one line.
+    - `store.Append(session, ArmLine(root, now()))`.
+    - On success it exits 0, with one stdout line: `classifier root armed for this session: <root> (until <RFC 3339 UTC>)`.
+  - `--clear` needs the session, as above. It appends `ClearLine` and prints `classifier root cleared for this session`, exit 0. It exits 0 also when nothing was armed.
+  - Exit codes: 0 armed or cleared, 1 usage error, 2 refused (no session, root refused, store failure).
+  - Docs. Each names `--root`, `--clear`, `CLAUDE_CODE_SESSION_ID`, "git", "60 minutes" and the exit codes, and says that the parent runs it before launching the classifier and clears it after.
+    - An `engine roles classifier-arm --root <dir> | --clear` block in `engine/cmd/usage.go`, right after the `classifier-guard` block.
+    - A `classifier-arm --root DIR | --clear` entry in `bin/lib/usage.sh`, right after the `classifier-guard` entry.
+    - A `gentle-ai-overlay roles classifier-arm` section in `README.md`, right after the `classifier-guard` section.
+    - One `CHANGELOG.md` line.
+  - C2 is edited so that the `classifier-guard` sections end at the new markers: `engine roles classifier-arm --root` (engine usage), `classifier-arm --root DIR` (wrapper) and `gentle-ai-overlay roles classifier-arm` (README). Rule for T3c-a5's texts: the guard's docs name the arm verb as `labdrian roles classifier-arm`, with no flags, so that no marker appears early.
+
+  **T3c-a4 tests**, RED first, with mutations as in T3c-a3.
+  - V1 `TestRolesClassifierArmArmsAndClearsTheRootOfTheSession`. It uses fake ports: a map store, a fixed clock, `toplevel` returning its input, and `getenv` with a session `s1` and `HOME` `/home/user`.
+    - `--root /w/repo` exits 0 with the one stdout line. The store's last line for `s1` is `ArmLine("/w/repo", now)`.
+    - `--clear` exits 0, and the last line is `clear`.
+    - Mv1: `--clear` writes nothing. V1 fails.
+  - V2 `TestRolesClassifierArmRefusesAndArmsNothing`. Each row exits 2 with one stderr line holding `nothing is armed`, and the store is left unchanged:
+    - no session;
+    - a session holding a newline;
+    - root `/home/user`;
+    - root `/w/repo/`;
+    - `toplevel` returning `/w` (the root is a subdirectory);
+    - `toplevel` failing;
+    - the store failing.
+    - Usage rows exit 1: no flag, `--root` with `--clear`, `--root` twice, `--root` with no value, and `--x`.
+    - Mv2: the session check dropped. V2 fails on the no-session row.
+    - Mv3: the toplevel equality dropped. V2 fails on the `/w` row.
+  - V3 `TestRolesClassifierArmAcceptsOnlyARealGitToplevel`, with production `toplevel` and the store over `t.TempDir()`.
+    - A temporary repository is made with `git init` and one commit, with `GIT_*` removed from the environment.
+    - Its toplevel exits 0.
+    - Its subdirectory `sub` exits 2.
+    - A directory with no repository exits 2.
+    - It is skipped when `git` is not on `PATH` locally, and fails without it on CI, as the existing git tests of `engine/cmd` do.
+  - C5 `TestDocsDescribeTheClassifierArm`: the three sections cut with `docSection`, from the new markers to `engine shaper assess`, `review <verb>` and `overlay --help`, each hold `classifier-arm`, `--root`, `--clear`, `CLAUDE_CODE_SESSION_ID`, `git` and `60 minutes`. The CHANGELOG line names `classifier-arm`.
+    - Mv4: the README section heading is cut to `roles classifier-ar`. C5 fails.
+  - Checks, in `engine/`: `go test ./cmd/ -run 'Classifier|Docs|Usage' -count=1`, `gofmt -l cmd/`, `go vet ./cmd/` and `bash -n ../bin/lib/usage.sh`.
+
+  **T3c-a5 design: the guard on the armed root, and glob patterns** (commit `fix(agents): judge the classifier against its armed root and refuse glob metacharacters`, `Risk: 2`).
+  - `engine/hookwire/scoped.go`:
+    - `session_id` becomes an expected top-level key. It is read strictly, like `cwd`, into `ScopedToolCall.Session`.
+    - The comment on `Cwd` says that it is the session's working directory, which is where the parent session was launched (L43), and not the classifier's root (`-5` F3).
+  - Domain (`engine/classifierguard`):
+    - `Call` gains `Cwd`.
+    - Grep and Glob with an empty `Path` are allowed only when `Cwd == Root`.
+    - `safePattern` becomes an allowlist: a non-empty pattern of at most 512 bytes, each byte in `A-Z`, `a-z`, `0-9`, `.`, `_`, `-`, `/`, `*` or `?`, not starting with `/`, and holding no `..`. So `{`, `}`, `[`, `]`, `,`, `!`, `\`, `~`, `$`, a space and every non-ASCII byte are refused (W5). The comment says why: whether Glob expands braces or brackets into absolute alternatives is not checked, and `-4`'s probe found none, but the guard does not depend on that.
+    - A sixth reason `ReasonUnarmed`: "labdrian classifier guard: no root is armed for this session, or its arming expired; the parent runs labdrian roles classifier-arm --root <git toplevel> before launching the classifier. " + `allowed`.
+    - `allowed` now says that the root is the one armed by `labdrian roles classifier-arm` for the session. It no longer says "working directory". It adds that Grep and Glob take an absolute `path` within the root, and a relative pattern of letters, digits, `.`, `_`, `-`, `/`, `*` and `?`.
+    - `ReasonRoot` keeps its job, for an armed root that is not clean.
+    - A new pure function `func Judge(armedLast, session string, now time.Time, c Call) Verdict`. An empty session, or `ArmedRoot(armedLast, now)` not ok, gives `ReasonUnarmed`. Otherwise it gives `Decide` with `c.Root` set to the armed root.
+    - The package comment says the root is the armed one.
+  - The verb `roles classifier-guard`:
+    - After the decode, an empty `Session` skips the store.
+    - Otherwise it reads `store.Last(Session)`. A store error exits 2 with one line, `roles classifier-guard: cannot read the armed root (...); this tool call is blocked.`
+    - It calls `Judge(last, Session, now(), Call{..., Cwd: call.Cwd})`. The root never comes from `cwd`.
+    - Its ports (state home, store and clock) are injected as in T3c-a4, through `runRolesClassifierGuardWith`. The dispatcher passes the production ones.
+    - The file comment says the root is the armed one.
+  - Docs:
+    - The `classifier-guard` block of `usage.go`, the `usage.sh` entry, the README section and the CHANGELOG line now say that the root is the one armed for the session by `labdrian roles classifier-arm`. They say it is read by the hook input's `session_id`, that it expires after 60 minutes, that nothing armed blocks every call, that Grep and Glob need a `path` unless the session's `cwd` is the root, and that Glob patterns are limited to the allowlist.
+    - None of these texts says "launched in" or that the root is the working directory (`-5` F3, `-3` F3). The usage and README texts keep "exit 2", "repeated key" and "missing binary".
+    - The README's Limits gain: any process with Bash in the session can re-arm another git toplevel, and one classifier at a time per session.
+  - Not changed: `DecodeToolCall`, any other guard, `engine/settings`, `engine/runtime`, `engine/agentgen`, `roles/` and `agents/`.
+
+  **T3c-a5 tests**, RED first, with mutations as above.
+  - H1, extended: a repeated `session_id`, the key `Session_ID`, and `session_id` set to `1` are errors.
+    - Mh1 and Mh2 (L42) still fail H1 on the new rows.
+  - H2, extended: every row carries `session_id`, and `Session` reads as given.
+    - Mh5: `Session` read from `agent_id`. H2 fails.
+  - D1, edited and extended. Every row now carries `Cwd`.
+    - Allowed: Grep and Glob with no path when `Cwd` is `/r`; Glob with `docs/**/*.md`, `*.md`, `docs/wiki/?.md` and `docs/wiki/evidence.md`.
+    - Blocked with `ReasonRead`:
+      - Grep and Glob with no path when `Cwd` is `/elsewhere`;
+      - Glob with each of these patterns: `{/etc/*,x}`, `{~/.ssh/*,a}`, `docs/{a,b}.md`, `[/]etc/*`, `docs/[ab].md`, `docs/\*.md`, `!x`, `docs/a,b`, `docs/é.md`, `docs/a b.md`, `""`, and 513 bytes of `a`.
+    - Mw17: `{` and `}` added to the allowlist. D1 fails on the brace rows.
+    - Mw18: `[` and `]` added. D1 fails on the bracket rows.
+    - Mw19: an empty path allowed whatever the `Cwd`. D1 fails on the `/elsewhere` rows.
+  - D3 `TestJudgeBlocksEveryCallWhenNothingIsArmed`, with `t` fixed and Read on `/r/x`.
+    - The session `""`, the last line `""`, `clear`, an arming at `t-61m`, and `arm 1 /r/` each give `ReasonUnarmed`.
+    - `ArmLine("/r", t)` gives an allow.
+    - With `Cwd` `/elsewhere` and `ArmLine("/r", t)`: Read on `/elsewhere/x` and Write on `/elsewhere/docs/wiki/evidence.md` are blocked, and Write on `/r/docs/wiki/evidence.md` is allowed.
+    - Mw20: `Judge` takes the root from `c.Cwd`. D3 fails on the `/elsewhere` rows.
+  - D2, edited: six reasons, each one line, each with "speed bump", and each with "armed" in place of "working directory". `ReasonUnarmed` holds `labdrian roles classifier-arm`. The script forms still quote `ScriptPath`.
+    - Mw21: `ReasonUnarmed` drops `classifier-arm`. D2 fails.
+  - C1, edited. A `t.TempDir()` state home and a fixed clock are injected, and the store is armed with `/r` for session `s1` before the rows.
+    - Read on `/r/x` with `session_id` `s1` and `cwd` `/elsewhere`: exit 0, no output.
+    - The same with session `s2`, and the same with no `session_id`: exit 2, stderr exactly `ReasonUnarmed` plus a newline.
+    - After `--clear` for `s1` (through the T3c-a4 verb): exit 2 with `ReasonUnarmed`.
+    - An `armed` file replaced by a symbolic link: exit 2, one line holding `cannot read the armed root`.
+    - The `failures` rows get `session_id` `s1`. The "cannot decode" assertion finds its row by the name `a repeated command, the last allowed` through a loop, and fails with `t.Fatalf` when no row has that name (`-5` F4).
+    - Mw22: the verb passes `call.Cwd` as the root. C1 fails on the `/elsewhere` row.
+    - Mw23: the named row is renamed. C1 fails with "no row".
+  - C2, edited:
+    - The guard's usage block and README section each hold `exit 2`, `repeated key`, `missing binary`, `labdrian roles classifier-arm`, `session_id` and `60 minutes`.
+    - None of the guard's usage block, README section, `usage.sh` entry or CHANGELOG line holds `launched in`, `fails closed` or `working directory`.
+    - Mw24: the README section says "the directory the classifier was launched in" again. C2 fails.
+  - Checks, in `engine/`:
+    - `go test ./hookwire/ ./classifierguard/... ./cmd/ -count=1`;
+    - `gofmt -l hookwire/ classifierguard/ cmd/`;
+    - `go vet ./hookwire/ ./classifierguard/... ./cmd/`;
+    - `bash -n ../bin/lib/usage.sh`;
+    - once before the commit, `go test ./... -count=1`.
+
+  **T3c-b changes to L39 and L42.**
+  - Body line 8: L42's sentence is replaced by "The root is the one this prompt names, armed for this session by the parent: a hook blocks the page, the script and every read outside it, and blocks every call when nothing is armed, so when a call is blocked, report the reason and stop. Give Read an absolute path under the root, and Grep and Glob an absolute `path` under the root with a relative pattern of letters, digits, `.`, `_`, `-`, `/`, `*` and `?`." It is not a Rules line, so K1's count of 8 Rules lines stands. This folds the third finding of `-2`.
+  - `roles/classifier/PROVENANCE.md` lists the changed sentence under Changed.
+  - C3: the dispatcher run on a Read input with no session armed exits 2 with stderr exactly `ReasonUnarmed` plus a newline. That proves the verb is dispatched, since an unknown verb exits 1. It no longer expects exit 0.
+  - C4 and the hook command of L42 are unchanged.
+
+  **Order.** P3 runs first. Then T3c-a3, T3c-a4 and T3c-a5 are built in that order, each reviewed in a chain from the last reviewed head (`f1f0fa37` for T3c-a3), with WARNINGs fixed before the next. Then T3c-b. W4 and W5 are closed only once T3c-a5 is committed, so delivery waits for it.
+
+  **Forecast** (shaper estimate, no actuals, low confidence; authored lines, without generated files or the document):
+  - T3c-a3: 255-315. Domain 70-85, A1-A3 100-120, store 50-60, S1 35-45, ring 1.
+  - T3c-a4: 200-245. Verb 75-90, dispatch 3, V1-V3 80-100, docs 20-25, C5 20-25, C2 marker edits 3.
+  - T3c-a5: 185-255. Decoder 4, H1 and H2 10, domain (Cwd, allowlist, `ReasonUnarmed`, `Judge`) 35-45, D1-D3 45-60, verb 20-30, C1 50-70, docs 25-30, C2 10.
+  - T3c-b: L42's 300-405, plus 2 for the body sentence and 0-5 for C3. If it goes past 400, the cut of L42 applies (K5 and C3 into T3c-c).
+  - If T3c-a3 goes past 400, the builder moves the store and S1 into T3c-a4 and reports `partial`. If T3c-a4 does, the docs and C5 move into T3c-a5. If T3c-a5 does, the glob allowlist and its D1 rows move into a commit T3c-a6 right after.
+
+  **Risk expectation.**
+  - T3c-a3: item 2. The guard's state and its rules are added, but nothing reads them yet.
+  - T3c-a4: items 2 and 3. A new verb, whose usage and exit codes are a contract that T4's role-chain step consumes.
+  - T3c-a5: item 2. The guard's decision changes source.
+  - T3c-b: items 2 and 5, as in L39.
+
+  **Risks, not decided here:**
+  - P3 is unverified. That Bash sees `CLAUDE_CODE_SESSION_ID`, and that the hook's `session_id` is the same id, is inferred from the binary's text.
+  - The expiry of 60 minutes and the skew of one minute are assumptions, and the owner may change them. A classifier run longer than the expiry is blocked mid-run, which fails safe.
+  - Any process with Bash in the session can re-arm another git toplevel, and an arming made before a parent's crash lasts until it expires.
+  - One classifier at a time per session: a second arming replaces the first. T4 must launch them one after the other.
+  - The state home is resolved from `XDG_STATE_HOME` or `HOME` in both the Bash and the hook process. If the two environments differ, the guard sees nothing armed and blocks.
+  - `gitprov.Observe` needs a commit at HEAD, so a repository with no commit cannot be armed.
+  - Grep's `glob` filter is still unchecked; L42 judged that it only narrows the files under `path`. `-4` found no escape through it.
+  - The guard still matches text. Symbolic links under the root, secrets in files under the root, and a hand-edited deployed agent file stay open, as L42 records.
+  - The T4 line is not edited here. Its use of the arm verb is recorded in S5.
+  - No product decision is open. The owner settled the root's source above.
+- **L46** (2026-11-23, shaper): a re-evaluation of the remaining tasks against native Claude Code features and Anthropic's harness-engineering guidance, before anything more is built. It designs no task. No task's scope, order, `shaped:` marker or box changed, and no owner decision changed. Changes to the document: this entry, and one note each in S5, S13 and S14 pointing at the owner questions below.
+
+  **Owner instruction, verbatim, 2026-11-23, relayed by another session of the owner:** "enviarle una instruccion a la session actual de revaluar contra plugins antes de construir y revisar a fondo las guias de claude code ademas de las best practices harness engineering". **Owner's doubt, verbatim:** "que de lo que se plantea hacer labdrian-sdd-overlay y playbook ya hace claude code y estamos haciendo un retrabajo".
+
+  **Sources read.**
+  - The digest `/tmp/claude-1000/-home-labdrian-labdrian-sdd-overlay/45673332-5a42-429f-889a-50c9d8bcb1fc/scratchpad/claude-code-docs-digest.md`, fetched 2026-11-23. It is in a session scratchpad, so it may not last. Quotes below are as the digest gives them. The digest itself names these gaps:
+    - the tail of the sub-agents page was read only as a summary;
+    - the tails of the skills, permission-modes and permissions pages were summarized;
+    - plugins/loading, settings-reference and plugins/install were not fetched.
+  - This document up to `## Log`, L6, L13 (forecasts), and L40 to L45.
+  - memorycard #6195 (project `labdrian-sdd-overlay`).
+  - Code in this worktree: `engine/gate/gate.go` lines 36-272 (`Rewrite`, `appendInstructions`), `engine/projection/app/hook.go` lines 87-219, `engine/settings/doc.go` (the owned families, which include a `permissions.deny` rule) and `engine/runtime/opencode_agents.go`.
+  - Observed in this shaper's own launch, 2026-11-23, with the Claude Code version not recorded: its context held `~/.claude/CLAUDE.md` and `~/AGENTS.md`. Separately, it held a block headed "SubagentStart hook additional context" with a "# Contract" of rules R5 to R12. So a sub-agent received both CLAUDE.md and a contract injected by a hook.
+  - I ran no command beyond reads, greps and codegraph queries.
+
+  **Steelman of re-evaluating against native features.** Anthropic's own guidance tells us to remove what the model or the harness no longer needs:
+  - "find the simplest solution possible, and only increasing complexity when needed" (https://www.anthropic.com/research/building-effective-agents);
+  - "every component in a harness encodes an assumption about what the model can't do on its own" (https://www.anthropic.com/engineering/harness-design-long-running-apps);
+  - "if you have hooks for things that are only preferences, delete them and let Claude decide" (https://code.claude.com/docs/en/best-practices).
+
+  A native mechanism we do not write is one we do not review, test or carry through upgrades. Wherever Claude Code itself enforces a limit (a sub-agent's `tools` list, permission rules), building our own enforcement of that limit is rework.
+
+  **Where native features stop** (the digest's "Not native" list): an enforced phase order with a task document; per-commit review tracking or stored findings; a learning loop that turns repeated review findings into ranked rules; a decision wiki; memory supersede or archive; per-subagent path-scoped permissions (only hooks provide these). The core of this feature (S2 to S8: the stored findings feed, the evidence store, classification, consolidation, rule outcomes) is on that list. So the re-evaluation narrows mechanisms. It does not narrow the loop.
+
+  **Verdicts.**
+
+  | Task | Verdict | Native evidence (quote, URL) or measured fact | What remains |
+  |------|---------|-----------------------------------------------|--------------|
+  | T10 | keep as designed | Not native: "a decision wiki". The absorbed pieces are skills, already a native format (https://code.claude.com/docs/en/skills). | As designed. Two points stay open. Whether a skill named `doctor` collides with the built-in `/doctor` (https://code.claude.com/docs/en/memory names `/doctor prompt-audit`) is unverified: https://code.claude.com/docs/en/skills (tail summarized). The commit-check and merge-step hooks are to be checked against "delete them" for preferences; their content was not read in this pass. |
+  | T11 | keep as designed | A plugin "installs and loads as one unit" (https://code.claude.com/docs/en/plugins). Against using it here: "plugin subagents don't support the `hooks`, `mcpServers`, or `permissionMode` frontmatter fields" (https://code.claude.com/docs/en/sub-agents). No `settings` component was found, so the `permissions.deny` rule that `engine/settings` installs (doc.go lines 13-14) cannot ship in a plugin. `apply` already deploys the T2 and T3 pieces (T20, T3 done), and `engine/runtime` deploys to OpenCode too (opencode_agents.go). | As designed. Shipping trysm as a plugin at its launch is a separate product decision (Risks). |
+  | T12 | narrow to the gap | "Hook entries merge across settings levels rather than replacing each other" (https://code.claude.com/docs/en/hooks): nothing native removes duplicates, so the deduplication is needed. "use the permission system rather than a hook to enforce a hard allow or deny" (https://code.claude.com/docs/en/hooks-guide). Permission rules `Tool(specifier)` are ordered deny, ask, allow; Bash rules see shell operators; list keys combine across files (https://code.claude.com/docs/en/permissions, https://code.claude.com/docs/en/settings). | The commit check and the review hold stay owned hook families, since both read review state. Ask-before-delivery becomes `permissions.ask` rules that `engine/settings` writes. How `ask` behaves in auto, dontAsk and bypassPermissions is unverified: https://code.claude.com/docs/en/permission-modes (tail summarized). Owner question 2. |
+  | T13 | narrow to the gap | "Treat CLAUDE.md as the place you write down what you'd otherwise re-explain" and "target under 200 lines per CLAUDE.md file" (https://code.claude.com/docs/en/memory). Text injected by a hook binds no more than CLAUDE.md does: "Claude treats CLAUDE.md files and auto memory as context. They aren't enforced configuration." Observed: a sub-agent receives CLAUDE.md (Sources). | The static merged text goes into CLAUDE.md. Hooks keep only text computed per workflow, such as `OnSessionStart`'s memory instructions (hook.go lines 151-165). The word check becomes a lint on that file. `/doctor prompt-audit` flags contradictions but sets no budget, so OD-8 still applies. Owner question 3. |
+  | T7 | keep as designed | Auto memory is machine-local, and only "the first 200 lines or 25KB of `MEMORY.md`" load at start. Not found: supersede, archive, expiry, or a shared store (https://code.claude.com/docs/en/memory). | As designed (20-100 lines, L13). |
+  | T5 | keep as designed | On SubagentStart, `additionalContext` is added "at the start of its conversation, before its first prompt", with matchers on agent type (https://code.claude.com/docs/en/hooks). This is native, and it is observed in this install (Sources). gate-task's `Rewrite` (gate.go lines 91-120) is a PreToolUse rewrite that already runs on every Agent call. L6 (d) chose it so that no hook family is added (R-006). | As designed. A SubagentStart family would add a family in `engine/settings`, with install, status and goldens (the cost L45 (d) names), and would save no lines for a target that is Claude-only (OD-7). Its gains are fewer changes to the `contract-golden` tests and compatibility with plugin packaging. Recorded as the alternative, with no question asked. |
+  | T3c | narrow to the gap | "Give a custom subagent in `.claude/agents/` only `tools: Read, Grep, Glob`. Now it's a reviewer that can't edit anything, and that limit is enforced by Claude Code rather than requested in a prompt" (https://code.claude.com/docs/en/best-practices). No native per-subagent path limit exists; the docs' own way is a PreToolUse hook in the frontmatter (https://code.claude.com/docs/en/sub-agents). So T3c-a and T3c-a2 follow the documented path. But that hook is skipped when the folder is not trusted (#6195, L41) and is dropped for plugin agents. The hook's `cwd` is the launch directory, and the Agent tool takes no `cwd` (L43), which is what forced the armed root of L45. Permission rules are session-wide; no per-subagent rule was found. | The classifier gets `tools: Read, Grep, Glob`, a limit Claude Code enforces and that is not on the list of fields plugins drop. It returns the Evidence rows in its envelope, and the parent appends them and runs `evidence.sh check`. Dropped: T3c-a3, a4 and a5 (640-815 authored lines forecast in L45), plus the hook command, C3 and C4 of T3c-b. T3c-a and T3c-a2 (374 + 400 added lines, L40, L44) would be unused. Kept: R5-F2 (the licence comments) and R2-F1 (the pins). This reverses the owner's L45 choice, so it goes to the owner as question 1. |
+  | T4 | keep as designed | It uses the existing `labdrian review stop-hook` (a native Stop hook). The Stop hook's cap of 8 consecutive blocks (https://code.claude.com/docs/en/hooks) does not conflict with asking once per session and commit. | As designed. Its arm and clear steps (S5, L45) follow question 1: if the owner accepts it, they become "append the returned rows, run `check`". |
+  | T6 | keep as designed | Not native: memory supersede or archive, and a loop from repeated findings to rules. The native counterpart is manual: "Add to it when: Claude makes the same mistake a second time" (https://code.claude.com/docs/en/memory). | As designed. |
+  | T16 | keep as designed | `/code-review`: "Claude reports the findings as text in the reply." No findings file is written (https://code.claude.com/docs/en/code-review-local). Stored findings are the loop's input (S3). | As designed. |
+  | T17 | keep as designed | Same as T16. Counting exposure is not native. | As designed. |
+  | T18 | narrow to the gap | The same best-practice quote as T3c: a sub-agent whose tools are Read, Grep and Glob is read-only by enforcement. The S14 draft gives the explorer `Bash`, with a read-only limit enforced only by the prompt (S14 note (a)). | The role as the owner decided it (L12), with no `Bash`, keeping the CodeGraph and memorycard read tools. Whether a built-in Explore sub-agent already covers it is unverified: https://code.claude.com/docs/en/sub-agents (built-in sub-agents; tail read as summary). Owner question 4. |
+  | T14 | keep as designed | `model` and `effort` are native frontmatter fields (https://code.claude.com/docs/en/sub-agents). `roles.go` already generates them, so reconciling `models.conf` into it is the native path. | As designed. |
+  | T15 | keep as designed | Nothing native generates agents across several runtimes. | As designed. |
+  | Review chain (not a task here; T8 and T9 were outside this pass) | keep | `/code-review` stores no findings. It can be overridden "by a skill named code-review or a reviewer subagent" (https://code.claude.com/docs/en/code-review-local). | No change. Pointing `/code-review` at our reviewer is a possible entry point, not proposed here. |
+
+  **Recommended option:** keep the loop's core, and narrow only the mechanisms that Claude Code already enforces: T3c, T12, T13 and T18. Accepted tradeoff: if the owner accepts question 1, about 774 committed and reviewed lines (T3c-a, T3c-a2) lose their use, and the parent session takes on the append.
+
+  **Strongest counter-argument.** The evidence is partial and tied to versions. The digest names gaps on exactly the pages that decide the details (sub-agents, permission modes). The measured facts are for Claude Code 2.1.330, and L41 left "behaviour after a Claude Code upgrade" unverified. Narrowing T3c also moves the one write of the loop into the parent, which no guard limits. A wrong but well-formed row then passes `check`. Under the current design, the classifier could not write any other file. Changing course now also needs a removal commit and its own review.
+
+  **Owner questions** (each one replaces or narrows a task; ordered by the work it saves; the foreman asks them one at a time):
+  1. T3c, the classifier's limits. Native: a sub-agent's `tools` list is enforced by Claude Code ("enforced by Claude Code rather than requested in a prompt", https://code.claude.com/docs/en/best-practices). That list still works if trysm ever ships as a plugin, while frontmatter hooks do not (https://code.claude.com/docs/en/sub-agents).
+     - Proposal: the classifier gets `tools: Read, Grep, Glob` and returns its Evidence rows. The parent appends them to `docs/wiki/evidence.md` and runs `evidence.sh check`.
+     - Dropped: the armed root (T3c-a3, a4 and a5, forecast 640-815 authored lines, L45), the hook command and its tests in T3c-b, and T4's arm and clear steps. The guard already committed (T3c-a and T3c-a2, 774 added lines) would be removed in one commit or left unwired.
+     - Kept: the licence comments and the body pins of T3c-b.
+     - Cost: it reverses your 2026-11-23 choice "Raíz fijada antes (Recommended)". The classifier can still read any file, as the reviewer can. A malformed row is caught by `check` in the parent, not prevented in the classifier.
+     - Recommendation: accept, because it is the simplest design that keeps the limit enforced.
+  2. T12, ask-before-delivery. Native: "use the permission system rather than a hook to enforce a hard allow or deny" (https://code.claude.com/docs/en/hooks-guide). `permissions.ask` rules such as `Bash(git push *)` see shell operators and combine across settings files (https://code.claude.com/docs/en/permissions).
+     - Proposal: ask-before-delivery becomes `permissions.ask` rules that `engine/settings` writes, as it already writes a deny rule. The commit check and the review hold stay hooks, since both read review state.
+     - Saves: one of T12's three hook families, out of a 300-700 line forecast. The saving is an estimate, with low confidence.
+     - Cost: how `ask` behaves in auto and bypassPermissions modes is unverified. The rules would also ask on every push, merge or PR, including the merges your standing rule allows without asking.
+     - Recommendation: accept, if you confirm that every delivery command should prompt.
+  3. T13, the session text. Native: CLAUDE.md is loaded every session ("Treat CLAUDE.md as the place you write down what you'd otherwise re-explain", https://code.claude.com/docs/en/memory). A sub-agent receives it, as observed in this launch. Text injected by a hook is no more binding ("They aren't enforced configuration").
+     - Proposal: the static merged text (the overlay rules and playbook's `rules.md` and Contract) goes into CLAUDE.md, within the native target of "under 200 lines". The playbook Contract stops arriving through a SubagentStart hook. Hooks keep only text computed per workflow, such as the memory instructions.
+     - Saves: the hook path of T13 (100-350 line forecast). The saving is an estimate, with low confidence.
+     - Cost: the word check becomes a lint on a file you can also edit by hand, and OD-8 (the budgets) still has to be answered.
+     - Recommendation: accept.
+  4. T18, the explorer's tools. Native: the same `tools: Read, Grep, Glob` enforcement.
+     - Proposal: the explorer keeps your L12 role and drops `Bash`. Its read-only limit is then enforced, not just asked for in the prompt.
+     - Saves: no lines; it gains enforcement.
+     - Cost: no `git log`, `git show` or `rg` through Bash. Grep, Glob, CodeGraph and memorycard remain.
+     - Whether a built-in Explore sub-agent already makes this role unnecessary is unverified, and it is not asked here, because you decided the role.
+     - Recommendation: accept.
+
+  **Risks, not decided here:**
+  - Product decision, open: whether trysm ships to Claude Code as a plugin at its launch (Phase 11). A plugin would drop the agents' frontmatter `hooks` and could not carry the `permissions.deny` rule. This pass keeps `apply`.
+  - Auto memory is on in this install (a `MEMORY.md` index was loaded into this launch), beside memorycard. Two memory stores exist outside this feature's scope.
+  - T3c-a3 is the next unit to be built. If question 1 is pending when a builder is launched, work on the armed root may be wasted.
+  - The digest lives in a session scratchpad. If it is cleaned up, the quotes above are the only record left.
+- **L47** (2026-11-23, shaper): re-shape of T3c, T4, T12, T13 and T18 after the owner's answers to the four questions of L46, on branch `feat/playbook-classifier-role` at head `f1f0fa37` (T3c-a2), workflow `merge-playbook-into-sdd-overlay-t3`. Changes to the document: S5 (intro, a new decision bullet, the T3 detail's Row, Body, Enforcement and script lines, the T3c detail), S6 (acceptance), S13 (three new bullets), S14 (the T18 note), and the lines of T3c, T4, T12, T13 and T18, whose `shaped:` markers move to this entry (from L45, L6, L6, L6 and L12). No other spec or task changed. L39, L42 and L45 stay in the Log unchanged; where this entry differs, this entry holds.
+
+  **Owner decisions, verbatim, 2026-11-23, relayed by the coordinator with each question.** Decided by the owner.
+  1. T3c. Asked whether to make the classifier read-only (tools Read, Grep, Glob; it returns its Evidence rows; the foreman appends them and runs `evidence.sh check`), noting that it reverses "Raíz fijada antes": "Solo lectura (Recommended)". This supersedes the armed-root decision of L45.
+  2. T12. Asked whether ask-before-delivery becomes `permissions.ask` rules instead of a hook (commit check and review hold stay hooks), with the cost that every push, merge or PR prompts, including merges the standing ok allows: "Reglas permissions.ask".
+  3. T13. Asked whether the static session text goes to CLAUDE.md (overlay rules plus playbook rules.md and Contract, under 200 lines) with hooks keeping only per-workflow text: "Fijo a CLAUDE.md (Recommended)".
+  4. T18. Asked whether to drop Bash from the explorer: "Sacar Bash (Recommended)".
+
+  **Superseded by this entry (append-only; L45 is not edited).** The armed root of L45: T3c-a3 (domain and store), T3c-a4 (`roles classifier-arm`), T3c-a5 (guard on the armed root, glob allowlist), premise P3, and T4's arm and clear steps. Also superseded: the guard wiring of L39 and L42 in T3c-b (the `guard` field, the frontmatter hook command, G3, C3, C4), and K5 in T3c-b (moved to T4b). None of these is built.
+
+  **Sources read.**
+  - The document up to `## Log`, L6, L12, L13, L21, L24, L28, L37 to L46.
+  - Review records in `odd/review-results/merge-playbook-into-sdd-overlay/`: `7704d28b9678-2.json`, `-5.json` and the claims of `-3.polisher.json`, `-4.polisher.json`; `f66e524dfbd1-3.json`, `-5.json`; `f1f0fa37ce5f-3.json`, `-5.json` and the claims of `-2.polisher.json`.
+  - memorycard #6196 (project `labdrian-sdd-overlay`): the same four answers, and the open plugin question.
+  - In the worktree: `roles/classifier/body.md` and `PROVENANCE.md` (whole); `engine/cmd/roles.go` (whole: the dispatch at lines 64-65, the comment at lines 6-7); `README.md` lines 1620-1655 (the guard section, 1631-1651); `engine/cmd/usage.go` lines 345-364 (the guard block, 355-362); `CHANGELOG.md` lines 1-32 (the guard line 30, under `## Unreleased`, `### Added`); `skills/_shared/evidence/evidence.sh` lines 1-80 (modes and exits) and `evidence-rules.md` (whole: 19 general kinds, levels 2 and 3); `skills/role-chain/references/models.md` line 6 (no `classifier`); `engine/settings/merge.go` (whole, through codegraph: `installedFamilies`, `mergeHooks`, `addClearanceDenyRule`, `removeHooks`); a grep of `engine/runtime` for `owner-rules.md` (`ownerrules.go` line 28, `codex_ownerrules.go` line 11, `core/config.go` line 33: Claude and Codex both write `instructions/owner-rules.md`, 45 lines).
+  - Grep over the worktree outside `odd/` for `classifierguard|DecodeScopedToolCall|ScopedToolCall|classifier-guard|ClassifierGuard`: 12 files (`CHANGELOG.md`, `README.md`, `bin/lib/usage.sh`, `engine/architecture_test.go`, `engine/classifierguard/classifierguard.go` and its test, `engine/cmd/roles.go`, `engine/cmd/roles_classifier_guard.go` and its test, `engine/cmd/usage.go`, `engine/hookwire/scoped.go` and its test). So `DecodeScopedToolCall` has no user but the guard. Line counts of the six Go files: 113, 144, 68, 117, 132, 97 (671).
+  - Observed in this shaper's own launch: its context held `~/.claude/CLAUDE.md`, `~/AGENTS.md`, and a "SubagentStart hook additional context" block with a "# Contract" of rules R5 to R12, as L46 observed. Its source (assumed: the hook of the playbook plugin installed from the marketplace) was not checked.
+  - I ran no command beyond reads, greps, a codegraph query and two memorycard reads.
+
+  **Steelman of the read-only classifier.** The guard of T3c-a and T3c-a2 and the armed root of L45 were about 1,400-1,600 authored lines (774 committed, 640-815 forecast) to make a text matcher hold a write-capable agent to one file and one script. A `tools` list does the same job for writes and commands, is enforced by Claude Code ("enforced by Claude Code rather than requested in a prompt", https://code.claude.com/docs/en/best-practices, as quoted in L46), survives plugin packaging, and costs one row field. The reviewer already works this way (`Read, Grep, Glob`). The page's one writer becomes the parent, which already runs `record`, `verify` and `check`, and which knows the worktree root, so the root problem of L42 to L45 disappears instead of being solved.
+
+  **How the classifier gets `index` and rule text it can no longer run. Options:**
+  - (a, chosen) The parent runs `index` and passes its stdout as `<index>`, plus the absolute paths `<page>` and `<rules>` (`$HOME` expanded by the parent). The classifier reads `<page>` and, for a general kind it picks from `<index>`, that kind's row of `<rules>`. Cost per launch: the 19-line index of today (L6) plus the reads it chooses. The index is the same text T5 gives the builder and the reviewer, so there is one source of it.
+  - (b) The parent passes `rule <kind>` output for every kind of the index. Deterministic and no table reading, but 19 rule texts of 40-130 words each (evidence-rules.md) go into every launch, whether used or not.
+  - (c) The parent passes only the two paths, and the classifier builds the level-2+ list itself from both tables. It then redoes `index`'s filter and order by reading, a second reading of what the script already computes.
+  - Why (a): it keeps the script as the one computer of the index and of `check`, while the rule text of the few kinds used is read where it lives. L37's reason for not reading `evidence-rules.md` was that the agent could not name its path without the home directory; the parent now names it. S4's "no second Go parse" is not touched: no code parses the format; the model reads a table, as it already reads the page's Kinds table in step 2.
+  - Strongest counter-argument to (a): the classifier now applies `rule <kind>`'s precedence (page first) and unescapes `\|` by reading, so a rule can be mis-copied into a new Kinds row, and `check` validates the shape, not the content. Tradeoff accepted: a mis-copied rule is visible in the diff of the commit that carries the page, which is reviewed (L6 counter-argument, OD-12 open), and (b)'s fixed context cost on every launch is avoided.
+
+  **Strongest counter-argument to the whole re-shape** (as L46 stated it): the one write of the loop moves into the parent, which no guard limits, and a wrong but well-formed row passes `check`. Under L45 the classifier could not write any other file. Tradeoff accepted, by the owner's answer 1: the parent writes only by the fixed steps of T4b, takes a backup first, and puts the page back when `check` fails; the classifier can read any file the user can read, as the reviewer can.
+
+  **T3c-r design: remove the guard** (commit `refactor(agents): remove the classifier guard`, `Risk: 2`). First of the rest of T3; reviewed in a chain from `f1f0fa37`. It also carries the uncommitted review records `f1f0fa37ce5f-2` to `-5` unchanged, and the document edits of this entry.
+  - Delete whole: `engine/classifierguard/` (both files), `engine/hookwire/scoped.go` and `scoped_test.go`, `engine/cmd/roles_classifier_guard.go` and `roles_classifier_guard_test.go` (with `rolesClassifierGuardVerb`, C1, C2 and the recovered-panic test).
+  - Delete lines: `engine/cmd/roles.go` lines 64-65 (the case); the comment at lines 6-7 drops `'roles classifier-guard' (roles_classifier_guard.go)` and keeps the other two hook verbs. `engine/cmd/usage.go` lines 355-362 (the block). The `classifier-guard` entry of `bin/lib/usage.sh` (from line 272 to the line before the next entry). `README.md` lines 1631-1652 (the section and the blank line after it), so `overlay --help` follows the builder guard's section. `CHANGELOG.md` line 30: the verb was never released (`## Unreleased`), so its Added line goes. `engine/architecture_test.go` line 191 (the `classifierguard` ring).
+  - Nothing stays. `DecodeScopedToolCall` has no other user; L42's follow-up (moving the other guards onto a strict decode) stays open as a finding, and the decoder can be taken back from `f1f0fa37` if a shaper designs it.
+  - No new test: the commit only deletes. Checks, in `engine/`, with exact results reported:
+    - `rg -n 'classifier-guard|classifierguard|ClassifierGuard|DecodeScopedToolCall|ScopedToolCall' .. --glob '!odd/**'` prints nothing (exit 1);
+    - `go build ./...`, `go vet ./...`, `gofmt -l .` (nothing printed), `bash -n ../bin/lib/usage.sh`;
+    - `go test ./cmd/ ./hookwire/ . -count=1`, then once `go test ./... -count=1`;
+    - `go run ./cmd/ roles classifier-guard </dev/null` exits 1 with the unknown-verb error (the verb is gone).
+  - Lines. Authored (written) lines: 1-4 (the `roles.go` comment). Deleted lines, reported apart, like generated and copied files: 700-730 (671 in the six Go files, 8 in `usage.go`, 2-4 in `usage.sh`, 22 in `README.md`, 1 each in `CHANGELOG.md`, `architecture_test.go`, 2 in `roles.go`). This counts whole-file and whole-block deletions apart from L13's method (additions plus deletions), because they hold no new logic; a reviewer checks only that nothing refers to them, which the `rg` and build checks show.
+  - Split rule: if the reviewer refuses the diff for its size, or the foreman counts deletions under L13, cut into T3c-r1 (the verb, its tests, the dispatch, usage, README, CHANGELOG: about 230 deleted) and T3c-r2 (`engine/classifierguard` and its ring: about 258) and T3c-r3 (`hookwire/scoped`: 229), in that order; each state builds, since an unreferenced package still compiles.
+  - Risk expectation: item 2 (a guard verb and its decoder go). Not item 5: no deployed file referred to the verb (T3c-b, which would have wired it, was never built). Not item 3: no other component calls the verb or the decoder (grep above).
+
+  **T3c-b design: the read-only row, the notice, the body and its pins** (commit `fix(agents): make the classifier read-only and license and pin it`, `Risk: 3,5`). After T3c-r; reviewed in a chain from T3c-r.
+  - `engine/agentgen/roles.go`, the `claudeOnlyRoles` row: `tools: []string{"Read", "Grep", "Glob"}`; a new optional field `notice string` (L39), set to `"LICENSE"` on this row only; no `guard` field. The row's comment says: read-only by its tools (owner, L47); its rows are appended by the parent (T4).
+  - The description, verbatim (ASCII): `Classifier role, off the role chain, read-only: classifies the findings one review kept (send them, the review identifier and date, the evidence page path, the general rules path and the evidence index) by the classify rules, and returns the Kinds and Evidence rows for the parent to append to docs/wiki/evidence.md.`
+  - `claudeFile` and `agentgen.go`: the notice comments of L39 (the header line, a `#` line, then each LICENSE line as `# ` plus the line, or `#`), read from `roles/<name>/<notice>` by the source reader; a missing notice is a `sourceError` named in `Check`'s order. Every other generated file stays byte-identical.
+  - `roles/classifier/body.md` (ASCII; the builder may refine the wording under test, but K1 pins the final lines and these anchors are fixed). Lines 1-6 stay the core prefix. The rest becomes:
+
+    ````text
+    You classify the findings of one review as evidence for the project's evidence page, by the criteria below.
+
+    The prompt gives the findings the review kept, a review identifier, the review's date when known, and three inputs: `<page>`, the absolute path of the evidence page; `<rules>`, the absolute path of the general rules; and `<index>`, the kinds of level 2 and up of both, one per line, or `empty`. When `<page>` or `<rules>` is not given, stop and say so.
+
+    ## Rules
+
+    - Change no file and run no command: return the rows under Output, and the parent appends them to `<page>` and runs the evidence check.
+    - Only add rows. Never return a row that deletes, edits, reorders, or consolidates a row, and never rename a kind. Consolidation is proposed to the owner at the close of a work.
+    - A kind names the mistake, not the place: `test-passes-when-broken`, not `auth-bug`. It is kebab-case, and its rule fits in one sentence a step can act on.
+    - Write no secret and no customer data in a row. A finding is one general line.
+    - A script counts. Never count in your head or write a count in a row.
+    - A kind's level and rule come from `<page>` first, then from `<rules>`. A kind in neither has no level or rule to take.
+
+    ## Gotchas
+
+    (the first four Gotchas lines of today, unchanged)
+    - Never return the example rows of the format.
+
+    ## Steps
+
+    1. Read `<page>`: the Kinds and the Evidence tables. When it does not exist, both are empty.
+    2. Read `<index>`. For a general kind you may use, read its row in the Kinds table of `<rules>`.
+    3. For each real finding, apply the central test: would the rule of this kind have prevented this finding?
+       - Yes for a kind of the page: use that kind, at its current level in Kinds.
+       - Yes for a general kind that the page lacks: return a Kinds row for it, at the level of its row in `<rules>`, with its rule copied, Source `evidence-rules.md`, and Scope `general`; then use it at that level.
+       - No for every kind: return a Kinds row for a new kind at level 1, with Rule, Applies when, Source (the review identifier), and Scope filled. Scope is `project` when understanding the rule needs the project's business, otherwise `general`.
+    4. Return one Evidence row per finding: Kind, Level, Review (the identifier given), Date (the review's date when given, else today, `YYYY-MM-DD`), Finding.
+    5. Check each row against the Format: six cells in Kinds and five in Evidence, a kebab-case kind, a positive level, a `YYYY-MM-DD` date, a scope of `general` or `project`, and `|` inside a cell written as `\|`.
+
+    ## Format
+
+    (unchanged: the cell rule, the empty page and the two example rows)
+
+    ## Output
+
+    - A line `Kinds rows:`, then one markdown fence with the Kinds rows to add, one per line, with no header; an empty fence when there are none.
+    - A line `Evidence rows:`, then one markdown fence with the Evidence rows to add, the same way.
+    - Any finding skipped, with the reason.
+    ````
+
+    So the body holds no script path, no `sh "`, no `$HOME` and no exit code. Judge 2 of `7704d28b9678-4` is resolved: the prompt names `<page>` and `<rules>` as paths to read, and the core prefix's "Write only the artifacts and paths the prompt names" has nothing to conflict with.
+  - `roles/classifier/PROVENANCE.md`, Changed section: the tools are `Read, Grep, Glob` where the snapshot had `Read, Grep, Glob, Bash, Edit, Write`; the agent returns rows and the parent appends them and runs the check (where the snapshot's agent wrote the page and ran the script); the general kinds come from the given index and the rules file read by its given path; the exit-3 rule and the script path are gone; the output is the two fenced row lists. The line about `<script>` and the exit-3 line are replaced, not kept.
+  - Regenerated `agents/classifier.md`: the notice (about 23 comment lines), the new tools and description, the new body. Reported apart.
+  - Not changed: `engine/roles`, `overlay.manifest`, `skills/_shared/evidence/*`, `skills/role-chain/*` (T4b), every other role.
+
+  **T3c-b tests**, RED first; each mutation applied to a backup copy, the focused tests run, the backup copied back and checked with `cmp` (as in L40 and L44); the builder reports the failing test names.
+  - G2, edited: the whole expected file is the notice comments, then `name`, the new description, `model: sonnet`, `tools: Read, Grep, Glob`, then the body without the memory line.
+    - Mx9: `Bash` added back to the row's tools. G2 fails.
+    - Mx10: `Write` added. G2 fails.
+  - G4 `TestTheClassifierFileCarriesTheLicenseNoticeOfItsSource` (L39): every line of `roles/classifier/LICENSE`, in order, is a frontmatter comment line before `name:`.
+    - Mz3: the row's `notice` emptied. G4 fails.
+    - Mz4: a LICENSE line changed in `claudeFile` only. G4 fails.
+  - Pin edits: `seededRoot` stubs `roles/classifier/LICENSE`; `TestCheckNamesEveryArtifactThatIsMissingInTheOrderOfTheTable` names the missing notice.
+  - K1, rewritten (`engine/skills`): the first six lines are `roleCorePrefix("classifier")`; `## Rules` equals the six lines above, `## Gotchas` five lines, `## Output` three lines, each a want-list in the test; the Steps hold the anchors `Read \`<page>\``, `<index>`, `would the rule of this kind have prevented this finding?`, `Return one Evidence row per finding` and `Check each row against the Format`; the body holds `<rules>`, `Kinds rows:` and `Evidence rows:`; it holds none of `CLAUDE_PLUGIN_ROOT`, `~/.claude`, `$HOME`, `sh "`, `evidence.sh` and `engram` (case-insensitive).
+    - My3: the line "... is not evidence. Skip it." deleted. K1 fails.
+    - My4: "Only add rows." reworded. K1 fails.
+    - My7: a step "Run `sh \"<script>\" check`" put back. K1 fails on `sh "`.
+    - My8: `Kinds rows:` renamed `Kinds:`. K1 fails.
+  - K3, kept as built in T3 (LICENSE blob, PROVENANCE fields, a non-empty Changed section).
+  - K4 `TestTheFormatOfTheClassifierBodyPassesEvidenceCheck` (`engine/shelltest`, L39 unchanged): the empty page of the Format passes `check`, and passes again with the two example rows under their tables.
+    - My1: `Applies when` renamed in the template. K4 fails.
+    - My2: the example date becomes `2026/11/19`. K4 fails.
+  - Not in T3c-b any more: G3, C3, C4 (no hook) and K5 (moved to T4b as R1).
+  - Checks, in `engine/`: `OVERLAY_DIR=<worktree> go run ./cmd/ gadu-generate`, then `--check`; `go test ./agentgen/ ./skills/ ./shelltest/ -count=1`; `go run ./cmd/ skills validate --registry ../skills.registry.yaml --manifest ../overlay.manifest --source-root ../skills` (expected still `89 files`); `rg -nP '[^\x00-\x7F]' ../roles/classifier/body.md ../agents/classifier.md` prints nothing; `gofmt -l agentgen/ skills/ shelltest/`; once before the commit, `go test ./... -count=1`.
+  - Forecast (shaper estimate, low confidence; authored, without generated files or the document): 220-300. Agentgen notice 25-35, G2 edit 10-15, G4 30-35, pin edits 6, body 40-50 changed, PROVENANCE 8-10, K1 rewrite 55-75, K4 45-55. Split rule: past about 400, K4 moves into a commit T3c-c right after, and the builder reports `partial`.
+  - Risk expectation: item 5 (the deployed agent file changes for Claude Code) and item 3 (the classifier's Output shape is the contract T4b's parent step reads). Not item 2 any more: no guard is added.
+
+  **Disposition of the open findings once T3c-r and T3c-b are committed** (closure is observed only when those commits and their reviews are clean):
+  - `7704d28b9678-5` F1 WARNING (prompt-only limits on Bash, Edit, Write): resolved by T3c-b's tools, pinned by G2 (Mx9, Mx10).
+  - `7704d28b9678-5` F2 WARNING (no MIT notice in the deployed file): resolved by T3c-b's notice comments (G4).
+  - `7704d28b9678-2` F1 WARNING (K1 too weak, Format unpinned): resolved by T3c-b's K1 and K4.
+  - `f66e524dfbd1-3` F1 and `-5` F1 WARNING (lenient decode), `-3` F2 and `-5` F3 WARNING (fails open when the verb is not reached; "fails closed" docs): resolved by removal in T3c-r; no hook, verb, decoder or doc remains.
+  - `f66e524dfbd1-5` F2 WARNING (page and script not tied to the root; reads unrestricted): the write half is resolved by T3c-b (the classifier writes nothing) and T4b (the parent writes only `<root>/docs/wiki/evidence.md` of the reviewed tree it resolves itself). The read half stays by design, as for the reviewer; T4b's step says so (below).
+  - `f1f0fa37ce5f-3` F1, F2 and `-5` F1, F2 WARNING, and the two WARNINGs of `-2`: resolved by removal in T3c-r; with no guard there is no root to widen and no Glob pattern to filter.
+  - SUGGESTIONs resolved by removal: `f66e524dfbd1-3` F3; `f1f0fa37ce5f-3` F3, `-5` F3, `-5` F4, and the third finding of `-2`.
+  - SUGGESTION `f66e524dfbd1-3` F4 (reads unrestricted and undocumented): carried to T4b, whose step documents that a row may carry text the classifier read, and that it lands only in the reviewed tree's page and is reviewed with the commit that carries it.
+  - SUGGESTIONs carried from `7704d28b9678`: R2-F3 (exits 1 and 2) moves to T4b (R2 below), since the parent runs the script; judge 2 of `-4` is resolved in T3c-b (above); R5-F3 (path drift) moves to T4b (R1 below), since the script and rules paths now live in the parent's step.
+  - The models.md items (`7704d28b9678-2` F2, `-5` F4, judge 1 of `-3`): T4b, as the owner decided ("Sumarla a T4 (Recommended)", L39).
+
+  **T4 design (replaces L6 as T4's design entry).** Two commits after T3c-b, each reviewed in a chain.
+  - T4a (commit `feat(review): ask for the classification of a result with kept findings`, `Risk: 3,5`):
+    - `skills/_shared/evidence/evidence.sh` gains a mode `reviewed <identifier> [wiki directory]`: no output; exit 0 when an Evidence row's Review cell equals the identifier exactly, 1 when none or when there is no page, 2 on a usage error (no identifier), 3 without `awk`. The header comment and usage name it; `PROVENANCE.md` lists it under "Changed since the snapshot". Why a mode and not a Go read of the page: S4 keeps `evidence.sh` the one parser of the format (shipped rule `format-parsed-differently-by-two-scripts`), and a substring test would also match a new kind's Source cell, which holds the same identifier.
+    - `labdrian review stop-hook`: for a branch commit whose stored result has kept findings (T1's feed), it runs `sh <deployed evidence.sh> reviewed <feature>/<head12>-<n> <toplevel>/docs/wiki`; exit 1 asks once per session and commit, in the hook's existing reason format, naming the result and the Classify step of the role-chain skill; exit 0 does not ask; any other outcome (2, 3, a missing script, a timeout, an unreadable result) does not ask and exits 0 (S6).
+    - Tests, RED first: B12 in `engine/shelltest` (the mode: a match, a miss, an identifier that is a prefix of a row's (`.../x-1` vs `.../x-10`), a match only in a Kinds Source cell, no page, no identifier, no `awk`); SH1 asked; SH2 not asked with no kept finding; SH3 not asked when an Evidence row carries the identifier; SH4 not asked twice in one session and commit; SH5 exit 0 and not asked on an unreadable result, a missing script and exit 3.
+    - Mutations: Mt1 the mode matches by prefix (B12 fails on `-10`); Mt2 the mode reads the Kinds table too (B12 fails on the Source row); Mt3 the once-per-session record dropped (SH4 fails); Mt4 exit 3 asks (SH5 fails).
+    - Forecast 250-350 (mode 15-25, B12 50-70, hook 60-90, SH1-SH5 110-150, docs 10-15). Split rule: past about 400, the mode and B12 go first as T4a1, the hook and SH1-SH5 as T4a2.
+  - T4b (commit `feat(role-chain): classify kept findings after review`, `Risk: 3`):
+    - A Classify step in `skills/role-chain/SKILL.md`, run by the parent after `record` / `verify` of a result. In order:
+      1. Run `labdrian review findings --feature <f> --stored <head12>-<n>.json`; with no kept finding, skip the step.
+      2. `<root>` is the git toplevel of the reviewed tree (the worktree); `<script>` is `$HOME/.claude/skills/_shared/evidence/evidence.sh`; `<rules>` is `evidence-rules.md` beside it, with `$HOME` expanded; `<page>` is `<root>/docs/wiki/evidence.md`.
+      3. Run `sh "<script>" reviewed <f>/<head12>-<n> "<root>/docs/wiki"`; exit 0 means classified: skip.
+      4. Run `sh "<script>" check "<root>/docs/wiki"`. Exit 1: show the FAIL lines and stop, blocked, appending nothing. Exit 2: a usage error, blocked. Exit 3: `awk` is missing, blocked.
+      5. Run `sh "<script>" index "<root>/docs/wiki"`, with the exits of 4; `<index>` is its stdout, or `empty`.
+      6. Launch the classifier with the kept findings, the identifier, the review date, `<page>`, `<rules>` and `<index>`.
+      7. Take the fence after `Kinds rows:` and the fence after `Evidence rows:` from its reply. When one is missing, or one of their lines is not a single table row (starts with `| `, ends with ` |`), append nothing and stop, blocked.
+      8. Copy `<page>` to a backup in the session scratchpad; when the page is missing, create it first as the empty page this step shows. Append the Kinds rows after the last row of the Kinds table and the Evidence rows after the last row of the Evidence table; change no other line.
+      9. Run `check` again. Exit 0: run `count` and report its lines for the kinds touched. Any other exit: copy the backup back (remove the page when step 8 created it), show the output and stop, blocked; the result stays unclassified, and the stop-hook asks again.
+      - The step also says: the parent never deletes or edits a row; a row may carry text the classifier read anywhere it can read, and it lands only in this page, which the next commit of the work carries and its review sees; the page is not committed by this step.
+    - `skills/role-chain/references/models.md` line 6: the Mid roles read `builder, polisher, prototyper, sweeper, classifier`.
+    - Tests, RED first:
+      - R1 `TestTheClassifyStepRunsTheDeployedEvidenceStore` (`engine/skills`; R5-F3): `ResolveRoutes` over the real manifest, for `claude` with `SkillsRoot` the literal `$HOME/.claude/skills`, gives `_shared/evidence/evidence.sh` the step's `<script>` and `_shared/evidence/evidence-rules.md` the step's `<rules>`; `bin/lib/targets.sh` holds `[claude]="$HOME/.claude/skills"`. Mr1: the step's path becomes `.../evidence-store.sh` (R1 fails). Mr2: the Claude root of `targets.sh` changes (R1 fails).
+      - R2 `TestTheClassifyStepNamesEachExitOfTheScript` (R2-F3): the step names exit 1, 2 and 3, each with "blocked". Mr3: the exit-3 line deleted (R2 fails).
+      - R3 `TestTheClassifyStepBacksUpBeforeItAppendsAndPutsThePageBack`: the anchors `review findings`, `reviewed`, `check`, `index`, `Launch the classifier`, `backup`, `Append`, `check`, `copy the backup back`, `count` appear in that order. Mr4: backup and append swapped (R3 fails).
+      - R4 `TestTheEmptyPageOfTheClassifyStepPassesCheck` (`engine/shelltest`): the step's empty page passes `check`; with the body's two example rows appended as step 8 says, it passes again. Mr5: a header of the step's page renamed (R4 fails).
+      - R5 `TestTheMidLineOfModelsNamesEveryMidRole` (`engine/agentgen`, internal): the roles of the models.md Mid line equal the names of every row of `roles` and `claudeOnlyRoles` with `tierMid`. Mr6: `classifier` removed from the line (R5 fails). Mr7: a mid role's tier set to light (R5 fails). This closes `-5` F4 ("no test pins that list").
+    - Approval: editing `SKILL.md` and `models.md` makes the `role-chain` approval stale (L38). The builder edits, runs the tests, and stops with `partial` before the commit; the owner runs `labdrian skills approve --id role-chain --approver <name>` (a human act); then the builder re-runs `skills validate` and commits.
+    - Forecast 180-260 (step 30-40, models 1, R1-R5 150-210). Split rule: past about 400, R4 and R5 move into T4c.
+  - Not in T4 any more: `roles classifier-arm` and its clear (L45), and launching with the root as working directory (L42).
+
+  **T12 design (replaces L6 as T12's design entry).** OD-6 (L24, "Gana el nuestro (Recommended)") and OD-7 (L21, "Solo Claude Code (Recommended)") are answered, so the line's blockers are removed.
+  - Premise P4, checked by the prototyper before T12a, with the limits of L41 and L43 (scratch project at a trusted path, created and deleted, no write to `~/.claude`, nothing remote; the rules go in the scratch project's `.claude/settings.json`): in Claude Code 2.1.330, does `permissions.ask` with `Bash(git push *)` ask for (Q13) `git push origin x` in the main session, (Q14) the same inside a sub-agent, (Q15) `cd /x && git push`, (Q16) a bare `git push`; (Q17) does `Bash(git merge *)` stay silent for `git merge-base a b`; (Q18) what happens under `claude -p` with no terminal, and (Q19) under `--permission-mode bypassPermissions` and `acceptEdits`. Push targets are a local bare repository made in the scratch project, never a remote. The rule spellings T12a writes are the ones P4 shows working; if Q13 or Q14 fails, a shaper redesigns before T12a.
+  - T12a (commit `feat(settings): ask before delivery commands`, `Risk: 3,5`):
+    - `engine/settings`: `DeliveryAskRules`, a fixed list, assumption until P4: `Bash(git push)`, `Bash(git push *)`, `Bash(gh pr create *)`, `Bash(gh pr merge *)`, `Bash(git merge *)`. Including a local `git merge` reads the owner's "every push, merge or PR" literally (assumption).
+    - `mergeHooks` adds each missing rule to `permissions.ask` after `addClearanceDenyRule`, creating the object and the list as that function does; `removeHooks` removes exactly these strings from `permissions.ask` through one helper shared with the deny removal, deleting an empty list and an empty `permissions`. A user's own ask rules and their order stay.
+    - `install-hooks` help, README and CHANGELOG name the rules, that every such command prompts (including merges under the standing ok), and how to remove them.
+    - Tests, RED first: A1 install adds the five rules once, and a second install changes nothing; A2 a user's ask rule before them stays first; A3 uninstall removes only ours and deletes the empty list and object; A4 the settings goldens. Mutations: Mk1 uninstall skips one rule (A3 fails); Mk2 install appends duplicates (A1 fails); Mk3 uninstall drops the user's rule (A2 fails).
+    - Status: the builder reads `engine/status` and reports a missing ask rule the way the deny rule is reported, if it is; whether it is was not checked here.
+    - Forecast 140-240. Split rule: past about 400, the docs move into T12a2.
+  - T12b (commit `feat(settings): one commit-check and one review-hold family`, `Risk: 2,3,5`): the commit check and the review hold as one owned Bash PreToolUse family each in `installedFamilies`, deduplicated against the review gate of T8 and the hooks T10 absorbs, removable by `removeHooks`. No ask-before-delivery family. Its family identities depend on what T8 and T10 build, so a shaper details T12b in a new entry after both land; the builder does not start T12b before that entry. Forecast 200-450, low confidence (L13's 300-700 less one family).
+
+  **T13 design (replaces L6 as T13's design entry).** OD-8 is answered (L28, "Se aplican (Recommended)"), so the line's blocker is removed.
+  - The merged static text = the overlay's `instructions/owner-rules.md` (45 lines, written by the Claude and Codex adapters) + playbook `plugins/playbook-agents/rules.md` (36 lines, L13; after T7's memorycard change) + the playbook Contract (the text this launch received through a SubagentStart hook; its file in the snapshot was not located here).
+  - The playbook parts are Claude-only (OD-7). Design: a new source `instructions/claude-rules.md` holds them, deduplicated against `owner-rules.md` (shipped rule `definition-stated-in-two-files`); the Claude adapter writes `owner-rules.md` then `claude-rules.md` into its one owner rules block of `~/.claude/CLAUDE.md`; the Codex block keeps its bytes.
+  - No hook injects static text. `OnSessionStart`'s memory instructions (computed per workflow) stay. The playbook plugin's SubagentStart hook goes with T11's replacement of the marketplace install, so T13 lands after T11; before that, both copies would reach a session.
+  - Check, a Go test in `engine/runtime`, RED first: `TestTheClaudeSessionTextFitsItsBudgets`: the composed Claude block is under 200 lines, and its Contract and rules parts are within the OD-8 budgets (contract 270 words, rules 400, loaded at start 370/620), counted as playbook `scripts/verify.sh` counts them; the builder reads that script and cites the lines, since this shaper did not verify what 370/620 means. `TestTheCodexOwnerRulesBlockIsUnchanged`. Mutations: a 201st line (the first test fails); one word over the contract budget (fails); a playbook line added to `owner-rules.md` (the Codex test fails).
+  - Forecast 120-260. Split rule: past about 400, the text merge goes first and the budget test second. Risk expectation: items 3 and 5.
+
+  **T18 design (replaces L12 as T18's design entry; L12's decision and draft stand where this entry does not change them).**
+  - Tools: `Read, Glob, Grep, mcp__memorycard__mem_search, mcp__memorycard__mem_get, mcp__codegraph__codegraph_explore`; no `Bash`.
+  - The draft's third body line becomes: "You change no file and no git state, and you have no shell. A question that needs a write or a command goes under `next`." Its fifth line becomes: "Use the cheapest source first: CodeGraph for structure when an index exists, then Grep and Glob, then reads of a line range; read a whole file only when the map needs it." S14 notes (a) and (e) no longer apply; (c) and (d) stand for the builder.
+  - Test: the explorer row of `roles_test.go` pins the tools. Mutation: `Bash` added to the row (the row test fails).
+  - Forecast 40-150 (L13, unchanged). Risk expectation: item 5.
+
+  **Order of the rest of T3, and after.** T3c-r (from `f1f0fa37`), then T3c-b; T3's WARNINGs are closed when both are committed and reviewed clean, so T3's branch may be delivered then. Then T4a, T4b (with the owner's approval of `role-chain`), T5 and the rest in the Tasks order. T12a waits for P4, T12b for T8 and T10 and a shaper entry, T13 for T7 and T11. No premise blocks T3c-r or T3c-b.
+
+  **Risks, not decided here:**
+  - The loop's one write is in the parent: a well-formed wrong row passes `check`; a row may carry text the classifier read anywhere (f66e524dfbd1-3 F4, residual).
+  - T3c-r counts deleted lines apart from L13's method; if the foreman holds to L13, the split rule applies.
+  - L42's strict decode for the other guards loses its only implementation; recoverable from `f1f0fa37`.
+  - T4b cannot be committed until the owner re-approves `role-chain`.
+  - T4a changes absorbed `evidence.sh` again (a new mode); B10 enforces the PROVENANCE line.
+  - P4 is unverified: how `ask` behaves in `-p`, `bypassPermissions` and sub-agents decides whether delivery is held in automation; including local `git merge` is an assumption from the owner's words.
+  - T13: the Contract's source file was not located, and the meaning of the 370/620 budget is unverified.
+  - T18: the generator's `roles` table also generates an OpenCode file for each row (L37, 35 files), while the owner stopped OpenCode work (L21); whether the explorer gets one is not settled here.
+  - Carried from L37 and L39: `gate-task` appends the memory instructions block to the classifier, which has no memorycard tool; whether Claude Code reads `effort` from an agent file is open.
+  - Product decision, open (L46): whether trysm ships to Claude Code as a plugin at its launch. Nothing in this entry depends on it: the classifier's limit and the explorer's are `tools` lists, which a plugin keeps; `permissions.ask` rules and CLAUDE.md blocks are written by `apply` and could not ship inside a plugin (L46, T11).
+- **L48** (2026-11-23, foreman): the open question of L46 and L47 answered. The owner first asked, verbatim, "coño nose que recomendas vos ?"; the foreman recommended `apply` at launch and a plugin later (a plugin carries no settings, so the T12 `permissions.ask` rules need `apply`; no plugin component writes CLAUDE.md, which T13 now uses; plugin agents ignore frontmatter hooks; a plugin reaches Claude Code only). Asked "¿Cómo se instala trysm en el lanzamiento?", the owner answered "apply ahora, plugin después (Recommended)". Decided: trysm installs through `labdrian apply` at launch (settings, CLAUDE.md, the other runtimes); a Claude Code plugin is a later task, for the Claude part only, not part of this feature's current tasks. T11 stays as designed. Memory: #6196.
+- **L49** (2026-11-23, builder): T3c-r built as designed in L47, on branch `feat/playbook-classifier-role` from `f1f0fa37` (T3c-a2), workflow `merge-playbook-into-sdd-overlay-t3`, in one commit (no split: the split rule of L47 fires only when the reviewer refuses the diff for its size or the foreman counts deletions under L13; neither happened yet, so the cut into T3c-r1, r2 and r3 is not made and the foreman decides). Commit `refactor(agents): remove the classifier guard` (its SHA is not knowable inside its own commit; `git log --grep`), `Risk: 2`. S5 covered for its Enforcement part under L47: the guard, its decoder, its verb and its docs are gone, so S5 no longer names a hook or a guard verb. T3c-b is not started, and the T3c box stays `[ ]`. The commit also holds the uncommitted document edits of L46, L47 and L48 (S5, S6, S13, S14 and the task lines) and the review records `odd/review-results/merge-playbook-into-sdd-overlay/f1f0fa37ce5f-1.sweep.json`, `-2.polisher.json`, `-3.json`, `-4.polisher.json` and `-5.json`, unchanged.
+
+  **Removed.** Whole files: `engine/classifierguard/classifierguard.go` (113) and `classifierguard_test.go` (144), `engine/hookwire/scoped.go` (132) and `scoped_test.go` (97), `engine/cmd/roles_classifier_guard.go` (68) and `roles_classifier_guard_test.go` (117). Blocks: the `case rolesClassifierGuardVerb` of `engine/cmd/roles.go` (2 lines) and, in the same file, the comment of lines 6-7 now names the other two hook verbs (2 lines written, 2 deleted); the 8-line block of `engine/cmd/usage.go`; the 4-line entry of `bin/lib/usage.sh`; the 22-line section of `README.md`; the Added line of `CHANGELOG.md` (unreleased); the `classifierguard` ring of `engine/architecture_test.go`.
+
+  **Test-first.** No new test: the commit only deletes, so no behaviour is added, which is the exception L47 names. Evidence that the deletion is complete is the `rg`, build and test results below; the tests of the removed code went with it.
+
+  **Commands run, from `engine/` unless noted, with exact results:**
+  - `rg -n 'classifier-guard|classifierguard|ClassifierGuard|DecodeScopedToolCall|ScopedToolCall' .. --glob '!odd/**' --glob '!.git/**'` (run from the repository root as `.`) printed nothing, exit 1. Before the edits it listed the files above, `README.md:1631`, `CHANGELOG.md:30` and `bin/lib/usage.sh:272`.
+  - `go build ./...` exit 0. `go vet ./...` exit 0, nothing printed. `gofmt -l .` printed nothing. `bash -n ../bin/lib/usage.sh` exit 0.
+  - `go run ./cmd/ roles classifier-guard </dev/null` printed `error: roles: unknown verb "classifier-guard" (expected validate, next, resume, append, match-shaper, or skill-paths)` and exited 1.
+  - Focused: `go test ./cmd/ ./hookwire/ . -count=1` printed `ok` for `engine/cmd` (97.598s), `engine/hookwire` (0.229s) and `engine` (0.571s); the docs tests are in `cmd`.
+  - Full: `go test ./... -count=1` printed no line other than `ok` or `no test files` (one run filtered with `rg -v '^ok|no test files'`, printing nothing); a second full run, made by mistake in the same command, counted 87 `ok` lines (88 in L44, one package less). No failure.
+
+  **Lines.** Authored (written): 2 added (the `roles.go` comment). Deleted, reported apart: 711 (671 in the six Go files, 8 in `usage.go`, 4 in `usage.sh`, 22 in `README.md`, 1 in `CHANGELOG.md`, 1 in `architecture_test.go`, 4 in `roles.go`). L47 forecast 700-730; 711 is inside it. The document edits and the review records are not counted here.

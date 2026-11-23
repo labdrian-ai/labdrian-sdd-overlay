@@ -1,0 +1,19 @@
+{
+  "kind": "polisher",
+  "base": "f66e524dfbd18d641a7a2270b4413990f7c75257",
+  "head": "f1f0fa37ce5fdde769934860c4692c8acee3e4ca",
+  "diff_sha256": "d6d51c692c8a238445cd35fad746f5dabc2bbe60b8194f1b94552be8f49eaffc",
+  "findings": {
+    "findings": [],
+    "evidence": [
+      "Read the whole diff except the five f66e524dfbd1-* review records (kept blind): classifierguard.go and test, roles_classifier_guard.go and test, hookwire/scoped.go and test, usage.go, usage.sh, README, CHANGELOG, L41-L44",
+      "Bash allow regexp: captured directory excludes quote, $, backtick, backslash and 0x00-0x1f; $ without (?m) anchors end of text; m[1] == Root+/docs/wiki with cleanRoot (also rejects 0x7f) leaves no expansion or traversal route",
+      "Edit/Write exact equality against Root+PageSuffix; within requires absolute clean path equal to root or under root+/, so /rs/x and /r/../s are refused; cleanRoot rejects empty, relative, /, unclean and control characters",
+      "Strict decoder: repeated keys found after unescaping; fold-equal keys, non-string expected values, U+FFFD, non-object tool_input, non-object top level and trailing values refused; legitimate Claude Code keys neither fold to an expected key nor carry a non-string expected value",
+      "Live read-only probe with this session's Glob and Grep: absolute /etc/hostnam* returned /etc/hostname (guard right to refuse a leading /); {/etc/hostnam*,nomatchzz}, [/]etc/hostnam*, \\/etc/hostnam* and ./../../../../../../etc/hostnam* returned no files; Grep glob /etc/hostname or {../../../../../../../../etc/hostname,x} with path inside the root returned no files",
+      "roles_classifier_guard_test.go index failures[len(failures)-3] is the repeated-command row",
+      "roles/classifier/body.md steps 1-5 stay allowed when the hook cwd equals the prompt's root; a different worktree root is refused, which fails safe and is left to T4 by L42/L43",
+      "Not run: go test, go vet, gofmt; the hook is not yet wired (T3c-b)"
+    ]
+  }
+}

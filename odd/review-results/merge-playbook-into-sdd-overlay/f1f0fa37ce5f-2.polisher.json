@@ -1,0 +1,54 @@
+{
+  "kind": "polisher",
+  "base": "f66e524dfbd18d641a7a2270b4413990f7c75257",
+  "head": "f1f0fa37ce5fdde769934860c4692c8acee3e4ca",
+  "diff_sha256": "d6d51c692c8a238445cd35fad746f5dabc2bbe60b8194f1b94552be8f49eaffc",
+  "findings": {
+    "findings": [
+      {
+        "location": "engine/classifierguard/classifierguard.go:62-95",
+        "severity": "WARNING",
+        "claim": "The guard ties the root to the hook input's cwd, but the classifier is given its root in the prompt, so a classifier launched with a cwd other than the reviewed tree's root has every Read, Grep and Glob outside the cwd blocked, and its Edit, Write and script call on the prompt's root blocked as well. Nothing in the agent file or the guard reconciles the two roots.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "evidence": [
+          "agents/classifier.md:14 says the classifier receives the root of the reviewed tree; lines 16-44 use that prompt root for the page and the script call",
+          "Decide compares c.FilePath == c.Root+PageSuffix and m[1] == c.Root+wikiSuffix, where Root is the hook input's cwd",
+          "The base allowed any clean absolute */docs/wiki, so reviewing a worktree from another cwd was allowed before and is now blocked",
+          "The hook is not yet wired (T3c-b); a design premise (L42) to confirm at wiring time"
+        ]
+      },
+      {
+        "location": "engine/classifierguard/classifierguard.go:62-95",
+        "severity": "WARNING",
+        "claim": "A Glob pattern that starts with { (brace alternation) passes safePattern, which rejects only /, ~, $ and ..; a pattern like {/etc/*,x} could reach outside the root if Glob expands braces and honours absolute alternatives. The code itself says whether Glob honours an absolute pattern is unverified.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "evidence": [
+          "safePattern checks only the leading /, ~, $ and the substring ..",
+          "the same function's comment: whether Glob honours an absolute pattern is unverified",
+          "before this commit all Glob calls were allowed; this is a hole in the new confinement"
+        ]
+      },
+      {
+        "location": "engine/classifierguard/classifierguard.go:86-94",
+        "severity": "SUGGESTION",
+        "claim": "Legitimate calls are blocked: Grep with a relative path (such as docs), and Glob with an absolute pattern inside the root (such as /r/docs/**/*.md), and the classifier has no instruction steering it to the allowed forms.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "evidence": [
+          "within requires a leading /, and Grep calls it for any non-empty Path",
+          "safePattern rejects any pattern starting with / with no within-root check",
+          "tests pin 'read relative' and 'glob absolute pattern' as blocked"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read diff lines 1-589 (not 590-1321)",
+      "Bash regex excludes quote, $, backtick, backslash and controls and ends with $",
+      "hookwire/scoped.go refuses repeated and case-variant keys (Kelvin included), non-string values, U+FFFD and more than one JSON value",
+      "Read agents/classifier.md lines 1-45",
+      "No commands or tests run"
+    ]
+  }
+}
