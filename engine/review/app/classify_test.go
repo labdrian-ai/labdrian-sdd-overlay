@@ -17,12 +17,25 @@ import (
 
 // fakeClassified is the Classified port over a map: the review identifiers whose evidence rows exist.
 type fakeClassified struct {
-	done  map[string]bool
-	err   error
-	calls []string // "<root> <review>"
+	done     map[string]bool
+	err      error
+	stamp    string
+	stampErr error
+	calls    []string // "<root> <review>"
+	stamps   int      // how many times the state of the page was asked
 }
 
-func newFakeClassified() *fakeClassified { return &fakeClassified{done: map[string]bool{}} }
+func newFakeClassified() *fakeClassified {
+	return &fakeClassified{done: map[string]bool{}, stamp: "stamp-1"}
+}
+
+func (c *fakeClassified) Stamp(root string) (string, error) {
+	c.stamps++
+	if c.stampErr != nil {
+		return "", c.stampErr
+	}
+	return c.stamp, nil
+}
 
 func (c *fakeClassified) Classified(root, review string) (bool, error) {
 	c.calls = append(c.calls, root+" "+review)
@@ -51,6 +64,16 @@ const (
 // the identifier, written here without the code under test.
 func classifyKey(review string) string { return "classify-" + sha256Of([]byte(review))[:16] }
 
+// memoKey is the key under which a session remembers the answer of the port for review at the page state stamp: the
+// prefix and the first 16 hex digits of the SHA-256 of the identifier, a NUL and the stamp, written here without the code
+// under test.
+func memoKey(prefix, review, stamp string) string {
+	return prefix + sha256Of([]byte(review + "\x00" + stamp))[:16]
+}
+
+func classifiedKey(review, stamp string) string { return memoKey("classified-", review, stamp) }
+func lackingKey(review, stamp string) string    { return memoKey("lacking-", review, stamp) }
+
 // SH1: a result with a kept finding that the page lacks blocks the stop and is named.
 func TestStopAsksForTheClassificationOfAResultWithAKeptFinding(t *testing.T) {
 	g, store, _ := classifyWorld(t)
@@ -65,8 +88,8 @@ func TestStopAsksForTheClassificationOfAResultWithAKeptFinding(t *testing.T) {
 	if wantCalls := []string{fakeRepo.Root + " " + otherReview}; !reflect.DeepEqual(port.calls, wantCalls) {
 		t.Errorf("port calls = %q, want %q", port.calls, wantCalls)
 	}
-	if !asked.put["session-1 "+classifyKey(otherReview)] || len(asked.put) != 1 {
-		t.Errorf("remembered = %v, want only %s of session-1", asked.put, classifyKey(otherReview))
+	if !asked.put["session-1 "+classifyKey(otherReview)] || !asked.put["session-1 "+lackingKey(otherReview, port.stamp)] || len(asked.put) != 2 {
+		t.Errorf("remembered = %v, want only %s and %s of session-1", asked.put, classifyKey(otherReview), lackingKey(otherReview, port.stamp))
 	}
 }
 
@@ -113,13 +136,13 @@ func TestStopDoesNotAskForAClassifiedResult(t *testing.T) {
 
 	got, err := app.New(g, store).WithAsked(asked).WithClassified(port).Stop(evidenceDir, "session-1", false)
 
-	if err != nil || got.Block || len(asked.put) != 1 || !asked.put["session-1 "+classifiedKey(otherReview)] {
-		t.Errorf("Stop() = %+v, %v with %v remembered; want no block, no error and only %s remembered", got, err, asked.put, classifiedKey(otherReview))
+	if err != nil || got.Block || len(asked.put) != 1 || !asked.put["session-1 "+classifiedKey(otherReview, port.stamp)] {
+		t.Errorf("Stop() = %+v, %v with %v remembered; want no block, no error and only %s remembered", got, err, asked.put, classifiedKey(otherReview, port.stamp))
 	}
 }
 
-// SH4: the question is put once per session; the port is asked again at the next stop, which does not block, and a
-// result still lacking is named in another session.
+// SH4: the question is put once per session; the next stop does not block and does not ask the port again, and a result
+// still lacking is named, after a new question of the port, in another session.
 func TestStopAsksForAResultOnceForEachSession(t *testing.T) {
 	g, store, _ := classifyWorld(t)
 	asked, port := newFakeAsked(), newFakeClassified()
@@ -133,11 +156,11 @@ func TestStopAsksForAResultOnceForEachSession(t *testing.T) {
 	if againErr != nil || again.Block {
 		t.Errorf("the second Stop() of the session = %+v, %v; want no block and no error", again, againErr)
 	}
-	if len(port.calls) != 2 {
-		t.Errorf("port calls = %q, want two: a result still lacking is asked of the port at every stop", port.calls)
+	if len(port.calls) != 1 {
+		t.Errorf("port calls = %q, want one: the session remembers that the page lacks the result", port.calls)
 	}
 	other, otherErr := service.Stop(evidenceDir, "session-2", false)
-	if otherErr != nil || !other.Block || len(other.Classify) != 1 || len(port.calls) != 3 {
+	if otherErr != nil || !other.Block || len(other.Classify) != 1 || len(port.calls) != 2 {
 		t.Errorf("Stop() of another session = %+v, %v with %q asked of the port; want a block naming the result and a second call", other, otherErr, port.calls)
 	}
 }
@@ -189,8 +212,8 @@ func TestStopNamesEveryResultOfACommitWithItsOwnKey(t *testing.T) {
 	if err != nil || !got.Block || !reflect.DeepEqual(got.Classify, want) {
 		t.Fatalf("Stop() = %+v, %v; want a block naming %+v", got, err, want)
 	}
-	if len(asked.put) != 2 || !asked.put["session-1 "+classifyKey(otherReview)] || !asked.put["session-1 "+classifyKey("own-rdd/333333333333-2")] {
-		t.Errorf("remembered = %v, want one key for each of the two results", asked.put)
+	if len(asked.put) != 4 || !asked.put["session-1 "+classifyKey(otherReview)] || !asked.put["session-1 "+classifyKey("own-rdd/333333333333-2")] {
+		t.Errorf("remembered = %v, want a classify- key for each of the two results, and a lacking- key for each", asked.put)
 	}
 }
 
@@ -211,11 +234,11 @@ func TestKeptResultsNamesTheResultsOfTheBranchCommitsOldestFirst(t *testing.T) {
 	g, store, _ := classifyWorld(t)
 	reviewed(t, store, baseSHA, headSHA, 1, warning("F1"))
 
-	got, err := app.New(g, store).KeptResults(evidenceDir)
+	got, refused, err := app.New(g, store).KeptResults(evidenceDir)
 
 	want := []app.KeptResult{{Review: headReview, Head: headSHA, Kept: 1}, {Review: otherReview, Head: otherSHA, Kept: 1}}
-	if err != nil || !reflect.DeepEqual(got, want) {
-		t.Errorf("KeptResults() = %+v, %v; want %+v", got, err, want)
+	if err != nil || len(refused) != 0 || !reflect.DeepEqual(got, want) {
+		t.Errorf("KeptResults() = %+v, %v, %v; want %+v and no error", got, refused, err, want)
 	}
 }
 
@@ -235,46 +258,34 @@ func TestKeptResultsIsEmptyWhereThereAreNoBranchCommitsToRead(t *testing.T) {
 			g, store, _ := classifyWorld(t)
 			tc.setup(g, store)
 
-			got, err := app.New(g, store).KeptResults(evidenceDir)
+			got, refused, err := app.New(g, store).KeptResults(evidenceDir)
 
-			if err != nil || len(got) != 0 {
-				t.Errorf("KeptResults() = %+v, %v; want nothing and no error", got, err)
+			if err != nil || len(refused) != 0 || len(got) != 0 {
+				t.Errorf("KeptResults() = %+v, %v, %v; want nothing and no error", got, refused, err)
 			}
 		})
 	}
 }
 
-// J1: what the pass cannot read, hold or bind is an error and no result, as Check refuses the same file; it is never
-// skipped.
+// J1: what the pass as a whole cannot tell is an error and no result, and no refusal.
 func TestKeptResultsRefusesWhatItCannotReadHoldOrBind(t *testing.T) {
 	cause := errors.New("boom")
-	verdictName := "333333333333-1.verifier.json"
 	for _, tc := range []struct {
 		name  string
 		setup func(g *fakeGit, store *fakeResults)
-		wraps error
-		names string
 	}{
-		{"a file that is not a result", func(g *fakeGit, store *fakeResults) {
-			store.put("own-rdd", "333333333333-2.json", []byte("not a result"))
-		}, review.ErrInvalidStored, "333333333333-2.json"},
-		{"a result for a diff that is not the one git gives now", func(g *fakeGit, store *fakeResults) {
-			g.diff = []byte("diff --git a/other.go b/other.go\n")
-		}, review.ErrBindingDiffers, ""},
-		{"git cannot give the diff", func(g *fakeGit, store *fakeResults) { g.fail["Diff"] = cause }, cause, ""},
-		{"the verdict cannot be read", func(g *fakeGit, store *fakeResults) { store.fail["Read "+verdictName] = cause }, cause, verdictName},
-		{"the store cannot give the features", func(g *fakeGit, store *fakeResults) { store.fail["Features"] = cause }, cause, ""},
-		{"git cannot tell where HEAD stands", func(g *fakeGit, store *fakeResults) { g.fail["Standing"] = cause }, cause, ""},
-		{"the store cannot list the results", func(g *fakeGit, store *fakeResults) { store.fail["Names"] = cause }, cause, ""},
+		{"the store cannot give the features", func(g *fakeGit, store *fakeResults) { store.fail["Features"] = cause }},
+		{"git cannot tell where HEAD stands", func(g *fakeGit, store *fakeResults) { g.fail["Standing"] = cause }},
+		{"the store cannot list the results", func(g *fakeGit, store *fakeResults) { store.fail["Names"] = cause }},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			g, store, _ := classifyWorld(t)
 			tc.setup(g, store)
 
-			got, err := app.New(g, store).KeptResults(evidenceDir)
+			got, refused, err := app.New(g, store).KeptResults(evidenceDir)
 
-			if got != nil || err == nil || !errors.Is(err, tc.wraps) || !strings.Contains(err.Error(), tc.names) {
-				t.Errorf("KeptResults() = %+v, %v; want nothing and an error that wraps %v and names %q", got, err, tc.wraps, tc.names)
+			if got != nil || refused != nil || !errors.Is(err, cause) {
+				t.Errorf("KeptResults() = %+v, %v, %v; want nothing, no refusal and an error that wraps the cause", got, refused, err)
 			}
 		})
 	}
@@ -288,11 +299,11 @@ func TestKeptResultsSkipsAResultAboutAnotherCommit(t *testing.T) {
 	store.put("own-rdd", "333333333333-2.json", store.files["own-rdd"][name])
 	delete(store.files["own-rdd"], name)
 
-	got, err := app.New(g, store).KeptResults(evidenceDir)
+	got, refused, err := app.New(g, store).KeptResults(evidenceDir)
 
 	want := []app.KeptResult{{Review: otherReview, Head: otherSHA, Kept: 1}}
-	if err != nil || !reflect.DeepEqual(got, want) {
-		t.Errorf("KeptResults() = %+v, %v; want %+v and no error", got, err, want)
+	if err != nil || len(refused) != 0 || !reflect.DeepEqual(got, want) {
+		t.Errorf("KeptResults() = %+v, %v, %v; want %+v and no error", got, refused, err, want)
 	}
 }
 
@@ -350,14 +361,16 @@ func TestStopDoesNotBlockWhenTheQuestionsOfTheSessionCannotBeRead(t *testing.T) 
 	}
 }
 
-// J5: a question that cannot be recorded is an error and no block, for a result the page lacks and for one it holds.
+// J5: a question that cannot be recorded is an error and no block, for a result the page lacks and for one it holds; for
+// the one it holds the failed record is only the memory, named in the error.
 func TestStopDoesNotBlockWhenAQuestionCannotBeRecorded(t *testing.T) {
 	for _, tc := range []struct {
 		name  string
 		setup func(port *fakeClassified)
+		names string
 	}{
-		{"an unclassified result", func(port *fakeClassified) {}},
-		{"a classified result", func(port *fakeClassified) { port.done[otherReview] = true }},
+		{"an unclassified result", func(port *fakeClassified) {}, ""},
+		{"a classified result", func(port *fakeClassified) { port.done[otherReview] = true }, "record that " + otherReview + " is classified"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			g, store, _ := classifyWorld(t)
@@ -368,16 +381,12 @@ func TestStopDoesNotBlockWhenAQuestionCannotBeRecorded(t *testing.T) {
 
 			got, err := app.New(g, store).WithAsked(asked).WithClassified(port).Stop(evidenceDir, "session-1", false)
 
-			if !errors.Is(err, cause) || got.Block {
-				t.Errorf("Stop() = %+v, %v; want no block and an error that wraps the cause", got, err)
+			if !errors.Is(err, cause) || got.Block || !strings.Contains(err.Error(), tc.names) {
+				t.Errorf("Stop() = %+v, %v; want no block and an error that wraps the cause and names %q", got, err, tc.names)
 			}
 		})
 	}
 }
-
-// classifiedKey is the key under which a session remembers that review is classified, written here without the code
-// under test.
-func classifiedKey(review string) string { return "classified-" + sha256Of([]byte(review))[:16] }
 
 // J6: a result found classified is asked of the port once for each session, and remembered under its own key.
 func TestStopAsksThePortAboutAClassifiedResultOnceForEachSession(t *testing.T) {
@@ -395,21 +404,23 @@ func TestStopAsksThePortAboutAClassifiedResultOnceForEachSession(t *testing.T) {
 			t.Errorf("stop %d of %s = %+v, %v with %d port calls; want no block, no error and %d calls", i+1, step.session, got, err, len(port.calls), step.calls)
 		}
 	}
-	if !asked.put["session-1 "+classifiedKey(otherReview)] || asked.put["session-1 "+classifyKey(otherReview)] {
-		t.Errorf("remembered = %v, want %s of session-1 and no classify- key", asked.put, classifiedKey(otherReview))
+	if !asked.put["session-1 "+classifiedKey(otherReview, port.stamp)] || asked.put["session-1 "+classifyKey(otherReview)] {
+		t.Errorf("remembered = %v, want %s of session-1 and no classify- key", asked.put, classifiedKey(otherReview, port.stamp))
 	}
 }
 
-// secondAddFails is an Asked store whose second Add fails, once.
+// secondAddFails is an Asked store whose second Add of a classify- key fails, once.
 type secondAddFails struct {
 	*fakeAsked
 	adds int
 }
 
 func (a *secondAddFails) Add(session, key string) error {
-	a.adds++
-	if a.adds == 2 {
-		return errors.New("disk full")
+	if strings.HasPrefix(key, "classify-") {
+		a.adds++
+		if a.adds == 2 {
+			return errors.New("disk full")
+		}
 	}
 	return a.fakeAsked.Add(session, key)
 }

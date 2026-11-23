@@ -19,10 +19,10 @@ func (s Service) FactsOfAnyFeature(repo Repository, commit string, listings ...f
 // KeptResults lists the stored results of the commits of the branch HEAD is on, in the repository that holds dir
 // (absolute), that have one kept finding or more (S6): what keptResultsOf finds for the pass of Stop, which is the only
 // production caller, so production exports no listing of its own.
-func (s Service) KeptResults(dir string) ([]KeptResult, error) {
+func (s Service) KeptResults(dir string) ([]KeptResult, []error, error) {
 	repo, err := s.git.Locate(dir)
 	if err != nil {
-		return nil, fmt.Errorf("locate the repository of %s: %w", dir, err)
+		return nil, nil, fmt.Errorf("locate the repository of %s: %w", dir, err)
 	}
 	return s.keptResultsOf(repo)
 }
