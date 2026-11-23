@@ -1,0 +1,16 @@
+{
+  "kind": "polisher",
+  "base": "c5fc60b0c327ac3d69e503e146aa392a09cc2ab5",
+  "head": "490a46c0b44b02d1d791724a99f1259a111b4fb8",
+  "diff_sha256": "433dfac68450ce94998bae45b0a7a5127a809f36c29b5eed4ca7e68aa85c8fc1",
+  "findings": {
+    "findings": [],
+    "evidence": [
+      "Read the full diff t3cf.diff",
+      "agents/classifier.md: comment lines after --- and before name:, accepted by the new ClaudeInstructions skip loop; tools Read, Grep, Glob",
+      "ClaudeInstructions has no production caller; notice and claudeOnlyRoles uses consistent with claudeOnlyRole; foreman and roles rows cannot set notice",
+      "Risk 3: Output names the markdown opener, the stop-on-missing-input rule and the optional failed input, consistent; Risk 5: header built from origin and licenseName",
+      "Tests not run"
+    ]
+  }
+}

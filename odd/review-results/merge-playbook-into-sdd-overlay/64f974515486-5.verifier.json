@@ -1,0 +1,74 @@
+{
+  "verdicts": [
+    {
+      "id": "F1",
+      "result": "reproduced",
+      "base_result": "not-reproduced",
+      "command": "git show <sha>:roles/classifier/body.md (head 64f97451, base 97a13d2a); head measured earlier with rg and go test ./skills/ -run Classifier",
+      "output": "Head: the three cross-row rules (evidence.sh:113,117,148) are missing from Step 5 and unpinned. Base: body.md:38 says 'Run `check` again; when it fails, fix your rows.', so the agent ran evidence.sh check itself."
+    },
+    {
+      "id": "F2",
+      "result": "reproduced",
+      "base_result": "not-reproduced",
+      "command": "git archive of each sha into scratchpad/vf/{base,head}; probe_f2_test.go calling ClaudeInstructions on agents/classifier.md; HOME=<mktemp> go test ./agentgen -run TestProbeF2 -count=1",
+      "output": "Head: FAIL, ClaudeInstructions: not an agent file the generator wrote: expected the key \"name\" next. Base: ok (name: right after ---)."
+    },
+    {
+      "id": "F3",
+      "result": "not-reproduced",
+      "base_result": "not-reproduced",
+      "command": "Prototyper 2026-11-23, Claude Code 2.1.330: agents/classifier.md of 64f97451 in .claude/agents/ of a trusted scratch project, claude --print asking the parent to launch classifier, list tools, try Bash; controls without comments and without tools:. Base: head -5 of base agents/classifier.md",
+      "output": "Head: loads with 23 comment lines; sub-agent has only Read, Grep, Glob; control without tools: gets Bash, Edit, Write. Base: no comment lines; line 2 is name: classifier."
+    },
+    {
+      "id": "F4",
+      "result": "reproduced",
+      "base_result": "not-reproduced",
+      "command": "git show <sha>:roles/classifier/PROVENANCE.md and <sha>:roles/classifier/body.md",
+      "output": "Head: PROVENANCE.md:18 quotes 'You receive the findings the review kept', absent from body.md:10. Base: body.md:8 contains the quoted phrase."
+    },
+    {
+      "id": "F5",
+      "result": "reproduced",
+      "base_result": "not-reproduced",
+      "command": "rg -n -i 'notice|unreadable|missing' head engine/agentgen/agentgen.go; git diff 97a13d2a 64f97451 -- engine/agentgen/messages_pin_test.go; rg notice base roles.go",
+      "output": "Head: agentgen.go:75 reads the LICENSE as a source; Check (230-233) prints it as 'missing (the source of the role is not in the repository)'; messages_pin_test.go:46 pins that text. Base: no notice field or read."
+    },
+    {
+      "id": "F6",
+      "result": "reproduced",
+      "base_result": "not-reproduced",
+      "command": "head: go vet ./agentgen/ with notice: set on the builder row; base: rg -n -i notice engine/agentgen/roles.go",
+      "output": "Head: go vet passes and the notice is dropped. Base: the role struct has no notice field."
+    },
+    {
+      "id": "F7",
+      "result": "reproduced",
+      "base_result": "not-reproduced",
+      "command": "rg -n -i 'notice|playbook|MIT Lic' scratchpad/vf/{base,head}/engine/agentgen/roles.go",
+      "output": "Head: roles.go:246 noticeComments hard-codes andresfrei/playbook and the MIT License. Base: no noticeComments."
+    },
+    {
+      "id": "F8",
+      "result": "reproduced",
+      "base_result": "not-reproduced",
+      "command": "head: zero-fence body with go test ./shelltest/ -run TheFormatOfTheClassifierBody; base: rg -c '' engine/shelltest/classifier_format_test.go",
+      "output": "Head: panic index out of range [-1] from fences[len(fences)-1] at line 47. Base: the test file does not exist."
+    },
+    {
+      "id": "F9",
+      "result": "reproduced",
+      "base_result": "not-reproduced",
+      "command": "git show <sha>:roles/classifier/body.md Output; rg -n 'markdown|fence' head classifier_format_test.go",
+      "output": "Head: body.md:67-68 say 'one markdown fence' without naming the opener; the shelltest parser accepts only the literal opener line. Base: Output asks for no fence."
+    },
+    {
+      "id": "F10",
+      "result": "reproduced",
+      "base_result": "not-reproduced",
+      "command": "git show <sha>:roles/classifier/body.md (head 10, 31-32; base 8-10, 32)",
+      "output": "Head: stop defined only for missing page or rules; nothing for a missing index. Base: no index input; the agent ran the script's index mode."
+    }
+  ]
+}

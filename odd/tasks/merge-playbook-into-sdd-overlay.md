@@ -2531,3 +2531,29 @@ Order is execution order: the learning loop (T1, T19, T2, T20, T21, T22, T3-T6, 
   - Authored lines (added plus deleted, without `agents/classifier.md` and this document): 305. By file: `agentgen.go` 43, `claude.go` 11, `claude_test.go` 32, `messages_pin_test.go` 25, `roles.go` 56, `classifier_format_test.go` 36, `classifier_artifact_test.go` 27, `PROVENANCE.md` 3, `body.md` 10, `classifier_notice_internal_test.go` 62 (new). Generated: `agents/classifier.md` 10. Forecast was 190-280.
   - Not changed: `engine/roles`, `overlay.manifest`, `skills/_shared/evidence/*`, `skills/role-chain/*`, `roles/classifier/LICENSE`, every other generated file.
   - Dispositions are as listed in L51 and L52; closure is observed only when the review of this commit is clean.
+- **L54** (2026-11-23, delivery): the T3 unit is delivered at head `490a46c0b44b02d1d791724a99f1259a111b4fb8` (branch `feat/playbook-classifier-role`, worktree `playbook-evidence-store`, onto `origin/main` `54a4ff7e8ceea8b078f2f77a63e85abd42c1d2d5`; not pushed, no PR, no merge). This commit adds only `odd/` paths: the eight untracked review records of `490a46c0`, unchanged, and this entry. Its own SHA is not knowable inside it. S5 and S9 are covered by the T3 family; no spec text changed.
+
+  **State at close.**
+  - Done, each with its commit: T3 `7704d28b`; T3c-a `f66e524d`; T3c-a2 `f1f0fa37`; T3c-r `6385fde3`; T3c-b `64f97451`; T3c-f `490a46c0`. T1, T19, T2, T20, T21 and T22 are `[x]` with the commits on their lines, merged before this branch.
+  - Unfinished (`[ ]`, not started): T4, T5, T6, T16, T17, T18, T7, T8, T9, T10, T11, T12, T13, T14, T15. T4 needs the owner's re-approval of the `role-chain` skill before its commit (L47).
+  - Missing artifacts: none known for T3c-f.
+
+  **Review of T3c-f (`490a46c0`).** Sweep `490a46c0b44b-1`: clean. Polisher `490a46c0b44b-2` and `-4`: no findings. Reviewer `490a46c0b44b-3`: three SUGGESTIONs. Reviewer `490a46c0b44b-5`: three SUGGESTIONs. No verifier record exists for this head.
+
+  **`labdrian review check --feature merge-playbook-into-sdd-overlay --onto origin/main`** at `490a46c0b44b02d1d791724a99f1259a111b4fb8`: exit 0, `"outcome": "clear"`, base `54a4ff7e8ceea8b078f2f77a63e85abd42c1d2d5`, nine ranges, twelve results. Each result as printed (fix, carry): `7704d28b9678-2` (F1; F2 F3); `7704d28b9678-5` (F1 F2; F3 F4); `f66e524dfbd1-3` (F1 F2; F3 F4); `f66e524dfbd1-5` (F1 F2 F3); `f1f0fa37ce5f-3` (F1 F2; F3); `f1f0fa37ce5f-5` (F1 F2; F3 F4); `6385fde3e6ab-4` (carry F1); `6385fde3e6ab-5` (none); `64f974515486-2` (F3; F1 F2); `64f974515486-5` (F1 F2 F3; F4 to F10); `490a46c0b44b-3` (carry F1 F2 F3); `490a46c0b44b-5` (carry F1 F2 F3). The check printed no exemptions. The earlier carries are reported as printed, not re-judged here.
+
+  **Open SUGGESTIONs, carried to the next batch (T4a, T4b), open by id:**
+  - `490a46c0b44b-3` F1: ClaudeInstructions accepts comments in any agent file (`engine/agentgen/claude.go:21`).
+  - `490a46c0b44b-3` F2: an empty LICENSE yields no notice silently (`engine/agentgen/agentgen.go:97`).
+  - `490a46c0b44b-3` F3: `<failed>` has no format or consumer until T4b (`roles/classifier/body.md:10`).
+  - `490a46c0b44b-5` F1: the opener is written bare mid-line, not as a code span as L51 wrote (`roles/classifier/body.md:67`).
+  - `490a46c0b44b-5` F2: an empty subject for a projecting error that wraps ErrNotExist (`engine/agentgen/agentgen.go:241`).
+  - `490a46c0b44b-5` F3: the same as `490a46c0b44b-3` F1 (`engine/agentgen/claude.go:21`).
+
+  **Test run** at `490a46c0b44b02d1d791724a99f1259a111b4fb8` (the worktree was at that head): `cd engine && HOME=<scratch directory> GOMODCACHE=/home/labdrian/go/pkg/mod GOCACHE=/home/labdrian/.cache/go-build go test ./... -count=1`. Exit 0. Last lines: `ok  	github.com/labdrian-ai/labdrian-sdd-overlay/engine/workflow	0.259s`, `ok  	github.com/labdrian-ai/labdrian-sdd-overlay/engine/workflow/app	0.038s`, `ok  	github.com/labdrian-ai/labdrian-sdd-overlay/engine/workflow/filelog	0.394s`, `ok  	github.com/labdrian-ai/labdrian-sdd-overlay/engine/workflowprofile	0.007s`. 87 packages `ok`, no FAIL line. HOME was a scratch directory; the module and build caches were pointed at their real paths so the build resolves offline.
+
+  **`labdrian review ci --landing 490a46c0b44b02d1d791724a99f1259a111b4fb8 --head 490a46c0b44b02d1d791724a99f1259a111b4fb8`**, exit 1, stderr: `error: review ci: the tree of the landing 490a46c0b44b02d1d791724a99f1259a111b4fb8 holds CI markers: .github/workflows/ci.yml, .github/workflows/release.yml; the repository has remotes: origin; the no-CI closure does not apply`. The closure rests on the review check and the test run above, not on the no-CI rule.
+
+  **Incidents and tool gaps.**
+  - One verifier `go test` run used the real HOME (agentgen, skills and shelltest tests). The brief names no record id. Not fixed here; the tests must run with HOME set to a temporary directory.
+  - `review record --role sweeper` cannot say "removed" for paths the reviewed commit itself deleted; it records them as "live" with evidence. Tool gap, no workaround applied.

@@ -1,0 +1,97 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "c5fc60b0c327ac3d69e503e146aa392a09cc2ab5",
+    "head": "490a46c0b44b02d1d791724a99f1259a111b4fb8",
+    "diff_sha256": "433dfac68450ce94998bae45b0a7a5127a809f36c29b5eed4ca7e68aa85c8fc1",
+    "paths": [
+      "agents/classifier.md",
+      "engine/agentgen/agentgen.go",
+      "engine/agentgen/classifier_notice_internal_test.go",
+      "engine/agentgen/claude.go",
+      "engine/agentgen/claude_test.go",
+      "engine/agentgen/messages_pin_test.go",
+      "engine/agentgen/roles.go",
+      "engine/shelltest/classifier_format_test.go",
+      "engine/skills/classifier_artifact_test.go",
+      "odd/tasks/merge-playbook-into-sdd-overlay.md",
+      "roles/classifier/PROVENANCE.md",
+      "roles/classifier/body.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "hunt"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "c5fc60b0c327ac3d69e503e146aa392a09cc2ab5",
+      "head": "490a46c0b44b02d1d791724a99f1259a111b4fb8",
+      "diff_sha256": "433dfac68450ce94998bae45b0a7a5127a809f36c29b5eed4ca7e68aa85c8fc1"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "agents/classifier.md",
+        "engine/agentgen/agentgen.go",
+        "engine/agentgen/classifier_notice_internal_test.go",
+        "engine/agentgen/claude.go",
+        "engine/agentgen/claude_test.go",
+        "engine/agentgen/messages_pin_test.go",
+        "engine/agentgen/roles.go",
+        "engine/shelltest/classifier_format_test.go",
+        "engine/skills/classifier_artifact_test.go",
+        "odd/tasks/merge-playbook-into-sdd-overlay.md",
+        "roles/classifier/PROVENANCE.md",
+        "roles/classifier/body.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "roles/classifier/body.md:67",
+        "severity": "SUGGESTION",
+        "claim": "L51 gives the opener as the code span `` ```markdown ``; body and its K1 pin write a bare ```markdown mid-line, an unclosed backtick run that renders as literal text; L53 does not list this deviation. -5 F9 resolved in substance, not as L51 wrote it.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "roles/classifier/body.md:67",
+          "roles/classifier/body.md:68",
+          "odd/tasks/merge-playbook-into-sdd-overlay.md:2391"
+        ]
+      },
+      {
+        "id": "F2",
+        "location": "engine/agentgen/agentgen.go:241",
+        "severity": "SUGGESTION",
+        "claim": "Check builds missing/cannot-read messages from p.subject, set only by the two reading sites; a projecting error wrapping fs.ErrNotExist would print an empty subject. No current projecting error wraps it.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/agentgen/agentgen.go:241",
+          "engine/agentgen/agentgen.go:127"
+        ]
+      },
+      {
+        "id": "F3",
+        "location": "engine/agentgen/claude.go:21",
+        "severity": "SUGGESTION",
+        "claim": "The skip loop accepts # lines before name: in any agent file, including chain roles and the foreman whose generator writes none; the exact-inverse contract is wider than documented; tests cover only refused shapes.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/agentgen/claude.go:12",
+          "engine/agentgen/claude.go:21",
+          "engine/agentgen/claude_test.go"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the whole diff, the four T3c-b review records and L51-L53",
+      "Every T3c-b finding resolved per L51/L52; -5 F9 with the form deviation in F1; F3 recorded not reproduced",
+      "evidence.sh check enforces no cross-row rule beyond the three in Step 5",
+      "Not run: go test, gadu-generate --check, vet, gofmt"
+    ]
+  }
+}

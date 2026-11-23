@@ -1,0 +1,18 @@
+{
+  "kind": "polisher",
+  "base": "c5fc60b0c327ac3d69e503e146aa392a09cc2ab5",
+  "head": "490a46c0b44b02d1d791724a99f1259a111b4fb8",
+  "diff_sha256": "433dfac68450ce94998bae45b0a7a5127a809f36c29b5eed4ca7e68aa85c8fc1",
+  "findings": {
+    "findings": [],
+    "evidence": [
+      "Read the full diff t3cf.diff",
+      "Step 5 cross-row rules match evidence.sh check L113, L117, L148; check runs once per file",
+      "Risk 3: the markdown opener named mid-line opens no fence in markdownFencesAfter or evidence.sh awk; <failed> optional and compatible with body.md L14",
+      "Risk 5: header built from origin and licenseName equals the old hard-coded text; notice() empty for empty LICENSE as before",
+      "agentgen.go: only the two reading closures set subject; no message left with an empty subject",
+      "ClaudeInstructions callers are tests only; skip runs only between --- and name:; refusal cases pinned",
+      "Not run: tests, gadu-generate --check, vet, gofmt"
+    ]
+  }
+}
