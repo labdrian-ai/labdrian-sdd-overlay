@@ -1,6 +1,6 @@
 // Package evidencesh is the adapter of the Classified port of review/app (S6, T4w): it asks the deployed evidence store,
 // `sh <script> reviewed-each <root>/docs/wiki <review>...`, whether the evidence page of a working tree holds an Evidence
-// row for each of the stored results, through a Runner (execrunner), so the program that starts it stays the one place that
+// row, or a row of its table of reviews classified without evidence, for each of the stored results, through a Runner (execrunner), so the program that starts it stays the one place that
 // starts programs of the machine. It runs one `sh` for each call and splits no call: past the limits of one exec (the
 // header of evidence.sh names them) the call is an error. Nothing it is told is remembered. Its bound is the timeout and
 // the grace of the Runner: at the deadline the Runner kills sh, and the call can wait up to the Runner's grace more
@@ -83,8 +83,8 @@ func New(runner Runner, o Options) Script {
 	return Script{runner: runner, script: o.Script, environ: slices.Clone(o.Environ), timeout: timeout}
 }
 
-// Classified says, for each of reviews, whether the evidence page at <root>/docs/wiki holds an Evidence row with that
-// Review (app.Classified). The reviews reach the script in order as arguments of one run. The package doc says what each
+// Classified says, for each of reviews, whether the evidence page at <root>/docs/wiki holds an Evidence row, or a row of
+// its table of Classified without evidence, with that Review (app.Classified). The reviews reach the script in order as arguments of one run. The package doc says what each
 // outcome is; the exit table of the script is that of `reviewed-each`: 0 with one line for each review, 2 for a usage
 // error, 3 for no awk, 4 for a page it cannot answer about, and never an answer for any of them.
 func (s Script) Classified(root string, reviews []string) ([]bool, error) {

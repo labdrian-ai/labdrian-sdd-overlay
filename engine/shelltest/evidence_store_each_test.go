@@ -124,6 +124,8 @@ func TestEvidenceStore_ReviewedEachAnswersEveryIdentifierFromOneRead(t *testing.
 	states := map[string]state{
 		"a valid page": plain(evidencePage(kinds, evidence)),
 		"no page":      plain(""),
+		"a page with the table of classified reviews":            plain(evidencePage(kinds, evidence) + classifiedHead + "| f/zzzz-1 | 2026-11-24 |\n"),
+		"a page whose table of classified reviews fails a check": plain(evidencePage(kinds, evidence) + classifiedHead + "| f/zzzz-1 | 2026/11/19 |\n"),
 		"a directory at the page path": func(t *testing.T) (evidenceWorld, []string, string) {
 			w := newEvidenceWorld(t, "")
 			if err := os.MkdirAll(filepath.Join(w.repo, "docs", "wiki", "evidence.md"), 0o755); err != nil {
@@ -202,7 +204,7 @@ func TestEvidenceStore_ReviewedEachAnswersEveryIdentifierFromOneRead(t *testing.
 	for name, page := range failingEvidencePages {
 		states["a page that fails a check: "+name] = plain(page)
 	}
-	ids := []string{"f/aaaa-1", "f/zzzz-1", "f/dddd-1", "f/spaced-1", "f/a|b-1", "f/xxxx-1", "f/xxxx-10", "f/src-1", `f/a\b-1`}
+	ids := []string{"f/aaaa-1", "f/zzzz-1", "f/dddd-1", "f/spaced-1", "f/a|b-1", "f/xxxx-1", "f/xxxx-10", "f/src-1", `f/a\b-1`, "f/zzzz-1"}
 	for name, build := range states {
 		t.Run("parity with reviewed: "+name, func(t *testing.T) {
 			w, env, wiki := build(t)

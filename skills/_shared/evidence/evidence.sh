@@ -14,9 +14,13 @@
 # "## Evidence" (evidence-rules.md has only the first):
 #   Kinds:    | Kind | Level | Rule | Applies when | Source | Scope |
 #   Evidence: | Kind | Level | Review | Date | Finding |
+# An optional third table, under "## Classified without evidence", lists a
+# review that was classified and gave no evidence row:
+#   Classified without evidence: | Review | Date |
 # A kind is kebab-case and unique; a level is a positive integer, 1 meaning
 # that the kind has no rule yet; a date is YYYY-MM-DD; a scope is general or
-# project; every kind of the evidence is in Kinds.
+# project; every kind of the evidence is in Kinds; a Review of the third table
+# is not blank.
 # - check: prints "FAIL <file>: <problem>" for each problem and exits 1; else
 #   prints one line and exits 0. With no page it says so and exits 0.
 # - count: one line per kind and level of the evidence: the number of distinct
@@ -32,7 +36,8 @@
 #   neither, a message on stderr and exit 1 (seed-evidence-31). The kind is
 #   compared with a cell as text, never as a number: a kind 01 is not 1.
 # - reviewed <identifier>: prints nothing; exits 0 when the page passes every
-#   check of "check" and a row of its Evidence table has the identifier as its
+#   check of "check" and a row of its Evidence table, or of its table of
+#   Classified without evidence, has the identifier as its
 #   Review cell, exactly (a cell is trimmed, "\|" in it is read as "|", and the
 #   identifier is compared as the bytes given, as text, never as a number: a
 #   cell 01 is not 1); 1 when none does, when the page
@@ -60,7 +65,8 @@
 # count, rules, and index exit 0 (reviewed and reviewed-each also exit 4, see
 # above), but with no awk on PATH every mode prints
 # "evidence.sh: awk is not on PATH; <mode> cannot run" on stderr and exits 3
-# (a usage error still exits 2). A cell may hold "|" written as "\|". Not
+# (a usage error still exits 2). count, rules, index and rule do not read the
+# table of Classified without evidence. A cell may hold "|" written as "\|". Not
 # read: a table inside a code block. A row after a line that ends the table
 # (a blank line, for one) is still read, and check fails on it.
 
@@ -151,7 +157,7 @@ run_awk() {
     # The elements split makes are text too (the empty string makes each one), so a key is the bytes of an identifier on every awk.
     if (each) { nid = split(want, ids, "\n"); for (i = 1; i <= nid; i++) { ids[i] = ids[i] ""; wanted[ids[i]] = 1 } }
   }
-  BEGIN { sec = ""; kh = "Kind|Level|Rule|Applies when|Source|Scope"; eh = "Kind|Level|Review|Date|Finding" }
+  BEGIN { sec = ""; kh = "Kind|Level|Rule|Applies when|Source|Scope"; eh = "Kind|Level|Review|Date|Finding"; ch = "Review|Date" }
   /^```/ { fence = !fence; next }
   fence { next }
   /^# / { if (trim(substr($0, 3)) == "Evidence") title = 1; next }
@@ -159,12 +165,26 @@ run_awk() {
     h = trim(substr($0, 4)); sec = ""
     if (h == "Kinds") { sec = "K"; hasK = 1; rowK = 0; doneK = 0 }
     else if (h == "Evidence") { sec = "E"; hasE = 1; rowE = 0; doneE = 0 }
+    else if (h == "Classified without evidence") { sec = "C"; rowC = 0; doneC = 0 }
     next
   }
   /^\|/ {
     if (sec == "") next
-    if (sec == "K" && doneK || sec == "E" && doneE) fail("a table row after the table of " (sec == "K" ? "Kinds" : "Evidence") " ended, by a line that is not a row: " $0)
+    if (sec == "K" && doneK || sec == "E" && doneE || sec == "C" && doneC) fail("a table row after the table of " (sec == "K" ? "Kinds" : sec == "E" ? "Evidence" : "Classified without evidence") " ended, by a line that is not a row: " $0)
     cells($0)
+    if (sec == "C") {
+      # A review classified with no evidence row: | Review | Date |. Read by check, reviewed and reviewed-each only.
+      rowC++
+      if (rowC == 1) { if (joined() != ch) fail("the header row of Classified without evidence is not: | " ch " |"); next }
+      if (rowC == 2) { if (isseparator($0)) next; fail("the second row of Classified without evidence is not the separator row") }
+      if (ncell != 2) { fail("a row of Classified without evidence has " ncell " cells, not 2: " cell[1]); next }
+      rv = cell[1]; d = cell[2]
+      if (rv == want) found = 1
+      if (rv in wanted) hit[rv] = 1
+      if (rv == "") fail("a row of Classified without evidence has no review")
+      if (!isdate(d)) fail("classified review \"" rv "\" has date \"" d "\", not YYYY-MM-DD")
+      next
+    }
     if (sec == "K") {
       rowK++
       if (rowK == 1) { if (joined() != kh) fail("the header row of Kinds is not: | " kh " |") ; next }
@@ -200,7 +220,7 @@ run_awk() {
     }
     next
   }
-  { if (sec == "K" && rowK > 0) doneK = 1; if (sec == "E" && rowE > 0) doneE = 1 }
+  { if (sec == "K" && rowK > 0) doneK = 1; if (sec == "E" && rowE > 0) doneE = 1; if (sec == "C" && rowC > 0) doneC = 1 }
   END {
     if (mode == "check" || mode == "reviewed" || each) {
       if (!title) fail("missing the heading \"# Evidence\"")

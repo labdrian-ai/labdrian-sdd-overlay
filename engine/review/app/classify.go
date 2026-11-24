@@ -9,11 +9,11 @@ import (
 )
 
 // Classified is the port that tells whether stored results have been classified into the evidence page of a working
-// tree (S6): the learning loop counts a result as classified when the page holds an Evidence row whose Review is the
-// result's identifier.
+// tree (S6): the learning loop counts a result as classified when the page holds an Evidence row, or a row of its table
+// of Classified without evidence, whose Review is the result's identifier.
 type Classified interface {
-	// Classified says, for each of reviews, whether the evidence page of the working tree at root holds an Evidence row
-	// whose Review is that identifier, <feature>/<head12>-<n>. With a nil error the answers are exactly len(reviews), the
+	// Classified says, for each of reviews, whether the evidence page of the working tree at root holds an Evidence row,
+	// or a row of its table of Classified without evidence, whose Review is that identifier, <feature>/<head12>-<n>. With a nil error the answers are exactly len(reviews), the
 	// i-th about reviews[i], all read from one state of the page. An empty reviews gives an empty answer and reads
 	// nothing. An error is a page or a script that cannot say, never "not classified".
 	Classified(root string, reviews []string) ([]bool, error)
