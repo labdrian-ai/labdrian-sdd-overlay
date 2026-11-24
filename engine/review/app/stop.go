@@ -53,8 +53,9 @@ type Ruling struct {
 // remembered: the port is asked once at each stop, for every kept result, so a page that changed is read again; the
 // block names every result still lacking, the ones asked before included, so a lost record never hides a result. A
 // result that cannot be read, hold or bind is left out and named in an error returned beside the ruling, once for each
-// session and text of its refusal, so a block and an error can come together. What the pass as a whole cannot tell is an
-// error with no block. A Service without the port is as it was.
+// session and stored file, recorded when the stop returns its ruling with no error of the pass, so a block and an error
+// can come together. What the pass as a whole cannot tell is an error with no block, and names the refusals again at the
+// next stop. A Service without the port is as it was.
 func (s Service) Stop(dir, session string, continuing bool) (Ruling, error) {
 	if s.asked == nil {
 		return Ruling{}, errors.New("review: the stop hook has no store of the questions it has put")

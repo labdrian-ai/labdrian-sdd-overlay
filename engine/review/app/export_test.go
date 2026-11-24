@@ -24,5 +24,6 @@ func (s Service) KeptResults(dir string) ([]KeptResult, []error, error) {
 	if err != nil {
 		return nil, nil, fmt.Errorf("locate the repository of %s: %w", dir, err)
 	}
-	return s.keptResultsOf(repo)
+	kept, refused, err := s.keptResultsOf(repo)
+	return kept, errorsOf(refused), err
 }

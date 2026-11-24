@@ -45,13 +45,14 @@ func (s Service) WithClassified(c Classified) Service {
 // Only a result that is about another commit than the one whose name it carries (its binding says so, and only the
 // first 12 characters of its name said it was about this one) and a result with no kept finding are skipped. A result
 // that cannot be read, that does not hold, or that does not bind its commit is a refusal, the second value, as 'review
-// check' refuses the same file; it is left out and the pass goes on, so one bad file hides no other result. What the
+// check' refuses the same file (its text is the error's, its review the identifier of the file, whatever the error says);
+// it is left out and the pass goes on, so one bad file hides no other result. What the
 // pass as a whole cannot tell (the features, where HEAD stands, the names of a feature's results) is the third value,
 // returned with no result.
 //
 // There is nothing in a tree that keeps no features, on a detached HEAD, on a repository that does not tell its
 // default branch, and on a branch with no commit of its own, and that is no error. Nothing is stored.
-func (s Service) keptResultsOf(repo Repository) ([]KeptResult, []error, error) {
+func (s Service) keptResultsOf(repo Repository) ([]KeptResult, []refusal, error) {
 	features, err := s.results.Features(repo.Root)
 	if err != nil {
 		return nil, nil, fmt.Errorf("read the features of %s: %w", repo.Root, err)
@@ -76,14 +77,14 @@ func (s Service) keptResultsOf(repo Repository) ([]KeptResult, []error, error) {
 	}
 	var (
 		out     []KeptResult
-		refused []error
+		refused []refusal
 	)
 	for _, commit := range standing.Commits {
 		for _, listing := range listings {
 			for _, name := range review.ResultsOfHead(listing.names, commit) {
 				h, binds, err := s.heldResult(repo, listing.feature, name, commit)
 				if err != nil {
-					refused = append(refused, err)
+					refused = append(refused, refusal{review: reviewID(listing.feature, name), err: err})
 					continue
 				}
 				if !binds {
@@ -99,6 +100,17 @@ func (s Service) keptResultsOf(repo Repository) ([]KeptResult, []error, error) {
 	}
 	return out, refused, nil
 }
+
+// refusal is a stored result the pass refused: review is its identifier, <feature>/<head12>-<n>, and err why. Its text and
+// its causes are err's, so errors.Is reaches them; the identifier is what a session names it by (refusedKey).
+type refusal struct {
+	review string
+	err    error
+}
+
+func (r refusal) Error() string { return r.err.Error() }
+
+func (r refusal) Unwrap() error { return r.err }
 
 // incomplete is the problems of a classification pass that did not stop it: the results it refused, and the records of a
 // named refusal that failed. Its text joins the problems by "; ", and the hook prints it on one line (oneLine); the type
@@ -134,33 +146,55 @@ func classifyKey(review string) string {
 	return "classify-" + sha256hex.Sum([]byte(review))[:16]
 }
 
-// refusedKey names, in the questions of a session, that the refusal with the given text was named: refused- and the
-// first 16 hex digits of the SHA-256 of the text, 24 bytes of lowercase letters, digits and dashes, a key of the same
-// store as classifyKey's. A refusal whose text changes is named again.
-func refusedKey(text string) string {
-	return "refused-" + sha256hex.Sum([]byte(text))[:16]
+// refusedKey names, in the questions of a session, that the refusal of the stored file whose identifier is review
+// (<feature>/<head12>-<n>) was named: refused- and the first 16 hex digits of the SHA-256 of the identifier, 24 bytes of
+// lowercase letters, digits and dashes, a key of the same store as classifyKey's. The text of the refusal is not part of
+// it: a file is named once for each session, whatever its error says.
+func refusedKey(review string) string {
+	return "refused-" + sha256hex.Sum([]byte(review))[:16]
 }
 
-// unnamed is the refusals the session has not named yet, in order, each followed by the failed record of its naming when
-// the record fails (then it is named again at the next stop); a refusal whose key the session holds is dropped. A refusal
-// is recorded when it is kept. A key that cannot be read is an error and no refusal is returned: the pass cannot tell.
-func (s Service) unnamed(session string, refusals []error) ([]error, error) {
-	var problems []error
-	for _, refusal := range refusals {
-		key := refusedKey(refusal.Error())
-		named, err := s.asked.Has(session, key)
+// errorsOf is refusals as errors, in order.
+func errorsOf(refusals []refusal) []error {
+	if len(refusals) == 0 {
+		return nil
+	}
+	out := make([]error, len(refusals))
+	for i, r := range refusals {
+		out[i] = r
+	}
+	return out
+}
+
+// unnamed is, in order, the refusals whose key the session does not hold: the ones a stop that returns its ruling names.
+// It only reads. A key that cannot be read is an error and no refusal is returned: the pass cannot tell.
+func (s Service) unnamed(session string, refusals []refusal) ([]refusal, error) {
+	var fresh []refusal
+	for _, r := range refusals {
+		named, err := s.asked.Has(session, refusedKey(r.review))
 		if err != nil {
 			return nil, fmt.Errorf("read the questions asked in the session: %w", err)
 		}
-		if named {
-			continue
+		if !named {
+			fresh = append(fresh, r)
 		}
-		problems = append(problems, refusal)
-		if err := s.asked.Add(session, key); err != nil {
+	}
+	return fresh, nil
+}
+
+// named records the keys of fresh, the refusals a stop returns with its ruling, and gives them as errors, in order, each
+// followed by the failed record of its naming when the record fails (then it is named again at the next stop). Only a
+// stop that returns its ruling with no error of the pass calls it: a stop that ends in an error names the refusals
+// beside that error and records nothing, so the next stop names them again.
+func (s Service) named(session string, fresh []refusal) []error {
+	var problems []error
+	for _, r := range fresh {
+		problems = append(problems, r)
+		if err := s.asked.Add(session, refusedKey(r.review)); err != nil {
 			problems = append(problems, fmt.Errorf("record that a refusal was named: %w", err))
 		}
 	}
-	return problems, nil
+	return problems
 }
 
 // classifyRuling is the block that asks for the classification of the results of dir that the page lacks, or no block.
@@ -168,17 +202,18 @@ func (s Service) unnamed(session string, refusals []error) ([]error, error) {
 //  1. the repository is located;
 //  2. the results are those that hold (keptResultsOf); a pass error is returned with no block;
 //  3. each refusal (a result that cannot be read, held or bound) is named in the error returned beside the ruling
-//     (incomplete) once for each session and text (unnamed);
-//  4. with no kept result there is no block;
+//     (incomplete) once for each session and stored file, recorded when the stop returns its ruling with no error of the
+//     pass (unnamed reads, named records);
+//  4. with no kept result there is no block, and the refusals are recorded (named);
 //  5. the port is asked once, for every kept result in order, and nothing it says is remembered: a stop asks again. An
 //     error of the port, or a number of answers that is not the number of results, is an error with no block;
 //  6. every result still lacking goes to once with its classifyKey: the stop is blocked when one of those questions is
 //     new to the session, and the block names every result still lacking, the ones asked before included, as a review
 //     question names every need;
-//  7. the ruling, joined with the problems of the refusals.
+//  7. the ruling, joined with the problems of the refusals, which are recorded (named) only now.
 //
 // What the pass as a whole cannot tell (the repository, the features, the port, the questions of the session) is an error
-// with no block, joined with the refusals.
+// with no block, joined with the refusals not named yet; nothing is recorded for them.
 func (s Service) classifyRuling(dir, session string) (Ruling, error) {
 	repo, err := s.git.Locate(dir)
 	if err != nil {
@@ -186,14 +221,14 @@ func (s Service) classifyRuling(dir, session string) (Ruling, error) {
 	}
 	results, refusals, err := s.keptResultsOf(repo)
 	if err != nil {
-		return Ruling{}, withIncomplete(fmt.Errorf("find the results with kept findings: %w", err), refusals)
+		return Ruling{}, withIncomplete(fmt.Errorf("find the results with kept findings: %w", err), errorsOf(refusals))
 	}
-	problems, err := s.unnamed(session, refusals)
+	fresh, err := s.unnamed(session, refusals)
 	if err != nil {
-		return Ruling{}, withIncomplete(err, refusals)
+		return Ruling{}, withIncomplete(err, errorsOf(refusals))
 	}
 	if len(results) == 0 {
-		return Ruling{}, withIncomplete(nil, problems)
+		return Ruling{}, withIncomplete(nil, s.named(session, fresh))
 	}
 	reviews := make([]string, len(results))
 	for i, result := range results {
@@ -201,10 +236,10 @@ func (s Service) classifyRuling(dir, session string) (Ruling, error) {
 	}
 	answers, err := s.classified.Classified(repo.Root, reviews)
 	if err != nil {
-		return Ruling{}, withIncomplete(fmt.Errorf("tell whether the results with kept findings are classified: %w", err), problems)
+		return Ruling{}, withIncomplete(fmt.Errorf("tell whether the results with kept findings are classified: %w", err), errorsOf(fresh))
 	}
 	if len(answers) != len(reviews) {
-		return Ruling{}, withIncomplete(fmt.Errorf("the evidence page of %s gave %d answers for %d results", repo.Root, len(answers), len(reviews)), problems)
+		return Ruling{}, withIncomplete(fmt.Errorf("the evidence page of %s gave %d answers for %d results", repo.Root, len(answers), len(reviews)), errorsOf(fresh))
 	}
 	var (
 		lacking []KeptResult
@@ -216,11 +251,11 @@ func (s Service) classifyRuling(dir, session string) (Ruling, error) {
 		}
 	}
 	if len(lacking) == 0 {
-		return Ruling{}, withIncomplete(nil, problems)
+		return Ruling{}, withIncomplete(nil, s.named(session, fresh))
 	}
 	ruling, err := s.once(session, keys, Ruling{Block: true, Classify: lacking})
 	if err != nil {
-		return Ruling{}, withIncomplete(err, problems)
+		return Ruling{}, withIncomplete(err, errorsOf(fresh))
 	}
-	return ruling, withIncomplete(nil, problems)
+	return ruling, withIncomplete(nil, s.named(session, fresh))
 }

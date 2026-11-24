@@ -1,7 +1,8 @@
 package main
 
-// Every error the stop hook prints is one line of stderr, whatever line breaks its text holds (S6, L72): the line form is
-// the printer's concern, so the errors of review/app keep their own texts.
+// Every error the stop hook prints is one line of stderr (S6, L72): CR, LF, VT, FF and the UTF-8 forms of NEL, LS and PS
+// fold, every other byte is kept (L74). The line form is the printer's concern, so the errors of review/app keep their
+// own texts.
 
 import (
 	"errors"
@@ -20,6 +21,17 @@ func TestStopHookPrintsAnErrorOfManyLinesOnOneLine(t *testing.T) {
 		stdout, stderr, exits := runStopHook(d, stopInput("s1", "relative/dir", false))
 
 		want := "review stop-hook: cannot determine the working directory: first second\n"
+		if stdout != "" || stderr != want || !equalInts(exits, []int{0}) {
+			t.Errorf("stdout = %q, stderr = %q, exits = %v; want nothing, %q and [0]", stdout, stderr, exits, want)
+		}
+	})
+	t.Run("bytes that are not text", func(t *testing.T) {
+		d := s.hookDeps()
+		d.getwd = func() (string, error) { return "", errors.New("a\xffb\xe2\x80\xa8c") }
+
+		stdout, stderr, exits := runStopHook(d, stopInput("s1", "relative/dir", false))
+
+		want := "review stop-hook: cannot determine the working directory: a\xffb c\n"
 		if stdout != "" || stderr != want || !equalInts(exits, []int{0}) {
 			t.Errorf("stdout = %q, stderr = %q, exits = %v; want nothing, %q and [0]", stdout, stderr, exits, want)
 		}
@@ -46,6 +58,19 @@ func TestOneLineJoinsTheLinesOfAText(t *testing.T) {
 		{"\na\n", "a"},
 		{"a", "a"},
 		{"", ""},
+		// the folded set (L74): VT, FF and the UTF-8 forms of NEL, LS and PS, written as byte escapes.
+		{"a\vb", "a b"},
+		{"a\fb", "a b"},
+		{"a\xc2\x85b", "a b"},
+		{"a\xe2\x80\xa8b", "a b"},
+		{"a\xe2\x80\xa9b", "a b"},
+		{"a\r\xe2\x80\xa8\v\xe2\x80\xa9b", "a b"},
+		{"\xe2\x80\xa9a\f", "a"},
+		// every other byte is printed as it is.
+		{"a\xffb\nc", "a\xffb c"},
+		{"a\x85b", "a\x85b"},
+		{"a\xe2\x80", "a\xe2\x80"},
+		{"\xc3\xa9\n\xc3\xbc", "\xc3\xa9 \xc3\xbc"},
 	} {
 		if got := oneLine(tc.in); got != tc.want {
 			t.Errorf("oneLine(%q) = %q, want %q", tc.in, got, tc.want)

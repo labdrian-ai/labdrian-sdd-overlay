@@ -20,8 +20,8 @@ package main
 //   - The exit code is 0 always, except 1 for a command line that is not understood. It is never 2, which blocks the stop
 //     and hands stderr to the agent as the reason: whatever goes wrong (input that cannot be read or decoded, a repository
 //     or a store that cannot be read, a panic) the stop happens, so a hook that is broken never keeps an agent from
-//     stopping. What the hook could not tell is one line on stderr, whatever line breaks its text holds (oneLine), which
-//     Claude Code shows only in verbose mode; input it cannot use is silent on both streams, and so is every case with
+//     stopping. What the hook could not tell is one line on stderr, with CR, LF, VT, FF and the UTF-8 forms of NEL, LS and
+//     PS folded to a space and every other byte kept (oneLine), which Claude Code shows only in verbose mode; input it cannot use is silent on both streams, and so is every case with
 //     nothing to ask.
 //
 // It asks git and reads the working tree, and writes one marker in the state home when it blocks a stop (review/fsstore's
@@ -68,23 +68,45 @@ func runReviewStopHook(p process, d deps, args []string) {
 	p.exit(0)
 }
 
-// oneLine is text with each run of carriage returns and line feeds made one space, and the runs at its start and its end
-// dropped: what the hook prints on stderr, which is one line whatever line breaks the text of an error holds.
+// oneLine is text with each run of line breaks made one space, and the runs at its start and its end dropped: what the
+// hook prints on stderr, which is one line. It works on bytes: every byte that is not part of a line break is written as
+// it is, invalid UTF-8 included. The line breaks are those of lineBreakAt.
 func oneLine(text string) string {
 	var b strings.Builder
 	broken := false
-	for _, r := range text {
-		if r == '\r' || r == '\n' {
+	for i := 0; i < len(text); {
+		if n := lineBreakAt(text, i); n > 0 {
 			broken = true
+			i += n
 			continue
 		}
 		if broken && b.Len() > 0 {
 			b.WriteByte(' ')
 		}
 		broken = false
-		b.WriteRune(r)
+		b.WriteByte(text[i])
+		i++
 	}
 	return b.String()
+}
+
+// lineBreakAt is the length in bytes of the line break that starts at text[i], and 0 when none does: CR, LF, VT and FF
+// (one byte), and the UTF-8 forms of NEL (U+0085, C2 85), LS (U+2028, E2 80 A8) and PS (U+2029, E2 80 A9), the mandatory
+// breaks of Unicode UAX #14. A lone byte 0x85 is not NEL: the hook does not know the encoding of a text that is not UTF-8.
+func lineBreakAt(text string, i int) int {
+	switch text[i] {
+	case '\r', '\n', '\v', '\f':
+		return 1
+	case 0xC2:
+		if strings.HasPrefix(text[i:], "\xc2\x85") {
+			return 2
+		}
+	case 0xE2:
+		if strings.HasPrefix(text[i:], "\xe2\x80\xa8") || strings.HasPrefix(text[i:], "\xe2\x80\xa9") {
+			return 3
+		}
+	}
+	return 0
 }
 
 // stopHookAnswer reads the hook input and returns what the hook prints on stdout: the block of the stop, or nothing. Input
