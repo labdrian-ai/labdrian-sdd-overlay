@@ -1,0 +1,42 @@
+{
+  "kind": "sweep",
+  "base": "6cc18ea485a94e2f49b7ca4b905aa0a84dbb7673",
+  "head": "34e436c2b3102513a90c9ce58d3e89ea5e00e40a",
+  "diff_sha256": "b3b327f723c2afa56914a18a67d3da306760832b9c1029c561e2a02078cf27c8",
+  "outcome": "fired",
+  "t1": {
+    "deleted_or_renamed": [],
+    "removed_names": [
+      {
+        "name": "--git",
+        "hits": [
+          "engine/gitfs/locator.go",
+          "engine/gitprov/fs_test.go",
+          "engine/gitprov/gitprov.go",
+          "engine/gitprov/gitprov_test.go",
+          "engine/review/app/fakes_test.go",
+          "engine/review/app/hookfacts_test.go",
+          "engine/review/app/launch_test.go",
+          "engine/review/app/unreviewed_test.go",
+          "engine/review/gitexec/gitexec_test.go",
+          "engine/review/gitexec/realgit_test.go",
+          "engine/skills/procedural_candidate_contract_test.go",
+          "longterm-mem/internal/projectidfs/identity_test.go",
+          "odd/review-results/phase9-store-agnostic-promotion/874c5b951b14-4.polisher.json",
+          "odd/tasks/consolidation-phase9.md",
+          "openspec/changes/archive/2026-09-13-pi-package-hardening/apply-progress.md",
+          "openspec/changes/archive/2026-09-21-procedural-memory-lifecycle/design.md",
+          "openspec/specs/longterm-mem-memory-access/spec.md",
+          "skills/_shared/procedural-candidate-detection.md",
+          "tools/actuals-record-validator/main_test.go"
+        ]
+      }
+    ]
+  },
+  "t2": [],
+  "t3": [],
+  "t4": {
+    "leftovers": [],
+    "orphaned_fixtures": []
+  }
+}

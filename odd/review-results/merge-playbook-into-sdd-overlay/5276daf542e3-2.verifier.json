@@ -1,0 +1,32 @@
+{
+  "verdicts": [
+    {
+      "id": "F1",
+      "result": "reproduced",
+      "command": "Head and base: copy probes/{head,base}_probe_test.go into <tree>/engine/review/app/zz_probe_test.go, then cd <tree>/engine && HOME=$(mktemp -d) go test ./review/app/ -run TestProbeT2F1 -v -count=1. The probe uses the existing fakes: classifyWorld plus an invalid stored file own-rdd/333333333333-9.json. It sends Stop's result through hookGuard, a verbatim copy of review_stop_hook.go:97-99 'if err != nil || !ruling.Block { return nil, err }'. stopHookAnswer itself cannot be given a Classified port because newReviewService builds the Service. Reachability: rg -n 'WithClassified|\\.Stamp\\(|Stamp\\(root' -g '!*_test.go' head/engine",
+      "output": "HEAD: 'T2F1 stop1: Stop Block=true Classify=1 err!=nil=true -> hook blocks=false; classify- key recorded=true' and 'T2F1 stop2: Stop Block=false err!=nil=true -> hook blocks=false'. The block that comes with the refusal error is dropped by the hook guard. The classify- key is already recorded, so the next stop does not block either, and the question is never shown. Production does not reach this at head: rg finds WithClassified only at review/app/classify.go:36 (definition) and in comments in service.go:34 and stop.go:50. No production caller wires it, and stopHookAnswer (review_stop_hook.go:96) calls newReviewService(d).WithAsked(asked).Stop without WithClassified. BASE: 'T2F1 stop1: Stop Block=false Classify=0 err!=nil=true -> hook blocks=false; classify- key recorded=false' and 'stop2: Stop Block=false err!=nil=true'. At base, Stop never returns a block together with an error, so the guard drops nothing and no key is recorded.",
+      "base_result": "not-reproduced"
+    },
+    {
+      "id": "F2",
+      "result": "reproduced",
+      "command": "rg -n 'WithClassified|\\.Stamp\\(|Stamp\\(root' -g '!*_test.go' head/engine ; rg -ln 'func \\(.*\\) Stamp\\(' head/engine ; and the same searches on base/engine (read-only search; no adapter exists to execute)",
+      "output": "HEAD: the port doc at classify.go:18-19 promises: 'Stamp is the state of everything Classified(root, review) reads, for any review: equal stamps give equal answers, so Stop asks Classified again only when the stamp changed.' The only non-test Stamp hits are the interface declaration at classify.go:20 and the call at classify.go:173. The only implementer of Stamp is fakeClassified in review/app/classify_test.go (plus my scratch probe). There is no production adapter and no test that pins an adapter's stamp to the inputs of 'evidence.sh reviewed'. Whether a future stamp covers every input cannot be executed at head, because there is no adapter. BASE: the Classified port has no Stamp method (base classify.go:13-17), and the only Stamp hits in base/engine are unrelated skills/StampProvenance.",
+      "base_result": "not-reproduced"
+    },
+    {
+      "id": "F3",
+      "result": "reproduced",
+      "command": "Head and base: cd <tree>/engine && HOME=$(mktemp -d) go test ./review/app/ -run TestProbeT2F3 -v -count=1. The probe uses a real fsstore.NewAsked(t.TempDir()), 2 kept results and 10 stops in session-1. On head the stamp changes at every stop (stamp-1..stamp-10). On base the page answer alternates. It counts the files under the Asked dir.",
+      "output": "HEAD: 'T2F3: 2 kept results, 10 stamps, 10 stops -> 22 marker files in the Asked dir'. That is one memo file per result per page state (20) plus 2 classify- markers, and nothing removes them. BASE: 'T2F3: 2 kept results, 10 stops over changing page states -> 3 marker files in the Asked dir'. Base keys carry no stamp, so the count stays bounded.",
+      "base_result": "not-reproduced"
+    },
+    {
+      "id": "F4",
+      "result": "reproduced",
+      "command": "Head and base: cd <tree>/engine && HOME=$(mktemp -d) go test ./review/app/ -run TestProbeT2F4 -v -count=1 (classifyWorld plus the persistently invalid own-rdd/333333333333-9.json, three Stops in session-1)",
+      "output": "HEAD: 'stop1 Block=true err: classify the results with kept findings: odd/review-results/own-rdd/333333333333-9.json: review: invalid stored file: ...', then stop2 and stop3 with Block=false and the same error, then 'T2F4: errors over 3 stops = 3'. BASE: three stops with Block=false and 'err: find the results with kept findings: odd/review-results/own-rdd/333333333333-9.json: review: invalid stored file: ...', then 'T2F4: errors over 3 stops = 3'. The repeated error at every stop already exists at base. At base, though, the bad file also hides the valid result (no block at all), so the finding's 'introduced' disposition does not hold for the repetition itself.",
+      "base_result": "reproduced"
+    }
+  ]
+}

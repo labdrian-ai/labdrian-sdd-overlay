@@ -1,0 +1,15 @@
+{
+  "kind": "sweeper",
+  "base": "6cc18ea485a94e2f49b7ca4b905aa0a84dbb7673",
+  "head": "34e436c2b3102513a90c9ce58d3e89ea5e00e40a",
+  "diff_sha256": "b3b327f723c2afa56914a18a67d3da306760832b9c1029c561e2a02078cf27c8",
+  "sweep": "34e436c2b310-1.sweep.json",
+  "commit": null,
+  "candidates": [
+    {
+      "candidate": "T1 name: --git",
+      "disposition": "live",
+      "evidence": "34e436c2 removed no flag or name --git; its only removed line with --git is a test fixture diff header (diff --git a/other.go b/other.go). The 19 hits are git text: diff --git headers and rev-parse --git-dir / --git-common-dir (live at engine/gitprov/gitprov.go:112, engine/gitfs/locator.go:227)."
+    }
+  ]
+}

@@ -1,0 +1,32 @@
+{
+  "kind": "polisher",
+  "base": "6cc18ea485a94e2f49b7ca4b905aa0a84dbb7673",
+  "head": "34e436c2b3102513a90c9ce58d3e89ea5e00e40a",
+  "diff_sha256": "b3b327f723c2afa56914a18a67d3da306760832b9c1029c561e2a02078cf27c8",
+  "findings": {
+    "findings": [
+      {
+        "location": "engine/review/app/stop.go:66",
+        "severity": "SUGGESTION",
+        "claim": "Stop now returns a block together with a non-nil error. The only production caller, the stop hook, drops the block whenever err != nil. `once` has already recorded the classify- keys by then, so the question would never be asked again in that session. The hook is not wired to Classified yet, so nothing is lost today.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "evidence": [
+          "engine/cmd/review_stop_hook.go:96-99 does `ruling, err := ...Stop(...)` then `if err != nil || !ruling.Block { return nil, err }`, which discards a block that comes with an error.",
+          "engine/review/app/stop.go:127-131 records each classify- key in `once` before it returns the ruling.",
+          "engine/review/app/classify.go:104-114 and 188-216 make the error and the block come together, for a refused result or a failed memory write.",
+          "No production code calls WithClassified: the grep for `Classified` and `.Stop(` outside tests found no wiring. T4w, which prints a block and an error together, is declared still to do (L69), so this is latent. Land T4w's hook change in the same delivery as this contract change, or the first refused result will swallow the classification question."
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full diff at /tmp/claude-1000/-home-labdrian-labdrian-sdd-overlay/45673332-5a42-429f-889a-50c9d8bcb1fc/scratchpad/t4m.diff (853 lines).",
+      "Read engine/review/app/classify.go lines 60-105 and engine/review/app/stop.go lines 55-134 in the worktree /home/labdrian/labdrian-sdd-overlay-worktrees/review-5276daf542e3.",
+      "Read engine/cmd/review_stop_hook.go lines 85-123.",
+      "Grepped engine non-test files for `.Stop(` and `Classified`: no production implementer of Classified exists, and no production code calls WithClassified.",
+      "Traced the memory logic by reading: the memo key includes the stamp; the classified and lacking prefixes are read in `remembered`; the classify- key still goes through `once`; a failed memory write is appended to the problems and the pass goes on; an error from Features, Standing, Names, Stamp, Has or the port aborts the pass with no block. I found no defect in it.",
+      "I ran no tests or commands. Test results are only those quoted in the task document.",
+      "The judge was given the range 6cc18ea4..5276daf5; its finding is in the code commit 34e436c2; the tests commit 5276daf5 is recorded with no finding"
+    ]
+  }
+}

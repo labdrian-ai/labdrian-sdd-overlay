@@ -1,0 +1,90 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "6cc18ea485a94e2f49b7ca4b905aa0a84dbb7673",
+    "head": "5276daf542e3ddac26b4b3ea42b077dd6ff6a8d9",
+    "diff_sha256": "53571780899453f8da75b7fdce4b37f7fea41eb17c476d4527a5ef11e0748f15",
+    "paths": [
+      "engine/review/app/classify.go",
+      "engine/review/app/classify_test.go",
+      "engine/review/app/export_test.go",
+      "engine/review/app/stop.go",
+      "odd/tasks/merge-playbook-into-sdd-overlay.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "hunt"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "6cc18ea485a94e2f49b7ca4b905aa0a84dbb7673",
+      "head": "5276daf542e3ddac26b4b3ea42b077dd6ff6a8d9",
+      "diff_sha256": "53571780899453f8da75b7fdce4b37f7fea41eb17c476d4527a5ef11e0748f15"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/review/app/classify.go",
+        "engine/review/app/classify_test.go",
+        "engine/review/app/export_test.go",
+        "engine/review/app/stop.go",
+        "odd/tasks/merge-playbook-into-sdd-overlay.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "engine/review/app/classify.go:195",
+        "severity": "WARNING",
+        "claim": "The page stamp is read once, before the loop (classify.go:173). Each port answer is then saved under that stamp (classify.go:195), with no second read to check that the page did not change in between. Failure mode: Stamp returns S, the page is then edited (a classifier writes or removes a row, or a rollback), and Classified reads the new bytes. The answer for the new content is then saved under S. The next stop sees stamp S2 and asks the port again, which is fine. But if the page later returns to the bytes of S (L69 relies on rollback restoring the old stamp and making its memory right again), the session reads the saved answer, which was about other content. It then skips or asks for the result wrongly for as long as the page stays in state S. One fix is to read Stamp again after Classified and skip the memo Add when the two stamps differ. No test pins this ordering.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/review/app/classify.go:173",
+          "engine/review/app/classify.go:195",
+          "odd/tasks/merge-playbook-into-sdd-overlay.md:3273"
+        ]
+      },
+      {
+        "id": "F2",
+        "location": "engine/review/app/classify.go:114",
+        "severity": "SUGGESTION",
+        "claim": "The doc of incomplete (classify.go:104-106) and test M3 promise one line on stderr. That holds only if each problem is one line itself. A refusal can now be a git error from heldResult (M1 case 'git cannot give the diff'). gitexec.output wraps git's trimmed stderr with said(), which keeps the newlines inside it (gitexec.go:1161, 1183-1188). review_stop_hook.go:62 prints err with %v and does not flatten it. So git stderr with more than one line breaks the one-line contract that this type was added to keep. M3 uses only single-line causes, so nothing pins this case.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/review/app/classify.go:114",
+          "engine/review/gitexec/gitexec.go:1161",
+          "engine/cmd/review_stop_hook.go:62"
+        ]
+      },
+      {
+        "id": "F3",
+        "location": "engine/review/app/classify.go:173",
+        "severity": "SUGGESTION",
+        "claim": "Hunt class (1), empty value: an empty stamp returned with no error is accepted as a valid page state. If an adapter returns \"\", nil (T4w's Stamp, still unwritten), every page state gets the same memo key. A result's first answer is then reused for the whole session, which brings back the stale-after-row-removal defect of -6 F1 without any signal. classifyRuling could refuse an empty stamp as a pass error, like a Stamp error (M7), and a test could pin that.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/review/app/classify.go:173",
+          "engine/review/app/classify.go:149"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full diff at the scratchpad path t4m.diff (853 lines, 5 paths) and, in the worktree at head, classify.go (whole), stop.go:30-139, and the T4m design L69 and builder record L70 in odd/tasks/merge-playbook-into-sdd-overlay.md:3240-3389 plus the diff hunk.",
+      "319810f5614a-4 F1 (lacking result asked of the port at every stop): resolved as L69 choice 2(d) says. The answer is saved under a lacking- memo key (classify.go:191-197) and read back by remembered() (classify.go:215-226). SH4 now expects 1 port call; M4 pins calls per page state.",
+      "319810f5614a-4 F2 and -6 F2 (one bad file hides every result): resolved in app as L69 choice 1(a) says. A heldResult error is a refusal and the loop goes on (classify.go:86-88). classifyRuling returns the ruling with an incomplete error (classify.go:206-210). M1 and M2 pin this. The hook still drops a block that comes with an error (review_stop_hook.go guard), which L69 explicitly defers to T4w (SH10, Mt21). It cannot be reached at this head: Grep finds WithClassified only in app and its tests.",
+      "319810f5614a-4 F3 (a failed memo Add aborts the pass): resolved as L69 choice 3(a) says. The Add error is appended to the problems and the answer in hand is used (classify.go:195-197). M6 and the J5 classified case pin this.",
+      "319810f5614a-6 F1 (a row removed later in the session goes unseen): resolved in app through stamp-keyed memo keys (classify.go:148-150). M5 pins both subcases. Real freshness depends on T4w's adapter Stamp, deferred by L69.",
+      "memoKey lengths checked: classified- is 11+16=27 bytes and lacking- is 8+16=24 bytes, lowercase hex and dashes, as documented.",
+      "Hexagonal check: the changed production files are only engine/review/app/classify.go and stop.go. They import fmt, strings, engine/review and engine/sha256hex, so there is no adapter code. The Classified port, with its new Stamp, is declared in app. Grep finds no production implementer of Stamp, only fakeClassified in tests.",
+      "Read gitexec.go output/said and the review_stop_hook.go stderr print sites to check the one-line claim (F2).",
+      "Test review: M1 case (d) compares reviewsOf(nil)=[]string{} with append([]string{}, nil...)=[]string{}, which is equal. The J1 trimming and the secondAddFails prefix filter match L69.",
+      "L70 builder record: its test, vet and mutation results are the builder's own claims. I did not check them.",
+      "Not run: no build, test, vet or mutation (reviewer contract: never run)."
+    ]
+  }
+}

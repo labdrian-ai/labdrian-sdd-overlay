@@ -1,0 +1,25 @@
+{
+  "verdicts": [
+    {
+      "id": "F1",
+      "result": "reproduced",
+      "command": "Head and base: cd <tree>/engine && HOME=$(mktemp -d) go test ./review/app/ -run TestProbeT5F1 -v -count=1. On head, a seqClassified port's Stamp returns S1, S2, S1 at stops 1-3 and Classified answers true, because the row is written after the S1 stamp was read at stop 1 and removed after stop 2, so the page is back at S1 (lacking) at stop 3. On base, a pageClassified port answers true, true, false for the same page history; base has no Stamp.",
+      "output": "HEAD: 'stop1: Block=false err=<nil> portCalls=1', 'stop2: Block=false err=<nil> portCalls=2', 'stop3: Block=false err=<nil> portCalls=2', and 'memo classified-under-S1=true lacking-under-S1=false classify-key=false'. The answer about the later state is stored under the stale stamp S1. At stop 3 the page is again S1 and lacks the row, yet the port is not asked and nothing blocks, even though the result was never asked for (no classify- key). BASE: 'stop1..stop3: Block=false err=<nil> portCalls=1'. Base produces the same wrong outcome through its stamp-free classified- memo (the earlier -6 F1 defect), not through the stamp-ordering mechanism, which does not exist at base.",
+      "base_result": "reproduced"
+    },
+    {
+      "id": "F2",
+      "result": "reproduced",
+      "command": "Head and base: cd <tree>/engine && HOME=$(mktemp -d) go test ./review/app/ -run TestProbeT5F2b -v -count=1. Git's Diff fails with 'git diff: fatal: bad object 3333\\nfatal: second line of stderr' once Standing was asked twice (the classification pass). The probe formats the Stop error as review_stop_hook.go:62 does ('review %s: %v\\n') and counts newlines. Also read gitexec.go:1156-1189: said() only TrimSpaces the stderr and keeps inner newlines.",
+      "output": "HEAD: 'T5F2 Block=false err!=nil=true stderr lines = 2; text = \"review stop-hook: classify the results with kept findings: odd/review-results/own-rdd/333333333333-1.json: diff 1111...1111..3333...3333: git diff: fatal: bad object 3333\\nfatal: second line of stderr\\n\"'. The one-line contract of incomplete (classify.go:104-106) is broken. BASE: 'stderr lines = 2' with 'review stop-hook: find the results with kept findings: ...: git diff: fatal: bad object 3333\\nfatal: second line of stderr\\n'. The multi-line output also occurs at base, although base did not promise one line.",
+      "base_result": "reproduced"
+    },
+    {
+      "id": "F3",
+      "result": "reproduced",
+      "command": "Head and base: cd <tree>/engine && HOME=$(mktemp -d) go test ./review/app/ -run TestProbeT5F3 -v -count=1. On head the fakeClassified stamp is '' (Stamp returns \"\", nil). The row is classified at stop 1 and removed before stop 2. Base runs the same page change without Stamp.",
+      "output": "HEAD: 'T5F3 stop1 Block=false err=<nil>; stop2 (row removed) Block=false err=<nil> portCalls=1'. The empty stamp is accepted with no error, and the stale classified answer is reused after the row was removed: no block and no second port call. BASE: 'T5F3 stop1 Block=false err=<nil>; stop2 (row removed) Block=false err=<nil> portCalls=1'. Base shows the same stale reuse through its stamp-free classified- memo; the empty-stamp acceptance path itself does not exist at base.",
+      "base_result": "reproduced"
+    }
+  ]
+}

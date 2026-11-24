@@ -1,0 +1,95 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "6cc18ea485a94e2f49b7ca4b905aa0a84dbb7673",
+    "head": "5276daf542e3ddac26b4b3ea42b077dd6ff6a8d9",
+    "diff_sha256": "53571780899453f8da75b7fdce4b37f7fea41eb17c476d4527a5ef11e0748f15",
+    "paths": [
+      "engine/review/app/classify.go",
+      "engine/review/app/classify_test.go",
+      "engine/review/app/export_test.go",
+      "engine/review/app/stop.go",
+      "odd/tasks/merge-playbook-into-sdd-overlay.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "6cc18ea485a94e2f49b7ca4b905aa0a84dbb7673",
+      "head": "5276daf542e3ddac26b4b3ea42b077dd6ff6a8d9",
+      "diff_sha256": "53571780899453f8da75b7fdce4b37f7fea41eb17c476d4527a5ef11e0748f15"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/review/app/classify.go",
+        "engine/review/app/classify_test.go",
+        "engine/review/app/export_test.go",
+        "engine/review/app/stop.go",
+        "odd/tasks/merge-playbook-into-sdd-overlay.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "engine/cmd/review_stop_hook.go:97",
+        "severity": "WARNING",
+        "claim": "Stop's contract now allows a Ruling with Block=true returned together with a non-nil error: a refused result or a failed memo record, with another result lacking. The one production consumer of Stop, the stop hook, still does `if err != nil || !ruling.Block { return nil, err }`. It would drop the block whenever a refusal is present, so one bad stored file would silence the classification request for every other result, which is the case this change set out to fix. This is not reachable today because no production code calls WithClassified. The change updates the contract before its consumer, and only a task-document note (T4w, L69) defers the hook, so it can go unfixed.",
+        "evidence_class": "inferential",
+        "causal_disposition": "behavior-activated",
+        "proof_refs": [
+          "engine/cmd/review_stop_hook.go:97",
+          "engine/review/app/stop.go:56",
+          "engine/review/app/classify.go:173"
+        ]
+      },
+      {
+        "id": "F2",
+        "location": "engine/review/app/classify.go:18",
+        "severity": "SUGGESTION",
+        "claim": "Skipping the port rests on the claim that equal stamps give equal answers. Nothing in production implements Stamp yet, and only the test fake does. If T4w's stamp omits any input of `evidence.sh reviewed` (the script, the rules file, the page), a classified or lacking answer stays cached for the whole session and a later change goes unseen. That is the regression L-J6/M5 is meant to prevent. A test against the real adapter should pin that the stamp covers every input Classified reads.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/review/app/classify.go:18",
+          "engine/review/app/classify.go:226"
+        ]
+      },
+      {
+        "id": "F3",
+        "location": "engine/review/app/classify.go:203",
+        "severity": "SUGGESTION",
+        "claim": "The memo keys include the stamp, and each stop that sees a new page state writes one new marker file per kept result into the session directory. Nothing cleans these up, so a session in which the page changes often accumulates one file per result per state. The growth is small and bounded by session lifetime.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/review/app/classify.go:136",
+          "engine/review/fsstore/asked.go:69"
+        ]
+      },
+      {
+        "id": "F4",
+        "location": "engine/review/app/classify.go:77",
+        "severity": "SUGGESTION",
+        "claim": "Refusals are not remembered by the session. A persistently invalid stored result file therefore returns an error beside the ruling at every stop for as long as the file exists. The error is non-blocking. Combined with F1, it is a repeated hook error line on every stop until the file is removed. A test (M2) pins this as intended, but it is noisy behavior.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/review/app/classify.go:73",
+          "engine/review/app/classify_test.go:603"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full diff (853 lines) of the 5 changed paths.",
+      "Read stop.go and the callers of Stop and WithClassified in the worktree. Only engine/cmd/review_stop_hook.go:96 calls Stop, and nothing in production wires WithClassified.",
+      "Read fsstore/asked.go. The new memo keys of 27 and 24 bytes pass checkKey's lowercase letters, digits and dashes rule.",
+      "Checked go.mod: go 1.21, so a multi-%w fmt.Errorf is supported.",
+      "Traced classifyRuling for these cases: a failed memo Add, a changed stamp, a lacking result whose classify- key is already recorded, and a failed once. No logic defect found beyond the findings above.",
+      "No tests were run (not run)."
+    ]
+  }
+}
