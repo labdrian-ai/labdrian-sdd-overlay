@@ -1,0 +1,48 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "de7c6e99a305d330961e4f5b6df09b82cd960a69",
+    "head": "d0108e5f1245937319a943dd19be91f131637894",
+    "diff_sha256": "d931a741b195f2f798ad2d105784aa00cf56dc6f586458b17685b91f54110be0",
+    "paths": [
+      "engine/shelltest/evidence_store_each_test.go",
+      "engine/shelltest/evidence_store_test.go",
+      "engine/skills/evidence_store_artifact_test.go",
+      "odd/tasks/merge-playbook-into-sdd-overlay.md",
+      "skills/_shared/evidence/PROVENANCE.md",
+      "skills/_shared/evidence/evidence.sh"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "de7c6e99a305d330961e4f5b6df09b82cd960a69",
+      "head": "d0108e5f1245937319a943dd19be91f131637894",
+      "diff_sha256": "d931a741b195f2f798ad2d105784aa00cf56dc6f586458b17685b91f54110be0"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/shelltest/evidence_store_each_test.go",
+        "engine/shelltest/evidence_store_test.go",
+        "engine/skills/evidence_store_artifact_test.go",
+        "odd/tasks/merge-playbook-into-sdd-overlay.md",
+        "skills/_shared/evidence/PROVENANCE.md",
+        "skills/_shared/evidence/evidence.sh"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "Read the whole diff. Read evidence.sh lines 100-370 in the worktree at head.",
+      "The Risk 5 item (the deployed script) changes only header comment lines 50-56 of evidence.sh. No executable line changes in the diff, so no answer or exit of the script changes.",
+      "The new header and PROVENANCE.md text contains the needles the updated bound-text test requires: ARG_MAX, 'the caller's exec fails', '32 pages' and '128 KiB with 4 KiB pages'. 'the caller's exec fails' sits on one comment line in evidence.sh.",
+      "splitStatementLine matches evidence.sh line 151 exactly once, once leading blanks are dropped. The one ENVIRON code line, 147, matches the accepted form. The ENVIRON mentions at lines 146 and 150 are '#' comments, so the lint skips them.",
+      "The stub-awk subtest relies on the script calling only awk, dirname and basename (via command -v awk, line 105, and lines 117, 246 and 301). The remaining lines I read use only shell builtins, so the restricted PATH is enough. The stub's exec failure reaches awk_cannot_answer, which prints 'awk failed on ... (exit N)' and exits 4. The test's regex accepts any non-zero status.",
+      "Grep of engine/shelltest for strings.Repeat and make([]string finds no other large-argument test, so the new 32 KiB budget check in run() cannot trip an existing test.",
+      "I ran no commands and no tests; this is a read-only review."
+    ]
+  }
+}

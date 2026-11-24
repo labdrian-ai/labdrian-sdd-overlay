@@ -1,0 +1,17 @@
+{
+  "kind": "polisher",
+  "base": "de7c6e99a305d330961e4f5b6df09b82cd960a69",
+  "head": "d0108e5f1245937319a943dd19be91f131637894",
+  "diff_sha256": "d931a741b195f2f798ad2d105784aa00cf56dc6f586458b17685b91f54110be0",
+  "findings": {
+    "findings": [],
+    "evidence": [
+      "Read the full diff, sha256 d931a741..., at the scratchpad t4t.diff.",
+      "Read evidence.sh lines 100-150 in the review worktree. The only ENVIRON read is line 147, `want = ENVIRON[\"EVIDENCE_WANT\"] \"\"`. It matches the new one-form lint, and the code-line trim removes its indentation. Line 151 is the exact `splitStatementLine`, so both new pins accept the shipped script.",
+      "Checked that run_awk (line 120) and the awk-failed line (266) report any non-zero awk status as `(exit N)`. The stub subtest's pattern `[1-9][0-9]*` therefore holds for 126 or 127 under dash, bash or busybox.",
+      "Checked that the script calls only dirname and basename outside builtins on the paths the stub subtest exercises (lines 117, 246, 301, 320). The stub PATH, with the stub first and the linked tools after it, is therefore sufficient. `command -v awk` succeeds because the stub is executable.",
+      "Checked that the new header and PROVENANCE.md text matches the test needles `32 pages`, `128 KiB with 4 KiB pages`, `ARG_MAX` and `the caller's exec fails`. The diff shows the header lines 50-56 and PROVENANCE.md line 15 changed, and no code line of the script changed.",
+      "Not run: go tests, shellcheck and mutation checks. I have no shell tool, so I rely on the commit's own report for those."
+    ]
+  }
+}

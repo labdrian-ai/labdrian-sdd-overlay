@@ -1,0 +1,77 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "de7c6e99a305d330961e4f5b6df09b82cd960a69",
+    "head": "d0108e5f1245937319a943dd19be91f131637894",
+    "diff_sha256": "d931a741b195f2f798ad2d105784aa00cf56dc6f586458b17685b91f54110be0",
+    "paths": [
+      "engine/shelltest/evidence_store_each_test.go",
+      "engine/shelltest/evidence_store_test.go",
+      "engine/skills/evidence_store_artifact_test.go",
+      "odd/tasks/merge-playbook-into-sdd-overlay.md",
+      "skills/_shared/evidence/PROVENANCE.md",
+      "skills/_shared/evidence/evidence.sh"
+    ]
+  },
+  "rows": [
+    "recall",
+    "hunt",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "de7c6e99a305d330961e4f5b6df09b82cd960a69",
+      "head": "d0108e5f1245937319a943dd19be91f131637894",
+      "diff_sha256": "d931a741b195f2f798ad2d105784aa00cf56dc6f586458b17685b91f54110be0"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/shelltest/evidence_store_each_test.go",
+        "engine/shelltest/evidence_store_test.go",
+        "engine/skills/evidence_store_artifact_test.go",
+        "odd/tasks/merge-playbook-into-sdd-overlay.md",
+        "skills/_shared/evidence/PROVENANCE.md",
+        "skills/_shared/evidence/evidence.sh"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "engine/skills/evidence_store_artifact_test.go:498",
+        "severity": "SUGGESTION",
+        "claim": "The split pin counts code lines that contain the exact text `split(want,`. A second split with other spacing gets past it. For example, a later code line `n = split( want, ids, \"\\n\")` or `split(want , ids, \"\\n\")` that splits again without forcing text is not counted, so splitPinProblem still sees exactly one line, equal to splitStatementLine, and returns \"\". Its doc says the statement 'cannot be reordered, left to a comment or written twice and still pass', and the gap behind 5e745160b611-5 F4 (keys built from split elements that were not made text) can then come back unseen. Matching any code line that holds `split(` and `want`, allowing blanks, would close it. -5 F4 is otherwise resolved as L82 says.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/skills/evidence_store_artifact_test.go:498"
+        ]
+      },
+      {
+        "id": "F2",
+        "location": "skills/_shared/evidence/evidence.sh:53",
+        "severity": "SUGGESTION",
+        "claim": "The new header text and PROVENANCE.md line 15 give ARG_MAX as '(getconf ARG_MAX, which follows the stack limit)'. As I recall the Linux kernel (fs/exec.c), it clamps the exec limit to at least 128 KiB and at most 3/4 of _STK_LIM (6 MiB). As I recall glibc, sysconf(_SC_ARG_MAX) returns the stack rlimit / 4 with no upper clamp. If so, on a host whose stack limit is above 24 MiB or unlimited, getconf ARG_MAX states a limit larger than the one exec applies. Below a 512 KiB stack it no longer follows the stack limit at all. A caller of this deployed contract (T4w) that sizes a call from getconf ARG_MAX could then pass the real limit and get the exec failure the text describes. This is not run and the kernel and glibc behavior was not re-read in this review. It rests on knowledge of those sources, so it is a SUGGESTION to word the parenthetical as an approximation or drop it.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "skills/_shared/evidence/evidence.sh:53"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the whole diff file t4t.diff (6 paths). Read at head: evidence.sh (all of it), evidence_store_each_test.go (all of it), evidence_store_test.go lines 60-129, evidence_store_artifact_test.go imports and grep hits, and roles/reviewer/rows.json (readability row applied verbatim).",
+      "Read the criteria: the T4t line and L82 (task document lines 4148-4203), and the review records 5e745160b611-2.json (F1, F2), -5.json (F1-F5), -3.polisher.json and -4.polisher.json.",
+      "-2 F1, -5 F1, -3.polisher and -4.polisher F1: B14 (k) is removed, with no getconf, runtime or strconv left. evidenceWorld.run (evidence_store_test.go:119) fails a run whose argv is over 32 KiB, counting each string, its end byte and 8 bytes of pointer. Every evidence call site found by grep goes through run. The only one that does not is evidence_store_shells_test.go:35, which passes no identifiers. Resolved as L82 says.",
+      "-5 F2 and F5 are gone with (k): the guard and the underN computation are deleted.",
+      "-4.polisher F2: evidence.sh lines 50-56 and PROVENANCE.md line 15 name MAX_ARG_STRLEN and ARG_MAX, and say 'the caller's exec fails'. The needle '128 KiB with 4 KiB pages' is still on one header line (52), and the bound-text test checks both new needles in both files. Resolved. See F2 for the getconf parenthetical.",
+      "-2 F2 and -5 F3: unforcedEnvironReads (line 427) skips '#' lines and accepts only `<name> = ENVIRON[\"<NAME>\"] \"\"$` after leading blanks. The table has rows for the comment, prefix-operator, trailing-expression, chained and two-read forms. The only ENVIRON in evidence.sh is line 147, which matches the form. Neither comment at 121 nor 146 holds the word. Resolved.",
+      "-5 F4: splitStatementLine equals evidence.sh line 151 byte for byte once leading blanks are dropped. The table covers the reordered, comment-only and written-twice cases. Resolved, with the residual spacing gap in F1.",
+      "Stub subtest (each_test.go:75-99): PATH is only the stub dir plus tools. Go's exec.Cmd keeps the last PATH in Env. The script calls only dirname on the reviewed-each path (page_state, line 246; also line 117). `command -v awk` finds the stub, run_awk's exec fails, awk_cannot_answer prints the awk-failed line with exit 4 (lines 357-363), and the pattern accepts any non-zero status.",
+      "Hunt: execArgBytes(nil) is 0 and is tested. An empty script gives the split pin a problem ('0 code lines'). The stub paths are under t.TempDir. Errors from Chmod, MkdirAll, LookPath and Symlink are t.Fatal(f), none swallowed. No production code path writes or deletes.",
+      "L83 line counts checked against the diff: evidence.sh 7+4, PROVENANCE.md 1+1, evidence_store_test.go 31+2, totals 140 added and 83 deleted. They match.",
+      "No command was run: nothing was built, tested or executed (I am read-only)."
+    ]
+  }
+}
