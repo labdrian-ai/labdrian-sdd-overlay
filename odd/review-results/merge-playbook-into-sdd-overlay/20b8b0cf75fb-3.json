@@ -1,0 +1,57 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "81ead2737a36bf9be21f35457e334592ae8ceda1",
+    "head": "20b8b0cf75fb4d1e448116e5af9c262181b5dc13",
+    "diff_sha256": "304987f46ae8cd49ac6459042adf6259efad8731128042084c10f21ce9b33006",
+    "paths": [
+      "CHANGELOG.md",
+      "README.md",
+      "engine/architecture_short_name_test.go",
+      "engine/cmd/review_stop_hook_bound_linux_test.go",
+      "engine/cmd/review_stop_hook_docs_test.go",
+      "engine/execrunner/execrunner.go",
+      "engine/review/evidencesh/evidencesh.go",
+      "engine/review/evidencesh/evidencesh_bound_text_test.go",
+      "engine/review/evidencesh/evidencesh_fifo_linux_test.go",
+      "engine/review/evidencesh/evidencesh_refusal_text_test.go",
+      "odd/tasks/merge-playbook-into-sdd-overlay.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "81ead2737a36bf9be21f35457e334592ae8ceda1",
+      "head": "20b8b0cf75fb4d1e448116e5af9c262181b5dc13",
+      "diff_sha256": "304987f46ae8cd49ac6459042adf6259efad8731128042084c10f21ce9b33006"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "README.md",
+        "engine/architecture_short_name_test.go",
+        "engine/cmd/review_stop_hook_bound_linux_test.go",
+        "engine/cmd/review_stop_hook_docs_test.go",
+        "engine/execrunner/execrunner.go",
+        "engine/review/evidencesh/evidencesh.go",
+        "engine/review/evidencesh/evidencesh_bound_text_test.go",
+        "engine/review/evidencesh/evidencesh_fifo_linux_test.go",
+        "engine/review/evidencesh/evidencesh_refusal_text_test.go",
+        "odd/tasks/merge-playbook-into-sdd-overlay.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "Read the full diff at the scratchpad path, all 11 changed paths.",
+      "Checked evidencesh.go at head. Classified (line 90) and checkScript (line 116) hold the five pre-run Errorf formats: line 95 not an absolute path, line 120 not deployed, line 122 cannot be checked, line 124 not a regular file, line 128 cannot be read. The errors at lines 144-155 sit in other functions, so the new test's errorFormats does not collect them. The refusal table has one fragment per format, and the new test's exactly-one-fragment rule fits those formats.",
+      "Checked README.md at head. The new cut end marker 'gentle-ai-overlay roles builder-guard' is at line 1595, on its own line after the stop-hook section start at line 1545. The other occurrences (lines 638 and 894) are followed by a backtick, so they cannot match the newline-terminated markers. The README sentence ends with 'and not run', and the CHANGELOG sentence ends with 'not run'. Both are what the new test's cuts look for, and both name all five fragments.",
+      "The only runtime code change is a doc comment on the exported KillGrace, so the stop hook's behavior and the refusals it prints are unchanged. The documented refusals match the adapter's real errors.",
+      "SH15's backstop timer now starts after the stub and the records, just before the stop. The two FIFO close errors are discarded explicitly with `_ =`. Neither change touches production code.",
+      "I ran no commands (read-only review). Test results quoted in the task document (L93) were not re-run and are not verified here."
+    ]
+  }
+}

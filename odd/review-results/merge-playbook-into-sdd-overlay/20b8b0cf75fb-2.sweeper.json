@@ -1,0 +1,70 @@
+{
+  "kind": "sweeper",
+  "base": "81ead2737a36bf9be21f35457e334592ae8ceda1",
+  "head": "20b8b0cf75fb4d1e448116e5af9c262181b5dc13",
+  "diff_sha256": "304987f46ae8cd49ac6459042adf6259efad8731128042084c10f21ce9b33006",
+  "sweep": "20b8b0cf75fb-1.sweep.json",
+  "commit": null,
+  "candidates": [
+    {
+      "candidate": "T1 name: --help",
+      "disposition": "live",
+      "evidence": "The README cut end marker \"overlay --help\\n\" was replaced by \"gentle-ai-overlay roles builder-guard\\n\" (L92, c67f772ff05b-6 F1); the text overlay --help is still in README.md:1642, nothing left behind."
+    },
+    {
+      "candidate": "T3:  M agents/classifier.md",
+      "disposition": "live",
+      "evidence": "Uncommitted T4b/T4c work of the same batch (L90), held in the working tree until the owner approves role-chain; not part of commit 20b8b0cf and committed next."
+    },
+    {
+      "candidate": "T3:  M engine/skills/classifier_artifact_test.go",
+      "disposition": "live",
+      "evidence": "Uncommitted T4b/T4c work of the same batch (L90), held in the working tree until the owner approves role-chain; not part of commit 20b8b0cf and committed next."
+    },
+    {
+      "candidate": "T3:  M overlay.manifest",
+      "disposition": "live",
+      "evidence": "Uncommitted T4b/T4c work of the same batch (L90), held in the working tree until the owner approves role-chain; not part of commit 20b8b0cf and committed next."
+    },
+    {
+      "candidate": "T3:  M roles/classifier/body.md",
+      "disposition": "live",
+      "evidence": "Uncommitted T4b/T4c work of the same batch (L90), held in the working tree until the owner approves role-chain; not part of commit 20b8b0cf and committed next."
+    },
+    {
+      "candidate": "T3:  M skills/role-chain/SKILL.md",
+      "disposition": "live",
+      "evidence": "Uncommitted T4b/T4c work of the same batch (L90), held in the working tree until the owner approves role-chain; not part of commit 20b8b0cf and committed next."
+    },
+    {
+      "candidate": "T3:  M skills/role-chain/references/models.md",
+      "disposition": "live",
+      "evidence": "Uncommitted T4b/T4c work of the same batch (L90), held in the working tree until the owner approves role-chain; not part of commit 20b8b0cf and committed next."
+    },
+    {
+      "candidate": "T3: ?? engine/agentgen/models_mid_line_internal_test.go",
+      "disposition": "live",
+      "evidence": "Uncommitted T4b/T4c work of the same batch (L90), held in the working tree until the owner approves role-chain; not part of commit 20b8b0cf and committed next."
+    },
+    {
+      "candidate": "T3: ?? engine/cmd/role_chain_steps_test.go",
+      "disposition": "live",
+      "evidence": "Uncommitted T4b/T4c work of the same batch (L90), held in the working tree until the owner approves role-chain; not part of commit 20b8b0cf and committed next."
+    },
+    {
+      "candidate": "T3: ?? engine/shelltest/classify_step_check_test.go",
+      "disposition": "live",
+      "evidence": "Uncommitted T4b/T4c work of the same batch (L90), held in the working tree until the owner approves role-chain; not part of commit 20b8b0cf and committed next."
+    },
+    {
+      "candidate": "T3: ?? engine/skills/classify_step_artifact_test.go",
+      "disposition": "live",
+      "evidence": "Uncommitted T4b/T4c work of the same batch (L90), held in the working tree until the owner approves role-chain; not part of commit 20b8b0cf and committed next."
+    },
+    {
+      "candidate": "T3: ?? skills/role-chain/references/classify.md",
+      "disposition": "live",
+      "evidence": "Uncommitted T4b/T4c work of the same batch (L90), held in the working tree until the owner approves role-chain; not part of commit 20b8b0cf and committed next."
+    }
+  ]
+}

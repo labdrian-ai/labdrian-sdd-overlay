@@ -1,0 +1,84 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "81ead2737a36bf9be21f35457e334592ae8ceda1",
+    "head": "20b8b0cf75fb4d1e448116e5af9c262181b5dc13",
+    "diff_sha256": "304987f46ae8cd49ac6459042adf6259efad8731128042084c10f21ce9b33006",
+    "paths": [
+      "CHANGELOG.md",
+      "README.md",
+      "engine/architecture_short_name_test.go",
+      "engine/cmd/review_stop_hook_bound_linux_test.go",
+      "engine/cmd/review_stop_hook_docs_test.go",
+      "engine/execrunner/execrunner.go",
+      "engine/review/evidencesh/evidencesh.go",
+      "engine/review/evidencesh/evidencesh_bound_text_test.go",
+      "engine/review/evidencesh/evidencesh_fifo_linux_test.go",
+      "engine/review/evidencesh/evidencesh_refusal_text_test.go",
+      "odd/tasks/merge-playbook-into-sdd-overlay.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "hunt",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "81ead2737a36bf9be21f35457e334592ae8ceda1",
+      "head": "20b8b0cf75fb4d1e448116e5af9c262181b5dc13",
+      "diff_sha256": "304987f46ae8cd49ac6459042adf6259efad8731128042084c10f21ce9b33006"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "README.md",
+        "engine/architecture_short_name_test.go",
+        "engine/cmd/review_stop_hook_bound_linux_test.go",
+        "engine/cmd/review_stop_hook_docs_test.go",
+        "engine/execrunner/execrunner.go",
+        "engine/review/evidencesh/evidencesh.go",
+        "engine/review/evidencesh/evidencesh_bound_text_test.go",
+        "engine/review/evidencesh/evidencesh_fifo_linux_test.go",
+        "engine/review/evidencesh/evidencesh_refusal_text_test.go",
+        "odd/tasks/merge-playbook-into-sdd-overlay.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "engine/review/evidencesh/evidencesh_refusal_text_test.go:8",
+        "severity": "SUGGESTION",
+        "claim": "The new test's doc says that 'A refusal added without a fragment ... fails', and that the test holds 'every refusal the adapter makes before a run'. errorFormats only collects calls written as `fmt.Errorf` with a string-literal format (evidencesh_refusal_text_test.go:55-62). Three kinds of refusal before a run therefore pass unseen: one added as `errors.New(\"...\")`, a bare `return err`, and the refusal that already exists at evidencesh.go:130, `return f.Close()`. That last one is returned before any run, carries none of the five fragments, and is named by neither the README nor the CHANGELOG. L92 accepts only the helper-move blind spot; these other gaps are not stated. Concrete failure mode: a later refusal written with errors.New, which is common Go, goes unnamed in the texts while this test stays green, which repeats the hand-list class this test was written to close. Fix: narrow the doc's claim to fmt.Errorf calls, or also fail on any other return of a non-nil error in the two functions (errors.New, a bare return, return f.Close()).",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": []
+      },
+      {
+        "id": "F2",
+        "location": "odd/tasks/merge-playbook-into-sdd-overlay.md:4876",
+        "severity": "SUGGESTION",
+        "claim": "Builder record L93 says mutant Me4 was made on 'line 93' of evidencesh.go. That is the line number L92 gave for base. At the head this commit builds, the not-absolute Errorf is at evidencesh.go:95, because the package doc gained two lines. Line 93 at head is the closing brace of the `len(reviews) == 0` branch. Anyone who replays the mutation table from the record edits the wrong line.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": []
+      }
+    ],
+    "evidence": [
+      "Read the whole diff (391 lines, 11 paths) and, at head in the worktree, each changed Go file whole or in the changed region. Read README.md lines 1540-1599, L92 (task document lines 4798-4852) and the L93 entry. Read the carried review records c67f772ff05b-6.json, -3.json, -5.polisher.json and -2.sweeper.json, and the readability row of roles/reviewer/rows.json:9, which I applied.",
+      "-6 F1 and -5.polisher: resolved. Every README cut of the stop-hook section, the three in review_stop_hook_docs_test.go:171,195,213 and the one in evidencesh_bound_text_test.go:56, now ends at 'gentle-ai-overlay roles builder-guard\\n' (README.md:1595). A grep for the old end marker 'review stop-hook\\n\", \"overlay --help' in engine/ found no match. The new test cuts the README sentence from 'A script path that' to 'and not run' (README.md:1584-1585), so the builder-guard text and 'a stored file it cannot read' (README.md:1583) can no longer satisfy a needle.",
+      "-6 F2: resolved. The not-absolute refusal (evidencesh.go:95) is named in README.md:1584, CHANGELOG.md:30 and the package doc table (evidencesh.go:13). The five Errorf formats (evidencesh.go:95,120,122,124,128) each hold exactly one fragment of the table. The docs test comment at review_stop_hook_docs_test.go:188-191 no longer claims to hold every refusal. F1 covers what the parse misses.",
+      "-6 F3: resolved. The shortNameCuts doc (architecture_short_name_test.go:18-26) now says what is followed and 'It follows nothing else', which matches isLiteral and bind (lines 28-54).",
+      "-6 F4: resolved. The backstop now starts at review_stop_hook_bound_linux_test.go:52, after the stub write (:50) and recordRangeKept (:51) and just before start (:54). Cleanup order is LIFO: backstop.Stop runs before release. L92 records the correction of L90's inverted risk.",
+      "-6 F5: resolved. The KillGrace doc names Run and Output, and both set cmd.WaitDelay = KillGrace (execrunner.go:86,130).",
+      "-3 F1: resolved as L92 choice 6. SH15's doc (lines 27-29) and the package doc (evidencesh.go:8-9) state the Linux-only gap. TestOutputDoesNotWaitForAGrandchildHoldingThePipes (execrunner_test.go:218) has no build tag, and its lister is /bin/ps (lingering_test.go:38).",
+      "Sweep: resolved. Both FIFO releases discard the close error explicitly, with a comment: review_stop_hook_bound_linux_test.go:46 and evidencesh_fifo_linux_test.go:42.",
+      "S6 holds a T4b-e detail (grep count 4 in the task document). The T4 line records the T4b-e commit by message and leaves T4b open.",
+      "Checked L93's authored-line counts against the diff hunks: 127+15+15+17+4+7+2+4+3+2 = 196, which matches.",
+      "Hunt: the new test writes and deletes no path; t.Setenv HOME is scoped to the test. An empty table or a failed parse is caught by the len(formats) guard (:91-93). Every format must hold exactly one fragment, which catches unknown or doubled fragments.",
+      "Not run: no build, test, vet, errcheck or timing. Every check above was done by reading files with Read and Grep."
+    ]
+  }
+}

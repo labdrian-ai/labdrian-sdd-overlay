@@ -1,0 +1,21 @@
+{
+  "kind": "polisher",
+  "base": "81ead2737a36bf9be21f35457e334592ae8ceda1",
+  "head": "20b8b0cf75fb4d1e448116e5af9c262181b5dc13",
+  "diff_sha256": "304987f46ae8cd49ac6459042adf6259efad8731128042084c10f21ce9b33006",
+  "findings": {
+    "findings": [],
+    "evidence": [
+      "Read the whole target diff /tmp/claude-1000/-home-labdrian-labdrian-sdd-overlay/45673332-5a42-429f-889a-50c9d8bcb1fc/scratchpad/t4be.diff (391 lines): CHANGELOG.md, README.md, engine/architecture_short_name_test.go, engine/cmd/review_stop_hook_bound_linux_test.go, engine/cmd/review_stop_hook_docs_test.go, engine/execrunner/execrunner.go, engine/review/evidencesh/evidencesh.go, evidencesh_bound_text_test.go, evidencesh_fifo_linux_test.go, the new evidencesh_refusal_text_test.go and odd/tasks/merge-playbook-into-sdd-overlay.md.",
+      "Declared Risk 3 matches the change. The commit changes only docs, doc comments and tests, and no runtime code path. evidencesh.go changes only its package comment; execrunner.go changes only the KillGrace comment.",
+      "Read evidencesh.go at head (/home/labdrian/labdrian-sdd-overlay-worktrees/review-20b8b0cf75fb/engine/review/evidencesh/evidencesh.go). Classified makes one fmt.Errorf before the run (L95, 'is not an absolute path'). checkScript makes four (L120 'is not deployed', L122 'cannot be checked', L124 'is not a regular file', L128 'cannot be read'). Each holds exactly one of the five refusalFragments, so the new test's one-fragment-per-error and every-fragment-used checks hold at head.",
+      "Checked that the new README and CHANGELOG wording, 'not an absolute path (HOME unset or relative)', matches the code: evidenceScript in engine/cmd/review_stop_hook.go:199-201 joins d.env(\"HOME\") with the relative skills path, so an empty or relative HOME gives a relative path, and Classified refuses it at L94-96.",
+      "Checked the new README cut boundary: line 1545 'gentle-ai-overlay review stop-hook' is followed directly by line 1595 'gentle-ai-overlay roles builder-guard', with no other command section between them. The sentence at README:1584-1587 starts with 'A script path that' and ends with 'and not run'. textBetween (evidencesh_bound_text_test.go:24-35) normalizes whitespace and backticks, so the line wrap does not split a fragment.",
+      "Checked the CHANGELOG cut: in the entry at CHANGELOG.md:30, the first 'not run' after 'An evidence script path that' comes after all five fragments.",
+      "Checked SH15 at head (review_stop_hook_bound_linux_test.go:41-56). The backstop AfterFunc now starts after the stub write and recordRangeKept and right before start := time.Now(), so its 20 seconds cover only the stop, as the doc says.",
+      "Checked the short-name lint doc against shortNameCuts (architecture_short_name_test.go:27-80). isLiteral accepts only INT '12'. A name is bound only through ValueSpec values or ':=' (DEFINE) at its own position. Plain '=' and every other spelling are not followed, which is what the narrowed doc now says.",
+      "Checked both FIFO release sites: their `_ = f.Close()` only discards the error explicitly, with no change in behaviour.",
+      "Not run: no go test, vet or errcheck run by this polisher. The pass results in the task document are the builder's own claims and were not reproduced here."
+    ]
+  }
+}
