@@ -29,11 +29,13 @@
 #   The SubagentStart hook gives this index, not the rules (seed-evidence-31).
 # - rule <kind>: the level, rule, applies when, and source of that kind, at any
 #   level, from the page first and then evidence-rules.md; when the kind is in
-#   neither, a message on stderr and exit 1 (seed-evidence-31).
+#   neither, a message on stderr and exit 1 (seed-evidence-31). The kind is
+#   compared with a cell as text, never as a number: a kind 01 is not 1.
 # - reviewed <identifier>: prints nothing; exits 0 when the page passes every
 #   check of "check" and a row of its Evidence table has the identifier as its
 #   Review cell, exactly (a cell is trimmed, "\|" in it is read as "|", and the
-#   identifier is compared as the bytes given); 1 when none does, when the page
+#   identifier is compared as the bytes given, as text, never as a number: a
+#   cell 01 is not 1); 1 when none does, when the page
 #   fails a check, or when nothing is at the page's path under a directory that
 #   can be searched; 4, with one stderr line, for anything else at the path that
 #   is not a readable regular file, for a directory on the way that cannot be
@@ -44,7 +46,10 @@
 #   prints one line for each identifier, in the order given, "yes" where
 #   reviewed would exit 0 and "no" where it would exit 1 (no page, a page that
 #   fails a check, no row), then exits 0. Where reviewed exits 4 it exits 4, with
-#   the same stderr line and nothing on stdout. A missing or empty wiki
+#   the stderr line of reviewed, naming reviewed-each as its mode, and nothing
+#   on stdout. The identifiers reach awk in one environment string: past the
+#   limit of the system for one string (128 KiB on Linux) awk cannot start and
+#   the mode exits 4, with the awk-failed line. A missing or empty wiki
 #   directory, no identifier, or an identifier that is empty or holds a space, a
 #   tab or a line break, is a usage error.
 # count, rules, and index exit 0 (reviewed and reviewed-each also exit 4, see
@@ -134,7 +139,8 @@ run_awk() {
     return dd <= mx
   }
   BEGIN {
-    want = ENVIRON["EVIDENCE_WANT"]
+    # Read as text (the empty string makes it one), so every comparison with a cell is one of text.
+    want = ENVIRON["EVIDENCE_WANT"] ""
     # reviewed-each: want holds the identifiers one to a line; they are asked in order, repeats included.
     each = (mode == "reviewed-each")
     if (each) { nid = split(want, ids, "\n"); for (i = 1; i <= nid; i++) wanted[ids[i]] = 1 }
@@ -242,7 +248,7 @@ page_state() {
     done
   fi
   if [ ! -f "$page" ] || [ ! -r "$page" ]; then
-    printf 'evidence.sh: cannot read %s; reviewed cannot answer\n' "$page" >&2
+    printf 'evidence.sh: cannot read %s; %s cannot answer\n' "$page" "$mode" >&2
     exit 4
   fi
 }
@@ -250,9 +256,9 @@ page_state() {
 # awk_cannot_answer <awk's exit status>: the exit-4 line for an awk that failed, or exited 0 with no answer.
 awk_cannot_answer() {
   if [ "$1" -eq 0 ]; then
-    printf 'evidence.sh: awk gave no answer on %s; reviewed cannot answer\n' "$page" >&2
+    printf 'evidence.sh: awk gave no answer on %s; %s cannot answer\n' "$page" "$mode" >&2
   else
-    printf 'evidence.sh: awk failed on %s (exit %s); reviewed cannot answer\n' "$page" "$1" >&2
+    printf 'evidence.sh: awk failed on %s (exit %s); %s cannot answer\n' "$page" "$1" "$mode" >&2
   fi
   exit 4
 }

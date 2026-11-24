@@ -87,6 +87,9 @@ func TestEvidenceStore_LicenseAndProvenanceTravelWithTheCode(t *testing.T) {
 		"plugins/playbook-agents/evidence-rules.md",
 		"MIT",
 		"`reviewed-each <wiki directory> <identifier>...`", // a mode the script gained (T4k)
+		"as the mode they name",                            // the exit-4 lines of reviewed-each name it
+		"128 KiB",                                          // the bound of one environment string
+		"never as a number",                                // reviewed and rule compare as text
 	} {
 		if !strings.Contains(provenance, want) {
 			t.Errorf("PROVENANCE.md lacks %q", want)
@@ -204,33 +207,51 @@ func TestEvidenceStore_NamesNoSectionTaskOrLogEntryOfATaskDocument(t *testing.T)
 }
 
 // taskDocumentIdentifier is the pattern of the lint above and of its table test, as the task document writes its
-// identifiers: S, T or L and a number, then lowercase letters and dashed parts that are each a letter and digits
-// (T4g, T3c-a2), or OD- and a number with lowercase letters (OD-10b). It cannot tell prose such as L2-cache from an
-// identifier, so taskDocumentReferences drops a match that a dash and a letter follow (review 66a1a0398abe-3 F2, T4k).
-var taskDocumentIdentifier = regexp.MustCompile(`\b[STL][0-9]+(?:[a-z]+(?:-[a-z][0-9]*)*)?\b|\bOD-[0-9]+[a-z]*\b`)
+// identifiers: S, T or L and a number, or OD- and a number, each with lowercase letters and any dashed parts of
+// lowercase letters and digits (T4g, T3c-a2, OD-10b, and the T4k-only that is no identifier but names one). It cannot
+// tell prose such as L2-cache from an identifier, so taskDocumentProse lists the prose by name.
+var taskDocumentIdentifier = regexp.MustCompile(`\b[STL][0-9]+[a-z]*(?:-[a-z0-9]+)*\b|\bOD-[0-9]+[a-z]*(?:-[a-z0-9]+)*\b`)
 
-// taskDocumentReferences is every identifier of a task document that text names.
+// taskDocumentProse is the prose that the pattern matches and that names no identifier, each by its whole text: a false
+// positive is fixed by adding its exact text here, which a review sees (reviews 66a1a0398abe-3 F2, 4f714c67e87c-2 F2
+// and 4f714c67e87c-5 F1, T4k, T4q).
+var taskDocumentProse = map[string]bool{"L2-cache": true, "S5-based": true}
+
+// taskDocumentReferences is every identifier of a task document that text names: a match of the pattern that is not,
+// as a whole, a prose term of the list.
 func taskDocumentReferences(text string) []string {
 	var found []string
-	for _, at := range taskDocumentIdentifier.FindAllStringIndex(text, -1) {
-		if rest := text[at[1]:]; len(rest) >= 2 && rest[0] == '-' && (rest[1]|0x20 >= 'a' && rest[1]|0x20 <= 'z') {
-			continue
+	for _, match := range taskDocumentIdentifier.FindAllString(text, -1) {
+		if !taskDocumentProse[match] {
+			found = append(found, match)
 		}
-		found = append(found, text[at[0]:at[1]])
 	}
 	return found
 }
 
+// Every prose term is one whole match of the pattern, so no entry is dead (T4q, L78 choice 1).
+func TestTheTaskDocumentProseTermsAreEachOneWholeMatch(t *testing.T) {
+	for term := range taskDocumentProse {
+		if got := taskDocumentIdentifier.FindString(term); got != term {
+			t.Errorf("the pattern finds %q in the prose term %q, so the term is never dropped as a whole", got, term)
+		}
+	}
+}
+
 func TestTheTaskDocumentPatternMatchesEveryIdentifierForm(t *testing.T) {
-	for _, id := range []string{"S6", "T4g", "T3c-f", "T3c-a2", "L64", "OD-11", "OD-10b"} {
+	for _, id := range []string{"S6", "T4g", "T3c-f", "T3c-a2", "L64", "OD-11", "OD-10b",
+		"T4k-only", "L72-style", "T3c-ab", "L72-x", "OD-11-era", "L2-cache-line"} {
 		if got := taskDocumentReferences("see " + id + " here"); !reflect.DeepEqual(got, []string{id}) {
 			t.Errorf("the pattern finds %q in %q, want %q", got, "see "+id+" here", id)
 		}
 	}
-	for _, text := range []string{"ES2015", "SHA-256", "UTF-8", "level 2", "L2-cache", "S5-based", "see L2-cache here"} {
+	for _, text := range []string{"ES2015", "SHA-256", "UTF-8", "level 2", "L2-cache", "S5-based", "see L2-cache here", "see S5-based here"} {
 		if got := taskDocumentReferences(text); got != nil {
 			t.Errorf("the pattern finds %q in %q, want no match", got, text)
 		}
+	}
+	if got := taskDocumentReferences("L67-L72"); !reflect.DeepEqual(got, []string{"L67", "L72"}) {
+		t.Errorf("the pattern finds %q in %q, want L67 and L72", got, "L67-L72")
 	}
 }
 
@@ -245,12 +266,14 @@ var shellCallWords = []string{"cd", "dirname", "basename"}
 
 // shellCalls finds each cd, dirname and basename that is written as shell code: at the start of a word, outside
 // comments, outside single quotes and outside double quotes except inside a "$(...)" there. A backslash and a line
-// break join two lines; the call keeps the number of its first line. A quote state runs across lines. Bound: a call
-// built from a variable, eval, command or backquotes is not seen, and neither is a word that is an argument and
-// not a command (echo cd is seen).
+// break join two lines; the call keeps the number of its first line. A quote state runs across lines. A here-document
+// is refused, not read: "<<" written as shell code (not in quotes, a comment or "$((...))") is reported as a call of
+// the word "<<", since its body would be read as code. Bound: a call built from a variable, eval, command or
+// backquotes is not seen, and neither is a word that is an argument and not a command (echo cd is seen).
 func shellCalls(script string) []shellCall {
 	type context struct {
 		quoted bool // double quotes; else code
+		arith  bool // opened by "$((": a "<<" there is a shift
 		depth  int  // open "(" of this code context, not counting its "$("
 	}
 	isName := func(b byte) bool {
@@ -274,9 +297,13 @@ func shellCalls(script string) []shellCall {
 		case top.quoted && c == '"':
 			stack, wordStart = stack[:len(stack)-1], false
 		case c == '$' && i+1 < len(script) && script[i+1] == '(':
-			stack, wordStart = append(stack, context{}), true
+			stack, wordStart = append(stack, context{arith: i+2 < len(script) && script[i+2] == '('}), true
 			i++
 		case top.quoted:
+		case c == '<' && i+1 < len(script) && script[i+1] == '<' && !top.arith:
+			calls = append(calls, shellCall{line: line, word: "<<", rest: logicalRest(script[i+2:])})
+			i++
+			wordStart = false
 		case c == '\'':
 			for i++; i < len(script) && script[i] != '\''; i++ {
 				if script[i] == '\n' {
@@ -348,6 +375,11 @@ func TestShellCallsReadsOnlyShellCode(t *testing.T) {
 		{"an escaped quote opens nothing", `echo \"; cd x`, []shellCall{{1, "cd", " x"}}},
 		{"a quote that spans lines", "echo 'a\ncd x'\ncd y", []shellCall{{3, "cd", " y"}}},
 		{"a word inside a longer name", "mycd x; dirname2 y; x.cd z; $cd", nil},
+		{"a here-document is reported, its body is not read", "cat <<EOF\nit's here\nEOF\ncd /x\n", []shellCall{{1, "<<", "EOF"}}},
+		{"a here-document with a dash and quotes", "cat <<-'EOF'", []shellCall{{1, "<<", "-'EOF'"}}},
+		{"a shift in arithmetic is no here-document", "x=$((1 << 2)); cd -- y", []shellCall{{1, "cd", " -- y"}}},
+		{"two angle brackets in double quotes", `echo "<<"`, nil},
+		{"two angle brackets in a comment", "f # <<", nil},
 	} {
 		if got := shellCalls(c.script); !reflect.DeepEqual(got, c.want) {
 			t.Errorf("%s: shellCalls(%q) = %v, want %v", c.name, c.script, got, c.want)
@@ -361,6 +393,9 @@ func TestShellCallsReadsOnlyShellCode(t *testing.T) {
 func TestEvidenceStore_EveryCdDirnameAndBasenameEndsItsOptions(t *testing.T) {
 	seen := map[string]bool{}
 	for _, call := range shellCalls(readRepoFile(t, skillsRepoRoot(t), evidenceDirRel+"/evidence.sh")) {
+		if call.word == "<<" {
+			continue // a here-document is refused by its own test
+		}
 		seen[call.word] = true
 		if !strings.HasPrefix(call.rest, " -- ") {
 			t.Errorf("evidence.sh line %d: %q is not followed by \" -- \": %s%s", call.line, call.word, call.word, call.rest)
@@ -369,6 +404,31 @@ func TestEvidenceStore_EveryCdDirnameAndBasenameEndsItsOptions(t *testing.T) {
 	for _, word := range shellCallWords {
 		if !seen[word] {
 			t.Errorf("shellCalls found no %s in evidence.sh, so this lint reads nothing of it", word)
+		}
+	}
+}
+
+// evidence.sh holds no here-document: the option lint above does not read a here-document's body, so one would hide
+// the calls written after it (review 4f714c67e87c-5 F4, T4q).
+func TestEvidenceStore_HoldsNoHereDocument(t *testing.T) {
+	for _, call := range shellCalls(readRepoFile(t, skillsRepoRoot(t), evidenceDirRel+"/evidence.sh")) {
+		if call.word == "<<" {
+			t.Errorf("evidence.sh line %d writes a here-document: the option lint does not read its body, so write the text another way", call.line)
+		}
+	}
+}
+
+// Every environment value that evidence.sh reads is read as a string, so the awk compares it with a cell as text and
+// never as a number (review 4f714c67e87c-5 F5, T4q).
+func TestEvidenceStore_ReadsEveryEnvironmentValueAsAString(t *testing.T) {
+	script := readRepoFile(t, skillsRepoRoot(t), evidenceDirRel+"/evidence.sh")
+	reads := regexp.MustCompile(`ENVIRON\["[^"]*"\]`).FindAllStringIndex(script, -1)
+	if len(reads) == 0 {
+		t.Fatal("evidence.sh reads no environment value, so this lint reads nothing of it")
+	}
+	for _, at := range reads {
+		if !strings.HasPrefix(script[at[1]:], ` ""`) {
+			t.Errorf("evidence.sh reads %s with no empty string after it, so awk takes it for a number where it looks like one", script[at[0]:at[1]])
 		}
 	}
 }

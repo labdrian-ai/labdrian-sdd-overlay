@@ -1,8 +1,11 @@
 package shelltest
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -11,7 +14,7 @@ import (
 // "yes" or "no" each, in the order given, and exits 0. It agrees with reviewed on every page state: "yes" where
 // reviewed exits 0, "no" where it exits 1, and the same exit 4 and stderr line where reviewed exits 4 (T4k, L72).
 func TestEvidenceStore_ReviewedEachAnswersEveryIdentifierFromOneRead(t *testing.T) {
-	const cannotRead = "evidence.sh: cannot read docs/wiki/evidence.md; reviewed cannot answer\n"
+	const cannotRead = "evidence.sh: cannot read docs/wiki/evidence.md; reviewed-each cannot answer\n"
 	t.Run("three identifiers, the page holding the first and the third", func(t *testing.T) {
 		w := newEvidenceWorld(t, evidencePage(stdKinds, stdEvidence))
 		wantResult(t, "reviewed-each", w.inRepo("reviewed-each", "docs/wiki", "f/aaaa-1", "f/zzzz-1", "f/ffff-1"), 0, "yes\nno\nyes\n", "")
@@ -36,13 +39,13 @@ func TestEvidenceStore_ReviewedEachAnswersEveryIdentifierFromOneRead(t *testing.
 		w := newEvidenceWorld(t, onePage("alpha-kind"))
 		env := stubAwk(t, w, "echo yes\n")
 		wantResult(t, "reviewed-each", w.run(w.repo, env, "reviewed-each", "docs/wiki", "f/aaaa-1", "f/bbbb-1"), 4, "",
-			"evidence.sh: awk gave no answer on docs/wiki/evidence.md; reviewed cannot answer\n")
+			"evidence.sh: awk gave no answer on docs/wiki/evidence.md; reviewed-each cannot answer\n")
 	})
 	t.Run("an awk that gives an empty line among its answers", func(t *testing.T) {
 		w := newEvidenceWorld(t, onePage("alpha-kind"))
 		env := stubAwk(t, w, "printf 'yes\\n\\nno\\nno\\n'\n")
 		wantResult(t, "reviewed-each", w.run(w.repo, env, "reviewed-each", "docs/wiki", "f/aaaa-1", "f/bbbb-1", "f/cccc-1"), 4, "",
-			"evidence.sh: awk gave no answer on docs/wiki/evidence.md; reviewed cannot answer\n")
+			"evidence.sh: awk gave no answer on docs/wiki/evidence.md; reviewed-each cannot answer\n")
 	})
 	t.Run("an identifier with a backslash is compared as its bytes", func(t *testing.T) {
 		w := newEvidenceWorld(t, evidencePage(stdKinds, stdEvidence+"| alpha-kind | 1 | f/a\\b-1 | 2026-04-04 | backslash |\n"))
@@ -62,22 +65,62 @@ func TestEvidenceStore_ReviewedEachAnswersEveryIdentifierFromOneRead(t *testing.
 		wantResult(t, "reviewed-each", w.inRepo("reviewed-each", "docs/wiki", "f/aaaa-1", "f/zzzz-1", "f/aaaa-1"), 0, "yes\nno\nyes\n", "")
 	})
 
-	// Parity with reviewed on the page states of B12 and B13.
+	// The bound of one environment string (T4q, L78 choice 4): the identifiers reach awk joined in one, which a
+	// Linux exec limits to 128 KiB. Past it awk cannot start and the mode exits 4, one stderr line; under it, it answers.
+	t.Run("the identifiers of one call past the bound of one environment string", func(t *testing.T) {
+		if runtime.GOOS != "linux" {
+			t.Skip("the 128 KiB limit of one environment string is the limit of Linux")
+		}
+		manyIDs := func(n int) []string {
+			ids := make([]string, n)
+			for i := range ids {
+				ids[i] = fmt.Sprintf("f/review-%08d", i)
+			}
+			return ids
+		}
+		w := newEvidenceWorld(t, onePage("alpha-kind"))
+		past := w.inRepo(append([]string{"reviewed-each", "docs/wiki"}, manyIDs(9000)...)...)
+		if !regexp.MustCompile(`^evidence\.sh: awk failed on docs/wiki/evidence\.md \(exit [0-9]+\); reviewed-each cannot answer\n$`).MatchString(past.Stderr) || past.Exit != 4 || past.Stdout != "" {
+			t.Errorf("9000 identifiers: exit %d, stdout of %d bytes, stderr %q, want exit 4, no stdout and one awk-failed line", past.Exit, len(past.Stdout), past.Stderr)
+		}
+		under := w.inRepo(append([]string{"reviewed-each", "docs/wiki"}, manyIDs(6000)...)...)
+		wantResult(t, "6000 identifiers", under, 0, strings.Repeat("no\n", 6000), "")
+	})
+
+	// Parity with reviewed on the page states of B12 and B13. A state returns its world, the environment it adds and
+	// the wiki directory argument (a dash directory is run with -w).
 	kinds := stdKinds + "| source-kind | 1 | | | f/src-1 | project |\n"
-	evidence := stdEvidence + "| alpha-kind | 1 | f/xxxx-10 | 2026-04-01 | prefix |\n| alpha-kind | 1 |  f/spaced-1  | 2026-04-02 | spaced |\n| alpha-kind | 1 | f/a\\|b-1 | 2026-04-03 | pipe |\n"
-	states := map[string]func(t *testing.T) (evidenceWorld, []string){
-		"a valid page": func(t *testing.T) (evidenceWorld, []string) {
-			return newEvidenceWorld(t, evidencePage(kinds, evidence)), nil
-		},
-		"no page": func(t *testing.T) (evidenceWorld, []string) { return newEvidenceWorld(t, ""), nil },
-		"a directory at the page path": func(t *testing.T) (evidenceWorld, []string) {
+	evidence := stdEvidence + "| alpha-kind | 1 | f/xxxx-10 | 2026-04-01 | prefix |\n| alpha-kind | 1 |  f/spaced-1  | 2026-04-02 | spaced |\n| alpha-kind | 1 | f/a\\|b-1 | 2026-04-03 | pipe |\n| alpha-kind | 1 | f/a\\b-1 | 2026-04-04 | backslash |\n"
+	type state func(t *testing.T) (w evidenceWorld, env []string, wiki string)
+	plain := func(page string) state {
+		return func(t *testing.T) (evidenceWorld, []string, string) {
+			return newEvidenceWorld(t, page), nil, "docs/wiki"
+		}
+	}
+	notRoot := func(t *testing.T) {
+		t.Helper()
+		if os.Geteuid() == 0 {
+			t.Skip("root reads a page and searches a directory whatever their mode")
+		}
+	}
+	chmod := func(t *testing.T, path string, mode os.FileMode) {
+		t.Helper()
+		if err := os.Chmod(path, mode); err != nil {
+			t.Fatal(err)
+		}
+		t.Cleanup(func() { _ = os.Chmod(path, 0o755) })
+	}
+	states := map[string]state{
+		"a valid page": plain(evidencePage(kinds, evidence)),
+		"no page":      plain(""),
+		"a directory at the page path": func(t *testing.T) (evidenceWorld, []string, string) {
 			w := newEvidenceWorld(t, "")
 			if err := os.MkdirAll(filepath.Join(w.repo, "docs", "wiki", "evidence.md"), 0o755); err != nil {
 				t.Fatal(err)
 			}
-			return w, nil
+			return w, nil, "docs/wiki"
 		},
-		"a link to a missing file at the page path": func(t *testing.T) (evidenceWorld, []string) {
+		"a link to a missing file at the page path": func(t *testing.T) (evidenceWorld, []string, string) {
 			w := newEvidenceWorld(t, "")
 			if err := os.MkdirAll(filepath.Join(w.repo, "docs", "wiki"), 0o755); err != nil {
 				t.Fatal(err)
@@ -85,9 +128,9 @@ func TestEvidenceStore_ReviewedEachAnswersEveryIdentifierFromOneRead(t *testing.
 			if err := os.Symlink(filepath.Join(w.tmp, "missing.md"), filepath.Join(w.repo, "docs", "wiki", "evidence.md")); err != nil {
 				t.Fatal(err)
 			}
-			return w, nil
+			return w, nil, "docs/wiki"
 		},
-		"a regular file where the wiki directory should be": func(t *testing.T) (evidenceWorld, []string) {
+		"a regular file where the wiki directory should be": func(t *testing.T) (evidenceWorld, []string, string) {
 			w := newEvidenceWorld(t, "")
 			if err := os.MkdirAll(filepath.Join(w.repo, "docs"), 0o755); err != nil {
 				t.Fatal(err)
@@ -95,30 +138,68 @@ func TestEvidenceStore_ReviewedEachAnswersEveryIdentifierFromOneRead(t *testing.
 			if err := os.WriteFile(filepath.Join(w.repo, "docs", "wiki"), []byte("not a directory\n"), 0o755); err != nil {
 				t.Fatal(err)
 			}
-			return w, nil
+			return w, nil, "docs/wiki"
 		},
-		"an awk that fails": func(t *testing.T) (evidenceWorld, []string) {
+		"an awk that fails": func(t *testing.T) (evidenceWorld, []string, string) {
 			w := newEvidenceWorld(t, onePage("alpha-kind"))
-			return w, stubAwk(t, w, "exit 2\n")
+			return w, stubAwk(t, w, "exit 2\n"), "docs/wiki"
 		},
-		"an awk that gives no answer": func(t *testing.T) (evidenceWorld, []string) {
+		"an awk that exits 1": func(t *testing.T) (evidenceWorld, []string, string) {
 			w := newEvidenceWorld(t, onePage("alpha-kind"))
-			return w, stubAwk(t, w, "exit 0\n")
+			return w, stubAwk(t, w, "exit 1\n"), "docs/wiki"
+		},
+		"an awk that gives no answer": func(t *testing.T) (evidenceWorld, []string, string) {
+			w := newEvidenceWorld(t, onePage("alpha-kind"))
+			return w, stubAwk(t, w, "exit 0\n"), "docs/wiki"
+		},
+		"a page of mode 000": func(t *testing.T) (evidenceWorld, []string, string) {
+			notRoot(t)
+			w := newEvidenceWorld(t, onePage("alpha-kind"))
+			chmod(t, filepath.Join(w.repo, "docs", "wiki", "evidence.md"), 0)
+			return w, nil, "docs/wiki"
+		},
+		"a wiki directory of mode 600": func(t *testing.T) (evidenceWorld, []string, string) {
+			notRoot(t)
+			w := newEvidenceWorld(t, onePage("alpha-kind"))
+			chmod(t, filepath.Join(w.repo, "docs", "wiki"), 0o600)
+			return w, nil, "docs/wiki"
+		},
+		"a dash wiki directory of mode 600": func(t *testing.T) (evidenceWorld, []string, string) {
+			notRoot(t)
+			w := newEvidenceWorld(t, "")
+			if err := os.Mkdir(filepath.Join(w.repo, "-w"), 0o755); err != nil {
+				t.Fatal(err)
+			}
+			chmod(t, filepath.Join(w.repo, "-w"), 0o600)
+			return w, nil, "-w"
+		},
+		"an empty wiki directory": func(t *testing.T) (evidenceWorld, []string, string) {
+			w := newEvidenceWorld(t, "")
+			if err := os.MkdirAll(filepath.Join(w.repo, "docs", "wiki"), 0o755); err != nil {
+				t.Fatal(err)
+			}
+			return w, nil, "docs/wiki"
+		},
+		"a dash wiki directory that holds nothing": func(t *testing.T) (evidenceWorld, []string, string) {
+			w := newEvidenceWorld(t, "")
+			if err := os.Mkdir(filepath.Join(w.repo, "-w"), 0o755); err != nil {
+				t.Fatal(err)
+			}
+			return w, nil, "-w"
 		},
 	}
 	for name, page := range failingEvidencePages {
-		page := page // go.mod says go 1.21: the closure below runs after the loop
-		states["a page that fails a check: "+name] = func(t *testing.T) (evidenceWorld, []string) { return newEvidenceWorld(t, page), nil }
+		states["a page that fails a check: "+name] = plain(page)
 	}
-	ids := []string{"f/aaaa-1", "f/zzzz-1", "f/dddd-1", "f/spaced-1", "f/a|b-1", "f/xxxx-1", "f/xxxx-10", "f/src-1"}
-	for name, state := range states {
+	ids := []string{"f/aaaa-1", "f/zzzz-1", "f/dddd-1", "f/spaced-1", "f/a|b-1", "f/xxxx-1", "f/xxxx-10", "f/src-1", `f/a\b-1`}
+	for name, build := range states {
 		t.Run("parity with reviewed: "+name, func(t *testing.T) {
-			w, env := state(t)
-			each := w.run(w.repo, env, append([]string{"reviewed-each", "docs/wiki"}, ids...)...)
+			w, env, wiki := build(t)
+			each := w.run(w.repo, env, append([]string{"reviewed-each", wiki}, ids...)...)
 			var want []string
 			exit4 := 0
 			for _, id := range ids {
-				one := w.run(w.repo, env, "reviewed", id, "docs/wiki")
+				one := w.run(w.repo, env, "reviewed", id, wiki)
 				switch one.Exit {
 				case 0:
 					want = append(want, "yes")
@@ -126,8 +207,10 @@ func TestEvidenceStore_ReviewedEachAnswersEveryIdentifierFromOneRead(t *testing.
 					want = append(want, "no")
 				case 4:
 					exit4++
-					if each.Exit != 4 || each.Stdout != "" || each.Stderr != one.Stderr {
-						t.Errorf("reviewed %s exits 4 with %q; reviewed-each gave exit %d, stdout %q, stderr %q", id, one.Stderr, each.Exit, each.Stdout, each.Stderr)
+					// The line says which mode ran: reviewed-each's is reviewed's with its own name.
+					named := strings.Replace(one.Stderr, "; reviewed cannot answer", "; reviewed-each cannot answer", 1)
+					if each.Exit != 4 || each.Stdout != "" || each.Stderr != named {
+						t.Errorf("reviewed %s exits 4 with %q; reviewed-each gave exit %d, stdout %q, stderr %q, want %q", id, one.Stderr, each.Exit, each.Stdout, each.Stderr, named)
 					}
 				default:
 					t.Fatalf("reviewed %s exits %d, which is not an answer", id, one.Exit)
