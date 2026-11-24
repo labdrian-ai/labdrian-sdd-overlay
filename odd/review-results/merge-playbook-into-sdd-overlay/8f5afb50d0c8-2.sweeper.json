@@ -1,0 +1,20 @@
+{
+  "kind": "sweeper",
+  "base": "c193276c57ad85d0a936e59987c0e660012df811",
+  "head": "8f5afb50d0c89c59714338a77a3916feb28aba5e",
+  "diff_sha256": "7183032d6a7cd75eb47ac7ce1405dd511edea4042cdba469043c668c94e56737",
+  "sweep": "8f5afb50d0c8-1.sweep.json",
+  "commit": null,
+  "candidates": [
+    {
+      "candidate": "T1 name: head12",
+      "disposition": "live",
+      "evidence": "8f5afb50 removed the function head12 (replaced by review.ShortName); rg head12 outside odd/ finds only README.md:653-747, the <head12> placeholder in the help of review bind/record/verify/exempt, which names the file-name form, not the function."
+    },
+    {
+      "candidate": "T1 name: short",
+      "disposition": "live",
+      "evidence": "8f5afb50 removed app.short (replaced by review.ShortName); rg for func short or short( outside odd/ finds only shortWaitStore, shortReason and shortSHA in other packages, unrelated names."
+    }
+  ]
+}

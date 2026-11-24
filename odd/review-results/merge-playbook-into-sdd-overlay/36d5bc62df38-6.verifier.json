@@ -1,0 +1,39 @@
+{
+  "verdicts": [
+    {
+      "id": "F1",
+      "result": "reproduced",
+      "command": "In the scratch copy probe1 of head, ran sd -F 'const grandchildLister = \"/bin/ps\"' 'const grandchildLister = \"/bin/ps-nonexistent-probe\"' overlaytest/grandchild_unix.go. Then HOME=$(mktemp -d) CI=true go test ./execrunner/ ./review/evidencesh/ ./cmd/ -run 'TestProcessGroupKillsTheGrandchildAtTheDeadline|TestClassified_AGrandchildDoesNotOutliveTheTimeoutOverAGroupRunner|TestStopHookBoundsTheEvidenceScriptWithEveryProcessItStarted' -v, and the same on the unmodified head (the literal -run X1 matches no test name: 'no tests to run')",
+      "output": "grandchild_unix.go:39-42 calls t.Skipf unconditionally, while overlaytest.go:67-69 calls t.Fatalf when CI==\"true\". Probe with CI=true: '--- SKIP: TestProcessGroupKillsTheGrandchildAtTheDeadline', '--- SKIP: TestClassified_AGrandchildDoesNotOutliveTheTimeoutOverAGroupRunner', '--- SKIP: TestStopHookBoundsTheEvidenceScriptWithEveryProcessItStarted', and all three packages 'ok'. Unmodified head: all three PASS (0.24s, 0.23s, 2.37s). Base has no overlaytest/grandchild_unix.go, so no check ran there.",
+      "base_result": "not-run"
+    },
+    {
+      "id": "F2",
+      "result": "reproduced",
+      "command": "Same probe as -4 F1 (hookprobe head with WithProcessGroup, base with New(); kill -KILL <pid> or kill -KILL -- -<pgid> of the hook, then ps -p <grandchild>)",
+      "output": "head: the grandchild survives both a kill of the hook pid and a kill of the hook's group ('S 3807828 /bin/sleep 41.3'; its pgid differs from the hook's pgid). base: the grandchild shares the hook's pgid, and a SIGKILL to the hook's group leaves it GONE. A SIGKILL to the hook pid alone leaves it alive on both. Real Claude Code was not killed.",
+      "base_result": "not-reproduced"
+    },
+    {
+      "id": "F3",
+      "result": "not-run",
+      "command": "",
+      "output": "Code read only, no run. group_unix.go:18 calls syscall.Kill(-cmd.Process.Pid, SIGKILL) by raw pid, not os.Process.Kill, which uses a pidfd. A race of exec.Cmd's context goroutine against Wait's reap plus pid reuse as a new pgid cannot be triggered deterministically. The kernel does not reuse a pid while it is still in use as a live pgid, so the window needs the whole group already reaped.",
+      "base_result": "not-run"
+    },
+    {
+      "id": "F4",
+      "result": "reproduced",
+      "command": "(a) The load runs listed under -4 F5 (-count=20 -p 8 with 8 and with 40 yes burners, killed by PID). (b) In the scratch copy probe4 of head, the X1 body was delayed with sd so the fork lands after the 200ms deadline ('\"/bin/sh\", \"-c\", \"/bin/sleep 0.4; \"+g.Body'), then HOME=$(mktemp -d) go test ./execrunner/ -run TestProcessGroupKillsTheGrandchildAtTheDeadline -count=3 -v. A first variant with a 1ms timeout passed 5/5.",
+      "output": "(a) The natural flake did not occur: 120/120 X1 and E1 PASS under load. (b) 3/3: 'group_unix_test.go:32: the grandchild stub did not write its id to .../grandchild.pid: it was not run', '--- FAIL'. When the kill lands before the fork, Started fails, although grandchild_unix.go:86-87 (RequireGone) calls a grandchild that never started gone. The mechanism is shown; the load-induced timing of it is not. Base has no X1, E1 or overlaytest.Grandchild.",
+      "base_result": "not-run"
+    },
+    {
+      "id": "F5",
+      "result": "reproduced",
+      "command": "Read group_other.go:7-8 and execrunner.go:20-23,100,147. Built the base probe (execrunner.New(), no group, the same as the !unix no-op ownGroup) with ctx 200ms and the grandchild body, timed the call, then ran ps -p <grandchild> 3s after return",
+      "output": "group_other.go:8 says 'a process it forked can outlive the call, up to killGrace'. execrunner.go:20-23 and 147 show that killGrace is cmd.WaitDelay, the wait for the pipes. Probe: 'returned: context deadline exceeded (signal: killed)', 'call took 2.210053900s', and 3s after return 'S 5 /bin/sleep 41.3' (alive, past killGrace). The grandchild was then killed by its PID. Base has no group_other.go, so the text does not exist there.",
+      "base_result": "not-reproduced"
+    }
+  ]
+}
