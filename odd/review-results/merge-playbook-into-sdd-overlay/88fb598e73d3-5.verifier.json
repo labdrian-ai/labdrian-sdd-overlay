@@ -1,0 +1,18 @@
+{
+  "verdicts": [
+    {
+      "id": "F1",
+      "result": "reproduced",
+      "command": "getconf PAGESIZE; rg -n 'MAX_ARG_STRLEN|MAX_ARG_STRINGS' /usr/include/linux/binfmts.h; rg -n '128 KiB' on <tree>/skills/_shared/evidence/evidence.sh, PROVENANCE.md and engine/shelltest/evidence_store_each_test.go; Read of the head test (k) at evidence_store_each_test.go:68-88",
+      "output": "getconf PAGESIZE printed 4096. binfmts.h:15 reads `#define MAX_ARG_STRLEN (PAGE_SIZE * 32)`, so the limit depends on page size: 128 KiB at 4 KiB pages, 512 KiB at 16 KiB and 2 MiB at 64 KiB. On head, evidence.sh:51 says '(128 KiB on Linux)' and PROVENANCE.md:15 says '(128 KiB on Linux)'. In the test, line 69 says 'a Linux exec limits to 128 KiB', and test (k) guards only with `if runtime.GOOS != \"linux\" { t.Skip(\"the 128 KiB limit of one environment string is the limit of Linux\") }` at lines 71-72, with no page-size guard. Line 82 then expects 9000 identifiers to give exit 4. Kernels with 16 KiB or 64 KiB pages were not run; this verdict rests on the definition read above. On base, rg found no '128 KiB' in these files (rc=1), and base has no test (k).",
+      "base_result": "not-reproduced"
+    },
+    {
+      "id": "F2",
+      "result": "reproduced",
+      "command": "In each of the head and base engine/ directories I ran: HOME=$(mktemp -d) go test ./skills/ -run TestEvidenceStore_ReadsEveryEnvironmentValueAsAString -count=1 -v. On head I also made four probe trees, vf-t4q/probe/{ctrl,name,blank,nospace}. Each copies the head engine/ and skills/_shared/evidence/ and adds one line after evidence.sh:143. ctrl adds `if (ENVIRON[\"EVIDENCE_N\"] > 0) probe = 1`; name adds `if (ENVIRON[name] > 0) probe = 1`; blank adds `if (ENVIRON[ \"EVIDENCE_N\" ] > 0) probe = 1`; nospace adds `probe2 = ENVIRON[\"EVIDENCE_N\"]\"\"; if (probe2 > 0) probe = 1`. I ran the same go test in each probe's engine/.",
+      "output": "Head, unmodified: PASS. ctrl: FAIL, 'evidence.sh reads ENVIRON[\"EVIDENCE_N\"] with no empty string after it', which shows the lint works on the literal form. name: PASS, so the numeric-compared `ENVIRON[name]` read is missed. blank: PASS, so the numeric-compared `ENVIRON[ \"EVIDENCE_N\" ]` read is missed. nospace: FAIL with the same message, although `ENVIRON[\"EVIDENCE_N\"]\"\"` is forced to a string; it fails on spacing alone. Base: 'testing: warning: no tests to run ... ok [no tests to run]'. Base has no such lint (rg for ReadsEveryEnvironment under base/engine returned rc=1).",
+      "base_result": "not-reproduced"
+    }
+  ]
+}

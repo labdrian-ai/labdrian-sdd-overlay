@@ -1,0 +1,81 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "255abff5451e43c8b46e6743bc162d69e2d38cba",
+    "head": "88fb598e73d339f72e439792edfa96d1b2dd4041",
+    "diff_sha256": "392b616593eee7c8968f1ca6b7ce4eb20f4903001807aa05393a445110e118bb",
+    "paths": [
+      "engine/shelltest/evidence_store_each_test.go",
+      "engine/shelltest/evidence_store_text_test.go",
+      "engine/skills/evidence_store_artifact_test.go",
+      "odd/tasks/merge-playbook-into-sdd-overlay.md",
+      "skills/_shared/evidence/PROVENANCE.md",
+      "skills/_shared/evidence/evidence.sh"
+    ]
+  },
+  "rows": [
+    "recall",
+    "hunt",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "255abff5451e43c8b46e6743bc162d69e2d38cba",
+      "head": "88fb598e73d339f72e439792edfa96d1b2dd4041",
+      "diff_sha256": "392b616593eee7c8968f1ca6b7ce4eb20f4903001807aa05393a445110e118bb"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/shelltest/evidence_store_each_test.go",
+        "engine/shelltest/evidence_store_text_test.go",
+        "engine/skills/evidence_store_artifact_test.go",
+        "odd/tasks/merge-playbook-into-sdd-overlay.md",
+        "skills/_shared/evidence/PROVENANCE.md",
+        "skills/_shared/evidence/evidence.sh"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "engine/shelltest/evidence_store_each_test.go:71",
+        "severity": "WARNING",
+        "claim": "The bound added for -2 F1 is stated and tested as a Linux constant, but it is not one. Linux defines MAX_ARG_STRLEN as 32 * PAGE_SIZE. That is 128 KiB only with 4 KiB pages. It is 512 KiB with 16 KiB pages (for example Asahi arm64) and 2 MiB with 64 KiB pages (for example some aarch64 and ppc64le distribution kernels). On such a kernel, test (k) passes 9,000 identifiers joined into about 162 KB. awk starts, prints 9,000 'no' lines and exits 0, so the 'past the bound' case fails, although the only guard is runtime.GOOS == \"linux\". The same holds where sh runs awk as a busybox applet without exec. The header of evidence.sh (line 51) and PROVENANCE.md say '128 KiB on Linux', and the test pins that figure as a needle. These are the documented bound that T4w's adapter relies on, and on those systems they are wrong. The answers stay correct (the failure is the safe one), so the defect is a false test failure and an inaccurate deployed claim, not a wrong answer. This reasoning comes from the kernel definition as recalled, not from source read here.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/shelltest/evidence_store_each_test.go:82",
+          "skills/_shared/evidence/evidence.sh:51"
+        ]
+      },
+      {
+        "id": "F2",
+        "location": "engine/skills/evidence_store_artifact_test.go:425",
+        "severity": "SUGGESTION",
+        "claim": "The known-error lint for -5 F5, TestEvidenceStore_ReadsEveryEnvironmentValueAsAString, finds reads only with the regex ENVIRON\\[\"[^\"]*\"\\]. That is a literal double-quoted subscript with no blanks inside the brackets. It also needs exactly one space and \"\" right after the read. A later read written as ENVIRON[name], ENVIRON[ \"X\" ] or ENVIRON[\"X\"]\"\" is either not found at all or fails for spacing alone. The len(reads) == 0 guard fires only when no read is found at all, so a second read that is numeric-compared goes unnoticed while the existing one still matches. The class the lint exists to catch (an environment value compared as a number) can come back through a read the lint cannot see.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/skills/evidence_store_artifact_test.go:430"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the whole diff (/tmp/claude-1000/-home-labdrian-labdrian-sdd-overlay/45673332-5a42-429f-889a-50c9d8bcb1fc/scratchpad/t4q.diff, 569 lines) across all 6 changed paths.",
+      "Read evidence.sh at head in full: the BEGIN read of ENVIRON[\"EVIDENCE_WANT\"] \"\", rv == want (reviewed), ak[i] == want (rule), the wanted/hit keys (reviewed-each), page_state and awk_cannot_answer printing $mode, and the header paragraphs for rule, reviewed and reviewed-each.",
+      "Read engine/skills/evidence_store_artifact_test.go lines 150-434 at head: taskDocumentIdentifier, taskDocumentProse, taskDocumentReferences, the prose-term test, the pattern table, the shellCalls arithmetic context and the << report, the table rows, the option lint's skip of <<, the here-doc lint and the ENVIRON lint.",
+      "Read evidence_store_test.go run/inRepo: scripts run as exec.Command(\"sh\", script, args...), which bears on test (k).",
+      "Read review records 4f714c67e87c-2.json (F1, F2) and 4f714c67e87c-5.json (F1-F5), and L78 (lines 3962-4033) of the task document.",
+      "-2 F2 and -5 F1: resolved as L78 choice 1 says. The pattern now takes every dashed part, the drop applies only to exact prose terms (L2-cache, S5-based), the table flags T4k-only, L72-style, T3c-ab, L72-x, OD-11-era and L2-cache-line, and L67-L72 gives L67 and L72. Checked by hand against the regex; no test was run.",
+      "-5 F5: resolved as choice 2 says. The concatenation with \"\" makes want a string, so rule's ak[i] == want and reviewed's rv == want compare as text. B15 covers the awk on PATH, gawk, mawk, nawk, original-awk and busybox where present. The ENVIRON lint is added; its coverage gap is reported as F2.",
+      "-5 F3: resolved as choice 3 says. All three exit-4 printf lines use $mode. The header and PROVENANCE say reviewed-each names itself. The parity loop compares after replacing '; reviewed cannot answer'. reviewed's lines are byte-identical, since $mode is 'reviewed' there.",
+      "-2 F1: resolved as choice 4 says (documented, pinned by (k), not split). The 128 KiB figure depends on page size, reported as F1.",
+      "-5 F2: resolved as choice 5 says. The parity map has 13 states, the six missing ones among them (mode 000, wiki 600, dash wiki 600 run with -w, an awk that exits 1, an empty wiki, an empty dash wiki). Mode states are skipped as root. The backslash row and f/a\\b-1 are among the parity ids. chmod cleanups restore 0755 before TempDir removal (LIFO order).",
+      "-5 F4: resolved as choice 6 says. << in code outside $((...)), quotes and comments is reported. The option lint skips it, and TestEvidenceStore_HoldsNoHereDocument fails on any.",
+      "Hunt: no new path is written or deleted by production code. Empty want is unchanged, since a usage error still exits 2. No new swallowed error: os.Chmod in a cleanup ignores its error on purpose; a failed exec.LookPath means the awk is absent.",
+      "Readability row read from roles/reviewed/rows.json and applied to PROVENANCE.md, the evidence.sh header and the L79 log entry. Nothing found that hides a defect. The commit message is not in the diff and was not inspected, because no git command was run.",
+      "No command was run: nothing was built, tested or executed."
+    ]
+  }
+}

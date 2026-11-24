@@ -1,0 +1,63 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "255abff5451e43c8b46e6743bc162d69e2d38cba",
+    "head": "88fb598e73d339f72e439792edfa96d1b2dd4041",
+    "diff_sha256": "392b616593eee7c8968f1ca6b7ce4eb20f4903001807aa05393a445110e118bb",
+    "paths": [
+      "engine/shelltest/evidence_store_each_test.go",
+      "engine/shelltest/evidence_store_text_test.go",
+      "engine/skills/evidence_store_artifact_test.go",
+      "odd/tasks/merge-playbook-into-sdd-overlay.md",
+      "skills/_shared/evidence/PROVENANCE.md",
+      "skills/_shared/evidence/evidence.sh"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "255abff5451e43c8b46e6743bc162d69e2d38cba",
+      "head": "88fb598e73d339f72e439792edfa96d1b2dd4041",
+      "diff_sha256": "392b616593eee7c8968f1ca6b7ce4eb20f4903001807aa05393a445110e118bb"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/shelltest/evidence_store_each_test.go",
+        "engine/shelltest/evidence_store_text_test.go",
+        "engine/skills/evidence_store_artifact_test.go",
+        "odd/tasks/merge-playbook-into-sdd-overlay.md",
+        "skills/_shared/evidence/PROVENANCE.md",
+        "skills/_shared/evidence/evidence.sh"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "skills/_shared/evidence/evidence.sh:146",
+        "claim": "The text-comparison fix covers only the ENVIRON read. In reviewed-each, `split(want, ids, \"\\n\")` yields strnum elements, and these are used as array subscripts (`wanted[ids[i]]`, `hit[...]`, `ids[i] in hit`) with no `\"\"` forcing. On an awk that converts a numeric-looking strnum subscript through CONVFMT (for example `1.0` or `1e0` becoming `1`), reviewed-each would again treat `1.0` as `1`, so it would disagree with reviewed. B15 passes on gawk, mawk and busybox awk, which keep the original string, and the other listed awks are absent or are gawk. The lint `TestEvidenceStore_ReadsEveryEnvironmentValueAsAString` only checks the ENVIRON read, so it would not catch this. This is a robustness gap on awks not installed here, and I did not show that any real awk reaches it.",
+        "evidence_class": "inferential",
+        "causal_disposition": "unknown",
+        "proof_refs": [
+          "skills/_shared/evidence/evidence.sh:146",
+          "skills/_shared/evidence/evidence.sh:229"
+        ],
+        "severity": "SUGGESTION"
+      }
+    ],
+    "evidence": [
+      "Read the full diff.",
+      "Read evidence.sh lines 60-349 in the worktree: the mode parsing, run_awk, page_state, awk_cannot_answer and the reviewed and reviewed-each branches.",
+      "`page_state` and `awk_cannot_answer` now print `$mode`. For `reviewed` that gives the same text as before, so `evidence_store_test.go` lines 293-360 still match.",
+      "Searched the repository outside `odd/` for the \"cannot answer\" stderr text. The only readers are the shell tests; the stop-hook adapter T4w is not built yet, so no consumer parses the changed reviewed-each lines.",
+      "The `\"\"` concatenation on the ENVIRON read is correct. Cells are already strings, since `trim` returns the result of `sub`.",
+      "The test cleanup order is correct. The chmod restore is registered after the TempDir cleanup, so it runs first, and the permission states skip when the effective user is root.",
+      "The 9000 and 6000 identifier cases (about 162 KB and 108 KB of joined text) fall either side of the 128 KiB single-string limit. The test cases are consistent with that limit.",
+      "Nothing was run: no tests, no shell and no awk.",
+      "The reviewer gave no severity; the foreman assigned SUGGESTION to F1 (no installed awk shown to reach it)"
+    ]
+  }
+}
