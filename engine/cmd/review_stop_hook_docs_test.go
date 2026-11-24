@@ -161,9 +161,10 @@ func TestChangelogRecordsTheReviewStopHook(t *testing.T) {
 	}
 }
 
-// The bound of the evidence run is told as the runner has it (T4y, `36d5bc62df38-4` F2): the run is stopped at 2 seconds, the
-// stop can wait up to 2 seconds more while a process the script started holds its output, and that process can outlive the
-// stop. No text says that the stop takes at most 2 seconds or that it stops every process the script started.
+// The bound of the evidence run is told as the runner has it (T4y, `36d5bc62df38-4` F2): the stop can wait while a process
+// the script started holds its output, and that process can outlive the stop. No text says that the stop takes at most 2
+// seconds or that it stops every process the script started. The seconds themselves are held by evidencesh's
+// TestTheTextsStateTheBoundOfTheRunner, against evidencesh.DefaultTimeout and execrunner.KillGrace (T4z).
 func TestTextsOfTheReviewStopHookStateTheBoundOfTheEvidenceRun(t *testing.T) {
 	readme := readRepositoryFile(t, "README.md")
 	for _, tc := range []struct{ name, text string }{
@@ -171,7 +172,7 @@ func TestTextsOfTheReviewStopHookStateTheBoundOfTheEvidenceRun(t *testing.T) {
 		{"CHANGELOG.md", docSection(t, readRepositoryFile(t, "CHANGELOG.md"), "- The Stop hook (`labdrian review stop-hook`)", "\n- ")},
 	} {
 		text := normalizeDocText(tc.text)
-		for _, want := range []string{"stopped at 2 seconds", "up to 2 seconds more", "can outlive the stop"} {
+		for _, want := range []string{"can outlive the stop"} {
 			if !strings.Contains(text, want) {
 				t.Errorf("%s does not say %q", tc.name, want)
 			}
@@ -185,7 +186,8 @@ func TestTextsOfTheReviewStopHookStateTheBoundOfTheEvidenceRun(t *testing.T) {
 }
 
 // What the evidence run cannot tell is told as it is (T4x, `4b9c3789c2e0-3` F2): a store that is not deployed is named, and
-// the line repeats at each stop because nothing of it is remembered.
+// the line repeats at each stop because nothing of it is remembered. Every refusal made before a run is named (T4z,
+// `c9440b24b20f-6` F6): not deployed, not a regular file, cannot be checked, cannot be read.
 func TestTextsOfTheReviewStopHookSayTheLineOfAnUndeployedStoreRepeats(t *testing.T) {
 	readme := readRepositoryFile(t, "README.md")
 	for _, tc := range []struct{ name, text string }{
@@ -193,7 +195,7 @@ func TestTextsOfTheReviewStopHookSayTheLineOfAnUndeployedStoreRepeats(t *testing
 		{"CHANGELOG.md", docSection(t, readRepositoryFile(t, "CHANGELOG.md"), "- The Stop hook (`labdrian review stop-hook`)", "\n- ")},
 	} {
 		text := normalizeDocText(tc.text)
-		for _, want := range []string{"not deployed", "repeats at each stop", "of it is remembered"} {
+		for _, want := range []string{"not deployed", "is not a regular file", "cannot be checked", "cannot be read", "repeats at each stop", "of it is remembered"} {
 			if !strings.Contains(text, want) {
 				t.Errorf("%s does not say %q", tc.name, want)
 			}

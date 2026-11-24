@@ -18,7 +18,7 @@ import (
 // other the tests use, because it is how stopRecordedProcess recognizes the process it started: it
 // reads the command line of an id and kills it only when the line is exactly the one it expects,
 // so an id that was reused by an unrelated process is left alone. Both outlast every bound the
-// tests wait for (killGrace and a few seconds), so a Run that waited for the grandchild is caught,
+// tests wait for (KillGrace and a few seconds), so a Run that waited for the grandchild is caught,
 // and both end by themselves in under half a minute, so a process nobody stopped is bounded.
 const (
 	lingeringSeconds = "29.5" // the grandchild of the fake programs, which holds the output pipes

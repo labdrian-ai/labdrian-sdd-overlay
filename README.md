@@ -1580,8 +1580,8 @@ gentle-ai-overlay review stop-hook
     stored review result of the branch whose kept findings `docs/wiki/evidence.md` does not hold yet. It asks the
     evidence store deployed under `~/.claude/skills/_shared/evidence/` once at each stop, through `evidence.sh
     reviewed-each` (stopped at 2 seconds; the stop can wait up to 2 seconds more while a process the script started holds its output, and that process can outlive the stop), and names every result still lacking, the ones asked before included. What the
-    script cannot tell, and a stored file it cannot read, is one line on stderr, and can come beside the block. A store
-    that is not deployed is named (`labdrian apply` deploys it) and not run. Nothing of it is remembered, so the line
+    script cannot tell, and a stored file it cannot read, is one line on stderr, and can come beside the block. A script
+    that is not deployed (`labdrian apply` deploys it), is not a regular file, cannot be checked or cannot be read is named, and not run. Nothing of it is remembered, so the line
     repeats at each stop that reaches the question.
     Input: the hook JSON on stdin, at most 1 MiB (more is input it cannot use). Only session_id, cwd, hook_event_name
     and stop_hook_active are read, and an event other than Stop is ignored.

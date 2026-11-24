@@ -4,7 +4,7 @@
 // starts programs of the machine. It runs one `sh` for each call and splits no call: past the limits of one exec (the
 // header of evidence.sh names them) the call is an error. Nothing it is told is remembered. Its bound is the timeout and
 // the grace of the Runner: at the deadline the Runner kills sh, and the call can wait up to the Runner's grace more
-// (execrunner's killGrace, 2 seconds) while a process the script started holds its output. That process is not killed and
+// (execrunner's KillGrace, 2 seconds) while a process the script started holds its output. That process is not killed and
 // can outlive the call.
 //
 // What each run means, the first row that applies:
