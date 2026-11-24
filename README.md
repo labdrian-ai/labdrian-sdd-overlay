@@ -887,15 +887,15 @@ overlay review <verb>
         pre-existing or base-only (reason `causal_disposition pre-existing` or `causal_disposition base-only`), or when
         it is a BLOCKER or CRITICAL that the verdict found not-reproduced (reason `verdict not-reproduced`), or when it
         is a BLOCKER or CRITICAL of causal_disposition unknown that the verdict found reproduced on base (reason
-        `verdict base-reproduced`). Both lists are always there. A result that is not stored, is not one, or whose verdict does not hold is refused, never an
+        `verdict base-reproduced`). Both lists are always there. The member `unverified`, always there too, lists the ids of the kept BLOCKER and CRITICAL findings whose check did not run, as `review verify` decides, which the Classify step waits for. A result that is not stored, is not one, or whose verdict does not hold is refused, never an
         empty list. Nothing is stored. Exit 0 listed, 1 usage error, a result that cannot be read or any other failure.
     stop-hook
         Not run by a person: the Claude Code Stop hook that `install-hooks` wires (the review stop-hook, described
         below as `gentle-ai-overlay review stop-hook`). It asks the agent for what the first commit with unfinished
         review steps misses, each thing once for each session and commit. When no commit misses anything it also asks,
         once for each session and result, for the classification of each stored review result of the branch whose kept
-        findings `docs/wiki/evidence.md` does not hold yet, through the deployed `evidence.sh reviewed-each`. Exit 0
-        always, 1 usage error.
+        findings `docs/wiki/evidence.md` does not hold yet, through the deployed `evidence.sh reviewed-each`. It does
+        not ask for a result with an unverified severe finding until its verdict is stored. Exit 0 always, 1 usage error.
 
 overlay memory <verb>
     Forward memory-directive verbs to the engine unchanged. Read-only: it only plans what memory
@@ -1577,7 +1577,9 @@ gentle-ai-overlay review stop-hook
     working tree; a session with no session_id counts as one session. It never blocks the stop of an agent that a stop
     hook is already making continue (stop_hook_active).
     When no commit misses anything, it also asks, once for each session and result, for the classification of each
-    stored review result of the branch whose kept findings `docs/wiki/evidence.md` does not hold yet. It asks the
+    stored review result of the branch whose kept findings `docs/wiki/evidence.md` does not hold yet; a result with an
+    unverified severe finding (a BLOCKER or CRITICAL whose check did not run) is not asked for until its verdict is
+    stored. It asks the
     evidence store deployed under `~/.claude/skills/_shared/evidence/` once at each stop, through `evidence.sh
     reviewed-each` (stopped at 2 seconds; the stop can wait up to 2 seconds more while a process the script started holds its output, and that process can outlive the stop), and names every result still lacking, the ones asked before included. What the
     script cannot tell, and a stored file it cannot read, is one line on stderr, and can come beside the block.

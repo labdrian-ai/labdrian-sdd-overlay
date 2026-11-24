@@ -16,6 +16,9 @@ type reviewFindingsJSON struct {
 	Verdict string                     `json:"verdict,omitempty"`
 	Kept    []reviewKeptFindingJSON    `json:"kept"`
 	LeftOut []reviewLeftOutFindingJSON `json:"left_out"`
+	// Unverified are the ids of the kept BLOCKER and CRITICAL findings whose check did not run, as `review verify` decides
+	// them; the member is always present and [] when there is none.
+	Unverified []string `json:"unverified"`
 }
 
 type reviewKeptFindingJSON struct {
@@ -65,7 +68,8 @@ func runReviewFindings(p process, d deps, args []string) {
 
 // findingsJSON is the listing as it is printed: the lists are never null, and keep the order of the reply.
 func findingsJSON(l reviewapp.Findings) reviewFindingsJSON {
-	out := reviewFindingsJSON{Review: l.Review, Verdict: l.Verdict, Kept: []reviewKeptFindingJSON{}, LeftOut: []reviewLeftOutFindingJSON{}}
+	out := reviewFindingsJSON{Review: l.Review, Verdict: l.Verdict, Kept: []reviewKeptFindingJSON{}, LeftOut: []reviewLeftOutFindingJSON{}, Unverified: []string{}}
+	out.Unverified = append(out.Unverified, l.Unverified...)
 	for _, k := range l.Kept {
 		refs := k.ProofRefs
 		if refs == nil {

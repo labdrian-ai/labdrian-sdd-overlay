@@ -8,7 +8,8 @@ package evidencesh_test
 // that names the refusals. A refusal added without a fragment, or a fragment a text drops, fails. It also reads every return
 // of the two bodies (not a function literal in them), so an errors.New or a bare `return err` cannot pass unseen
 // (`20b8b0cf75fb-6` F1): the error of a return is nil, a literal fmt.Errorf held as above, or one of three named exceptions,
-// each matched once and each with its reason; a return with no result, another expression, an exception matched twice or
+// each matched once and each with its reason (the bare `err` is accepted only as the return directly in the body of the
+// `if` whose init assigns `err` from a call of checkScript, `8ee5ac95b287-5` F2); a return with no result, another expression, an exception matched twice or
 // not at all fails. It reads the source of two functions, so an error moved into a helper, or a harmless rewrite of an
 // exception's return, fails it for a reason that is not a text; the fix is one table row or one moved line.
 
@@ -84,13 +85,51 @@ func errorFormats(t *testing.T, path string) []string {
 type errorException struct{ fn, expr, reason string }
 
 var errorExceptions = []errorException{
-	{"Classified", "err", "the error of checkScript, whose own returns this test holds"},
+	{"Classified", boundErr, "the error of checkScript, whose own returns this test holds"},
 	{"Classified", "s.refusal(run, stderr, err)", "after the run: the package doc's row of a failed run, not a refusal before it"},
 	{"Classified", "answers(run, stdout, len(reviews))", "after the run: the package doc's row of its output, not a refusal before it"},
 }
 
+// boundErr is how errorReturns writes the bare `err` that is returned directly in the body of an `if` whose init assigns
+// `err` from a call of checkScript: the one place a bare `err` is accepted (`8ee5ac95b287-5` F2). Any other bare `err`
+// is written `err`, which no exception names, so a pre-run check that binds and returns `err` in place of the call of
+// checkScript fails as an unnamed error return.
+const boundErr = "err (from checkScript)"
+
+// returnsOfCheckScript are the returns that sit directly in the body of an `if` whose init is an assignment of the one
+// name `err` from a call of the identifier checkScript (`err := checkScript(...)`).
+func returnsOfCheckScript(body *ast.BlockStmt) map[*ast.ReturnStmt]bool {
+	bound := map[*ast.ReturnStmt]bool{}
+	ast.Inspect(body, func(n ast.Node) bool {
+		stmt, ok := n.(*ast.IfStmt)
+		if !ok {
+			return true
+		}
+		assign, ok := stmt.Init.(*ast.AssignStmt)
+		if !ok || len(assign.Lhs) != 1 || len(assign.Rhs) != 1 {
+			return true
+		}
+		name, ok := assign.Lhs[0].(*ast.Ident)
+		call, isCall := assign.Rhs[0].(*ast.CallExpr)
+		if !ok || name.Name != "err" || !isCall {
+			return true
+		}
+		if fn, ok := call.Fun.(*ast.Ident); !ok || fn.Name != "checkScript" {
+			return true
+		}
+		for _, inner := range stmt.Body.List {
+			if ret, ok := inner.(*ast.ReturnStmt); ok {
+				bound[ret] = true
+			}
+		}
+		return true
+	})
+	return bound
+}
+
 // errorReturns are "<function>: <expr>" for the last result of every return of Classified and checkScript, not entering a
 // function literal, but nil and a literal fmt.Errorf call, which errorFormats holds. A return with no result fails here.
+// A bare `err` is written boundErr when it is returned where returnsOfCheckScript finds it, and `err` anywhere else.
 func errorReturns(t *testing.T, path string) []string {
 	t.Helper()
 	file, err := parser.ParseFile(token.NewFileSet(), path, nil, 0)
@@ -103,6 +142,7 @@ func errorReturns(t *testing.T, path string) []string {
 		if !ok || fn.Body == nil || !(fn.Name.Name == "Classified" && fn.Recv != nil) && fn.Name.Name != "checkScript" {
 			continue
 		}
+		bound := returnsOfCheckScript(fn.Body)
 		ast.Inspect(fn.Body, func(n ast.Node) bool {
 			if _, ok := n.(*ast.FuncLit); ok {
 				return false
@@ -126,7 +166,11 @@ func errorReturns(t *testing.T, path string) []string {
 					}
 				}
 			}
-			out = append(out, fn.Name.Name+": "+types.ExprString(last))
+			expr := types.ExprString(last)
+			if expr == "err" && bound[ret] {
+				expr = boundErr
+			}
+			out = append(out, fn.Name.Name+": "+expr)
 			return true
 		})
 	}

@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"reflect"
 	"strings"
 	"testing"
 )
@@ -112,6 +113,37 @@ func TestReviewFindingsPrintsEmptyListsForAResultWithNoFinding(t *testing.T) {
 	}
 	if !strings.Contains(stdout, `"kept": []`) || !strings.Contains(stdout, `"left_out": []`) || strings.Contains(stdout, "null") {
 		t.Errorf("stdout = %s, want kept and left_out as [] and no null", stdout)
+	}
+}
+
+// U3: `review findings` always prints the member `unverified`: [] for a result with no severe finding (never null, never
+// absent), and the ids of the kept severe findings whose check did not run, as `review verify` decides them.
+func TestReviewFindingsAlwaysPrintsTheUnverifiedMember(t *testing.T) {
+	for _, tc := range []struct {
+		name   string
+		edit   func(map[string]any)
+		member string
+		want   []string
+	}{
+		{"a result with no finding", func(o map[string]any) { o["findings"] = []any{} }, `"unverified": []`, []string{}},
+		{"a BLOCKER with no verdict stored", withBlocker, `"unverified": [`, []string{"F1"}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			w := newReviewWorld(t)
+			name := w.recordWith(tc.edit)
+
+			stdout, stderr, exits := w.run("", "findings", "--feature", "own-rdd", "--stored", name)
+
+			var got struct {
+				Unverified []string `json:"unverified"`
+			}
+			if err := json.Unmarshal([]byte(stdout), &got); err != nil || !equalInts(exits, []int{0}) || stderr != "" {
+				t.Fatalf("exit calls %v, stderr %q, decode error %v; want [0], nothing and one JSON object:\n%s", exits, stderr, err, stdout)
+			}
+			if !strings.Contains(stdout, tc.member) || strings.Contains(stdout, `"unverified": null`) || !reflect.DeepEqual(got.Unverified, tc.want) {
+				t.Errorf("unverified = %#v in\n%s\nwant %#v with the member %q always present", got.Unverified, stdout, tc.want, tc.member)
+			}
+		})
 	}
 }
 
