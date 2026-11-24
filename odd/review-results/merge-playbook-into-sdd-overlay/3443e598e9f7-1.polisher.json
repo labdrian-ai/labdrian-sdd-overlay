@@ -1,0 +1,16 @@
+{
+  "kind": "polisher",
+  "base": "1a6b141993d1a04f846b6d511059616eaf517852",
+  "head": "3443e598e9f7d12e20b6909788e000c83e12982c",
+  "diff_sha256": "6df9c485cfb1a273c22fc9db279736cac51dde9eabf7d2dfc4eacadb8a5e4172",
+  "findings": {
+    "findings": [],
+    "evidence": [
+      "Read the full diff (/tmp/claude-1000/-home-labdrian-labdrian-sdd-overlay/45673332-5a42-429f-889a-50c9d8bcb1fc/scratchpad/t4o.diff). It covers engine/review/app/classify.go, stop.go, export_test.go and the tests, and engine/cmd/review_stop_hook.go and its tests.",
+      "Traced classifyRuling. Refusal keys are written only through named(), at three returns: no kept result, every result already classified, and the ruling returned after once(). The port-error, wrong-count, once-error and unnamed-read-error returns record nothing, and they join the refusals into the error. This matches the stated goal that a failed stop names the refusal again at the next stop.",
+      "refusedKey now hashes reviewID(feature, name). I confirmed in the worktree that reviewID exists at engine/review/app/findings.go:87. The key keeps the same refused- plus 16 hex digit shape, so the store's key constraints are unchanged.",
+      "Checked lineBreakAt and oneLine. The 0xC2 and 0xE2 bytes are UTF-8 lead bytes, so they cannot be continuation bytes of another character. A lone 0x85 is not folded. A truncated E2 80 sequence is kept as it is. Leading and trailing breaks are dropped, and runs of breaks collapse to one space. I found no folding or loss bug.",
+      "I ran no tests or commands and only read the diff and one worktree symbol. The remaining doubt is the stop-hook limitation the diff itself records: a block returned together with an error is dropped by stopHookAnswer until T4w. That limitation was already there and is not introduced here."
+    ]
+  }
+}

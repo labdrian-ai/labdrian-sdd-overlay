@@ -1,0 +1,81 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "1a6b141993d1a04f846b6d511059616eaf517852",
+    "head": "3443e598e9f7d12e20b6909788e000c83e12982c",
+    "diff_sha256": "6df9c485cfb1a273c22fc9db279736cac51dde9eabf7d2dfc4eacadb8a5e4172",
+    "paths": [
+      "engine/cmd/review_stop_hook.go",
+      "engine/cmd/review_stop_hook_oneline_test.go",
+      "engine/review/app/classify.go",
+      "engine/review/app/classify_batch_test.go",
+      "engine/review/app/export_test.go",
+      "engine/review/app/stop.go",
+      "odd/tasks/merge-playbook-into-sdd-overlay.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "hunt"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "1a6b141993d1a04f846b6d511059616eaf517852",
+      "head": "3443e598e9f7d12e20b6909788e000c83e12982c",
+      "diff_sha256": "6df9c485cfb1a273c22fc9db279736cac51dde9eabf7d2dfc4eacadb8a5e4172"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/cmd/review_stop_hook.go",
+        "engine/cmd/review_stop_hook_oneline_test.go",
+        "engine/review/app/classify.go",
+        "engine/review/app/classify_batch_test.go",
+        "engine/review/app/export_test.go",
+        "engine/review/app/stop.go",
+        "odd/tasks/merge-playbook-into-sdd-overlay.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "engine/review/app/classify.go:260",
+        "severity": "SUGGESTION",
+        "claim": "Before this change, the stop after a failed stop returned its classification block with no error, because the refusal had been recorded at the failed stop. Now that next stop returns the block together with the refusal error (M15 stop 2 pins exactly this: a block plus an error naming -9.json). stopHookAnswer returns nil output whenever err != nil (engine/cmd/review_stop_hook.go:139), so the hook prints only the error and drops the block. `once` has already recorded the classify- keys, so that classification question is never shown in the session. This is the known -2 F1 loss, which L72 placed in T4w. T4o widens it to every stop that follows a failed pass while a refused file exists. Nothing in production calls WithClassified yet (the only non-test match is its definition, classify.go:35), so no live trigger reaches it today. T4w must handle this sequence, not only a first stop that carries a fresh refusal.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "worsened",
+        "proof_refs": [
+          "engine/review/app/classify.go:260",
+          "engine/cmd/review_stop_hook.go:139",
+          "engine/review/app/classify_batch_test.go:392"
+        ]
+      },
+      {
+        "id": "F2",
+        "location": "engine/cmd/review_stop_hook.go:87",
+        "severity": "SUGGESTION",
+        "claim": "oneLine now writes every byte that is not a line break as it is, which resolves -5 F1 and the polisher finding. One side effect: lone C1 bytes such as 0x9B (CSI on 8-bit terminals), which T4n had turned into U+FFFD, now reach stderr raw again, beside ESC and the other C0 controls that already passed. The error text that carries them can be file names of refusals or git stderr. When verbose mode shows such a line, it can carry terminal control sequences. L74 records this as a risk it did not decide (ESC and other C0 controls) and no finding names it. Nothing here shows realistic input reaching it.",
+        "evidence_class": "inferential",
+        "causal_disposition": "worsened",
+        "proof_refs": [
+          "engine/cmd/review_stop_hook.go:87"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the whole diff t4o.diff (565 lines, 7 paths).",
+      "Read engine/review/app/classify.go (whole) and engine/cmd/review_stop_hook.go (whole) at head, and engine/review/app/stop.go lines 45-84 (Stop, stopReview).",
+      "Read the prior review records 83424e3c72e2-3.json (F1-F3), 83424e3c72e2-5.json (F1-F3) and d8e2d28c0da6-4.polisher.json, and L74 (task document lines 3751-3810) and L75 (added in this diff).",
+      "-3 F1 resolved: unnamed only reads (classify.go:171-183). named records the keys (189-198) and is called only at the three returns with no pass error (231, 254, 260). The port error, the wrong count and once's error join errorsOf(fresh) and record nothing (239, 242, 258). M15 (a)-(e) pins it.",
+      "-5 F3 resolved: refusal{review, err} is set from reviewID(listing.feature, name) at classify.go:87, refusedKey hashes the identifier (153-155), and Error and Unwrap delegate to err, so the texts and errors.Is are unchanged. M16 pins it, including two keys for two files.",
+      "-5 F1 and polisher d8e2d28c0da6-4 resolved: oneLine loops over bytes and calls WriteByte (review_stop_hook.go:77-89). SH12 and the table rows with \\xff, the lone 0x85 and the cut sequence pin it.",
+      "-3 F2 and -5 F2 resolved: lineBreakAt folds CR, LF, VT and FF and the exact UTF-8 forms of NEL, LS and PS (96-110), and the doc comments at 23-24 and 71-73 name the set. The 0xC2 and 0xE2 cases fall through to return 0 when the prefix does not match, and HasPrefix makes the bounds safe at the end of the text.",
+      "-3 F3 placed as L74 choice 5 says (owner's L72, M12, T4w's timed stop). No code change was expected and none was made.",
+      "Hunt: an empty fresh list gives named nil and withIncomplete(nil, nil) nil. oneLine(\"\") is \"\". An Add error in named is reported, not swallowed. A Has error in unnamed returns every refusal and records nothing, the same as base. The change computes no path that is written or deleted. The new keys are only session marker keys in the existing Asked store.",
+      "Hexagonal check: classify.go imports only fmt, strings, engine/review and engine/sha256hex, so there is no adapter code in app. oneLine lives in engine/cmd.",
+      "Grep of engine/ for WithClassified( outside tests: only its definition at classify.go:35, so production does not wire it.",
+      "Ran nothing: no build, test, vet or mutation run. The builder's L75 command results were not reproduced."
+    ]
+  }
+}
