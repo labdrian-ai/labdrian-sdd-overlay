@@ -483,76 +483,43 @@ func TestUnforcedEnvironReadsFindsEveryRead(t *testing.T) {
 	}
 }
 
-// The one line of evidence.sh that splits the identifiers of reviewed-each, once its leading blanks are dropped: it
-// makes each identifier text before it is a key. No installed awk reaches the gap (gawk, mawk and busybox awk answered
-// the same without it), so the text is what holds it (reviews 88fb598e73d3-3 F1, T4r, and 5e745160b611-5 F4, T4t).
-const splitStatementLine = `if (each) { nid = split(want, ids, "\n"); for (i = 1; i <= nid; i++) { ids[i] = ids[i] ""; wanted[ids[i]] = 1 } }`
-
-var (
-	splitCall = regexp.MustCompile(`\bsplit[ \t]*\(`)
-	wantWord  = regexp.MustCompile(`\bwant\b`)
-)
-
-// splitPinProblem says what is wrong with the splitting of a script, or "" when exactly one line that is not a
-// comment holds both a split call and the word want, and that line is the statement above: the whole statement on its
-// one code line, so it cannot be reordered, respaced, left to a comment or written twice and still pass
-// (d0108e5f1245-5 F1, T4w-e). A line with a split call and no word want, such as the split of the page rows, stays out.
-func splitPinProblem(script string) string {
-	var lines []string
-	for _, line := range strings.Split(script, "\n") {
-		code := strings.TrimLeft(line, " \t")
-		if !strings.HasPrefix(code, "#") && splitCall.MatchString(code) && wantWord.MatchString(code) {
-			lines = append(lines, code)
-		}
+// prose is a comment block or a document read as sentences: each line with its leading blanks dropped, then a leading run
+// of # and the blanks after it dropped, the lines joined by one space and each run of blanks made one space. A phrase is
+// then found wherever its lines break (81a7200c14c2-7 F2, T4x).
+func prose(text string) string {
+	lines := strings.Split(text, "\n")
+	for i, line := range lines {
+		lines[i] = strings.TrimLeft(strings.TrimLeft(line, " \t"), "# \t")
 	}
-	switch {
-	case len(lines) != 1:
-		return fmt.Sprintf("%d code lines hold a split call and the word want where exactly 1 is required", len(lines))
-	case lines[0] != splitStatementLine:
-		return fmt.Sprintf("the line is %q, want %q", lines[0], splitStatementLine)
-	}
-	return ""
+	return strings.Join(strings.Fields(strings.Join(lines, " ")), " ")
 }
 
-func TestEvidenceStore_MakesSplitIdentifiersText(t *testing.T) {
-	if problem := splitPinProblem(readRepoFile(t, skillsRepoRoot(t), evidenceDirRel+"/evidence.sh")); problem != "" {
-		t.Errorf("evidence.sh: %s (5e745160b611-5 F4; no installed awk reaches the gap, so only this text holds it)", problem)
-	}
-}
-
-func TestSplitPinProblemHoldsTheWholeStatement(t *testing.T) {
-	for _, row := range []struct {
-		name, script string
-		ok           bool
-	}{
-		{"the statement as written", "    " + splitStatementLine + "\n", true},
-		{"the statement after a tab", "\t" + splitStatementLine + "\n", true},
-		{"the statement beside a comment of it", "# " + splitStatementLine + "\n    " + splitStatementLine + "\n", true},
-		{"the two steps reordered", `    if (each) { nid = split(want, ids, "\n"); for (i = 1; i <= nid; i++) { wanted[ids[i]] = 1; ids[i] = ids[i] "" } }` + "\n", false},
-		{"the statement only in a comment", "    # " + splitStatementLine + "\n", false},
-		{"the statement written twice", splitStatementLine + "\n" + splitStatementLine + "\n", false},
-		{"no statement", "x = 1\n", false},
-		{"a blank after the parenthesis", splitStatementLine + "\n" + `n = split( want, ids, "\n")` + "\n", false},
-		{"a blank before the comma", splitStatementLine + "\n" + `n = split(want , ids, "\n")` + "\n", false},
-		{"a blank before the parenthesis", splitStatementLine + "\n" + `n = split (want, ids, "\n")` + "\n", false},
-		{"a tab after the parenthesis", splitStatementLine + "\n" + "n = split(\twant, ids, \"\\n\")\n", false},
-		{"a split with no word want", splitStatementLine + "\n" + `n = split(line, raw, "|")` + "\n", true},
-		{"a longer word beside the statement", splitStatementLine + "\n" + `wantx = split(line, a, "|")` + "\n", true},
+func TestProseJoinsTheLinesOfACommentBlock(t *testing.T) {
+	for _, row := range []struct{ name, text, want string }{
+		{"two comment lines", "#   a\n#   b", "a b"},
+		{"a blank line between them", "#   a\n\n#   b", "a b"},
+		{"blanks and a tab", "  x\n\ty  z", "x y z"},
+		{"a markdown heading mark", "## Title\ntext", "Title text"},
+		{"the wrapped claim of the verifier", "#   the caller's exec fails. ARG_MAX follows the\n#   stack limit. A missing", "the caller's exec fails. ARG_MAX follows the stack limit. A missing"},
 	} {
-		if got := splitPinProblem(row.script); (got == "") != row.ok {
-			t.Errorf("%s: problem %q, want ok %v", row.name, got, row.ok)
+		if got := prose(row.text); got != row.want {
+			t.Errorf("%s: prose(%q) = %q, want %q", row.name, row.text, got, row.want)
 		}
+	}
+	if !strings.Contains(prose("#   ARG_MAX follows the\n#   stack limit."), "follows the stack limit") {
+		t.Error("a phrase wrapped over two comment lines is not found")
 	}
 }
 
 // The bound of one environment string is stated in pages, since Linux's MAX_ARG_STRLEN is 32 pages and 128 KiB only
 // where a page is 4 KiB (reviews 88fb598e73d3-5 F1 and 88fb598e73d3-4.polisher, T4r). Both limits are named, and what
 // the caller sees past the second: ARG_MAX stops the exec of sh itself, so the script does not run (review
-// 5e745160b611-4.polisher F2, T4t).
+// 5e745160b611-4.polisher F2, T4t). Every needle, wanted or refused, is searched in the text read as prose, so a phrase
+// is found or refused wherever its lines break (81a7200c14c2-7 F2, T4x).
 func TestEvidenceStore_NamesTheEnvironmentBoundInPages(t *testing.T) {
 	root := skillsRepoRoot(t)
 	for _, file := range []string{"evidence.sh", "PROVENANCE.md"} {
-		text := readRepoFile(t, root, evidenceDirRel+"/"+file)
+		text := prose(readRepoFile(t, root, evidenceDirRel+"/"+file))
 		for _, want := range []string{"32 pages", "128 KiB with 4 KiB pages", "ARG_MAX", "the caller's exec fails"} {
 			if !strings.Contains(text, want) {
 				t.Errorf("%s lacks %q", file, want)
@@ -565,7 +532,7 @@ func TestEvidenceStore_NamesTheEnvironmentBoundInPages(t *testing.T) {
 			t.Errorf("%s says ARG_MAX follows the stack limit, where the text may state only what was measured (d0108e5f1245-5 F2)", file)
 		}
 	}
-	if text := readRepoFile(t, root, evidenceDirRel+"/evidence.sh"); !strings.Contains(text, "between 128 KiB and 6 MiB") {
+	if text := prose(readRepoFile(t, root, evidenceDirRel+"/evidence.sh")); !strings.Contains(text, "between 128 KiB and 6 MiB") {
 		t.Errorf("evidence.sh lacks %q, the measured range of ARG_MAX (d0108e5f1245-5 F2)", "between 128 KiB and 6 MiB")
 	}
 }

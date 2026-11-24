@@ -10,6 +10,12 @@ import (
 // B15: reviewed and rule compare the identifier or kind they are given with a cell as text, as reviewed-each does,
 // on every awk found: a cell 01 is not 1, 1.0 is not 1 and 1e0 is not 1 (review 4f714c67e87c-5 F5, T4q, L78 choice 2).
 // Each awk other than the one on PATH runs through a scratch bin/awk that execs it, first on PATH.
+//
+// It is also the one pin of the text keys of reviewed-each, which splits its identifiers into an array: reviewed-each
+// answers 1, 01, 1.0 and 1e0 as text on every awk found, so an awk that keyed split elements as numbers would fail here.
+// No test holds the shape of the splitting code, since each round found one more shape it missed (88fb598e73d3-3 F1,
+// 5e745160b611-5 F4, and 81a7200c14c2-7 F1: an alias of the variable); the answer is what matters, and it is tested
+// where it can be seen. No installed awk fails without the forcing, so this holds it only on the awk that would.
 func TestEvidenceStore_ReviewedModesCompareAsTextOnEveryAwk(t *testing.T) {
 	// No blank around a cell, so no trim makes the text of a cell differ from the bytes written.
 	page := evidencePage("|alpha-kind|1||||project|\n|01|1||||project|\n", "|alpha-kind|1|01|2026-01-01|x|\n|alpha-kind|1|1.0|2026-01-02|y|\n")
