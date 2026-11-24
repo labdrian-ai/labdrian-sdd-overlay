@@ -49,12 +49,11 @@ type Ruling struct {
 //
 // When no review question blocks and the Service has a Classified port (WithClassified), the stop is blocked once for each
 // session and stored result of the branch's commits that has a kept finding the evidence page lacks (keptResultsOf, S6):
-// Ruling.Classify names those results, each keyed classify- and a digest of its identifier. What the port says of a
-// result, classified or lacking, is remembered for the session under the result and the page state (Classified.Stamp),
-// so the port is asked once for each result and page state, and a page that changed is read again; the block names every
-// result still lacking, the ones asked before included, so a lost record never hides a result. A result that cannot be
-// read, hold or bind is left out and named in an error returned beside the ruling, so a block and an error can come
-// together; so is a memory that cannot be recorded, and the pass goes on. What the pass as a whole cannot tell is an
+// Ruling.Classify names those results, each keyed classify- and a digest of its identifier. Nothing the port says is
+// remembered: the port is asked once at each stop, for every kept result, so a page that changed is read again; the
+// block names every result still lacking, the ones asked before included, so a lost record never hides a result. A
+// result that cannot be read, hold or bind is left out and named in an error returned beside the ruling, once for each
+// session and text of its refusal, so a block and an error can come together. What the pass as a whole cannot tell is an
 // error with no block. A Service without the port is as it was.
 func (s Service) Stop(dir, session string, continuing bool) (Ruling, error) {
 	if s.asked == nil {

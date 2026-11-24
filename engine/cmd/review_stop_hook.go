@@ -20,8 +20,9 @@ package main
 //   - The exit code is 0 always, except 1 for a command line that is not understood. It is never 2, which blocks the stop
 //     and hands stderr to the agent as the reason: whatever goes wrong (input that cannot be read or decoded, a repository
 //     or a store that cannot be read, a panic) the stop happens, so a hook that is broken never keeps an agent from
-//     stopping. What the hook could not tell is one line on stderr, which Claude Code shows only in verbose mode; input it
-//     cannot use is silent on both streams, and so is every case with nothing to ask.
+//     stopping. What the hook could not tell is one line on stderr, whatever line breaks its text holds (oneLine), which
+//     Claude Code shows only in verbose mode; input it cannot use is silent on both streams, and so is every case with
+//     nothing to ask.
 //
 // It asks git and reads the working tree, and writes one marker in the state home when it blocks a stop (review/fsstore's
 // Asked). It binds nothing, makes no worktree and stores no result: the agent runs the command the block names.
@@ -53,18 +54,37 @@ func runReviewStopHook(p process, d deps, args []string) {
 	// in full on stderr and turned into the same exit 0 as every other failure.
 	defer func() {
 		if r := recover(); r != nil {
-			fmt.Fprintf(p.stderr, "review %s: internal error: %v\n", reviewStopVerb, r)
+			fmt.Fprintf(p.stderr, "review %s: internal error: %s\n", reviewStopVerb, oneLine(fmt.Sprint(r)))
 			p.exit(0)
 		}
 	}()
 	out, err := stopHookAnswer(p, d)
 	if err != nil {
-		fmt.Fprintf(p.stderr, "review %s: %v\n", reviewStopVerb, err)
+		fmt.Fprintf(p.stderr, "review %s: %s\n", reviewStopVerb, oneLine(err.Error()))
 	}
 	if len(out) > 0 {
 		_, _ = p.stdout.Write(out) // nothing to do if the write fails: the stop happens.
 	}
 	p.exit(0)
+}
+
+// oneLine is text with each run of carriage returns and line feeds made one space, and the runs at its start and its end
+// dropped: what the hook prints on stderr, which is one line whatever line breaks the text of an error holds.
+func oneLine(text string) string {
+	var b strings.Builder
+	broken := false
+	for _, r := range text {
+		if r == '\r' || r == '\n' {
+			broken = true
+			continue
+		}
+		if broken && b.Len() > 0 {
+			b.WriteByte(' ')
+		}
+		broken = false
+		b.WriteRune(r)
+	}
+	return b.String()
 }
 
 // stopHookAnswer reads the hook input and returns what the hook prints on stdout: the block of the stop, or nothing. Input

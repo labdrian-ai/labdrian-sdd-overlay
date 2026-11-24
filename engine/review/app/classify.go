@@ -8,16 +8,15 @@ import (
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/sha256hex"
 )
 
-// Classified is the port that tells whether a stored result has been classified into the evidence page of a working
+// Classified is the port that tells whether stored results have been classified into the evidence page of a working
 // tree (S6): the learning loop counts a result as classified when the page holds an Evidence row whose Review is the
 // result's identifier.
 type Classified interface {
-	// Classified says whether the evidence page of the working tree at root holds an Evidence row whose Review is
-	// review, <feature>/<head12>-<n>. An error is a page or a script that cannot say, never "not classified".
-	Classified(root, review string) (bool, error)
-	// Stamp is the state of everything Classified(root, review) reads, for any review: equal stamps give equal answers,
-	// so Stop asks Classified again only when the stamp changed. An error is a state that cannot be read.
-	Stamp(root string) (string, error)
+	// Classified says, for each of reviews, whether the evidence page of the working tree at root holds an Evidence row
+	// whose Review is that identifier, <feature>/<head12>-<n>. With a nil error the answers are exactly len(reviews), the
+	// i-th about reviews[i], all read from one state of the page. An empty reviews gives an empty answer and reads
+	// nothing. An error is a page or a script that cannot say, never "not classified".
+	Classified(root string, reviews []string) ([]bool, error)
 }
 
 // KeptResult is a stored result of a commit of the branch that has findings which count as evidence (the rules of
@@ -101,9 +100,9 @@ func (s Service) keptResultsOf(repo Repository) ([]KeptResult, []error, error) {
 	return out, refused, nil
 }
 
-// incomplete is the problems of a classification pass that did not stop it: the results it refused, and the records of
-// its memory that failed. It is one line, the problems joined by "; ", since the hook prints an error as one line of
-// stderr, and errors.Join would break it with a line break. Unwrap gives each problem, so errors.Is reaches every cause.
+// incomplete is the problems of a classification pass that did not stop it: the results it refused, and the records of a
+// named refusal that failed. Its text joins the problems by "; ", and the hook prints it on one line (oneLine); the type
+// does not promise one line itself. Unwrap gives each problem, so errors.Is reaches every cause.
 type incomplete []error
 
 func (e incomplete) Error() string {
@@ -135,68 +134,84 @@ func classifyKey(review string) string {
 	return "classify-" + sha256hex.Sum([]byte(review))[:16]
 }
 
-// The prefixes of the memory of a session: what the port said about a result, at a page state.
-const (
-	classifiedPrefix = "classified-"
-	lackingPrefix    = "lacking-"
-)
+// refusedKey names, in the questions of a session, that the refusal with the given text was named: refused- and the
+// first 16 hex digits of the SHA-256 of the text, 24 bytes of lowercase letters, digits and dashes, a key of the same
+// store as classifyKey's. A refusal whose text changes is named again.
+func refusedKey(text string) string {
+	return "refused-" + sha256hex.Sum([]byte(text))[:16]
+}
 
-// memoKey names, in the questions of a session, what the port said of the result called review when the page was in
-// the state stamp: the prefix (classifiedPrefix or lackingPrefix) and the first 16 hex digits of the SHA-256 of the
-// identifier, a NUL and the stamp, 27 or 24 bytes of lowercase letters, digits and dashes, a key of the same store as
-// classifyKey's. A page that changed has another stamp, so what was remembered of the old one is not read.
-func memoKey(prefix, review, stamp string) string {
-	return prefix + sha256hex.Sum([]byte(review + "\x00" + stamp))[:16]
+// unnamed is the refusals the session has not named yet, in order, each followed by the failed record of its naming when
+// the record fails (then it is named again at the next stop); a refusal whose key the session holds is dropped. A refusal
+// is recorded when it is kept. A key that cannot be read is an error and no refusal is returned: the pass cannot tell.
+func (s Service) unnamed(session string, refusals []error) ([]error, error) {
+	var problems []error
+	for _, refusal := range refusals {
+		key := refusedKey(refusal.Error())
+		named, err := s.asked.Has(session, key)
+		if err != nil {
+			return nil, fmt.Errorf("read the questions asked in the session: %w", err)
+		}
+		if named {
+			continue
+		}
+		problems = append(problems, refusal)
+		if err := s.asked.Add(session, key); err != nil {
+			problems = append(problems, fmt.Errorf("record that a refusal was named: %w", err))
+		}
+	}
+	return problems, nil
 }
 
 // classifyRuling is the block that asks for the classification of the results of dir that the page lacks, or no block.
-// The results are those that hold (keptResultsOf); each one that cannot be read, held or bound is a refusal, named in
-// the error returned beside the ruling (incomplete). For each result in order, the session's memory is read first: what
-// the port said at the page state Stamp gives now (memoKey, classified or lacking) is not asked of the port again, and
-// what the port says now is remembered. A memory that cannot be recorded is named in the same error, and the answer in
-// hand is used. Every result still lacking goes to once with its classifyKey: the stop is blocked when one of those
-// questions is new to the session, and the block names every result still lacking, the ones asked before included, as
-// a review question names every need. What the pass as a whole cannot tell (the repository, the features, the state of
-// the page, the port, the questions of the session) is an error with no block, joined with the refusals.
+// In order:
+//  1. the repository is located;
+//  2. the results are those that hold (keptResultsOf); a pass error is returned with no block;
+//  3. each refusal (a result that cannot be read, held or bound) is named in the error returned beside the ruling
+//     (incomplete) once for each session and text (unnamed);
+//  4. with no kept result there is no block;
+//  5. the port is asked once, for every kept result in order, and nothing it says is remembered: a stop asks again. An
+//     error of the port, or a number of answers that is not the number of results, is an error with no block;
+//  6. every result still lacking goes to once with its classifyKey: the stop is blocked when one of those questions is
+//     new to the session, and the block names every result still lacking, the ones asked before included, as a review
+//     question names every need;
+//  7. the ruling, joined with the problems of the refusals.
+//
+// What the pass as a whole cannot tell (the repository, the features, the port, the questions of the session) is an error
+// with no block, joined with the refusals.
 func (s Service) classifyRuling(dir, session string) (Ruling, error) {
 	repo, err := s.git.Locate(dir)
 	if err != nil {
 		return Ruling{}, fmt.Errorf("locate the repository of %s: %w", dir, err)
 	}
-	results, problems, err := s.keptResultsOf(repo)
+	results, refusals, err := s.keptResultsOf(repo)
 	if err != nil {
-		return Ruling{}, withIncomplete(fmt.Errorf("find the results with kept findings: %w", err), problems)
+		return Ruling{}, withIncomplete(fmt.Errorf("find the results with kept findings: %w", err), refusals)
+	}
+	problems, err := s.unnamed(session, refusals)
+	if err != nil {
+		return Ruling{}, withIncomplete(err, refusals)
 	}
 	if len(results) == 0 {
 		return Ruling{}, withIncomplete(nil, problems)
 	}
-	stamp, err := s.classified.Stamp(repo.Root)
+	reviews := make([]string, len(results))
+	for i, result := range results {
+		reviews[i] = result.Review
+	}
+	answers, err := s.classified.Classified(repo.Root, reviews)
 	if err != nil {
-		return Ruling{}, withIncomplete(fmt.Errorf("read the state of the evidence page of %s: %w", repo.Root, err), problems)
+		return Ruling{}, withIncomplete(fmt.Errorf("tell whether the results with kept findings are classified: %w", err), problems)
+	}
+	if len(answers) != len(reviews) {
+		return Ruling{}, withIncomplete(fmt.Errorf("the evidence page of %s gave %d answers for %d results", repo.Root, len(answers), len(reviews)), problems)
 	}
 	var (
 		lacking []KeptResult
 		keys    []string
 	)
-	for _, result := range results {
-		done, remembered, err := s.remembered(session, result.Review, stamp)
-		if err != nil {
-			return Ruling{}, withIncomplete(err, problems)
-		}
-		if !remembered {
-			done, err = s.classified.Classified(repo.Root, result.Review)
-			if err != nil {
-				return Ruling{}, withIncomplete(fmt.Errorf("tell whether %s is classified: %w", result.Review, err), problems)
-			}
-			prefix, what := lackingPrefix, "lacking"
-			if done {
-				prefix, what = classifiedPrefix, "classified"
-			}
-			if err := s.asked.Add(session, memoKey(prefix, result.Review, stamp)); err != nil {
-				problems = append(problems, fmt.Errorf("record that %s is %s: %w", result.Review, what, err))
-			}
-		}
-		if !done {
+	for i, result := range results {
+		if !answers[i] {
 			lacking, keys = append(lacking, result), append(keys, classifyKey(result.Review))
 		}
 	}
@@ -208,19 +223,4 @@ func (s Service) classifyRuling(dir, session string) (Ruling, error) {
 		return Ruling{}, withIncomplete(err, problems)
 	}
 	return ruling, withIncomplete(nil, problems)
-}
-
-// remembered reads what the session remembers of the port's answer about review at the page state stamp: whether the
-// result is classified, and whether anything was remembered at all.
-func (s Service) remembered(session, review, stamp string) (classified, known bool, err error) {
-	for _, prefix := range []string{classifiedPrefix, lackingPrefix} {
-		known, err := s.asked.Has(session, memoKey(prefix, review, stamp))
-		if err != nil {
-			return false, false, fmt.Errorf("read the questions asked in the session: %w", err)
-		}
-		if known {
-			return prefix == classifiedPrefix, true, nil
-		}
-	}
-	return false, false, nil
 }
