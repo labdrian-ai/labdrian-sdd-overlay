@@ -1,0 +1,47 @@
+{
+  "kind": "polisher",
+  "base": "47d83bb7abb987bb6d0fd2812accd39e6862757f",
+  "head": "5e745160b6113f71831d342bbd39fbf810d5b161",
+  "diff_sha256": "3799b36e894c3f3dcf27f96a767e86fea66779767626e3874999760f374c7d39",
+  "findings": {
+    "findings": [
+      {
+        "location": "engine/shelltest/evidence_store_each_test.go:119",
+        "severity": "WARNING",
+        "claim": "The comment says the test 'holds on every page size', but on a Linux host with 64 KiB pages the unguarded 'under' case fails. The commit guards the 'past' case against ARG_MAX and leaves the 'under' case, which is about the same size, unguarded. The 'under' identifiers are passed to sh as separate arguments, so the exec of sh hits E2BIG before evidence.sh runs. B14 (k) then fails on aarch64 and ppc64le kernels that use 64 KiB pages.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "evidence": [
+          "Line 48 sets bound := 32 * PAGESIZE. With 64 KiB pages that is 2,097,152 bytes. Line 53 sets underN = bound/18 - 64 = 116,444 identifiers.",
+          "Line 119 passes all 116,444 identifiers as separate argv entries through w.inRepo. The argv strings alone are about 116,444 * 18 = 2,095,992 bytes, plus about 931 KB of argv pointers. getconf ARG_MAX with the default 8 MiB stack is 2,097,152 bytes, the same 2 MiB the commit's L81 note records on this host. The exec of sh therefore fails with E2BIG.",
+          "The guard at lines 111-113 (pastN*joined >= argMax/2) skips only the 'past' case. Its own comment at lines 109-110 says 'when the joined bytes reach half of it, the exec of sh itself may fail'. The 'under' case at line 119 reaches the same size and has no guard.",
+          "Before this commit the 'under' case used a fixed 6000 identifiers (about 108 KB), which runs on any page size. The commit introduced the page-sized 'under' count."
+        ]
+      },
+      {
+        "location": "skills/_shared/evidence/evidence.sh:51",
+        "severity": "WARNING",
+        "claim": "The documented bound names only MAX_ARG_STRLEN, which limits one string to 32 pages. Linux also limits argv and the environment together to ARG_MAX, which is the stack rlimit / 4 (default 2 MiB). With 64 KiB pages, 32 pages is 2 MiB, and the shared ARG_MAX limit stops awk from starting before the stated per-string bound is reached. The bound that consumers rely on is overstated on such hosts. PROVENANCE.md line 15 carries the same sentence.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "evidence": [
+          "Lines 51-53 of the header now say: 'past the limit of the system for one string (Linux's MAX_ARG_STRLEN, 32 pages: 128 KiB with 4 KiB pages) awk cannot start'. skills/_shared/evidence/PROVENANCE.md line 15 says the same.",
+          "Line 119 runs 'EVIDENCE_WANT=$want awk ...'. That exec carries the whole environment and awk's script argument, so the total must stay under ARG_MAX as well as the per-string limit.",
+          "With 64 KiB pages, MAX_ARG_STRLEN is 2 MiB and the default ARG_MAX is also 2 MiB. Any other environment bytes or awk arguments make the exec fail below the stated bound.",
+          "The commit's own test comment at engine/shelltest/evidence_store_each_test.go:109-110 admits this combined limit. The documented bound that T4w's adapter relies on ('does not split a call') omits it.",
+          "The commit does not change which calls fail: they still exit 4. Only the stated number is inaccurate, so the severity is WARNING."
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full diff at /tmp/claude-1000/-home-labdrian-labdrian-sdd-overlay/45673332-5a42-429f-889a-50c9d8bcb1fc/scratchpad/t4r.diff: evidence.sh, PROVENANCE.md, evidence_store_each_test.go, evidence_store_artifact_test.go and the task document.",
+      "Read /home/labdrian/labdrian-sdd-overlay-worktrees/review-5e745160b611/skills/_shared/evidence/evidence.sh lines 84-123: the reviewed-each argument loop builds want from \"$@\", and run_awk passes EVIDENCE_WANT through the environment to awk.",
+      "Grepped engine/shelltest for inRepo use. The identifiers reach evidence.sh as separate argv entries.",
+      "Checked the 4 KiB arithmetic: past is 7,345 * 18 = 132,210 bytes, above 131,072; under is 7,217 * 18 = 129,906 bytes plus the 14-byte EVIDENCE_WANT= prefix, below 131,072. Both are correct.",
+      "Checked the 16 KiB arithmetic: under is about 523 KB of strings plus 232 KB of pointers, below 2 MiB. Past is about 525 KB, below the 1 MiB guard, and above the 524,288-byte per-string bound. Both cases are correct there.",
+      "Reviewed the ids[i] = ids[i] \"\" change at evidence.sh line 147: it is harmless and changes no answer.",
+      "Reviewed the unforcedEnvironReads regex and its table rows. No defect found.",
+      "No tests were run. The review was read-only."
+    ]
+  }
+}

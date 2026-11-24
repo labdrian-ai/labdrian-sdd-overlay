@@ -1,0 +1,107 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "47d83bb7abb987bb6d0fd2812accd39e6862757f",
+    "head": "5e745160b6113f71831d342bbd39fbf810d5b161",
+    "diff_sha256": "3799b36e894c3f3dcf27f96a767e86fea66779767626e3874999760f374c7d39",
+    "paths": [
+      "engine/shelltest/evidence_store_each_test.go",
+      "engine/skills/evidence_store_artifact_test.go",
+      "odd/tasks/merge-playbook-into-sdd-overlay.md",
+      "skills/_shared/evidence/PROVENANCE.md",
+      "skills/_shared/evidence/evidence.sh"
+    ]
+  },
+  "rows": [
+    "recall",
+    "hunt",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "47d83bb7abb987bb6d0fd2812accd39e6862757f",
+      "head": "5e745160b6113f71831d342bbd39fbf810d5b161",
+      "diff_sha256": "3799b36e894c3f3dcf27f96a767e86fea66779767626e3874999760f374c7d39"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/shelltest/evidence_store_each_test.go",
+        "engine/skills/evidence_store_artifact_test.go",
+        "odd/tasks/merge-playbook-into-sdd-overlay.md",
+        "skills/_shared/evidence/PROVENANCE.md",
+        "skills/_shared/evidence/evidence.sh"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "engine/shelltest/evidence_store_each_test.go:119",
+        "severity": "WARNING",
+        "claim": "-5 F1 and -4.polisher are only partly resolved. The test still gives a false failure on 64 KiB-page Linux, which is the case those findings named. The new ARG_MAX guard (line 111) skips only the past case. The under case is always run, and it is just 128 identifiers (2,304 bytes) smaller. So whenever pastN*18 >= ARG_MAX/2, the under case also passes about half of ARG_MAX or more as sh arguments, and the guard's own comment (lines 109-110) says that size may fail the exec of sh. Concrete case: 64 KiB pages with an 8 MiB stack. getconf gives PAGESIZE 65536 and ARG_MAX 2097152, so bound = 2097152. The past case is skipped. The under case passes 116,444 arguments: about 2,096,000 string bytes plus about 930 KB of argv pointers, which the kernel counts against the same stack/4 limit of 2 MiB. Either the exec of sh fails with E2BIG, or the about 2 MB EVIDENCE_WANT plus the rest of the environment passes the 2 MiB total when sh execs awk. In both cases wantResult(0, 'no' lines) fails. The comment at lines 72-73 ('so the test holds on every page size') is therefore wrong on 64 KiB pages. The 16 KiB-page case works: bound 512 KiB, both cases are well under ARG_MAX, and awk fails only on MAX_ARG_STRLEN. A fix is to apply the same guard to the under case, or to skip the whole subtest, when the under bytes plus 8 bytes of pointer per argument reach the limit.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/shelltest/evidence_store_each_test.go:111"
+        ]
+      },
+      {
+        "id": "F2",
+        "location": "engine/shelltest/evidence_store_each_test.go:111",
+        "severity": "SUGGESTION",
+        "claim": "The ARG_MAX guard counts only the joined string bytes (pastN*18). The kernel also counts one pointer for each argument, 8 bytes on 64-bit, which adds about 44% for 18-byte identifiers. It also counts the test process's own environment. So 'half of ARG_MAX' is a heuristic, and the margin is not computed from what exec actually counts. No realistic host is shown to fall between the guard and the real limit. This is a precision gap in a new guard, not a reproduced failure.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/shelltest/evidence_store_each_test.go:111"
+        ]
+      },
+      {
+        "id": "F3",
+        "location": "engine/skills/evidence_store_artifact_test.go:103",
+        "severity": "SUGGESTION",
+        "claim": "The new helper's doc says 'no read is missed whatever its subscript or blanks', but the rule checks only what follows the read. A read with a prefix operator, such as `-ENVIRON[\"X\"] \"\"`, `!ENVIRON[\"X\"] \"\"` or `++ENVIRON[\"X\"] \"\"`, matches the forced pattern and is accepted. In awk, unary minus and not bind tighter than concatenation, so the value is made a number before the \"\" is appended. The class the lint exists for, an environment value taken as a number, can therefore pass it. evidence.sh has no such read today. The T4q rule had the same gap, but the T4r helper now states that it finds every read. A row such as `x = -ENVIRON[\"X\"] \"\"` in TestUnforcedEnvironReadsFindsEveryRead, and a refusal of a preceding unary operator, would close the gap.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "pre-existing",
+        "proof_refs": [
+          "engine/skills/evidence_store_artifact_test.go:103"
+        ]
+      },
+      {
+        "id": "F4",
+        "location": "engine/skills/evidence_store_artifact_test.go:170",
+        "severity": "SUGGESTION",
+        "claim": "The pin for -3 F1 checks only that the text `ids[i] = ids[i] \"\"` appears somewhere in evidence.sh. A comment containing that text, or the statement moved to after `wanted[ids[i]] = 1`, would keep the test green while the keys are again built from untouched split elements. L80 accepts a text pin, so -3 F1 is resolved as L80 says. Anchoring the needle to the whole statement `{ ids[i] = ids[i] \"\"; wanted[ids[i]] = 1 }` would hold the order too.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/skills/evidence_store_artifact_test.go:170"
+        ]
+      },
+      {
+        "id": "F5",
+        "location": "engine/shelltest/evidence_store_each_test.go:99",
+        "severity": "SUGGESTION",
+        "claim": "`underN = bound/joined - 64` is not checked for being positive. The page size is only checked to be 1 or more (line 89), so a getconf PAGESIZE under 36 bytes makes underN negative, and make([]string, underN) in manyIDs panics instead of failing with a message. No real Linux page size is that small, so realistic input does not reach this. It is the hunt row's negative-size class on a new computation.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/shelltest/evidence_store_each_test.go:99"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the whole diff (/tmp/claude-1000/-home-labdrian-labdrian-sdd-overlay/45673332-5a42-429f-889a-50c9d8bcb1fc/scratchpad/t4r.diff, 275 lines) across all 5 changed paths.",
+      "Read review records 88fb598e73d3-3.json (F1), 88fb598e73d3-5.json (F1, F2) and 88fb598e73d3-4.polisher.json, and L80 (task document lines 4067-4115).",
+      "-5 F1 and -4.polisher: the evidence.sh header (lines 51-53) and PROVENANCE.md line 15 now state MAX_ARG_STRLEN as 32 pages, '128 KiB with 4 KiB pages', with that needle on one header line. The test computes the bound from getconf PAGESIZE and skips when getconf is missing, as L80 choice 1 says. It still fails on 64 KiB pages; see F1.",
+      "-5 F2: the helper starts from \\bENVIRON\\b and accepts only a subscript followed by blanks and \"\". The table matches L80's 13 rows and the two-read line. Resolved as L80 choice 2 says; the remaining prefix-operator gap is F3.",
+      "-3 F1: evidence.sh line 148 forces ids[i] to text before keying wanted, and line 231 reads the forced value. hit keys come from rv, a string returned by trim. Resolved as L80 choice 3 says; the strength of the pin is F4.",
+      "Checked the comment's arithmetic for case sizes against the shell join at evidence.sh lines 91-97 (no trailing line break): past is 1,152 bytes over 131,072 and under is 1,152 bytes below it, with the 'EVIDENCE_WANT=' prefix and the end byte included. The comment is correct.",
+      "Checked the line counts in L81 against the diff: evidence.sh 5+3, PROVENANCE.md 1+1, lint file 7 deleted, B14 8 deleted. They match.",
+      "Readability row read from roles/reviewer/rows.json and applied to the evidence.sh header and its awk comment, PROVENANCE.md, the test comments and L81. The only misleading statements found are the 'holds on every page size' claim (F1) and the 'no read is missed' doc (F3).",
+      "Hunt: production code computes no new write or delete path. In the tests, getconf errors and non-numeric output are t.Fatalf, not swallowed. A negative computed size is F5.",
+      "No command was run: nothing was built, tested or executed. The kernel exec-limit reasoning in F1 and F2 is inference, not run on a large-page host."
+    ]
+  }
+}

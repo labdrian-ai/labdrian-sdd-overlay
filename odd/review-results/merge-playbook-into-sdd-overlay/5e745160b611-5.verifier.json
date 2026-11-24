@@ -1,0 +1,39 @@
+{
+  "verdicts": [
+    {
+      "id": "F1",
+      "result": "reproduced",
+      "command": "Same as -2 F1: (ulimit -s $n; getconf ARG_MAX; cd $S/$v/engine/shelltest && $S/$v-shelltest.test -test.run 'TestEvidenceStore_ReviewedEachAnswersEveryIdentifierFromOneRead/the_identifiers_of_one_call_past' -test.count=1 -test.v) for v in head base and n in 8192 1024 768 640 512 656 672 688 704 720 736 752 800 832 864 896 960",
+      "output": "Head: the under case (7217 ids) fails with 'fork/exec /usr/bin/sh: argument list too long' at n<=736 (ARG_MAX<=188416), including n=512 where ARG_MAX=131072 equals the bound. The past case is skipped by the guard. Head passes at n>=752. Base (fixed 9000/6000 ids): FAIL at every n<=896 with the same E2BIG on the 9000-identifier past case ('f/review-00008999]: fork/exec /usr/bin/sh: argument list too long'). Base passes at n=960 and above. The false failure therefore exists on base over a wider ARG_MAX range, so 'introduced' is not supported: head narrows a pre-existing class and leaves it open for the under case.",
+      "base_result": "reproduced"
+    },
+    {
+      "id": "F2",
+      "result": "reproduced",
+      "command": "Code read: engine/shelltest/evidence_store_each_test.go:111 at head (`if pastN*joined >= argMax/2`), with the stack runs of F1 as support",
+      "output": "Code read: the guard compares only pastN*18 string bytes with ARG_MAX/2. It counts no argv pointers, no environment, and not the EVIDENCE_WANT copy. The guard does not cover the under case at all, which fails at n<=736 (F1 output). Code read only: no host was found that falls between the guard and the real limit for the past case.",
+      "base_result": "not-run"
+    },
+    {
+      "id": "F3",
+      "result": "reproduced",
+      "command": "Probe copy $S/probes/f3h (head) and f3b (base): added the line `    x = -ENVIRON[\"EVIDENCE_WANT\"] \"\"` after the want = ENVIRON line. Then: cd $S/probes/f3h/engine/skills && .../head-skills.test -test.run ReadsEveryEnvironmentValueAsAString -test.count=1 -test.v; the same in f3b with base-skills.test. Also: X=007 awk 'BEGIN { x = -ENVIRON[\"X\"] \"\"; y = ENVIRON[\"X\"] \"\"; print x, y }'",
+      "output": "Head: '--- PASS: TestEvidenceStore_ReadsEveryEnvironmentValueAsAString'. Base: '--- PASS'. The lint accepts the prefixed read. gawk printed '-7 007', so the prefixed read is taken as a number. sh -n on the probe: ok.",
+      "base_result": "reproduced"
+    },
+    {
+      "id": "F4",
+      "result": "reproduced",
+      "command": "Probe copies of head evidence.sh. f4order: `{ wanted[ids[i]] = 1; ids[i] = ids[i] \"\" }`. f4comment: the statement removed and kept only as `# ids[i] = ids[i] \"\"`. Then: cd $S/probes/<probe>/engine/skills && .../head-skills.test -test.run MakesSplitIdentifiersText -test.count=1 -test.v; the same with base-skills.test",
+      "output": "Head: f4order '--- PASS: TestEvidenceStore_MakesSplitIdentifiersText' and f4comment '--- PASS'. sh -n is ok on both probes. Base: 'testing: warning: no tests to run', because the pin does not exist on base.",
+      "base_result": "not-run"
+    },
+    {
+      "id": "F5",
+      "result": "reproduced",
+      "command": "Code read: engine/shelltest/evidence_store_each_test.go:89 and :99 at head",
+      "output": "Code read: line 89 accepts any PAGESIZE >= 1. underN = 32*PAGESIZE/18 - 64 is negative when PAGESIZE < 36, and make([]string, underN) at line 102 then panics. The input is unrealistic: no Linux page size is under 36 bytes. Not executed.",
+      "base_result": "not-run"
+    }
+  ]
+}

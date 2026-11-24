@@ -1,0 +1,18 @@
+{
+  "verdicts": [
+    {
+      "id": "F1",
+      "result": "reproduced",
+      "command": "S=/tmp/claude-1000/-home-labdrian-labdrian-sdd-overlay/45673332-5a42-429f-889a-50c9d8bcb1fc/scratchpad/vf-t4r; built with `go test -c` (HOME=$(mktemp -d), GOCACHE=$S/gocache). For v in head base and n in 8192 1024 768 640 512 (then 656..960): (ulimit -s $n; getconf ARG_MAX; cd $S/$v/engine/shelltest && $S/$v-shelltest.test -test.run 'TestEvidenceStore_ReviewedEachAnswersEveryIdentifierFromOneRead/the_identifiers_of_one_call_past' -test.count=1 -test.v)",
+      "output": "Subtest: TestEvidenceStore_ReviewedEachAnswersEveryIdentifierFromOneRead/the_identifiers_of_one_call_past_the_bound_of_one_environment_string. Head: n=8192 (ARG_MAX 2097152) PASS, both cases ran. n=1024 (262144) PASS, 'past case skipped: 132210 joined bytes reach half of ARG_MAX'. n=768 (196608) PASS, past case skipped. n=640 (163840) FAIL, past case skipped, under case: 'evidence_store_test.go:99: run [sh .../evidence.sh reviewed-each docs/wiki f/review-00000000 ... f/review-00007216]: fork/exec /usr/bin/sh: argument list too long'. n=512 (131072, equal to the bound) FAIL, same E2BIG on the 7217-identifier under case. Threshold scan: head FAIL at n<=736 and PASS at n>=752. The unguarded under case fails at the exec of sh (E2BIG), before evidence.sh runs. This is the class the finding names, here at a small stack rlimit. No 64 KiB-page host was available.",
+      "base_result": "reproduced"
+    },
+    {
+      "id": "F2",
+      "result": "reproduced",
+      "command": "S=/tmp/claude-1000/-home-labdrian-labdrian-sdd-overlay/45673332-5a42-429f-889a-50c9d8bcb1fc/scratchpad/vf-t4r/probes; added a '# ENVIRON' line after line 1 of a copy of evidence.sh (head copy in f2h, base copy in f2b). Then: cd $S/f2h/engine/skills && .../head-skills.test -test.run ReadsEveryEnvironmentValueAsAString -test.count=1 -test.v; the same in f2b with base-skills.test",
+      "output": "Head: '--- FAIL: TestEvidenceStore_ReadsEveryEnvironmentValueAsAString', with 'evidence_store_artifact_test.go:448: evidence.sh uses \"ENVIRON\" with no empty string after its subscript, so awk takes the value for a number where it looks like one'. sh -n on the probe: ok. Controls with unmodified copies pass on head and base.",
+      "base_result": "not-reproduced"
+    }
+  ]
+}

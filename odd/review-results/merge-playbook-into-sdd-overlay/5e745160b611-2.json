@@ -1,0 +1,66 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "47d83bb7abb987bb6d0fd2812accd39e6862757f",
+    "head": "5e745160b6113f71831d342bbd39fbf810d5b161",
+    "diff_sha256": "3799b36e894c3f3dcf27f96a767e86fea66779767626e3874999760f374c7d39",
+    "paths": [
+      "engine/shelltest/evidence_store_each_test.go",
+      "engine/skills/evidence_store_artifact_test.go",
+      "odd/tasks/merge-playbook-into-sdd-overlay.md",
+      "skills/_shared/evidence/PROVENANCE.md",
+      "skills/_shared/evidence/evidence.sh"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "47d83bb7abb987bb6d0fd2812accd39e6862757f",
+      "head": "5e745160b6113f71831d342bbd39fbf810d5b161",
+      "diff_sha256": "3799b36e894c3f3dcf27f96a767e86fea66779767626e3874999760f374c7d39"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/shelltest/evidence_store_each_test.go",
+        "engine/skills/evidence_store_artifact_test.go",
+        "odd/tasks/merge-playbook-into-sdd-overlay.md",
+        "skills/_shared/evidence/PROVENANCE.md",
+        "skills/_shared/evidence/evidence.sh"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "engine/shelltest/evidence_store_each_test.go:119",
+        "claim": "The comment says the test now holds on every page size, but only the past case is guarded against ARG_MAX. The under case sends about bound-1152 bytes of identifiers as sh arguments with no guard. With 64 KiB pages, as on some arm64 hosts, the bound is 2 MiB. With the usual 8 MiB stack limit, ARG_MAX is 2 MiB, so the exec of sh itself should fail with E2BIG. The same happens on any host where ARG_MAX is close to the bound, for example a small stack rlimit. Then the under case fails the test (exit and stdout mismatch) instead of being skipped or sized under ARG_MAX/2. I did not run this. It follows from the added arithmetic and the file's own comment that exec limits arguments and environment together.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/shelltest/evidence_store_each_test.go:119"
+        ],
+        "severity": "WARNING"
+      },
+      {
+        "id": "F2",
+        "location": "engine/skills/evidence_store_artifact_test.go:103",
+        "claim": "The ENVIRON lint flags every occurrence of the word ENVIRON, including one in an awk comment or in a string, and the lint reads the whole script, not only the awk bodies. A future header or comment that mentions ENVIRON would fail the lint with a message about an unforced numeric read. This is a false-positive risk. No current line trips it, because the only ENVIRON in the script is at line 144. The bracketed-subscript row `ENVIRON[a[1]] \"\"` is also deliberately counted as unforced.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "skills/_shared/evidence/evidence.sh:144"
+        ],
+        "severity": "SUGGESTION"
+      }
+    ],
+    "evidence": [
+      "Read the full diff (5 paths)",
+      "Grepped the worktree for ENVIRON in evidence.sh (only line 144) and for the under-case call in evidence_store_each_test.go:119",
+      "Ran no tests or commands",
+      "The reviewer gave no severity; the foreman assigned WARNING to F1 (the same false-test-failure class as T4q -5 F1) and SUGGESTION to F2"
+    ]
+  }
+}
