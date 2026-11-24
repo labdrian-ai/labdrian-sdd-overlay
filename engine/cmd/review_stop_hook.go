@@ -172,8 +172,7 @@ func stopHookAnswer(p process, d deps) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	// The run is in a group of its own so that the kill at its deadline reaches the subshells of the script (T4x).
-	classified := evidencesh.New(execrunner.New().WithMaxOutput(evidenceScriptMaxOutput).WithProcessGroup(), evidencesh.Options{Script: evidenceScript(d), Environ: d.environment()})
+	classified := evidencesh.New(execrunner.New().WithMaxOutput(evidenceScriptMaxOutput), evidencesh.Options{Script: evidenceScript(d), Environ: d.environment()})
 	ruling, err := newReviewService(d).WithAsked(asked).WithClassified(classified).Stop(dir, in.SessionID, in.Continuing)
 	if !ruling.Block {
 		return nil, err

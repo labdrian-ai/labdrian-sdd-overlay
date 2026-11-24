@@ -1579,7 +1579,7 @@ gentle-ai-overlay review stop-hook
     When no commit misses anything, it also asks, once for each session and result, for the classification of each
     stored review result of the branch whose kept findings `docs/wiki/evidence.md` does not hold yet. It asks the
     evidence store deployed under `~/.claude/skills/_shared/evidence/` once at each stop, through `evidence.sh
-    reviewed-each` (on Unix stopped at 2 seconds with every process it started), and names every result still lacking, the ones asked before included. What the
+    reviewed-each` (stopped at 2 seconds; the stop can wait up to 2 seconds more while a process the script started holds its output, and that process can outlive the stop), and names every result still lacking, the ones asked before included. What the
     script cannot tell, and a stored file it cannot read, is one line on stderr, and can come beside the block. A store
     that is not deployed is named (`labdrian apply` deploys it) and not run. Nothing of it is remembered, so the line
     repeats at each stop that reaches the question.

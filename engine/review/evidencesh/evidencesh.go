@@ -2,10 +2,10 @@
 // `sh <script> reviewed-each <root>/docs/wiki <review>...`, whether the evidence page of a working tree holds an Evidence
 // row for each of the stored results, through a Runner (execrunner), so the program that starts it stays the one place that
 // starts programs of the machine. It runs one `sh` for each call and splits no call: past the limits of one exec (the
-// header of evidence.sh names them) the call is an error. Nothing it is told is remembered. Its bound, the timeout, holds
-// with every process the run started when the Runner kills the run's process group at the deadline, as the Runner of the
-// stop hook does (execrunner.WithProcessGroup, on Unix); over a Runner that kills only sh, a subshell that holds the pipes can
-// keep the call up to the Runner's own grace.
+// header of evidence.sh names them) the call is an error. Nothing it is told is remembered. Its bound is the timeout and
+// the grace of the Runner: at the deadline the Runner kills sh, and the call can wait up to the Runner's grace more
+// (execrunner's killGrace, 2 seconds) while a process the script started holds its output. That process is not killed and
+// can outlive the call.
 //
 // What each run means, the first row that applies:
 //   - no reviews: nothing runs, the answer is empty;
@@ -38,8 +38,8 @@ import (
 )
 
 // DefaultTimeout is how long one run may take when Options.Timeout says no limit. It is an assumption of L55 that the
-// timed stop of T4w measured: one run is `sh`, one `awk` and one read of one page. The run is stopped at it with every
-// process it started when the Runner kills the process group, and with sh alone otherwise (the package doc).
+// timed stop of T4w measured: one run is `sh`, one `awk` and one read of one page. At it the Runner kills sh, and the
+// call can wait up to the Runner's grace more for a process the script started that holds the output (the package doc).
 const DefaultTimeout = 2 * time.Second
 
 // Runner starts a program with exactly the environment it is given and returns what it printed on its standard output and

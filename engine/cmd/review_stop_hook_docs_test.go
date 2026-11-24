@@ -161,20 +161,25 @@ func TestChangelogRecordsTheReviewStopHook(t *testing.T) {
 	}
 }
 
-// The bound of the evidence run is told as it is (T4x, `4b9c3789c2e0-3` F1): on Unix the run is stopped at 2 seconds with
-// every process it started, and no text says that it takes at most 2 seconds.
-func TestTextsOfTheReviewStopHookSayTheEvidenceRunStopsWithEveryProcessItStarted(t *testing.T) {
+// The bound of the evidence run is told as the runner has it (T4y, `36d5bc62df38-4` F2): the run is stopped at 2 seconds, the
+// stop can wait up to 2 seconds more while a process the script started holds its output, and that process can outlive the
+// stop. No text says that the stop takes at most 2 seconds or that it stops every process the script started.
+func TestTextsOfTheReviewStopHookStateTheBoundOfTheEvidenceRun(t *testing.T) {
 	readme := readRepositoryFile(t, "README.md")
 	for _, tc := range []struct{ name, text string }{
 		{"the README section of the review stop-hook", docSection(t, readme, "gentle-ai-overlay review stop-hook\n", "overlay --help\n")},
 		{"CHANGELOG.md", docSection(t, readRepositoryFile(t, "CHANGELOG.md"), "- The Stop hook (`labdrian review stop-hook`)", "\n- ")},
 	} {
 		text := normalizeDocText(tc.text)
-		if !strings.Contains(text, "with every process it started") {
-			t.Errorf("%s does not say %q", tc.name, "with every process it started")
+		for _, want := range []string{"stopped at 2 seconds", "up to 2 seconds more", "can outlive the stop"} {
+			if !strings.Contains(text, want) {
+				t.Errorf("%s does not say %q", tc.name, want)
+			}
 		}
-		if strings.Contains(text, "at most 2 seconds") {
-			t.Errorf("%s still says %q", tc.name, "at most 2 seconds")
+		for _, refused := range []string{"with every process it started", "at most 2 seconds"} {
+			if strings.Contains(text, refused) {
+				t.Errorf("%s still says %q", tc.name, refused)
+			}
 		}
 	}
 }
