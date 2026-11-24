@@ -1579,7 +1579,7 @@ gentle-ai-overlay review stop-hook
     When no commit misses anything, it also asks, once for each session and result, for the classification of each
     stored review result of the branch whose kept findings `docs/wiki/evidence.md` does not hold yet. It asks the
     evidence store deployed under `~/.claude/skills/_shared/evidence/` once at each stop, through `evidence.sh
-    reviewed-each` (at most 2 seconds), and names every result still lacking, the ones asked before included. What the
+    reviewed-each` (on Unix stopped at 2 seconds with every process it started), and names every result still lacking, the ones asked before included. What the
     script cannot tell, and a stored file it cannot read, is one line on stderr, and can come beside the block.
     Input: the hook JSON on stdin, at most 1 MiB (more is input it cannot use). Only session_id, cwd, hook_event_name
     and stop_hook_active are read, and an event other than Stop is ignored.

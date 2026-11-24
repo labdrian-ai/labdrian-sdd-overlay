@@ -30,6 +30,7 @@ var ErrOutputTooLarge = errors.New("output is larger than the bound")
 // the adapter it wires.
 type Runner struct {
 	maxOutput int64
+	group     bool
 }
 
 // New returns the process adapter.
@@ -46,6 +47,20 @@ func (r Runner) WithMaxOutput(n int64) Runner {
 
 // MaxOutput is the bound WithMaxOutput set, in bytes; zero is none.
 func (r Runner) MaxOutput() int64 { return r.maxOutput }
+
+// WithProcessGroup is the runner that starts each program in a process group of its own and, at the deadline, stops the
+// whole group: what the program started (a subshell, a command it forked) does not outlive the call, and a grandchild that
+// holds the output pipes no longer holds the call up to the kill grace. It is opt-in: a program in a group of its own is no
+// longer in the foreground group of the terminal, so a Ctrl-C at the terminal does not reach it, and a caller takes the
+// option only after it has looked at that. On a system with no process group (a build that is not Unix) the deadline stops
+// the program alone, as it does without the option. killGrace stays as the backstop for a process that left the group.
+func (r Runner) WithProcessGroup() Runner {
+	r.group = true
+	return r
+}
+
+// ProcessGroup says whether WithProcessGroup was set; New is not.
+func (r Runner) ProcessGroup() bool { return r.group }
 
 // cappedBuffer collects what a program prints up to a bound and stops the program when it goes
 // over, so a runaway output cannot fill memory. The cut is exact: a write that crosses the bound
@@ -80,9 +95,12 @@ func (Runner) LookPath(name string) (string, error) { return exec.LookPath(name)
 // and waits for it. It returns what the program printed on both streams, even when it failed.
 // The program is stopped when ctx ends, and the error then wraps the reason (context.DeadlineExceeded
 // for a deadline) next to what the stopped process reported.
-func (Runner) Run(ctx context.Context, bin string, args ...string) ([]byte, error) {
+func (r Runner) Run(ctx context.Context, bin string, args ...string) ([]byte, error) {
 	cmd := exec.CommandContext(ctx, bin, args...)
 	cmd.WaitDelay = killGrace
+	if r.group {
+		ownGroup(cmd)
+	}
 	out, err := cmd.CombinedOutput()
 	if err != nil && ctx.Err() != nil {
 		return out, fmt.Errorf("%w (%v)", ctx.Err(), err)
@@ -127,6 +145,9 @@ func (r Runner) outputIn(ctx context.Context, dir string, env []string, in io.Re
 	cmd.Env = env
 	cmd.Stdin = in
 	cmd.WaitDelay = killGrace
+	if r.group {
+		ownGroup(cmd)
+	}
 	out := &cappedBuffer{max: r.maxOutput, cancel: cancel}
 	errOut := &cappedBuffer{max: r.maxOutput, cancel: cancel}
 	cmd.Stdout = out

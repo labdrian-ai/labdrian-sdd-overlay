@@ -161,6 +161,24 @@ func TestChangelogRecordsTheReviewStopHook(t *testing.T) {
 	}
 }
 
+// The bound of the evidence run is told as it is (T4x, `4b9c3789c2e0-3` F1): on Unix the run is stopped at 2 seconds with
+// every process it started, and no text says that it takes at most 2 seconds.
+func TestTextsOfTheReviewStopHookSayTheEvidenceRunStopsWithEveryProcessItStarted(t *testing.T) {
+	readme := readRepositoryFile(t, "README.md")
+	for _, tc := range []struct{ name, text string }{
+		{"the README section of the review stop-hook", docSection(t, readme, "gentle-ai-overlay review stop-hook\n", "overlay --help\n")},
+		{"CHANGELOG.md", docSection(t, readRepositoryFile(t, "CHANGELOG.md"), "- The Stop hook (`labdrian review stop-hook`)", "\n- ")},
+	} {
+		text := normalizeDocText(tc.text)
+		if !strings.Contains(text, "with every process it started") {
+			t.Errorf("%s does not say %q", tc.name, "with every process it started")
+		}
+		if strings.Contains(text, "at most 2 seconds") {
+			t.Errorf("%s still says %q", tc.name, "at most 2 seconds")
+		}
+	}
+}
+
 // The texts that say what the hook asks for also say that it asks for the classification of results (S6, T4w, L84): the
 // README entry and section, the help of the wrapper and the CHANGELOG, each naming the page and the script it asks through.
 func TestTextsOfTheReviewStopHookSayItAsksForClassification(t *testing.T) {
