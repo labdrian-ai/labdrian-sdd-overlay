@@ -140,7 +140,30 @@ func TestStopHookSaysOnStderrWhatTheEvidenceScriptCannotTell(t *testing.T) {
 		if stdout != "" || !equalInts(exits, []int{0}) {
 			t.Errorf("stdout = %q, exits = %v; want nothing and [0]", stdout, exits)
 		}
-		requireOneErrorLine(t, stderr, cannotTellPrefix, filepath.Join(s.userHome, ".claude", "skills", "_shared", "evidence", "evidence.sh"))
+		requireOneErrorLine(t, stderr, cannotTellPrefix, "is not deployed", filepath.Join(s.userHome, ".claude", "skills", "_shared", "evidence", "evidence.sh"))
+		if strings.Contains(stderr, "exited") {
+			t.Errorf("stderr = %q, want a store that is not deployed, not an exit of the script", stderr)
+		}
+	})
+	t.Run("the same line at every stop", func(t *testing.T) { // SH9 (iii): nothing of the answer is remembered (L72, #6210)
+		s := newStopWorld(t)
+		s.useHome(false)
+		s.recordRangeKept(s.head, s.c4, "introduced")
+		var first string
+
+		for stop := 1; stop <= 3; stop++ {
+			stdout, stderr, exits := s.stop("s1", false)
+
+			if stdout != "" || !equalInts(exits, []int{0}) {
+				t.Errorf("stop %d: stdout = %q, exits = %v; want nothing and [0]", stop, stdout, exits)
+			}
+			requireOneErrorLine(t, stderr, cannotTellPrefix, "is not deployed")
+			if first == "" {
+				first = stderr
+			} else if stderr != first {
+				t.Errorf("stop %d: stderr = %q, want the line of the first stop %q", stop, stderr, first)
+			}
+		}
 	})
 	t.Run("a page it cannot read", func(t *testing.T) {
 		s := newStopWorld(t)

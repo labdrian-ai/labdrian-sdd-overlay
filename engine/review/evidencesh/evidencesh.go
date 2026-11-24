@@ -9,6 +9,9 @@
 //
 // What each run means, the first row that applies:
 //   - no reviews: nothing runs, the answer is empty;
+//   - nothing at the script's path: an error that says the evidence store is not deployed, with no run, wrapping
+//     fs.ErrNotExist (any other error of the stat goes on to the run). The error repeats at every stop that reaches the
+//     question, because nothing of an answer is remembered (the owner's L72);
 //   - the deadline passed: an error wrapping context.DeadlineExceeded;
 //   - the exec failed, whatever the cause (no sh, a vector past ARG_MAX, an output past the runner's bound): an error
 //     wrapping it;
@@ -23,6 +26,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io/fs"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"slices"
@@ -83,6 +88,9 @@ func (s Script) Classified(root string, reviews []string) ([]bool, error) {
 	}
 	if !filepath.IsAbs(s.script) {
 		return nil, fmt.Errorf("the evidence script %q is not an absolute path", s.script)
+	}
+	if _, err := os.Stat(s.script); errors.Is(err, fs.ErrNotExist) {
+		return nil, fmt.Errorf("the evidence store is not deployed: nothing is at %s (labdrian apply deploys it to Claude Code): %w", s.script, err)
 	}
 	run := "sh " + s.script + " reviewed-each"
 	args := append([]string{s.script, "reviewed-each", filepath.Join(root, "docs", "wiki")}, reviews...)

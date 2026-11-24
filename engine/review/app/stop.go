@@ -82,7 +82,7 @@ func (s Service) stopReview(dir, session string) (Ruling, error) {
 	case err != nil || !ask:
 		return Ruling{}, err
 	}
-	prefix := short(question.Base) + "-" + short(question.Head) + "-"
+	prefix := review.ShortName(question.Base) + "-" + review.ShortName(question.Head) + "-"
 	keys := make([]string, 0, len(question.Needs))
 	for _, need := range question.Needs {
 		keys = append(keys, prefix+needKey(need.Missing))
@@ -131,9 +131,4 @@ func (s Service) once(session string, keys []string, ruling Ruling) (Ruling, err
 		}
 	}
 	return ruling, nil
-}
-
-// short is the first 12 characters of a full object name, as the names of the stored files use them.
-func short(name string) string {
-	return name[:min(len(name), 12)]
 }

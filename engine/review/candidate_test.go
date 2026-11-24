@@ -143,6 +143,21 @@ func TestOverLimitIsTrueOnlyAboveOneHundredFiftyThousandBytes(t *testing.T) {
 	}
 }
 
+// ShortName is the one place that cuts an object name to the 12 characters the stored files use: the whole name when
+// it is shorter, never a panic.
+func TestShortName(t *testing.T) {
+	for _, tc := range []struct{ name, want string }{
+		{"0123456789abcdef0123456789abcdef01234567", "0123456789ab"},
+		{"0123456789ab", "0123456789ab"},
+		{"01234", "01234"},
+		{"", ""},
+	} {
+		if got := review.ShortName(tc.name); got != tc.want {
+			t.Errorf("ShortName(%q) = %q, want %q", tc.name, got, tc.want)
+		}
+	}
+}
+
 // The zero Candidate names nothing: its short name is empty instead of a panic, for a caller that used
 // the zero value NewCandidate returns with its error.
 func TestTheZeroCandidateHasAnEmptyShortName(t *testing.T) {

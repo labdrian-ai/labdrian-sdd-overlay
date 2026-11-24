@@ -179,6 +179,23 @@ func TestTextsOfTheReviewStopHookSayTheEvidenceRunStopsWithEveryProcessItStarted
 	}
 }
 
+// What the evidence run cannot tell is told as it is (T4x, `4b9c3789c2e0-3` F2): a store that is not deployed is named, and
+// the line repeats at each stop because nothing of it is remembered.
+func TestTextsOfTheReviewStopHookSayTheLineOfAnUndeployedStoreRepeats(t *testing.T) {
+	readme := readRepositoryFile(t, "README.md")
+	for _, tc := range []struct{ name, text string }{
+		{"the README section of the review stop-hook", docSection(t, readme, "gentle-ai-overlay review stop-hook\n", "overlay --help\n")},
+		{"CHANGELOG.md", docSection(t, readRepositoryFile(t, "CHANGELOG.md"), "- The Stop hook (`labdrian review stop-hook`)", "\n- ")},
+	} {
+		text := normalizeDocText(tc.text)
+		for _, want := range []string{"not deployed", "repeats at each stop", "of it is remembered"} {
+			if !strings.Contains(text, want) {
+				t.Errorf("%s does not say %q", tc.name, want)
+			}
+		}
+	}
+}
+
 // The texts that say what the hook asks for also say that it asks for the classification of results (S6, T4w, L84): the
 // README entry and section, the help of the wrapper and the CHANGELOG, each naming the page and the script it asks through.
 func TestTextsOfTheReviewStopHookSayItAsksForClassification(t *testing.T) {

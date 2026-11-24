@@ -8,6 +8,7 @@ package evidencesh_test
 import (
 	"context"
 	"errors"
+	"io/fs"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -150,6 +151,47 @@ func (f *fake) Output(ctx context.Context, env []string, bin string, args ...str
 	return []byte(f.stdout), []byte(f.stderr), f.err
 }
 
+// presentScript is the absolute path of a file that exists, for a test whose Runner is a fake: the adapter asks that
+// something is at the script's path before it runs it, and a fake needs no real script.
+func presentScript(t *testing.T) string {
+	t.Helper()
+	path := filepath.Join(t.TempDir(), "evidence.sh")
+	if err := os.WriteFile(path, []byte("exit 0\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	return path
+}
+
+// countingRunner is a Runner that only counts its calls.
+type countingRunner struct{ calls int }
+
+func (c *countingRunner) Output(context.Context, []string, string, ...string) ([]byte, []byte, error) {
+	c.calls++
+	return nil, nil, nil
+}
+
+func TestClassified_NamesAnEvidenceStoreThatIsNotDeployed(t *testing.T) { // (h), (u)
+	missing := filepath.Join(t.TempDir(), "nowhere", "evidence.sh")
+	t.Run("a script path with nothing at it is named, not run (h)", func(t *testing.T) {
+		w := newWorld(t)
+		_, err := w.adapter(missing, 0).Classified(w.root, []string{"f/aaaa-1"})
+		wantError(t, err, "the evidence store is not deployed", missing, "labdrian apply")
+		if strings.Contains(err.Error(), "exited") {
+			t.Errorf("the error %q reads as an exit of the script", err)
+		}
+		if !errors.Is(err, fs.ErrNotExist) {
+			t.Errorf("the error %v does not wrap fs.ErrNotExist", err)
+		}
+	})
+	t.Run("the runner is not called (u)", func(t *testing.T) {
+		c := &countingRunner{}
+		got, err := evidencesh.New(c, evidencesh.Options{Script: missing}).Classified("/r", []string{"f/aaaa-1"})
+		if err == nil || got != nil || c.calls != 0 {
+			t.Errorf("Classified = %v, %v after %d calls; want no answer, an error and no call", got, err, c.calls)
+		}
+	})
+}
+
 func TestClassified_RunsNothingForNoReview(t *testing.T) { // (d)
 	for name, reviews := range map[string][]string{"nil": nil, "empty": {}} {
 		t.Run(name, func(t *testing.T) {
@@ -192,12 +234,6 @@ func TestClassified_RefusesWhatTheScriptCannotAnswer(t *testing.T) { // (e)-(i)
 		}
 		_, err := w.classified("f/aaaa-1")
 		wantError(t, err, "exited 4", "cannot read")
-	})
-	t.Run("a script that is not there (h)", func(t *testing.T) {
-		w := newWorld(t)
-		missing := filepath.Join(w.tmp, "nowhere", "evidence.sh")
-		_, err := w.adapter(missing, 0).Classified(w.root, []string{"f/aaaa-1"})
-		wantError(t, err, missing)
 	})
 	t.Run("an identifier the script refuses (i)", func(t *testing.T) {
 		w := newWorld(t)
@@ -251,7 +287,7 @@ func TestClassified_RefusesAnAnswerThatIsNotOneLineForEachReview(t *testing.T) {
 func TestClassified_RefusesWhatItMustNotRun(t *testing.T) { // (o), (p)
 	t.Run("a sh that cannot start (o)", func(t *testing.T) {
 		f := &fake{err: &os.PathError{Op: "fork/exec", Path: "/bin/sh", Err: syscall.E2BIG}}
-		_, err := evidencesh.New(f, evidencesh.Options{Script: "/x/evidence.sh"}).Classified("/r", []string{"f/aaaa-1"})
+		_, err := evidencesh.New(f, evidencesh.Options{Script: presentScript(t)}).Classified("/r", []string{"f/aaaa-1"})
 		wantError(t, err, "could not run")
 		if !errors.Is(err, syscall.E2BIG) {
 			t.Errorf("the error %v does not wrap syscall.E2BIG", err)
@@ -259,7 +295,7 @@ func TestClassified_RefusesWhatItMustNotRun(t *testing.T) { // (o), (p)
 	})
 	t.Run("an exit that is not an ExitError is not an answer", func(t *testing.T) {
 		f := &fake{err: errors.New("boom")}
-		got, err := evidencesh.New(f, evidencesh.Options{Script: "/x/evidence.sh"}).Classified("/r", []string{"f/aaaa-1"})
+		got, err := evidencesh.New(f, evidencesh.Options{Script: presentScript(t)}).Classified("/r", []string{"f/aaaa-1"})
 		if err == nil || got != nil {
 			t.Errorf("Classified = %v, %v; want no answer and an error", got, err)
 		}
@@ -272,14 +308,14 @@ func TestClassified_RefusesWhatItMustNotRun(t *testing.T) { // (o), (p)
 			t.Errorf("the runner was called %d times, want none", f.calls)
 		}
 	})
-	t.Run("an exit 0 that is a signal-free exit error of sh", func(t *testing.T) {
+	t.Run("an exit 126 of sh is not an answer", func(t *testing.T) {
 		var exit *exec.ExitError
 		err := exec.Command("sh", "-c", "exit 126").Run()
 		if !errors.As(err, &exit) {
 			t.Skip("sh gave no exit error")
 		}
 		f := &fake{err: err}
-		_, got := evidencesh.New(f, evidencesh.Options{Script: "/x/evidence.sh"}).Classified("/r", []string{"f/aaaa-1"})
+		_, got := evidencesh.New(f, evidencesh.Options{Script: presentScript(t)}).Classified("/r", []string{"f/aaaa-1"})
 		wantError(t, got, "exited 126")
 	})
 }
@@ -287,7 +323,8 @@ func TestClassified_RefusesWhatItMustNotRun(t *testing.T) { // (o), (p)
 func TestClassified_StartsShWithTheScriptTheModeTheWikiAndTheReviews(t *testing.T) { // (q), (r)
 	env := []string{"A=1", "B=2"}
 	f := &fake{stdout: "no\nyes\n"}
-	s := evidencesh.New(f, evidencesh.Options{Script: "/x/evidence.sh", Environ: env, Timeout: 700 * time.Millisecond})
+	script := presentScript(t)
+	s := evidencesh.New(f, evidencesh.Options{Script: script, Environ: env, Timeout: 700 * time.Millisecond})
 	env[0] = "A=changed"
 
 	before := time.Now()
@@ -300,7 +337,7 @@ func TestClassified_StartsShWithTheScriptTheModeTheWikiAndTheReviews(t *testing.
 	if f.calls != 1 || f.bin != "sh" {
 		t.Errorf("%d calls of %q, want one of sh", f.calls, f.bin)
 	}
-	if want := []string{"/x/evidence.sh", "reviewed-each", "/r/docs/wiki", "f/aaaa-1", "g/bbbb-2"}; !reflect.DeepEqual(f.args, want) {
+	if want := []string{script, "reviewed-each", "/r/docs/wiki", "f/aaaa-1", "g/bbbb-2"}; !reflect.DeepEqual(f.args, want) {
 		t.Errorf("args = %q, want %q", f.args, want)
 	}
 	if want := []string{"A=1", "B=2"}; !reflect.DeepEqual(f.env, want) {
@@ -318,7 +355,7 @@ func TestClassified_UsesTheDefaultTimeoutWhenNoneIsGiven(t *testing.T) { // (r)
 	for _, timeout := range []time.Duration{0, -time.Second} {
 		f := &fake{stdout: "yes\n"}
 		before := time.Now()
-		_, err := evidencesh.New(f, evidencesh.Options{Script: "/x/evidence.sh", Timeout: timeout}).Classified("/r", []string{"f/aaaa-1"})
+		_, err := evidencesh.New(f, evidencesh.Options{Script: presentScript(t), Timeout: timeout}).Classified("/r", []string{"f/aaaa-1"})
 		after := time.Now()
 		if err != nil {
 			t.Fatal(err)

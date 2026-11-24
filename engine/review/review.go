@@ -207,7 +207,14 @@ func (c Candidate) Short() string {
 	if len(c.Head) < shortLength {
 		return ""
 	}
-	return c.Head[:shortLength]
+	return ShortName(c.Head)
+}
+
+// ShortName is the first 12 characters of an object name, the whole name when it is shorter, as the names of the stored
+// files use them. It is the one place that cuts a name so (a lint holds it), whoever names a commit: the stop hook's
+// markers and reasons, and the files of a review.
+func ShortName(name string) string {
+	return name[:min(len(name), shortLength)]
 }
 
 // OverLimit reports whether the diff is larger than DiffLimitBytes.

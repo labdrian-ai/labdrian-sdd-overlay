@@ -232,18 +232,10 @@ func classifyReason(results []reviewapp.KeptResult) string {
 	lines := make([]string, len(results))
 	for i, r := range results {
 		feature, stored, _ := strings.Cut(r.Review, "/")
-		lines[i] = fmt.Sprintf("- %s (commit %s, %d kept): labdrian review findings --feature %s --stored %s.json", r.Review, head12(r.Head), r.Kept, feature, stored)
+		lines[i] = fmt.Sprintf("- %s (commit %s, %d kept): labdrian review findings --feature %s --stored %s.json", r.Review, review.ShortName(r.Head), r.Kept, feature, stored)
 	}
 	return "Review results of the branch hold findings that docs/wiki/evidence.md does not hold yet:\n\n" + strings.Join(lines, "\n") + "\n\n" +
 		"Run the Classify step of the role-chain skill for each. The stop hook names each result once for each session, and names it again beside a result it has not named yet."
-}
-
-// head12 is the first 12 characters of a commit name, the whole name when it is shorter.
-func head12(head string) string {
-	if len(head) > 12 {
-		return head[:12]
-	}
-	return head
 }
 
 // needLine is the line of the block for one thing the commit of q misses.
