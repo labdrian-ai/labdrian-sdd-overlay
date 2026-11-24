@@ -1,0 +1,84 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "a6927b09cefec494defdbf502f3fbbad4cd764bb",
+    "head": "83424e3c72e24ef2159198cf7aac13c6a95867ed",
+    "diff_sha256": "9556fccea3afa1daa6d7875cea525862f6cbee04572013601f5522a3b819feef",
+    "paths": [
+      "engine/cmd/review_stop_hook.go",
+      "engine/cmd/review_stop_hook_oneline_test.go",
+      "engine/review/app/classify.go",
+      "engine/review/app/classify_batch_test.go",
+      "engine/review/app/classify_test.go",
+      "engine/review/app/stop.go",
+      "odd/tasks/merge-playbook-into-sdd-overlay.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "a6927b09cefec494defdbf502f3fbbad4cd764bb",
+      "head": "83424e3c72e24ef2159198cf7aac13c6a95867ed",
+      "diff_sha256": "9556fccea3afa1daa6d7875cea525862f6cbee04572013601f5522a3b819feef"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/cmd/review_stop_hook.go",
+        "engine/cmd/review_stop_hook_oneline_test.go",
+        "engine/review/app/classify.go",
+        "engine/review/app/classify_batch_test.go",
+        "engine/review/app/classify_test.go",
+        "engine/review/app/stop.go",
+        "odd/tasks/merge-playbook-into-sdd-overlay.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "engine/review/app/classify.go:158",
+        "severity": "WARNING",
+        "claim": "A refusal is recorded as named in the session (refused- key) before the stop's outcome is known. After that it is never named again in that session, even when the stop that named it fails to deliver the error. For example, the port fails and the error is only printed to stderr, which Claude Code shows only in verbose mode. An unreadable stored result can then stay unreported for the rest of the session. The result is also left out of classification, so its kept findings are never asked for. This silencing is the owner's decision (L72) and is documented. The residual risk is that the only notice of a refused result is one line on a channel that is usually invisible.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/review/app/classify.go:159",
+          "engine/review/app/classify.go:196"
+        ]
+      },
+      {
+        "id": "F2",
+        "location": "engine/cmd/review_stop_hook.go:72",
+        "severity": "SUGGESTION",
+        "claim": "oneLine only folds CR and LF. Other line separators that error text can carry (U+2028, U+0085, VT, FF) pass through. The hook's one-line contract on stderr therefore holds only for CR and LF. The wording 'whatever line breaks its text holds' in the doc comment overstates that.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/cmd/review_stop_hook.go:75"
+        ]
+      },
+      {
+        "id": "F3",
+        "location": "engine/review/app/classify.go:202",
+        "severity": "SUGGESTION",
+        "claim": "The Classified port is now called at every non-continuing stop whenever any kept result exists, even when every classify- question was already put in the session. Nothing it says is cached. Once the T4w adapter runs the deployed evidence.sh through a subprocess with a 2-second timeout, each stop pays that cost, and a slow or failing script becomes an error on every stop. No adapter is wired in this diff, so the cost cannot be measured yet. It is an accepted tradeoff of L72, and the planned timed stop in T4w covers it.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/review/app/stop.go:66"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the whole diff (995 lines) at /tmp/claude-1000/-home-labdrian-labdrian-sdd-overlay/45673332-5a42-429f-889a-50c9d8bcb1fc/scratchpad/t4n.diff.",
+      "Read engine/review/app/classify.go lines 100-227 and engine/review/app/stop.go lines 55-134 in the worktree at head.",
+      "Searched the worktree engine/ for Classified, Stamp, classifyRuling and WithClassified outside tests. The only implementers and callers are in review/app, so no other implementer of the changed port breaks. Nothing wires WithClassified.",
+      "Searched engine/cmd/review_stop_hook.go for stderr. The two print sites in the hook run (lines 57 and 63) both go through oneLine. Line 49, the command-line error path, is separate and was left alone.",
+      "Checked the new unnamed, refusedKey and answer-count logic. A Has error returns an error with no block. An Add error is reported and the refusal is named again at the next stop. A wrong answer count returns an error with no block, and no ruling or key is recorded.",
+      "Did not run any tests or builds; the commands in the task document are the author's claims."
+    ]
+  }
+}

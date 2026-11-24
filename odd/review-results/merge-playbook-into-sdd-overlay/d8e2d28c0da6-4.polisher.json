@@ -1,0 +1,32 @@
+{
+  "kind": "polisher",
+  "base": "a6927b09cefec494defdbf502f3fbbad4cd764bb",
+  "head": "d8e2d28c0da6654c5e419e5118dba153204b6cca",
+  "diff_sha256": "251f1d36e67b0eb5c35e1ebc50602a55fff9c2c30dc36d3b57f812891f60f490",
+  "findings": {
+    "findings": [
+      {
+        "location": "engine/cmd/review_stop_hook.go:42",
+        "severity": "SUGGESTION",
+        "claim": "oneLine re-encodes every invalid UTF-8 byte of an error text as U+FFFD. An error that names a path holding non-UTF-8 bytes (for example a Latin-1 file name under the results or wiki directory) is now printed on stderr with those bytes replaced, so the printed path no longer matches the file on disk. Before this change the text was printed byte for byte with %v. Iterating over bytes, or copying invalid sequences through unchanged, would keep the original bytes and still make line breaks into spaces.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "evidence": [
+          "Diff lines 42-51: `for _, r := range text { ... b.WriteRune(r) }`. In Go, ranging over a string gives utf8.RuneError (U+FFFD) for each invalid byte, and WriteRune writes it as EF BF BD, so the original byte is lost.",
+          "Diff lines 21-22 and 28-29: the base printed `%v` of err/r verbatim; this commit sends both print sites through oneLine, so the replacement starts with this commit.",
+          "TestOneLineJoinsTheLinesOfAText (diff lines 104-121) covers only ASCII inputs, so nothing tests that bytes are kept."
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full diff /tmp/claude-1000/-home-labdrian-labdrian-sdd-overlay/45673332-5a42-429f-889a-50c9d8bcb1fc/scratchpad/t4n.diff (995 lines).",
+      "Read the post-change /home/labdrian/labdrian-sdd-overlay-worktrees/review-83424e3c72e2/engine/review/app/classify.go in full: the Classified port contract, keptResultsOf, unnamed, refusedKey and classifyRuling with its length check before indexing answers[i].",
+      "Read the post-change /home/labdrian/labdrian-sdd-overlay-worktrees/review-83424e3c72e2/engine/review/app/stop.go lines 40-138 (Stop, stopReview, once).",
+      "Declared risk (Risk: 3, the contract of the Classified port): Grep for `Stamp\\(|classified-|lacking-|\\.Classified\\(` outside odd/ in the worktree found only the one call site, classify.go:202. No non-test implementer or wiring of the old two-method port is left, and WithClassified is not wired in production (T4w still to come).",
+      "Grep for `Classified\\.Stamp|lacking- key|classified- key` found them only in historical review records under odd/review-results/, so no live documentation describes the removed memory.",
+      "Checked the error paths: a keptResultsOf error returns every refusal with no block; an unnamed Has failure returns the read error plus every refusal; a port error or a wrong number of answers returns an error with no block and no `once` record; the refusals already named are still joined into every later error of the same stop.",
+      "Not run: go build, go vet and go test (I ran no commands; the builder's reported results in L73 were not reproduced).",
+      "The judge was given the range a6927b09..83424e3c; its finding is in the code commit d8e2d28c; the tests commit is recorded with no finding"
+    ]
+  }
+}

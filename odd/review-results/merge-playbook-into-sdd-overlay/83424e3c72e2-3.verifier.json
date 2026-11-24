@@ -1,0 +1,25 @@
+{
+  "verdicts": [
+    {
+      "id": "F1",
+      "result": "reproduced",
+      "command": "head and base: git archive the SHA into /tmp/claude-1000/-home-labdrian-labdrian-sdd-overlay/45673332-5a42-429f-889a-50c9d8bcb1fc/scratchpad/vf-t4n/{head,base}; copy probes/zz_probe_{head,base}_test.go to <tree>/engine/review/app/zz_probe_test.go; cd <tree>/engine && HOME=$(mktemp -d) go test ./review/app -run TestZZProbe -v -count=1 (TestZZProbeF1 uses classifyWorld plus store.put(\"own-rdd\",\"333333333333-9.json\",\"not a result\"), the port broken at stop 1 by port.err=\"port down\" or, on head only, answers=[]bool{}, fixed for stops 2 and 3, all in session-1)",
+      "output": "head: mode=port-error stop=1 block=false refusalNamed=true err=tell whether the results with kept findings are classified: port down; classify the results with kept findings: odd/review-results/own-rdd/333333333333-9.json: review: invalid stored file: ... | stop=2 block=true refusalNamed=false err=<nil> | stop=3 block=false refusalNamed=false err=<nil>. mode=wrong-count stop=1 refusalNamed=true err=the evidence page of /work/wt/feature gave 0 answers for 1 results; classify ... 333333333333-9.json ... | stop=2 block=true refusalNamed=false err=<nil> | stop=3 refusalNamed=false err=<nil>. After the failed stop 1, the refusal is never named again in the session. Stop 1's error does name it, but only on stderr, next to the port error. base (port-error only, because base's port has no batch answer count): stop=1 refusalNamed=true; stop=2 block=true refusalNamed=true; stop=3 refusalNamed=true. ok on both.",
+      "base_result": "not-reproduced"
+    },
+    {
+      "id": "F2",
+      "result": "reproduced",
+      "command": "head: copy probes/zz_probe_hook_test.go and probes/zz_probe_oneline_test.go to head/engine/cmd; base: copy probes/zz_probe_hook_test.go to base/engine/cmd (base has no oneLine). Then cd <tree>/engine && HOME=$(mktemp -d) go test ./cmd -run TestZZProbe -v -count=1 (inputs: a\\vb, a\\fb, a\\xc2\\x85b, a\\xe2\\x80\\xa8b, a\\xe2\\x80\\xa9b, sent through getwd's error into the real hook, and on head also through oneLine directly)",
+      "output": "head: oneLine(\"a\\vb\")=\"a\\vb\", oneLine(\"a\\fb\")=\"a\\fb\", oneLine(\"a\\u0085b\")=\"a\\u0085b\", oneLine(\"a\\u2028b\")=\"a\\u2028b\", oneLine(\"a\\u2029b\")=\"a\\u2029b\". The hook's stderr is \"review stop-hook: cannot determine the working directory: a\\vb\\n\", and likewise for FF, NEL, LS and PS: every one passes through. base: the hook's stderr passes the same five characters through unchanged. Base folds nothing, LF included, so the defect is present there too, but base made no one-line promise.",
+      "base_result": "reproduced"
+    },
+    {
+      "id": "F3",
+      "result": "reproduced",
+      "command": "head and base: cd <tree>/engine && HOME=$(mktemp -d) go test ./review/app -run TestZZProbe -v -count=1 (TestZZProbeF3a: classifyWorld with one kept result, 3 stops in session-1, counting len(port.calls), and on base also the Stamp calls)",
+      "output": "head: stop=1 block=true portCalls=1; stop=2 block=false portCalls=2; stop=3 block=false portCalls=3. The port is called at every stop. base: stop=1 portCalls=1 stampCalls=1; stop=2 portCalls=1 stampCalls=2; stop=3 portCalls=1 stampCalls=3. On base Classified is called once and only Stamp at each stop.",
+      "base_result": "not-reproduced"
+    }
+  ]
+}
