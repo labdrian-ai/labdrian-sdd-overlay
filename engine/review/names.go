@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/gitobject"
 )
 
 // maxFeatureBytes bounds the name of a feature: a directory name well inside the 255 bytes a file system
@@ -184,7 +186,7 @@ var (
 func stem(name, suffix string) (head, number string, ok bool) {
 	rest, cut := strings.CutSuffix(name, suffix)
 	head, number, dash := strings.Cut(rest, "-")
-	return head, number, cut && dash && len(head) == shortLength && isLowerHex(head) && canonicalNumber(number)
+	return head, number, cut && dash && len(head) == gitobject.ShortLength && isLowerHex(head) && canonicalNumber(number)
 }
 
 func isLowerHex(s string) bool {

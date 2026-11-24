@@ -39,6 +39,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/execrunner"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/gitobject"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/hookwire"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/review"
 	reviewapp "github.com/labdrian-ai/labdrian-sdd-overlay/engine/review/app"
@@ -231,7 +232,7 @@ func classifyReason(results []reviewapp.KeptResult) string {
 	lines := make([]string, len(results))
 	for i, r := range results {
 		feature, stored, _ := strings.Cut(r.Review, "/")
-		lines[i] = fmt.Sprintf("- %s (commit %s, %d kept): labdrian review findings --feature %s --stored %s.json", r.Review, review.ShortName(r.Head), r.Kept, feature, stored)
+		lines[i] = fmt.Sprintf("- %s (commit %s, %d kept): labdrian review findings --feature %s --stored %s.json", r.Review, gitobject.Short(r.Head), r.Kept, feature, stored)
 	}
 	return "Review results of the branch hold findings that docs/wiki/evidence.md does not hold yet:\n\n" + strings.Join(lines, "\n") + "\n\n" +
 		"Run the Classify step of the role-chain skill for each. The stop hook names each result once for each session, and names it again beside a result it has not named yet."

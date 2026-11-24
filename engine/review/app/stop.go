@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/gitobject"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/review"
 )
 
@@ -82,7 +83,7 @@ func (s Service) stopReview(dir, session string) (Ruling, error) {
 	case err != nil || !ask:
 		return Ruling{}, err
 	}
-	prefix := review.ShortName(question.Base) + "-" + review.ShortName(question.Head) + "-"
+	prefix := gitobject.Short(question.Base) + "-" + gitobject.Short(question.Head) + "-"
 	keys := make([]string, 0, len(question.Needs))
 	for _, need := range question.Needs {
 		keys = append(keys, prefix+needKey(need.Missing))

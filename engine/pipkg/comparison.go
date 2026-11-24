@@ -7,6 +7,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/gitobject"
 )
 
 // resolveComparisonSource decides Check's comparison basis (R-006/R-007,
@@ -114,17 +116,8 @@ func (p Packages) resolveComparisonSource(overlayRoot, registryPath, destDir str
 	if exportErr != nil {
 		return CheckReport{}, "", "", "", noopCleanup, fmt.Errorf("pipkg: exporting %s for comparison: %w", deployRef, exportErr)
 	}
-	report = CheckReport{Basis: "deploy", DeployRef: deployRef, DeployTip: shortSHA(tip), BuiltFrom: builtFrom, Stale: stale}
+	report = CheckReport{Basis: "deploy", DeployRef: deployRef, DeployTip: gitobject.Short(tip), BuiltFrom: builtFrom, Stale: stale}
 	return report, root, filepath.Join(root, "skills.registry.yaml"), deployRef, deployCleanup, nil
-}
-
-// shortSHA renders sha's short (12-hex-char) form, or sha unchanged when
-// it is already shorter than that.
-func shortSHA(sha string) string {
-	if len(sha) > 12 {
-		return sha[:12]
-	}
-	return sha
 }
 
 // readBuiltFrom reads destDir/package.json's labdrian.builtFrom value,

@@ -9,9 +9,11 @@
 //
 // What each run means, the first row that applies:
 //   - no reviews: nothing runs, the answer is empty;
-//   - nothing at the script's path: an error that says the evidence store is not deployed, with no run, wrapping
-//     fs.ErrNotExist (any other error of the stat goes on to the run). The error repeats at every stop that reaches the
+//   - nothing at the script's path, also under a path part that is not a directory: an error that says the evidence store
+//     is not deployed, with no run, wrapping the error of the stat. The error repeats at every stop that reaches the
 //     question, because nothing of an answer is remembered (the owner's L72);
+//   - something at the path that is not a regular file, a path that cannot be checked, or a regular file that cannot be
+//     opened: an error that says which, with no run, so a script sh cannot open never reads as the script's exit 2;
 //   - the deadline passed: an error wrapping context.DeadlineExceeded;
 //   - the exec failed, whatever the cause (no sh, a vector past ARG_MAX, an output past the runner's bound): an error
 //     wrapping it;
@@ -32,6 +34,7 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/review/app"
@@ -89,8 +92,8 @@ func (s Script) Classified(root string, reviews []string) ([]bool, error) {
 	if !filepath.IsAbs(s.script) {
 		return nil, fmt.Errorf("the evidence script %q is not an absolute path", s.script)
 	}
-	if _, err := os.Stat(s.script); errors.Is(err, fs.ErrNotExist) {
-		return nil, fmt.Errorf("the evidence store is not deployed: nothing is at %s (labdrian apply deploys it to Claude Code): %w", s.script, err)
+	if err := checkScript(s.script); err != nil {
+		return nil, err
 	}
 	run := "sh " + s.script + " reviewed-each"
 	args := append([]string{s.script, "reviewed-each", filepath.Join(root, "docs", "wiki")}, reviews...)
@@ -101,6 +104,28 @@ func (s Script) Classified(root string, reviews []string) ([]bool, error) {
 		return nil, s.refusal(run, stderr, err)
 	}
 	return answers(run, stdout, len(reviews))
+}
+
+// checkScript says, before anything runs, whether a regular file that sh can open is at path, so a script sh cannot open
+// never reads as the script's own exit 2. Nothing, or a path part that is not a directory, is the evidence store not
+// deployed; anything else that cannot be checked, a path that is not a regular file and a regular file that cannot be
+// opened are each named. The open comes after the regular-file check, so a FIFO never blocks the hook. What it leaves: a
+// file changed between the check and the run, which sh still reports as its exit 2.
+func checkScript(path string) error {
+	info, err := os.Stat(path)
+	switch {
+	case errors.Is(err, fs.ErrNotExist), errors.Is(err, syscall.ENOTDIR):
+		return fmt.Errorf("the evidence store is not deployed: nothing is at %s (labdrian apply deploys it to Claude Code): %w", path, err)
+	case err != nil:
+		return fmt.Errorf("the evidence script %s cannot be checked: %w", path, err)
+	case !info.Mode().IsRegular():
+		return fmt.Errorf("the evidence script %s is not a regular file", path)
+	}
+	f, err := os.Open(path)
+	if err != nil {
+		return fmt.Errorf("the evidence script %s cannot be read: %w", path, err)
+	}
+	return f.Close()
 }
 
 // refusal is the error of a run that failed, as the package doc words it. said is the first line of stderr whole, its

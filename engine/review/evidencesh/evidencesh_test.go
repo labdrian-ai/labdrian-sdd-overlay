@@ -192,6 +192,66 @@ func TestClassified_NamesAnEvidenceStoreThatIsNotDeployed(t *testing.T) { // (h)
 	})
 }
 
+// A script that sh cannot open is refused before any run, and each way it cannot is named (T4y, `36d5bc62df38-4` F4), so
+// it never reads as the exit 2 of the script. The labels (v) to (y) are new: (l), (n), (d) and (p) of the shaping were taken.
+func TestClassified_RefusesAScriptShCannotOpenWithNoRun(t *testing.T) {
+	asked := func(t *testing.T, script string) error {
+		t.Helper()
+		c := &countingRunner{}
+		got, err := evidencesh.New(c, evidencesh.Options{Script: script}).Classified("/r", []string{"f/aaaa-1"})
+		if got != nil || c.calls != 0 {
+			t.Errorf("Classified = %v after %d calls; want no answer and no call", got, c.calls)
+		}
+		return err
+	}
+	t.Run("a path under a regular file is not deployed (v)", func(t *testing.T) {
+		file := filepath.Join(t.TempDir(), "plain")
+		if err := os.WriteFile(file, []byte("x\n"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		script := filepath.Join(file, "evidence.sh")
+		err := asked(t, script)
+		wantError(t, err, "the evidence store is not deployed", script, "labdrian apply")
+		if !errors.Is(err, syscall.ENOTDIR) {
+			t.Errorf("the error %v does not wrap syscall.ENOTDIR", err)
+		}
+	})
+	t.Run("a dangling symbolic link is not deployed (w)", func(t *testing.T) {
+		dir := t.TempDir()
+		link := filepath.Join(dir, "evidence.sh")
+		if err := os.Symlink(filepath.Join(dir, "gone"), link); err != nil {
+			t.Skipf("no symbolic link: %v", err)
+		}
+		err := asked(t, link)
+		wantError(t, err, "the evidence store is not deployed", link)
+	})
+	t.Run("a directory is not a regular file (x)", func(t *testing.T) {
+		dir := filepath.Join(t.TempDir(), "evidence.sh")
+		if err := os.Mkdir(dir, 0o755); err != nil {
+			t.Fatal(err)
+		}
+		err := asked(t, dir)
+		wantError(t, err, "the evidence script "+dir+" is not a regular file")
+	})
+	t.Run("a file nobody can read is named as unreadable (y)", func(t *testing.T) {
+		if os.Geteuid() == 0 {
+			t.Skip("root opens a file of mode 000")
+		}
+		script := filepath.Join(t.TempDir(), "evidence.sh")
+		if err := os.WriteFile(script, []byte("exit 0\n"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.Chmod(script, 0); err != nil {
+			t.Fatal(err)
+		}
+		err := asked(t, script)
+		wantError(t, err, "the evidence script "+script+" cannot be read")
+		if !errors.Is(err, fs.ErrPermission) {
+			t.Errorf("the error %v does not wrap fs.ErrPermission", err)
+		}
+	})
+}
+
 func TestClassified_RunsNothingForNoReview(t *testing.T) { // (d)
 	for name, reviews := range map[string][]string{"nil": nil, "empty": {}} {
 		t.Run(name, func(t *testing.T) {

@@ -6,6 +6,29 @@ import (
 	"testing"
 )
 
+// Short is the one place that cuts an object name to the characters the stored files and the markers of the stop hook use
+// (T4y, `36d5bc62df38-4` F3): 12, and the whole name when it is shorter.
+func TestShort(t *testing.T) {
+	for _, tc := range []struct{ name, in, want string }{
+		{"a SHA-1 name", strings.Repeat("0123456789", 4), "012345678901"},
+		{"a SHA-256 name", strings.Repeat("abcdef0123456789", 4), "abcdef012345"},
+		{"exactly 12 characters", "0123456789ab", "0123456789ab"},
+		{"one more than 12", "0123456789abc", "0123456789ab"},
+		{"one fewer than 12", "0123456789a", "0123456789a"},
+		{"5 characters", "abcde", "abcde"},
+		{"empty", "", ""},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := Short(tc.in); got != tc.want {
+				t.Errorf("Short(%q) = %q, want %q", tc.in, got, tc.want)
+			}
+		})
+	}
+	if ShortLength != 12 {
+		t.Errorf("ShortLength = %d, want 12", ShortLength)
+	}
+}
+
 // IsName is the one rule the three readers of a git object name decide by, so its boundary is
 // pinned at the function itself: exactly 40 or exactly 64 lowercase hexadecimal characters.
 func TestIsName(t *testing.T) {

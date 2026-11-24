@@ -91,7 +91,7 @@ func requireHelpers(t *testing.T) []string {
 // A tool a test needs that is missing skips the test on a developer machine, and fails it when CI is
 // "true", so a runner that lost the tool cannot pass by skipping. Every exported Require helper of the
 // package is held to it: a new helper with no row here fails this test, which is how a helper that
-// only skips (the class of NewGrandchild) cannot come back.
+// only skips (the class of the grandchild helper of T4x) cannot come back.
 func TestEveryRequireHelperFailsOnCI(t *testing.T) {
 	helpers := requireHelpers(t)
 	if len(helpers) == 0 {
