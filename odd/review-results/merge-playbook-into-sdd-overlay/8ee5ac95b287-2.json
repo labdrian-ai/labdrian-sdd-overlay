@@ -1,0 +1,76 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "ee092d9eb8109c5df58e1a8ed99ba92b33234123",
+    "head": "8ee5ac95b287935866a0d837bb0eb0acb945e73b",
+    "diff_sha256": "f7d3ce108f69366b74c05f4984bfcf1d6d7557ed1d811c7f94482375d5c71a60",
+    "paths": [
+      "agents/classifier.md",
+      "engine/agentgen/models_mid_line_internal_test.go",
+      "engine/cmd/role_chain_steps_test.go",
+      "engine/review/evidencesh/evidencesh.go",
+      "engine/review/evidencesh/evidencesh_refusal_text_test.go",
+      "engine/shelltest/classify_step_check_test.go",
+      "engine/skills/classifier_artifact_test.go",
+      "engine/skills/classify_step_artifact_test.go",
+      "odd/tasks/merge-playbook-into-sdd-overlay.md",
+      "overlay.manifest",
+      "roles/classifier/body.md",
+      "skills/role-chain/.approval.json",
+      "skills/role-chain/SKILL.md",
+      "skills/role-chain/references/classify.md",
+      "skills/role-chain/references/models.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "ee092d9eb8109c5df58e1a8ed99ba92b33234123",
+      "head": "8ee5ac95b287935866a0d837bb0eb0acb945e73b",
+      "diff_sha256": "f7d3ce108f69366b74c05f4984bfcf1d6d7557ed1d811c7f94482375d5c71a60"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "agents/classifier.md",
+        "engine/agentgen/models_mid_line_internal_test.go",
+        "engine/cmd/role_chain_steps_test.go",
+        "engine/review/evidencesh/evidencesh.go",
+        "engine/review/evidencesh/evidencesh_refusal_text_test.go",
+        "engine/shelltest/classify_step_check_test.go",
+        "engine/skills/classifier_artifact_test.go",
+        "engine/skills/classify_step_artifact_test.go",
+        "odd/tasks/merge-playbook-into-sdd-overlay.md",
+        "overlay.manifest",
+        "roles/classifier/body.md",
+        "skills/role-chain/.approval.json",
+        "skills/role-chain/SKILL.md",
+        "skills/role-chain/references/classify.md",
+        "skills/role-chain/references/models.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "skills/role-chain/references/classify.md:36",
+        "severity": "SUGGESTION",
+        "claim": "Step 10 relaunches the classifier with every FAIL line of the second check. evidence.sh `check` also runs over the general rules file (evidence.sh:300-305) and prints its FAIL lines under that file's label. A failure that comes from the general rules file cannot be fixed by new page rows, and step 9 restores only the page. The relaunch is then futile and ends in blocked after one wasted launch. Step 4 passed before the append, so this needs the rules file to change during the step. It is unlikely and costs one extra launch, with no data risk. The R7 test (classify_step_check_test.go) pins only `FAIL evidence.md:` lines, so it does not cover that label.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "skills/_shared/evidence/evidence.sh:300"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the whole diff (t4bc.diff) and all 15 changed paths.",
+      "Read evidence.sh at head: the exit codes of reviewed, check, index and count match the exits that classify.md steps 3 to 5 and 9 name. The `review findings --feature --stored` command exists in engine/cmd/review_findings.go.",
+      "The evidencesh.go change only drops the close error of a read-only probe. That is harmless, and the new errorReturns test walk covers the refusal returns.",
+      "Approver values `labdrian` and `labdrian-ai` both already occur among the skills' .approval.json files. I did not recompute the sha256 in the role-chain approval record.",
+      "The new Go tests and the manifest row look consistent with the code. I did not run anything."
+    ]
+  }
+}

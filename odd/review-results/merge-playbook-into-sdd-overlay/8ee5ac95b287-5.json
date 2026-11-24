@@ -1,0 +1,104 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "ee092d9eb8109c5df58e1a8ed99ba92b33234123",
+    "head": "8ee5ac95b287935866a0d837bb0eb0acb945e73b",
+    "diff_sha256": "f7d3ce108f69366b74c05f4984bfcf1d6d7557ed1d811c7f94482375d5c71a60",
+    "paths": [
+      "agents/classifier.md",
+      "engine/agentgen/models_mid_line_internal_test.go",
+      "engine/cmd/role_chain_steps_test.go",
+      "engine/review/evidencesh/evidencesh.go",
+      "engine/review/evidencesh/evidencesh_refusal_text_test.go",
+      "engine/shelltest/classify_step_check_test.go",
+      "engine/skills/classifier_artifact_test.go",
+      "engine/skills/classify_step_artifact_test.go",
+      "odd/tasks/merge-playbook-into-sdd-overlay.md",
+      "overlay.manifest",
+      "roles/classifier/body.md",
+      "skills/role-chain/.approval.json",
+      "skills/role-chain/SKILL.md",
+      "skills/role-chain/references/classify.md",
+      "skills/role-chain/references/models.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "hunt",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "ee092d9eb8109c5df58e1a8ed99ba92b33234123",
+      "head": "8ee5ac95b287935866a0d837bb0eb0acb945e73b",
+      "diff_sha256": "f7d3ce108f69366b74c05f4984bfcf1d6d7557ed1d811c7f94482375d5c71a60"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "agents/classifier.md",
+        "engine/agentgen/models_mid_line_internal_test.go",
+        "engine/cmd/role_chain_steps_test.go",
+        "engine/review/evidencesh/evidencesh.go",
+        "engine/review/evidencesh/evidencesh_refusal_text_test.go",
+        "engine/shelltest/classify_step_check_test.go",
+        "engine/skills/classifier_artifact_test.go",
+        "engine/skills/classify_step_artifact_test.go",
+        "odd/tasks/merge-playbook-into-sdd-overlay.md",
+        "overlay.manifest",
+        "roles/classifier/body.md",
+        "skills/role-chain/.approval.json",
+        "skills/role-chain/SKILL.md",
+        "skills/role-chain/references/classify.md",
+        "skills/role-chain/references/models.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "skills/role-chain/references/classify.md:7",
+        "severity": "SUGGESTION",
+        "claim": "Step 3 says what to do on exits 0 to 4 of `reviewed` and has no 'Any other exit' clause, unlike steps 4 and 9. Step 3 is the first command that runs `<script>`. When the evidence store is not deployed, or `<script>` cannot be opened, `sh` exits with its own status: 127 when bash is sh, or 2 on dash, which step 3 calls 'usage'. So the parent gets either no instruction or a wrong reason. The Go adapter guards against exactly this case: checkScript refuses before a run so that a script sh cannot open never reads as the script's own exit 2. The parent's step has no such guard. R2 (engine/skills/classify_step_artifact_test.go:100) checks step 3 only for exits 0 to 4 and 'stop, blocked', so the gap passes its pin. Fix: add 'Any other exit, or a script that is missing: show stderr and stop, blocked' to step 3, and hold it in R2 as step 4's clause is held.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "skills/role-chain/references/classify.md:7",
+          "engine/skills/classify_step_artifact_test.go:100"
+        ]
+      },
+      {
+        "id": "F2",
+        "location": "engine/review/evidencesh/evidencesh_refusal_text_test.go:87",
+        "severity": "SUGGESTION",
+        "claim": "The exception {\"Classified\", \"err\", ...} matches any `return nil, err` in Classified by its text alone. Nothing checks that this `err` comes from checkScript, which is what its reason claims. Concrete case: replace `if err := checkScript(s.script); err != nil { return nil, err }` with another pre-run check that binds `err` and returns it, and keep checkScript's Errorf calls elsewhere in the file's checkScript body. The exception is still matched exactly once, and a refusal before a run that no README or CHANGELOG text names passes. This is the F1 class of 20b8b0cf75fb-6, narrowed but not closed for the identifier exception. Fix: also require that the return's enclosing if-statement initializes `err` from a call to checkScript, or state the bound in the test's doc as L95 states the rewrite bound.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/review/evidencesh/evidencesh_refusal_text_test.go:87"
+        ]
+      },
+      {
+        "id": "F3",
+        "location": "skills/role-chain/references/models.md:6",
+        "severity": "SUGGESTION",
+        "claim": "The Mid line now lists `classifier` in the same sentence as roles that run on every provider, and the line ends with the Pi model id. Line 11 says Mid roles take the provider's mid model on Codex. The classifier is Claude-only: agentgen's claudeOnlyRoles has no Pi, Codex or OpenCode file, and classify.md:3 says to skip the step there. A parent that reads models.md alone to pick a role's model on Pi or Codex finds the classifier listed with a Pi model and no Claude-only mark. This contradicts SKILL.md's 'Claude Code only'. Fix: mark it on the line, e.g. 'classifier (Claude Code only)', and adjust R5's split.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "skills/role-chain/references/models.md:6"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the whole diff (768 lines, 15 paths) and, at head in the worktree, roles/classifier/body.md, agents/classifier.md lines 1-36, skills/role-chain/references/models.md, engine/review/evidencesh/evidencesh.go, engine/review/evidencesh/evidencesh_refusal_text_test.go, engine/cmd/review_stop_hook.go lines 218-239, engine/cmd/review_findings.go lines 30-69, skills/_shared/evidence/evidence.sh lines 1-90, and the readability row of roles/reviewer/rows.json:9, which I applied.",
+      "Read L90 (task document lines 4645-4724), L94 (4885-4917), L95 (4919-4953), and L96 and L97 in the diff. Read odd/review-results/merge-playbook-into-sdd-overlay/20b8b0cf75fb-6.json.",
+      "20b8b0cf75fb-6 F1: resolved as L95 choices 1 and 2 say. errorReturns walks every return of Classified and checkScript, skips function literals, fails on a return with no results, and passes nil and fmt.Errorf (a non-literal format is still caught by errorFormats:66-69). Any other expression must match one of the three exceptions exactly once. checkScript now drops its probe's close error with a reason comment (evidencesh.go:131-134), and its doc gains the sentence (evidencesh.go:114-115). F2 below the identifier exception is a residual bound.",
+      "20b8b0cf75fb-6 F2: resolved. L95 (task document line 4925) records the correction of L93's Me4 to line 95, and L97 names Me4 by its code text.",
+      "Classify step agreement. classify.md step 1 uses the same `review findings --feature --stored <x>.json` command the hook's classifyReason prints (review_stop_hook.go:235). `<id>` is `<feature>/<head12>-<n>`, as the hook's Review identifier is. The hook's 'the Classify step of the role-chain skill' resolves to the SKILL.md:38 bullet `- Classify, ` that R9 accepts. Step 6's inputs (kept findings, `<id>`, `<page>`, `<rules>`, `<index>`, no date) match body.md:10 (the three required inputs; date 'when known', else today, body.md:37). Steps 7-8 read the two fences of body.md's Output and append to `<page>`. Step 10's `<failed>` lines `FAIL <file>: <problem>` match body.md:10 and evidence.sh:20. The one relaunch and the stop on the second failure are bounded. The empty page equals body.md:44-56.",
+      "Checked L97's line counts against the diff: evidencesh.go +6/-2 and the refusal test +82/-4 both match.",
+      "Hunt: the new tests write and delete no repository path (HOME is a TempDir; R4 and R7 write inside newEvidenceWorld). checkScript's dropped close error is an intentional, documented discard; no other error is swallowed in a changed function.",
+      "Not run: no build, test, vet or mutation. Every check above was done by reading files with Read and Grep."
+    ]
+  }
+}

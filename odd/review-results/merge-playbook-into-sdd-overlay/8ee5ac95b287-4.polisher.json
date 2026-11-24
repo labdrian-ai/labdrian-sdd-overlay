@@ -1,0 +1,47 @@
+{
+  "kind": "polisher",
+  "base": "665b99f747e245c97cad19b45e2ea9f144bf2395",
+  "head": "8ee5ac95b287935866a0d837bb0eb0acb945e73b",
+  "diff_sha256": "7e6e3ff2bc17b02f7ed51c63e06bf3f5e931e9afbdbee54e5f0ed9a2b501b183",
+  "findings": {
+    "findings": [
+      {
+        "location": "skills/role-chain/SKILL.md:38",
+        "severity": "WARNING",
+        "claim": "The new Binding line tells the parent to run Classify right after `review record`. It never waits for `review verify`. The spec (task document line 157: \"after `review record` and `verify` of a result\") and classify.md's own opening (\"after `review record` (and verify)\") both require the verifier's verdict first. A parent that follows the Binding line can therefore classify a BLOCKER or CRITICAL finding before the verifier rules on it. If the verifier later finds it not-reproduced, the row stays on the evidence page for good, because classify.md:16 says \"Never delete or edit a row\". After that, `reviewed` exits 0, so the stop hook never asks again.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "evidence": [
+          "skills/role-chain/SKILL.md:38 (added by 665b99f7): \"- Classify, Claude Code only: after `review record`, follow `references/classify.md`.\" The line names no verify step.",
+          "The same Binding section (SKILL.md:37) has the verifier reproduce severe findings after the record. So in chain order, verify comes after `review record`.",
+          "engine/cmd/usage.go:311-314: in `review findings`, the verdict \"is left out when the verifier did not run\". A BLOCKER or CRITICAL is left out only when \"the verdict found not-reproduced\". Before verify, every severe finding is therefore in `kept`, and classify.md step 1 (line 5) and step 6 (line 10) send `kept` to the classifier.",
+          "odd/tasks/merge-playbook-into-sdd-overlay.md:157 states the order as \"after `review record` and `verify`\". Line 436 states it as \"after `review record` / `verify`\". The Binding line keeps only the first half.",
+          "engine/skills/classify_step_artifact_test.go:525 pins this exact line verbatim, so the gap is now locked in by a test."
+        ]
+      },
+      {
+        "location": "skills/role-chain/references/classify.md:13",
+        "severity": "WARNING",
+        "claim": "classify.md has no ending for a classifier reply whose Evidence fence is empty. The classifier body says to skip findings it judges not real, dismissed or already fixed, and to return an empty fence when nothing is left. Step 9 then appends nothing, `check` passes, and the step reports success. But no Evidence row carries `<id>`, so `reviewed` keeps exiting 1 and the result stays unclassified. The stop hook then names it again in every new session, and each run costs another classifier launch with the same outcome.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "evidence": [
+          "roles/classifier/body.md:25: \"A finding the review marks as not real, dismissed, or already fixed before the review is not evidence. Skip it.\" body.md:67-68 say each fence is \"an empty fence when there are none\".",
+          "classify.md:11 (step 7) blocks only when a fence is missing or holds a bad line, not when it is empty. classify.md:13 (step 9), on exit 0, only runs `count` and reports.",
+          "skills/_shared/evidence/evidence.sh:191 and 234: `reviewed` answers yes only when an Evidence row's Review cell equals the identifier (`found`). With no such row it exits 1 (lines 340-343), so classify.md:7 (step 3) means \"go on\" on every later run.",
+          "engine/cmd/review_stop_hook.go:238 asks again: \"The stop hook names each result once for each session\". Because the app keys classification on the evidence page alone (engine/review/app/classify.go:16), a result whose kept findings were all skipped is asked about in every session for good."
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full target diff /tmp/claude-1000/-home-labdrian-labdrian-sdd-overlay/45673332-5a42-429f-889a-50c9d8bcb1fc/scratchpad/t4bc.diff (665b99f7 and 8ee5ac95).",
+      "Read skills/_shared/evidence/evidence.sh at head: the exits of check, index, count, reviewed and reviewed-each, the FAIL line format, and the missing-page handling. Steps 3-5 and 9 of classify.md match these exits.",
+      "Read roles/classifier/body.md at head (its output and skip rules) and engine/agentgen/roles.go:189-207 (the classifier is already tierMid, which matches the models.md Mid line).",
+      "Read engine/cmd/review_stop_hook.go:228-239 (the classify reason and its `<feature>/<head12>-<n>` identifier) and engine/cmd/usage.go:309-315 (the flags, exits and verdict handling of `review findings`). The identifier and the step 1 command match classify.md.",
+      "Grepped odd/tasks/merge-playbook-into-sdd-overlay.md for the specified classify order (lines 92, 157, 436).",
+      "The evidencesh change (the probe's close error is dropped, and every error return is checked against the named exceptions) and the new tests R1-R9: I found no user-impacting defect. Declared Risk 3,5 and Risk 3 match the deployed skill, reference and agent changes and the stop-hook adapter change.",
+      "No commands run; I did not run go test or the evidence script.",
+      "The judge read the whole range ee092d9e..8ee5ac95 (one bind); the foreman records the same judgment on each commit of the range; both findings are in files of 665b99f7"
+    ]
+  }
+}
