@@ -1,0 +1,168 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "75cdbb84e656cd83c3f77574d863720feead5d44",
+    "head": "c9440b24b20f22aa7bf74c14d9a5cf2297fc5061",
+    "diff_sha256": "8396f95d0014d67436f16cf4efb2b83891b76df53e52f1ff8c5e10e75dd27a69",
+    "paths": [
+      "CHANGELOG.md",
+      "README.md",
+      "engine/architecture_short_name_test.go",
+      "engine/cmd/review_stop_hook.go",
+      "engine/cmd/review_stop_hook_bound_unix_test.go",
+      "engine/cmd/review_stop_hook_docs_test.go",
+      "engine/cmd/review_stop_hook_group_unix_test.go",
+      "engine/execrunner/execrunner.go",
+      "engine/execrunner/group_linux_test.go",
+      "engine/execrunner/group_other.go",
+      "engine/execrunner/group_unix.go",
+      "engine/execrunner/group_unix_test.go",
+      "engine/execrunner/lingering_test.go",
+      "engine/gitobject/gitobject.go",
+      "engine/gitobject/gitobject_test.go",
+      "engine/overlaytest/grandchild_unix.go",
+      "engine/overlaytest/overlaytest.go",
+      "engine/overlaytest/require_test.go",
+      "engine/pipkg/comparison.go",
+      "engine/review/app/stop.go",
+      "engine/review/candidate_test.go",
+      "engine/review/evidencesh/evidencesh.go",
+      "engine/review/evidencesh/evidencesh_test.go",
+      "engine/review/evidencesh/evidencesh_unix_test.go",
+      "engine/review/names.go",
+      "engine/review/review.go",
+      "odd/tasks/merge-playbook-into-sdd-overlay.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "hunt",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "75cdbb84e656cd83c3f77574d863720feead5d44",
+      "head": "c9440b24b20f22aa7bf74c14d9a5cf2297fc5061",
+      "diff_sha256": "8396f95d0014d67436f16cf4efb2b83891b76df53e52f1ff8c5e10e75dd27a69"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "README.md",
+        "engine/architecture_short_name_test.go",
+        "engine/cmd/review_stop_hook.go",
+        "engine/cmd/review_stop_hook_bound_unix_test.go",
+        "engine/cmd/review_stop_hook_docs_test.go",
+        "engine/cmd/review_stop_hook_group_unix_test.go",
+        "engine/execrunner/execrunner.go",
+        "engine/execrunner/group_linux_test.go",
+        "engine/execrunner/group_other.go",
+        "engine/execrunner/group_unix.go",
+        "engine/execrunner/group_unix_test.go",
+        "engine/execrunner/lingering_test.go",
+        "engine/gitobject/gitobject.go",
+        "engine/gitobject/gitobject_test.go",
+        "engine/overlaytest/grandchild_unix.go",
+        "engine/overlaytest/overlaytest.go",
+        "engine/overlaytest/require_test.go",
+        "engine/pipkg/comparison.go",
+        "engine/review/app/stop.go",
+        "engine/review/candidate_test.go",
+        "engine/review/evidencesh/evidencesh.go",
+        "engine/review/evidencesh/evidencesh_test.go",
+        "engine/review/evidencesh/evidencesh_unix_test.go",
+        "engine/review/names.go",
+        "engine/review/review.go",
+        "odd/tasks/merge-playbook-into-sdd-overlay.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "engine/architecture_short_name_test.go:23",
+        "severity": "SUGGESTION",
+        "claim": "The lint keeps one file-wide map of names bound to 12 and matches them by text, ignoring scope. Two misreads follow. First, an `i := 12` in one function makes an unrelated `buf[:i]` in another function of the same file a hit, and the message says 'write the short name of an object once, as gitobject.Short' about code that cuts no object name. Second, the doc lists 'a name matched by its text alone, whatever scope binds it' under 'What it does not follow'. That is what the lint does, and the doc does not say it is a source of false positives. A maintainer who reads the doc can conclude that scope is respected.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/architecture_short_name_test.go:23"
+        ]
+      },
+      {
+        "id": "F2",
+        "location": "engine/architecture_short_name_test.go:40",
+        "severity": "SUGGESTION",
+        "claim": "The doc says the lint follows 'a name the same file binds to it with const'. The ValueSpec branch records a name only when its own Values hold the literal 12. A const group with an implicitly repeated value, `const ( a = 12; b )`, gives `b` the value 12, but `b` has no Values, so `s[:b]` is not flagged. That is a const spelling the doc claims to cover and the table does not pin.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/architecture_short_name_test.go:40"
+        ]
+      },
+      {
+        "id": "F3",
+        "location": "engine/review/evidencesh/evidencesh.go:124",
+        "severity": "SUGGESTION",
+        "claim": "checkScript must check for a regular file before it opens the path, or a FIFO at the script path would block os.Open, and with it the Stop hook, without limit. That order is the only guard against the block, and no test pins it (L89 says so). A mutation that moves the open before the mode check passes every test. A FIFO test does not have to hang: it can run Classified in a goroutine and fail after a short time.After.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/review/evidencesh/evidencesh.go:124"
+        ]
+      },
+      {
+        "id": "F4",
+        "location": "engine/review/evidencesh/evidencesh.go:7",
+        "severity": "SUGGESTION",
+        "claim": "The bound text '2 seconds more' is copied as a number into the evidencesh package doc, README.md:1582 and CHANGELOG.md:30. It comes from execrunner's private killGrace (execrunner.go:23), and nothing ties the two together. The docs test checks the literal phrase, and SH15 only checks that the stop is back within 6 s. If killGrace became 3 s, the stop would take about 5.3 s, SH15 and the docs test would still pass, and all three texts would state a bound the code no longer has. That is the T4w error class again: a stated bound the runner does not have. The bound text matches today's code: sh is killed by SIGKILL through CommandContext at the 2 s timeout, and WaitDelay = killGrace = 2 s bounds the wait for the pipes from the moment the context is done or sh exits.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/review/evidencesh/evidencesh.go:7",
+          "engine/execrunner/execrunner.go:23",
+          "engine/cmd/review_stop_hook_bound_unix_test.go:30"
+        ]
+      },
+      {
+        "id": "F5",
+        "location": "engine/gitobject/gitobject.go:18",
+        "severity": "SUGGESTION",
+        "claim": "gitobject now holds the engine's only short-name cut, but its context did not move with it. The package doc (gitobject.go:1-8) and the H34 row in engine/architecture_test.go:124 still describe it only as the full-name rule shared by the workflow event, gitprov and gitfs. ShortLength's doc lists review files, the worktree and stop-hook markers, but not pipkg's DeployTip, which now also depends on it. A reader deciding whether changing ShortLength is safe does not learn from these docs that the Pi package report changes too. No test of pipkg was cited for DeployTip's length.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/gitobject/gitobject.go:18",
+          "engine/pipkg/comparison.go:119"
+        ]
+      },
+      {
+        "id": "F6",
+        "location": "CHANGELOG.md:30",
+        "severity": "SUGGESTION",
+        "claim": "Commit c9440b24 (Risk: 3) changes what the Stop hook prints. A deployed evidence.sh that is a directory, has mode 000, cannot be stat'ed, or sits under a path part that is not a directory is now refused before any run, with a named line: 'is not a regular file', 'cannot be read', 'cannot be checked' or 'not deployed'. Before, it reached sh and printed 'exited 2: sh: cannot open'. The CHANGELOG entry still names only the 'not deployed' case. The README mentions these refusals only under the generic 'what the script cannot tell is one line on stderr'.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "CHANGELOG.md:30",
+          "engine/review/evidencesh/evidencesh.go:121"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the whole diff /tmp/claude-1000/-home-labdrian-labdrian-sdd-overlay/45673332-5a42-429f-889a-50c9d8bcb1fc/scratchpad/t4y.diff, 1397 lines across 27 paths, including the deleted files and L89.",
+      "Read L88 (odd/tasks/merge-playbook-into-sdd-overlay.md:4527-4592) and the review records 36d5bc62df38-4.json and 36d5bc62df38-6.json.",
+      "-4 F1 = -6 F2: resolved. The group field, WithProcessGroup, ProcessGroup and both ownGroup calls are gone from execrunner.go (Run at lines 83-86, outputIn at 126-129). The stop-hook wiring is execrunner.New().WithMaxOutput(...) with no group. X4 (group_linux_test.go) checks Getpgrp for both Run and Output.",
+      "-4 F2: resolved. README.md:1582 and CHANGELOG.md:30 state the bound: stopped at 2 s, up to 2 s more while a process the script started holds its output, and that process can outlive the stop. The docs test requires the three phrases and refuses 'with every process it started' and 'at most 2 seconds'. A grep of the head tree outside odd/ finds the refused phrase only in the test. The text matches the code: CommandContext's default Cancel is Process.Kill (SIGKILL to sh), and WaitDelay=killGrace=2s (execrunner.go:23, 129) bounds the pipe wait from context done or process exit. See F4 for the missing link between the number and killGrace.",
+      "-4 F3: resolved. The lint walks every non-test .go file of the engine module except testdata and gitobject/gitobject.go, needs at least 100 files, and follows const, var and := bindings to 12. pipkg.shortSHA and review.ShortName are removed, and a grep for ShortName\\b and shortSHA finds no production use. See F1 and F2 for residual gaps.",
+      "-4 F4: resolved. checkScript (evidencesh.go:114-129) maps ENOTDIR to 'not deployed' and refuses non-regular, unreadable and uncheckable paths with no run. E1 (v)-(y) pin each case. See F3 for the untested FIFO order.",
+      "-4 F5: resolved as L88 says. SH15 is rewritten with a 2-6 s window, and X1 and E1 (t) are deleted.",
+      "-6 F1: resolved. NewGrandchild is deleted. RequireBash, RequireShAndAwk and RequirePrograms end in lacking(), which fails when CI=true. requireProcessLister calls RequirePrograms. TestEveryRequireHelperFailsOnCI parses the exported Require* helpers and runs each with CI on and off.",
+      "-6 F3, F4 and F5: dissolved. group_unix.go (the raw-id Cancel), grandchild_unix.go (Started and RequireGone) and group_other.go (the killGrace text) are deleted.",
+      "Checked the users of the changed names in the worktree: names.go reads gitobject.ShortLength. architecture_test.go classes pipkg as Adapter and gitobject as Domain, so the new import is allowed. Hook output still goes through cannotTellPrefix, and no caller tests errors.Is(fs.ErrNotExist) on the adapter error. lingering_test.go still uses os.",
+      "Read roles/reviewer/rows.json:9 (the readability row) and applied it.",
+      "Ran nothing. No build, test, vet or timing was run, so any check not listed here is 'not run'."
+    ]
+  }
+}

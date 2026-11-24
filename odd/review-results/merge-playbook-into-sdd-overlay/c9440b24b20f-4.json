@@ -1,0 +1,115 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "75cdbb84e656cd83c3f77574d863720feead5d44",
+    "head": "c9440b24b20f22aa7bf74c14d9a5cf2297fc5061",
+    "diff_sha256": "8396f95d0014d67436f16cf4efb2b83891b76df53e52f1ff8c5e10e75dd27a69",
+    "paths": [
+      "CHANGELOG.md",
+      "README.md",
+      "engine/architecture_short_name_test.go",
+      "engine/cmd/review_stop_hook.go",
+      "engine/cmd/review_stop_hook_bound_unix_test.go",
+      "engine/cmd/review_stop_hook_docs_test.go",
+      "engine/cmd/review_stop_hook_group_unix_test.go",
+      "engine/execrunner/execrunner.go",
+      "engine/execrunner/group_linux_test.go",
+      "engine/execrunner/group_other.go",
+      "engine/execrunner/group_unix.go",
+      "engine/execrunner/group_unix_test.go",
+      "engine/execrunner/lingering_test.go",
+      "engine/gitobject/gitobject.go",
+      "engine/gitobject/gitobject_test.go",
+      "engine/overlaytest/grandchild_unix.go",
+      "engine/overlaytest/overlaytest.go",
+      "engine/overlaytest/require_test.go",
+      "engine/pipkg/comparison.go",
+      "engine/review/app/stop.go",
+      "engine/review/candidate_test.go",
+      "engine/review/evidencesh/evidencesh.go",
+      "engine/review/evidencesh/evidencesh_test.go",
+      "engine/review/evidencesh/evidencesh_unix_test.go",
+      "engine/review/names.go",
+      "engine/review/review.go",
+      "odd/tasks/merge-playbook-into-sdd-overlay.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "75cdbb84e656cd83c3f77574d863720feead5d44",
+      "head": "c9440b24b20f22aa7bf74c14d9a5cf2297fc5061",
+      "diff_sha256": "8396f95d0014d67436f16cf4efb2b83891b76df53e52f1ff8c5e10e75dd27a69"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "README.md",
+        "engine/architecture_short_name_test.go",
+        "engine/cmd/review_stop_hook.go",
+        "engine/cmd/review_stop_hook_bound_unix_test.go",
+        "engine/cmd/review_stop_hook_docs_test.go",
+        "engine/cmd/review_stop_hook_group_unix_test.go",
+        "engine/execrunner/execrunner.go",
+        "engine/execrunner/group_linux_test.go",
+        "engine/execrunner/group_other.go",
+        "engine/execrunner/group_unix.go",
+        "engine/execrunner/group_unix_test.go",
+        "engine/execrunner/lingering_test.go",
+        "engine/gitobject/gitobject.go",
+        "engine/gitobject/gitobject_test.go",
+        "engine/overlaytest/grandchild_unix.go",
+        "engine/overlaytest/overlaytest.go",
+        "engine/overlaytest/require_test.go",
+        "engine/pipkg/comparison.go",
+        "engine/review/app/stop.go",
+        "engine/review/candidate_test.go",
+        "engine/review/evidencesh/evidencesh.go",
+        "engine/review/evidencesh/evidencesh_test.go",
+        "engine/review/evidencesh/evidencesh_unix_test.go",
+        "engine/review/names.go",
+        "engine/review/review.go",
+        "odd/tasks/merge-playbook-into-sdd-overlay.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "engine/cmd/review_stop_hook_bound_unix_test.go:251",
+        "severity": "SUGGESTION",
+        "claim": "SH15 asserts wall-clock bounds (at least 2s, at most 6s) around a nominal 4s run. A heavily loaded CI runner could exceed 6s and fail falsely. The task document admits this. Five unloaded runs measured 4.27 to 4.35s. The test also leaves a `/bin/sleep 10` running after it ends.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/cmd/review_stop_hook_bound_unix_test.go:251",
+          "odd/tasks/merge-playbook-into-sdd-overlay.md:4590"
+        ]
+      },
+      {
+        "id": "F2",
+        "location": "engine/architecture_short_name_test.go:59",
+        "severity": "SUGGESTION",
+        "claim": "The lint now matches an identifier by its text alone, whatever scope binds it. Any non-test engine file that binds a name to 12 anywhere (`n := 12`) and slices `x[:n]` with an unrelated `n` elsewhere in the same file is flagged. Today's tree passes, so this is a possible future false positive. The doc comment admits the limit.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/architecture_short_name_test.go:59",
+          "engine/architecture_short_name_test.go:82"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full diff, 1397 lines.",
+      "Grepped the worktree for remaining uses of ShortName, shortSHA, shortLength, NewGrandchild and WithProcessGroup. Only tests, docs and the task document match, and no production file does.",
+      "Checked that the group option was removed from every execrunner path (Run, outputIn) and from the stop hook wiring. The runner is back to the default process group, and X4 pins it.",
+      "Checked checkScript. It stats first, which follows symlinks and refuses a FIFO or directory before the open. Dangling links and ENOTDIR map to 'not deployed'. The docs admit the check-to-run race.",
+      "Checked the stop hook's bound. It is now timeout 2s plus the runner grace 2s. Settings.go has no hook timeout below 4s: grep of settings/review_stop.go shows no timeout key.",
+      "Checked the CI-fail behaviour of the Require helpers. RequireBash and requireProcessLister now fail on CI when a tool is missing. That is intentional and held by TestEveryRequireHelperFailsOnCI.",
+      "Ran no commands. The worktree is read-only evidence and I executed no tests."
+    ]
+  }
+}

@@ -1,0 +1,100 @@
+{
+  "kind": "sweeper",
+  "base": "5551f0ca4a09b4ed01dd2a07e626550668d0b8c9",
+  "head": "5175def31aa738d1b3fe9150e3e2fe9ccb3908d4",
+  "diff_sha256": "ae89dfc5a8327c974a3add84540a8e0cf58500c00193a03f5cb9fe9860b474ef",
+  "sweep": "5175def31aa7-1.sweep.json",
+  "commit": null,
+  "candidates": [
+    {
+      "candidate": "T1 path: engine/cmd/review_stop_hook_group_unix_test.go",
+      "disposition": "live",
+      "evidence": "Removed on purpose by L88 choice b (drops the process group, its option and its tests); rg outside odd/ for WithProcessGroup, ownGroup, ProcessGroup(), group_unix, group_other and the removed test names finds no leftover reference."
+    },
+    {
+      "candidate": "T1 path: engine/execrunner/group_other.go",
+      "disposition": "live",
+      "evidence": "Removed on purpose by L88 choice b (drops the process group, its option and its tests); rg outside odd/ for WithProcessGroup, ownGroup, ProcessGroup(), group_unix, group_other and the removed test names finds no leftover reference."
+    },
+    {
+      "candidate": "T1 path: engine/execrunner/group_unix.go",
+      "disposition": "live",
+      "evidence": "Removed on purpose by L88 choice b (drops the process group, its option and its tests); rg outside odd/ for WithProcessGroup, ownGroup, ProcessGroup(), group_unix, group_other and the removed test names finds no leftover reference."
+    },
+    {
+      "candidate": "T1 path: engine/execrunner/group_unix_test.go",
+      "disposition": "live",
+      "evidence": "Removed on purpose by L88 choice b (drops the process group, its option and its tests); rg outside odd/ for WithProcessGroup, ownGroup, ProcessGroup(), group_unix, group_other and the removed test names finds no leftover reference."
+    },
+    {
+      "candidate": "T1 path: engine/review/evidencesh/evidencesh_unix_test.go",
+      "disposition": "live",
+      "evidence": "Removed on purpose by L88 choice b (drops the process group, its option and its tests); rg outside odd/ for WithProcessGroup, ownGroup, ProcessGroup(), group_unix, group_other and the removed test names finds no leftover reference."
+    },
+    {
+      "candidate": "T1 name: ProcessGroup",
+      "disposition": "live",
+      "evidence": "Removed on purpose by L88 choice b (drops the process group, its option and its tests); rg outside odd/ for WithProcessGroup, ownGroup, ProcessGroup(), group_unix, group_other and the removed test names finds no leftover reference."
+    },
+    {
+      "candidate": "T1 name: TestClassified_AGrandchildDoesNotOutliveTheTimeoutOverAGroupRunner",
+      "disposition": "live",
+      "evidence": "Removed on purpose by L88 choice b (drops the process group, its option and its tests); rg outside odd/ for WithProcessGroup, ownGroup, ProcessGroup(), group_unix, group_other and the removed test names finds no leftover reference."
+    },
+    {
+      "candidate": "T1 name: TestOwnGroupCancelOfAnEndedProgramIsProcessDone",
+      "disposition": "live",
+      "evidence": "Removed on purpose by L88 choice b (drops the process group, its option and its tests); rg outside odd/ for WithProcessGroup, ownGroup, ProcessGroup(), group_unix, group_other and the removed test names finds no leftover reference."
+    },
+    {
+      "candidate": "T1 name: TestProcessGroupIsOptIn",
+      "disposition": "live",
+      "evidence": "Removed on purpose by L88 choice b (drops the process group, its option and its tests); rg outside odd/ for WithProcessGroup, ownGroup, ProcessGroup(), group_unix, group_other and the removed test names finds no leftover reference."
+    },
+    {
+      "candidate": "T1 name: TestProcessGroupKillsTheGrandchildAtTheDeadline",
+      "disposition": "live",
+      "evidence": "Removed on purpose by L88 choice b (drops the process group, its option and its tests); rg outside odd/ for WithProcessGroup, ownGroup, ProcessGroup(), group_unix, group_other and the removed test names finds no leftover reference."
+    },
+    {
+      "candidate": "T1 name: TestStopHookBoundsTheEvidenceScriptWithEveryProcessItStarted",
+      "disposition": "live",
+      "evidence": "Removed on purpose by L88 choice b (drops the process group, its option and its tests); rg outside odd/ for WithProcessGroup, ownGroup, ProcessGroup(), group_unix, group_other and the removed test names finds no leftover reference."
+    },
+    {
+      "candidate": "T1 name: WithProcessGroup",
+      "disposition": "live",
+      "evidence": "Removed on purpose by L88 choice b (drops the process group, its option and its tests); rg outside odd/ for WithProcessGroup, ownGroup, ProcessGroup(), group_unix, group_other and the removed test names finds no leftover reference."
+    },
+    {
+      "candidate": "T1 name: ownGroup",
+      "disposition": "live",
+      "evidence": "Removed on purpose by L88 choice b (drops the process group, its option and its tests); rg outside odd/ for WithProcessGroup, ownGroup, ProcessGroup(), group_unix, group_other and the removed test names finds no leftover reference."
+    },
+    {
+      "candidate": "T2 deadcode engine: overlaytest/grandchild_unix.go: unreachable func: Grandchild.RequireGone",
+      "disposition": "live",
+      "evidence": "The grandchild helper became unreachable when 5175def3 dropped its only callers (L88 choice b); c9440b24 deleted engine/overlaytest/grandchild_unix.go, so nothing of it is left at the head."
+    },
+    {
+      "candidate": "T2 deadcode engine: overlaytest/grandchild_unix.go: unreachable func: Grandchild.Started",
+      "disposition": "live",
+      "evidence": "The grandchild helper became unreachable when 5175def3 dropped its only callers (L88 choice b); c9440b24 deleted engine/overlaytest/grandchild_unix.go, so nothing of it is left at the head."
+    },
+    {
+      "candidate": "T2 deadcode engine: overlaytest/grandchild_unix.go: unreachable func: Grandchild.isGrandchild",
+      "disposition": "live",
+      "evidence": "The grandchild helper became unreachable when 5175def3 dropped its only callers (L88 choice b); c9440b24 deleted engine/overlaytest/grandchild_unix.go, so nothing of it is left at the head."
+    },
+    {
+      "candidate": "T2 deadcode engine: overlaytest/grandchild_unix.go: unreachable func: Grandchild.pid",
+      "disposition": "live",
+      "evidence": "The grandchild helper became unreachable when 5175def3 dropped its only callers (L88 choice b); c9440b24 deleted engine/overlaytest/grandchild_unix.go, so nothing of it is left at the head."
+    },
+    {
+      "candidate": "T2 deadcode engine: overlaytest/grandchild_unix.go: unreachable func: NewGrandchild",
+      "disposition": "live",
+      "evidence": "The grandchild helper became unreachable when 5175def3 dropped its only callers (L88 choice b); c9440b24 deleted engine/overlaytest/grandchild_unix.go, so nothing of it is left at the head."
+    }
+  ]
+}

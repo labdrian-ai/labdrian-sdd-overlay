@@ -1,0 +1,110 @@
+{
+  "kind": "sweep",
+  "base": "5175def31aa738d1b3fe9150e3e2fe9ccb3908d4",
+  "head": "c9440b24b20f22aa7bf74c14d9a5cf2297fc5061",
+  "diff_sha256": "224cacfd67bd2020203560dd6c897d889e32df499d8d0f761afdab2497b6a65f",
+  "outcome": "fired",
+  "t1": {
+    "deleted_or_renamed": [
+      "engine/overlaytest/grandchild_unix.go"
+    ],
+    "removed_names": [
+      {
+        "name": "Grandchild",
+        "hits": [
+          "odd/review-results/merge-playbook-into-sdd-overlay/36d5bc62df38-6.verifier.json"
+        ]
+      },
+      {
+        "name": "NewGrandchild",
+        "hits": [
+          "odd/review-results/merge-playbook-into-sdd-overlay/36d5bc62df38-6.json"
+        ]
+      },
+      {
+        "name": "RequireGone",
+        "hits": [
+          "odd/review-results/merge-playbook-into-sdd-overlay/36d5bc62df38-6.json",
+          "odd/review-results/merge-playbook-into-sdd-overlay/36d5bc62df38-6.verifier.json"
+        ]
+      },
+      {
+        "name": "ShortName",
+        "hits": [
+          "odd/review-results/merge-playbook-into-sdd-overlay/36d5bc62df38-3.polisher.json",
+          "odd/review-results/merge-playbook-into-sdd-overlay/36d5bc62df38-4.json",
+          "odd/review-results/merge-playbook-into-sdd-overlay/36d5bc62df38-4.verifier.json",
+          "odd/review-results/merge-playbook-into-sdd-overlay/36d5bc62df38-5.polisher.json",
+          "odd/review-results/merge-playbook-into-sdd-overlay/36d5bc62df38-6.json",
+          "odd/review-results/merge-playbook-into-sdd-overlay/8f5afb50d0c8-2.sweeper.json",
+          "odd/review-results/merge-playbook-into-sdd-overlay/8f5afb50d0c8-3.polisher.json",
+          "odd/review-results/merge-playbook-into-sdd-overlay/8f5afb50d0c8-4.polisher.json",
+          "odd/review-results/merge-playbook-into-sdd-overlay/c193276c57ad-2.polisher.json",
+          "odd/review-results/merge-playbook-into-sdd-overlay/c193276c57ad-3.polisher.json"
+        ]
+      },
+      {
+        "name": "Started",
+        "hits": [
+          "engine/piguard/piguard.go",
+          "engine/piguard/piguard_test.go",
+          "odd/review-results/merge-playbook-into-sdd-overlay/36d5bc62df38-6.json",
+          "odd/review-results/merge-playbook-into-sdd-overlay/36d5bc62df38-6.verifier.json"
+        ]
+      },
+      {
+        "name": "grandchildLister",
+        "hits": [
+          "odd/review-results/merge-playbook-into-sdd-overlay/36d5bc62df38-6.verifier.json"
+        ]
+      },
+      {
+        "name": "pid",
+        "hits": [
+          "engine/cmd/phase8_acceptance_test.go",
+          "engine/cmd/registry_golden_group_test.go",
+          "engine/execrunner/lingering_test.go",
+          "engine/runtime/opencode_bridge_failure_test.go",
+          "engine/shelltest/overlay_longterm_mem_test.sh",
+          "engine/synctrigger/osproc/osproc_test.go",
+          "odd/review-results/merge-playbook-into-sdd-overlay/36d5bc62df38-3.polisher.json",
+          "odd/review-results/merge-playbook-into-sdd-overlay/36d5bc62df38-4.verifier.json",
+          "odd/review-results/merge-playbook-into-sdd-overlay/36d5bc62df38-5.polisher.json",
+          "odd/review-results/merge-playbook-into-sdd-overlay/36d5bc62df38-6.json",
+          "odd/review-results/merge-playbook-into-sdd-overlay/36d5bc62df38-6.verifier.json",
+          "odd/review-results/merge-playbook-into-sdd-overlay/4b9c3789c2e0-3.verifier.json",
+          "odd/review-results/merge-playbook-into-sdd-overlay/8f5afb50d0c8-3.polisher.json",
+          "odd/review-results/merge-playbook-into-sdd-overlay/8f5afb50d0c8-4.polisher.json",
+          "odd/review-results/merge-playbook-into-sdd-overlay/c193276c57ad-2.polisher.json",
+          "odd/review-results/merge-playbook-into-sdd-overlay/c193276c57ad-3.polisher.json",
+          "odd/tasks/consolidation-phase9.md",
+          "openspec/changes/archive/2026-09-02-longterm-mem/apply-progress.md"
+        ]
+      },
+      {
+        "name": "shortLength",
+        "hits": [
+          "odd/review-receipts/own-rdd/review-2d64bcb7d390d55a.review-state.json",
+          "odd/review-receipts/own-rdd/review-51e3b9173d94627f.review-state.json",
+          "odd/review-results/merge-playbook-into-sdd-overlay/36d5bc62df38-4.json",
+          "odd/review-results/merge-playbook-into-sdd-overlay/36d5bc62df38-5.polisher.json",
+          "odd/review-results/merge-playbook-into-sdd-overlay/8f5afb50d0c8-4.polisher.json",
+          "odd/review-results/merge-playbook-into-sdd-overlay/c193276c57ad-3.polisher.json"
+        ]
+      },
+      {
+        "name": "shortSHA",
+        "hits": [
+          "odd/review-results/merge-playbook-into-sdd-overlay/36d5bc62df38-6.json",
+          "odd/review-results/merge-playbook-into-sdd-overlay/8f5afb50d0c8-2.sweeper.json"
+        ]
+      }
+    ]
+  },
+  "t2": [],
+  "t3": [],
+  "t4": {
+    "leftovers": [],
+    "orphaned_fixtures": []
+  }
+}
