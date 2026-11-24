@@ -214,12 +214,27 @@ func TestEvidenceStoreWithoutAwkSaysSoAndExitsThree(t *testing.T) {
 		t.Fatal(err)
 	}
 	env := []string{"PATH=" + noawk}
-	for _, args := range [][]string{{"check"}, {"count"}, {"rules"}, {"index"}, {"rule", "beta-kind"}, {"reviewed", "f/aaaa-1"}} {
+	for _, args := range [][]string{{"check"}, {"count"}, {"rules"}, {"index"}, {"rule", "beta-kind"}, {"reviewed", "f/aaaa-1"}, {"reviewed-each", "docs/wiki", "f/aaaa-1"}} {
 		wantResult(t, args[0]+" with no awk", w.run(w.repo, env, args...), 3, "",
 			"evidence.sh: awk is not on PATH; "+args[0]+" cannot run\n")
 	}
 	wantResult(t, "a usage error with no awk", w.run(w.repo, env, "bogus"), 2, "", evidenceUsage)
 }
+
+// failingEvidencePages are pages that a check of check refuses (T4f, L60 choice 2). The first five hold a row with
+// f/aaaa-1, so only the check makes them answer "no"; the last two have no Evidence table, so they hold no such row
+// and cover the page checks (they answer "no" with or without the check).
+var failingEvidencePages = map[string]string{
+	"the matching row at level 0":           evidencePage(failingKind, "| alpha-kind | 0 | f/aaaa-1 | 2026-01-01 | x |\n"),
+	"the matching row with date 2026/01/01": evidencePage(failingKind, "| alpha-kind | 1 | f/aaaa-1 | 2026/01/01 | x |\n"),
+	"the matching row's kind not in Kinds":  evidencePage(failingKind, "| ghost-kind | 1 | f/aaaa-1 | 2026-01-01 | x |\n"),
+	"a row after the Evidence table ended":  evidencePage(failingKind, "| alpha-kind | 1 | f/aaaa-1 | 2026-01-01 | x |\n\n| alpha-kind | 1 | f/bbbb-1 | 2026-01-02 | y |\n"),
+	"no # Evidence title":                   strings.TrimPrefix(evidencePage(failingKind, "| alpha-kind | 1 | f/aaaa-1 | 2026-01-01 | x |\n"), "# Evidence\n\n"),
+	"no ## Evidence heading":                kindsHead + failingKind,
+	"the ## Evidence heading and no table":  kindsHead + failingKind + "\n## Evidence\n\nnothing yet\n",
+}
+
+const failingKind = "| alpha-kind | 1 | | | | project |\n"
 
 // B12: reviewed prints nothing and answers by its exit: 0 when an Evidence row's Review cell is the identifier
 // exactly (trimmed, "\|" read as "|"), 1 when none or when there is no page. The Review cell alone counts: the
@@ -256,19 +271,8 @@ func TestEvidenceStoreReviewedAnswersByExitWhetherAnEvidenceRowHoldsTheReview(t 
 	wantResult(t, "an empty wiki directory", empty.inRepo("reviewed", "f/aaaa-1"), 1, "", "")
 	wantResult(t, "a wiki argument that starts with a dash and holds nothing", empty.inRepo("reviewed", "f/aaaa-1", "-w"), 1, "", "")
 
-	// A page that fails a check of check answers 1 even when a row holds the identifier (T4f, L60 choice 2). The
-	// first five pages hold a row with f/aaaa-1, so only the check makes them answer 1; the last two have no
-	// Evidence table, so they hold no such row and cover the page checks (they answer 1 with or without the check).
-	const kind = "| alpha-kind | 1 | | | | project |\n"
-	for name, page := range map[string]string{
-		"the matching row at level 0":           evidencePage(kind, "| alpha-kind | 0 | f/aaaa-1 | 2026-01-01 | x |\n"),
-		"the matching row with date 2026/01/01": evidencePage(kind, "| alpha-kind | 1 | f/aaaa-1 | 2026/01/01 | x |\n"),
-		"the matching row's kind not in Kinds":  evidencePage(kind, "| ghost-kind | 1 | f/aaaa-1 | 2026-01-01 | x |\n"),
-		"a row after the Evidence table ended":  evidencePage(kind, "| alpha-kind | 1 | f/aaaa-1 | 2026-01-01 | x |\n\n| alpha-kind | 1 | f/bbbb-1 | 2026-01-02 | y |\n"),
-		"no # Evidence title":                   strings.TrimPrefix(evidencePage(kind, "| alpha-kind | 1 | f/aaaa-1 | 2026-01-01 | x |\n"), "# Evidence\n\n"),
-		"no ## Evidence heading":                kindsHead + kind,
-		"the ## Evidence heading and no table":  kindsHead + kind + "\n## Evidence\n\nnothing yet\n",
-	} {
+	// A page that fails a check of check answers 1 even when a row holds the identifier (T4f, L60 choice 2).
+	for name, page := range failingEvidencePages {
 		wantResult(t, name, newEvidenceWorld(t, page).inRepo("reviewed", "f/aaaa-1"), 1, "", "")
 	}
 
@@ -287,15 +291,6 @@ func TestEvidenceStoreReviewedAnswersByExitWhetherAnEvidenceRowHoldsTheReview(t 
 // after, with awk's own stderr dropped (T4f, L60 choice 1; T4g, L62 choices 1 and 2).
 func TestEvidenceStoreReviewedCannotAnswerForAPageItCannotRead(t *testing.T) {
 	const cannotRead = "evidence.sh: cannot read docs/wiki/evidence.md; reviewed cannot answer\n"
-	// stubAwk puts an awk that runs body first on PATH and returns the environment that says so.
-	stubAwk := func(w evidenceWorld, body string) []string {
-		stub := filepath.Join(w.tmp, "stubawk")
-		writeEvidenceFile(t, filepath.Join(stub, "awk"), "#!/bin/sh\n"+body)
-		if err := os.Chmod(filepath.Join(stub, "awk"), 0o755); err != nil {
-			t.Fatal(err)
-		}
-		return []string{"PATH=" + stub + string(os.PathListSeparator) + os.Getenv("PATH")}
-	}
 	t.Run("a page that cannot be read", func(t *testing.T) {
 		if os.Geteuid() == 0 {
 			t.Skip("root reads a page of mode 000")
@@ -339,17 +334,17 @@ func TestEvidenceStoreReviewedCannotAnswerForAPageItCannotRead(t *testing.T) {
 	})
 	t.Run("an awk that fails on the page", func(t *testing.T) {
 		w := newEvidenceWorld(t, onePage("alpha-kind"))
-		env := stubAwk(w, "echo 'awk: fatal: simulated' >&2\nexit 2\n")
+		env := stubAwk(t, w, "echo 'awk: fatal: simulated' >&2\nexit 2\n")
 		wantResult(t, "reviewed", w.run(w.repo, env, "reviewed", "f/aaaa-1"), 4, "", "evidence.sh: awk failed on docs/wiki/evidence.md (exit 2); reviewed cannot answer\n")
 	})
 	t.Run("an awk that exits 1", func(t *testing.T) {
 		w := newEvidenceWorld(t, onePage("alpha-kind"))
-		env := stubAwk(w, "echo 'awk: fatal: simulated' >&2\nexit 1\n")
+		env := stubAwk(t, w, "echo 'awk: fatal: simulated' >&2\nexit 1\n")
 		wantResult(t, "reviewed", w.run(w.repo, env, "reviewed", "f/aaaa-1"), 4, "", "evidence.sh: awk failed on docs/wiki/evidence.md (exit 1); reviewed cannot answer\n")
 	})
 	t.Run("an awk that gives no answer", func(t *testing.T) {
 		w := newEvidenceWorld(t, onePage("alpha-kind"))
-		env := stubAwk(w, "exit 0\n")
+		env := stubAwk(t, w, "exit 0\n")
 		wantResult(t, "reviewed", w.run(w.repo, env, "reviewed", "f/aaaa-1"), 4, "", "evidence.sh: awk gave no answer on docs/wiki/evidence.md; reviewed cannot answer\n")
 	})
 	t.Run("a wiki argument that starts with a dash and cannot be searched", func(t *testing.T) {
@@ -375,6 +370,17 @@ func TestEvidenceStoreReviewedCannotAnswerForAPageItCannotRead(t *testing.T) {
 		}
 		wantResult(t, "reviewed", w.inRepo("reviewed", "f/aaaa-1"), 4, "", cannotRead)
 	})
+}
+
+// stubAwk puts an awk that runs body first on PATH and returns the environment that says so.
+func stubAwk(t *testing.T, w evidenceWorld, body string) []string {
+	t.Helper()
+	stub := filepath.Join(w.tmp, "stubawk")
+	writeEvidenceFile(t, filepath.Join(stub, "awk"), "#!/bin/sh\n"+body)
+	if err := os.Chmod(filepath.Join(stub, "awk"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	return []string{"PATH=" + stub + string(os.PathListSeparator) + os.Getenv("PATH")}
 }
 
 // fileTree is every entry under dir but dir itself, by path relative to dir: a regular file as "file "
@@ -422,7 +428,7 @@ func TestEvidenceStoreWritesNothingAndNeedsNoOtherWikiFile(t *testing.T) {
 		t.Fatalf("the repository holds %v, want only docs/wiki/evidence.md", got)
 	}
 	before := fileTree(t, w.tmp)
-	for _, args := range [][]string{{"check"}, {"count"}, {"rules"}, {"index"}, {"rule", "beta-kind"}, {"rule", "no-such-kind"}, {"reviewed", "f/aaaa-1"}, {"reviewed", "f/none-1"}, {"bogus"}} {
+	for _, args := range [][]string{{"check"}, {"count"}, {"rules"}, {"index"}, {"rule", "beta-kind"}, {"rule", "no-such-kind"}, {"reviewed", "f/aaaa-1"}, {"reviewed", "f/none-1"}, {"reviewed-each", "docs/wiki", "f/aaaa-1", "f/none-1"}, {"bogus"}} {
 		w.inRepo(args...)
 		if after := fileTree(t, w.tmp); !reflect.DeepEqual(after, before) {
 			t.Fatalf("after %v the tree under %s changed:\n before %v\n after  %v", args, w.tmp, before, after)

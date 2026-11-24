@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os/exec"
 	"path/filepath"
+	"reflect"
 	"regexp"
 	"strings"
 	"testing"
@@ -85,6 +86,7 @@ func TestEvidenceStore_LicenseAndProvenanceTravelWithTheCode(t *testing.T) {
 		"plugins/playbook-agents/evidence.sh",
 		"plugins/playbook-agents/evidence-rules.md",
 		"MIT",
+		"`reviewed-each <wiki directory> <identifier>...`", // a mode the script gained (T4k)
 	} {
 		if !strings.Contains(provenance, want) {
 			t.Errorf("PROVENANCE.md lacks %q", want)
@@ -195,41 +197,178 @@ func TestEvidenceStore_CopiesMatchTheSnapshotOrAreListedAsChanged(t *testing.T) 
 func TestEvidenceStore_NamesNoSectionTaskOrLogEntryOfATaskDocument(t *testing.T) {
 	root := skillsRepoRoot(t)
 	for _, name := range evidenceStoreNames {
-		if match := taskDocumentIdentifier.FindString(readRepoFile(t, root, evidenceDirRel+"/"+name)); match != "" {
-			t.Errorf("%s names %q, a reference into a task document that the deployed file cannot carry", name, match)
+		if found := taskDocumentReferences(readRepoFile(t, root, evidenceDirRel+"/"+name)); len(found) > 0 {
+			t.Errorf("%s names %q, a reference into a task document that the deployed file cannot carry", name, found[0])
 		}
 	}
 }
 
-// taskDocumentIdentifier is the pattern of the lint above and of its table test: S, T or L and a number, with an
-// optional letter suffix and dashed parts (T4g, T3c-f), or OD- and a number (review 9b030f225615-5 F1, T4i, L64 choice 3).
-var taskDocumentIdentifier = regexp.MustCompile(`\b[STL][0-9]+[a-z]*(-[a-z0-9]+)*\b|\bOD-[0-9]+[a-z]*\b`)
+// taskDocumentIdentifier is the pattern of the lint above and of its table test, as the task document writes its
+// identifiers: S, T or L and a number, then lowercase letters and dashed parts that are each a letter and digits
+// (T4g, T3c-a2), or OD- and a number with lowercase letters (OD-10b). It cannot tell prose such as L2-cache from an
+// identifier, so taskDocumentReferences drops a match that a dash and a letter follow (review 66a1a0398abe-3 F2, T4k).
+var taskDocumentIdentifier = regexp.MustCompile(`\b[STL][0-9]+(?:[a-z]+(?:-[a-z][0-9]*)*)?\b|\bOD-[0-9]+[a-z]*\b`)
+
+// taskDocumentReferences is every identifier of a task document that text names.
+func taskDocumentReferences(text string) []string {
+	var found []string
+	for _, at := range taskDocumentIdentifier.FindAllStringIndex(text, -1) {
+		if rest := text[at[1]:]; len(rest) >= 2 && rest[0] == '-' && (rest[1]|0x20 >= 'a' && rest[1]|0x20 <= 'z') {
+			continue
+		}
+		found = append(found, text[at[0]:at[1]])
+	}
+	return found
+}
 
 func TestTheTaskDocumentPatternMatchesEveryIdentifierForm(t *testing.T) {
-	for _, id := range []string{"S6", "T4g", "T3c-f", "L64", "OD-11"} {
-		if got := taskDocumentIdentifier.FindString("see " + id + " here"); got != id {
+	for _, id := range []string{"S6", "T4g", "T3c-f", "T3c-a2", "L64", "OD-11", "OD-10b"} {
+		if got := taskDocumentReferences("see " + id + " here"); !reflect.DeepEqual(got, []string{id}) {
 			t.Errorf("the pattern finds %q in %q, want %q", got, "see "+id+" here", id)
 		}
 	}
-	for _, text := range []string{"ES2015", "SHA-256", "UTF-8", "level 2"} {
-		if got := taskDocumentIdentifier.FindString(text); got != "" {
+	for _, text := range []string{"ES2015", "SHA-256", "UTF-8", "level 2", "L2-cache", "S5-based", "see L2-cache here"} {
+		if got := taskDocumentReferences(text); got != nil {
 			t.Errorf("the pattern finds %q in %q, want no match", got, text)
 		}
 	}
 }
 
-// Every dirname and basename of the script ends its options, so a path that starts with "-" is read as a path (review
-// 9b030f225615-2 F1, T4i, L64 choice 1). Comment lines are not code and are skipped.
-func TestEvidenceStore_EveryDirnameAndBasenameEndsItsOptions(t *testing.T) {
-	word := regexp.MustCompile(`\b(dirname|basename)\b`)
-	for i, line := range strings.Split(readRepoFile(t, skillsRepoRoot(t), evidenceDirRel+"/evidence.sh"), "\n") {
-		if strings.HasPrefix(strings.TrimSpace(line), "#") {
+// shellCall is a use of one of the words that shellCalls looks for: the line it starts on, the word, and the rest of
+// its logical line (continued lines joined) after the word.
+type shellCall struct {
+	line       int
+	word, rest string
+}
+
+var shellCallWords = []string{"cd", "dirname", "basename"}
+
+// shellCalls finds each cd, dirname and basename that is written as shell code: at the start of a word, outside
+// comments, outside single quotes and outside double quotes except inside a "$(...)" there. A backslash and a line
+// break join two lines; the call keeps the number of its first line. A quote state runs across lines. Bound: a call
+// built from a variable, eval, command or backquotes is not seen, and neither is a word that is an argument and
+// not a command (echo cd is seen).
+func shellCalls(script string) []shellCall {
+	type context struct {
+		quoted bool // double quotes; else code
+		depth  int  // open "(" of this code context, not counting its "$("
+	}
+	isName := func(b byte) bool {
+		return b == '_' || b == '-' || b == '.' || b == '/' || b >= '0' && b <= '9' || b >= 'a' && b <= 'z' || b >= 'A' && b <= 'Z'
+	}
+	var calls []shellCall
+	line, wordStart := 1, true
+	stack := []context{{}}
+	for i := 0; i < len(script); i++ {
+		c, top := script[i], &stack[len(stack)-1]
+		switch {
+		case c == '\\' && i+1 < len(script):
+			i++
+			if script[i] == '\n' {
+				line++
+			}
+			wordStart = false
+		case c == '\n':
+			line++
+			wordStart = !top.quoted
+		case top.quoted && c == '"':
+			stack, wordStart = stack[:len(stack)-1], false
+		case c == '$' && i+1 < len(script) && script[i+1] == '(':
+			stack, wordStart = append(stack, context{}), true
+			i++
+		case top.quoted:
+		case c == '\'':
+			for i++; i < len(script) && script[i] != '\''; i++ {
+				if script[i] == '\n' {
+					line++
+				}
+			}
+			wordStart = false
+		case c == '"':
+			stack, wordStart = append(stack, context{quoted: true}), false
+		case c == '#' && wordStart:
+			for i+1 < len(script) && script[i+1] != '\n' {
+				i++
+			}
+		case c == '(':
+			top.depth++
+			wordStart = true
+		case c == ')':
+			if top.depth > 0 {
+				top.depth--
+			} else if len(stack) > 1 {
+				stack = stack[:len(stack)-1]
+			}
+			wordStart = true
+		default:
+			if wordStart {
+				for _, word := range shellCallWords {
+					if strings.HasPrefix(script[i:], word) && (i+len(word) == len(script) || !isName(script[i+len(word)])) {
+						calls = append(calls, shellCall{line: line, word: word, rest: logicalRest(script[i+len(word):])})
+						i += len(word) - 1
+						break
+					}
+				}
+			}
+			wordStart = c == ' ' || c == '\t' || c == ';' || c == '&' || c == '|' || c == '`'
+		}
+	}
+	return calls
+}
+
+// logicalRest is the text up to the next line break that no backslash continues, continued lines joined.
+func logicalRest(text string) string {
+	var rest strings.Builder
+	for i := 0; i < len(text) && text[i] != '\n'; i++ {
+		if text[i] == '\\' && i+1 < len(text) && text[i+1] == '\n' {
+			i++
 			continue
 		}
-		for _, at := range word.FindAllStringIndex(line, -1) {
-			if !strings.HasPrefix(line[at[1]:], " -- ") {
-				t.Errorf("evidence.sh line %d: %q is not followed by \" -- \": %s", i+1, line[at[0]:at[1]], strings.TrimSpace(line))
-			}
+		rest.WriteByte(text[i])
+	}
+	return rest.String()
+}
+
+func TestShellCallsReadsOnlyShellCode(t *testing.T) {
+	for _, c := range []struct {
+		name, script string
+		want         []shellCall
+	}{
+		{"dirname in a substitution", `x=$(dirname "$p")`, []shellCall{{1, "dirname", ` "$p")`}}},
+		{"a word in double quotes", `echo "dirname failed"`, nil},
+		{"a word in a comment", "f # dirname", nil},
+		{"a word in single quotes", `'dirname'`, nil},
+		{"cd in a substitution", `x=$(cd "$d" && pwd)`, []shellCall{{1, "cd", ` "$d" && pwd)`}}},
+		{"basename in a substitution in double quotes", `echo "$(basename "$f")"`, []shellCall{{1, "basename", ` "$f")"`}}},
+		{"a continued line keeps its first line", "a\nx=$(dirname \\\n\"$p\")", []shellCall{{2, "dirname", ` "$p")`}}},
+		{"a continued line with the dashes on the next", "dirname \\\n-- \"$p\"", []shellCall{{1, "dirname", ` -- "$p"`}}},
+		{"a hash inside quotes ends nothing", `echo "a # b"; dirname -- x`, []shellCall{{1, "dirname", " -- x"}}},
+		{"a hash of a parameter ends nothing", "echo ${#x}; cd -- y", []shellCall{{1, "cd", " -- y"}}},
+		{"quotes of both kinds, then a call", `echo 'it'"s"; cd x`, []shellCall{{1, "cd", " x"}}},
+		{"an escaped quote opens nothing", `echo \"; cd x`, []shellCall{{1, "cd", " x"}}},
+		{"a quote that spans lines", "echo 'a\ncd x'\ncd y", []shellCall{{3, "cd", " y"}}},
+		{"a word inside a longer name", "mycd x; dirname2 y; x.cd z; $cd", nil},
+	} {
+		if got := shellCalls(c.script); !reflect.DeepEqual(got, c.want) {
+			t.Errorf("%s: shellCalls(%q) = %v, want %v", c.name, c.script, got, c.want)
+		}
+	}
+}
+
+// Every cd, dirname and basename of the script ends its options, so a path that starts with "-" is read as a path
+// (reviews 9b030f225615-2 F1 and 66a1a0398abe-5 F1, T4i, T4k). Only shell code counts: a comment, a quoted text or a
+// message that names one of them is not a call (66a1a0398abe-3 F3).
+func TestEvidenceStore_EveryCdDirnameAndBasenameEndsItsOptions(t *testing.T) {
+	seen := map[string]bool{}
+	for _, call := range shellCalls(readRepoFile(t, skillsRepoRoot(t), evidenceDirRel+"/evidence.sh")) {
+		seen[call.word] = true
+		if !strings.HasPrefix(call.rest, " -- ") {
+			t.Errorf("evidence.sh line %d: %q is not followed by \" -- \": %s%s", call.line, call.word, call.word, call.rest)
+		}
+	}
+	for _, word := range shellCallWords {
+		if !seen[word] {
+			t.Errorf("shellCalls found no %s in evidence.sh, so this lint reads nothing of it", word)
 		}
 	}
 }
