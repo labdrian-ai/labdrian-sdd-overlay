@@ -88,7 +88,6 @@ func TestEvidenceStore_LicenseAndProvenanceTravelWithTheCode(t *testing.T) {
 		"MIT",
 		"`reviewed-each <wiki directory> <identifier>...`", // a mode the script gained (T4k)
 		"as the mode they name",                            // the exit-4 lines of reviewed-each name it
-		"128 KiB",                                          // the bound of one environment string
 		"never as a number",                                // reviewed and rule compare as text
 	} {
 		if !strings.Contains(provenance, want) {
@@ -418,17 +417,90 @@ func TestEvidenceStore_HoldsNoHereDocument(t *testing.T) {
 	}
 }
 
+// unforcedEnvironReads returns, for every occurrence of the word ENVIRON in an awk script that does not start a read
+// forced to text (a subscript on one line, then any blanks and ""), the rest of its line. It starts from the word, not
+// from one subscript form, so no read is missed whatever its subscript or blanks.
+func unforcedEnvironReads(script string) []string {
+	word := regexp.MustCompile(`\bENVIRON\b`)
+	forced := regexp.MustCompile(`^ENVIRON[ \t]*\[[^\]\n]*\][ \t]*""`)
+	var found []string
+	for _, at := range word.FindAllStringIndex(script, -1) {
+		rest := script[at[0]:]
+		if forced.MatchString(rest) {
+			continue
+		}
+		if end := strings.IndexByte(rest, '\n'); end >= 0 {
+			rest = rest[:end]
+		}
+		found = append(found, rest)
+	}
+	return found
+}
+
 // Every environment value that evidence.sh reads is read as a string, so the awk compares it with a cell as text and
-// never as a number (review 4f714c67e87c-5 F5, T4q).
+// never as a number (review 4f714c67e87c-5 F5, T4q; every occurrence of the word, 88fb598e73d3-5 F2, T4r).
 func TestEvidenceStore_ReadsEveryEnvironmentValueAsAString(t *testing.T) {
 	script := readRepoFile(t, skillsRepoRoot(t), evidenceDirRel+"/evidence.sh")
-	reads := regexp.MustCompile(`ENVIRON\["[^"]*"\]`).FindAllStringIndex(script, -1)
-	if len(reads) == 0 {
+	if !regexp.MustCompile(`\bENVIRON\b`).MatchString(script) {
 		t.Fatal("evidence.sh reads no environment value, so this lint reads nothing of it")
 	}
-	for _, at := range reads {
-		if !strings.HasPrefix(script[at[1]:], ` ""`) {
-			t.Errorf("evidence.sh reads %s with no empty string after it, so awk takes it for a number where it looks like one", script[at[0]:at[1]])
+	for _, read := range unforcedEnvironReads(script) {
+		t.Errorf("evidence.sh uses %q with no empty string after its subscript, so awk takes the value for a number where it looks like one", read)
+	}
+}
+
+func TestUnforcedEnvironReadsFindsEveryRead(t *testing.T) {
+	for _, row := range []struct {
+		name, line string
+		want       int
+	}{
+		{"a read forced with one space", `x = ENVIRON["X"] ""`, 0},
+		{"a read forced with no space", `x = ENVIRON["X"]""`, 0},
+		{"a read forced after a tab", "x = ENVIRON[\"X\"]\t\"\"", 0},
+		{"a subscript with blanks inside", `x = ENVIRON[ "X" ] ""`, 0},
+		{"a variable subscript", `x = ENVIRON[name] ""`, 0},
+		{"a blank before the bracket", `x = ENVIRON ["X"] ""`, 0},
+		{"another word that ends in the name", `if (MYENVIRON["X"] > 0) y = 1`, 0},
+		{"a variable subscript used as a number", `if (ENVIRON[name] > 0) y = 1`, 1},
+		{"a subscript with blanks used as a number", `if (ENVIRON[ "X" ] > 0) y = 1`, 1},
+		{"a read added to a number", `x = ENVIRON["X"] + 0`, 1},
+		{"a loop over the array", `for (k in ENVIRON) n++`, 1},
+		{"a bracketed subscript", `x = ENVIRON[a[1]] ""`, 1},
+		{"a subscript broken over two lines", "x = ENVIRON[\n\"X\"] \"\"", 1},
+	} {
+		if got := unforcedEnvironReads(row.line); len(got) != row.want {
+			t.Errorf("%s: %q gave %d entries %q, want %d", row.name, row.line, len(got), got, row.want)
+		}
+	}
+	two := unforcedEnvironReads(`x = ENVIRON["A"] "" ENVIRON["B"]`)
+	if len(two) != 1 || !strings.HasPrefix(two[0], `ENVIRON["B"]`) {
+		t.Errorf("a forced read then an unforced one gave %q, want only the second", two)
+	}
+}
+
+// reviewed-each makes the identifiers split from its one environment string text before it uses them as keys, where
+// they are made, as the read itself is. No installed awk reaches the gap (gawk, mawk and busybox awk answered the same
+// without it), so the text of the line is what holds it (review 88fb598e73d3-3 F1, T4r).
+func TestEvidenceStore_MakesSplitIdentifiersText(t *testing.T) {
+	script := readRepoFile(t, skillsRepoRoot(t), evidenceDirRel+"/evidence.sh")
+	if !strings.Contains(script, `ids[i] = ids[i] ""`) {
+		t.Error(`evidence.sh does not write ids[i] = ids[i] "" before it keys by the split identifiers; no installed awk reaches the gap, so only this text holds it (88fb598e73d3-3 F1)`)
+	}
+}
+
+// The bound of one environment string is stated in pages, since Linux's MAX_ARG_STRLEN is 32 pages and 128 KiB only
+// where a page is 4 KiB (reviews 88fb598e73d3-5 F1 and 88fb598e73d3-4.polisher, T4r).
+func TestEvidenceStore_NamesTheEnvironmentBoundInPages(t *testing.T) {
+	root := skillsRepoRoot(t)
+	for _, file := range []string{"evidence.sh", "PROVENANCE.md"} {
+		text := readRepoFile(t, root, evidenceDirRel+"/"+file)
+		for _, want := range []string{"32 pages", "128 KiB with 4 KiB pages"} {
+			if !strings.Contains(text, want) {
+				t.Errorf("%s lacks %q", file, want)
+			}
+		}
+		if strings.Contains(text, "128 KiB on Linux") {
+			t.Errorf("%s says 128 KiB on Linux, which holds only with 4 KiB pages", file)
 		}
 	}
 }

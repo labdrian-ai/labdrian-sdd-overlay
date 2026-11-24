@@ -48,8 +48,9 @@
 #   fails a check, no row), then exits 0. Where reviewed exits 4 it exits 4, with
 #   the stderr line of reviewed, naming reviewed-each as its mode, and nothing
 #   on stdout. The identifiers reach awk in one environment string: past the
-#   limit of the system for one string (128 KiB on Linux) awk cannot start and
-#   the mode exits 4, with the awk-failed line. A missing or empty wiki
+#   limit of the system for one string (Linux's MAX_ARG_STRLEN, 32 pages:
+#   128 KiB with 4 KiB pages) awk cannot start and the mode exits 4, with the
+#   awk-failed line. A missing or empty wiki
 #   directory, no identifier, or an identifier that is empty or holds a space, a
 #   tab or a line break, is a usage error.
 # count, rules, and index exit 0 (reviewed and reviewed-each also exit 4, see
@@ -143,7 +144,8 @@ run_awk() {
     want = ENVIRON["EVIDENCE_WANT"] ""
     # reviewed-each: want holds the identifiers one to a line; they are asked in order, repeats included.
     each = (mode == "reviewed-each")
-    if (each) { nid = split(want, ids, "\n"); for (i = 1; i <= nid; i++) wanted[ids[i]] = 1 }
+    # The elements split makes are text too (the empty string makes each one), so a key is the bytes of an identifier on every awk.
+    if (each) { nid = split(want, ids, "\n"); for (i = 1; i <= nid; i++) { ids[i] = ids[i] ""; wanted[ids[i]] = 1 } }
   }
   BEGIN { sec = ""; kh = "Kind|Level|Rule|Applies when|Source|Scope"; eh = "Kind|Level|Review|Date|Finding" }
   /^```/ { fence = !fence; next }
