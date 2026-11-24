@@ -47,10 +47,13 @@
 #   reviewed would exit 0 and "no" where it would exit 1 (no page, a page that
 #   fails a check, no row), then exits 0. Where reviewed exits 4 it exits 4, with
 #   the stderr line of reviewed, naming reviewed-each as its mode, and nothing
-#   on stdout. The identifiers reach awk in one environment string: past the
-#   limit of the system for one string (Linux's MAX_ARG_STRLEN, 32 pages:
-#   128 KiB with 4 KiB pages) awk cannot start and the mode exits 4, with the
-#   awk-failed line. A missing or empty wiki
+#   on stdout. The identifiers reach sh as arguments and awk in one environment
+#   string. Linux limits one string to MAX_ARG_STRLEN (32 pages:
+#   128 KiB with 4 KiB pages), and the arguments and environment of one exec
+#   together to ARG_MAX (getconf ARG_MAX, which follows the stack limit). Past
+#   either when awk starts, awk cannot start and the mode exits 4, with the
+#   awk-failed line. Past ARG_MAX when sh starts, this script does not run and
+#   the caller's exec fails. A missing or empty wiki
 #   directory, no identifier, or an identifier that is empty or holds a space, a
 #   tab or a line break, is a usage error.
 # count, rules, and index exit 0 (reviewed and reviewed-each also exit 4, see

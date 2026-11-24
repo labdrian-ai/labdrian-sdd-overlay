@@ -1,13 +1,10 @@
 package shelltest
 
 import (
-	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"regexp"
-	"runtime"
-	"strconv"
 	"strings"
 	"testing"
 )
@@ -67,57 +64,38 @@ func TestEvidenceStore_ReviewedEachAnswersEveryIdentifierFromOneRead(t *testing.
 		wantResult(t, "reviewed-each", w.inRepo("reviewed-each", "docs/wiki", "f/aaaa-1", "f/zzzz-1", "f/aaaa-1"), 0, "yes\nno\nyes\n", "")
 	})
 
-	// The bound of one environment string (T4q, L78 choice 4; T4r, L80 choice 1): the identifiers reach awk joined in
-	// one, which Linux limits to MAX_ARG_STRLEN, 32 pages (128 KiB with 4 KiB pages). Past it awk cannot start and the
-	// mode exits 4, one stderr line; under it, it answers. The page size is read from the host, so the test holds on
-	// every page size.
-	t.Run("the identifiers of one call past the bound of one environment string", func(t *testing.T) {
-		if runtime.GOOS != "linux" {
-			t.Skip("MAX_ARG_STRLEN, the limit of one environment string, is the limit of Linux")
-		}
-		getconf, err := exec.LookPath("getconf")
-		if err != nil {
-			t.Skip("getconf is not on PATH: the page size, and so the bound, is unknown")
-		}
-		sysconf := func(name string) int {
-			t.Helper()
-			out, err := exec.Command(getconf, name).Output()
-			if err != nil {
-				t.Fatalf("getconf %s: %v", name, err)
-			}
-			n, err := strconv.Atoi(strings.TrimSpace(string(out)))
-			if err != nil || n < 1 {
-				t.Fatalf("getconf %s printed %q, want a number of 1 or more", name, out)
-			}
-			return n
-		}
-		bound := 32 * sysconf("PAGESIZE")
-		argMax := sysconf("ARG_MAX")
-		// An identifier "f/review-%08d" is 17 bytes, 18 joined with its line break. Each case sits 64 identifiers (1,152
-		// bytes) from the bound, the EVIDENCE_WANT= prefix and the end byte included.
-		const joined = 18
-		pastN, underN := bound/joined+64, bound/joined-64
-		t.Logf("bound %d bytes (32 pages), ARG_MAX %d, %d identifiers past, %d under", bound, argMax, pastN, underN)
-		manyIDs := func(n int) []string {
-			ids := make([]string, n)
-			for i := range ids {
-				ids[i] = fmt.Sprintf("f/review-%08d", i)
-			}
-			return ids
-		}
+	// The exit 4 of an awk that cannot start (T4t, L82): past the limits of one exec (MAX_ARG_STRLEN for one environment
+	// string, ARG_MAX for all of them) awk does not start, and the script takes the branch of any awk that fails. No test
+	// sizes a call from the host's limits: each wrong model of the kernel was found by a review as a false failure on
+	// some host (5e745160b611-2 F1 and 5e745160b611-5 F1). An awk whose exec fails, a file whose interpreter is not
+	// there, is that case on every host; evidenceWorld.run refuses a call that passes more than evidenceArgBudget.
+	// The stub is the only awk on PATH: dash goes on to the next PATH entry when an exec fails with ENOENT, so a
+	// working awk behind it would be run instead (found when this test was first run). The tools the script calls,
+	// dirname and basename, are linked beside it.
+	t.Run("an awk that cannot start", func(t *testing.T) {
 		w := newEvidenceWorld(t, onePage("alpha-kind"))
-		// The identifiers also reach sh as arguments, and exec limits arguments and environment together (ARG_MAX): when
-		// the joined bytes reach half of it, the exec of sh itself may fail, not awk's, so the past case is not run.
-		if pastN*joined >= argMax/2 {
-			t.Logf("past case skipped: %d joined bytes reach half of ARG_MAX (%d)", pastN*joined, argMax)
-		} else {
-			past := w.inRepo(append([]string{"reviewed-each", "docs/wiki"}, manyIDs(pastN)...)...)
-			if !regexp.MustCompile(`^evidence\.sh: awk failed on docs/wiki/evidence\.md \(exit [0-9]+\); reviewed-each cannot answer\n$`).MatchString(past.Stderr) || past.Exit != 4 || past.Stdout != "" {
-				t.Errorf("%d identifiers: exit %d, stdout of %d bytes, stderr %q, want exit 4, no stdout and one awk-failed line", pastN, past.Exit, len(past.Stdout), past.Stderr)
+		stub, tools := filepath.Join(w.tmp, "noexecawk"), filepath.Join(w.tmp, "tools")
+		writeEvidenceFile(t, filepath.Join(stub, "awk"), "#!/nonexistent/interpreter\n")
+		if err := os.Chmod(filepath.Join(stub, "awk"), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.MkdirAll(tools, 0o755); err != nil {
+			t.Fatal(err)
+		}
+		for _, name := range []string{"dirname", "basename"} {
+			path, err := exec.LookPath(name)
+			if err != nil {
+				t.Fatalf("%s is not on PATH, and the script calls it: %v", name, err)
+			}
+			if err := os.Symlink(path, filepath.Join(tools, name)); err != nil {
+				t.Fatal(err)
 			}
 		}
-		under := w.inRepo(append([]string{"reviewed-each", "docs/wiki"}, manyIDs(underN)...)...)
-		wantResult(t, fmt.Sprintf("%d identifiers", underN), under, 0, strings.Repeat("no\n", underN), "")
+		env := []string{"PATH=" + stub + string(os.PathListSeparator) + tools}
+		got := w.run(w.repo, env, "reviewed-each", "docs/wiki", "f/aaaa-1", "f/bbbb-1")
+		if got.Exit != 4 || got.Stdout != "" || !regexp.MustCompile(`^evidence\.sh: awk failed on docs/wiki/evidence\.md \(exit [1-9][0-9]*\); reviewed-each cannot answer\n$`).MatchString(got.Stderr) {
+			t.Errorf("an awk that cannot start: exit %d, stdout %q, stderr %q, want exit 4, no stdout and one awk-failed line", got.Exit, got.Stdout, got.Stderr)
+		}
 	})
 
 	// Parity with reviewed on the page states of B12 and B13. A state returns its world, the environment it adds and

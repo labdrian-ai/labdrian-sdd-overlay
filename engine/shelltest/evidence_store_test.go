@@ -86,11 +86,40 @@ func newEvidenceWorld(t *testing.T, page string) evidenceWorld {
 	return w
 }
 
+// evidenceArgBudget is the most a run may pass as arguments, 32 KiB. A call near the limits of exec makes a test
+// depend on the host (ARG_MAX follows the stack limit), and the identifiers of reviewed-each are the only strings
+// that grow, so no test sizes a call from the host: the exit 4 of an awk that cannot start is pinned with an awk whose
+// exec fails (T4t, 5e745160b611-5 F1). 32 KiB is far under the smallest ARG_MAX the reviews met (131072).
+const evidenceArgBudget = 32 << 10
+
+// execArgBytes is what a list of arguments takes of an exec: each string's bytes and its end byte, and 8 bytes of
+// pointer for each string.
+func execArgBytes(args []string) int {
+	total := 0
+	for _, arg := range args {
+		total += len(arg) + 1 + 8
+	}
+	return total
+}
+
+func TestExecArgBytesCountsEachStringItsEndByteAndItsPointer(t *testing.T) {
+	if got := execArgBytes([]string{"ab", "c"}); got != 3+2+16 {
+		t.Errorf("execArgBytes(ab, c) = %d, want 21", got)
+	}
+	if got := execArgBytes(nil); got != 0 {
+		t.Errorf("execArgBytes(nil) = %d, want 0", got)
+	}
+}
+
 // run runs the script under sh from dir with a home of its own, a TMPDIR inside the watched tree and
-// CLAUDE_PROJECT_DIR unset, plus extra.
+// CLAUDE_PROJECT_DIR unset, plus extra. It fails a run whose arguments pass evidenceArgBudget.
 func (w evidenceWorld) run(dir string, extra []string, args ...string) overlaytest.Result {
 	w.t.Helper()
-	cmd := exec.Command("sh", append([]string{w.script}, args...)...)
+	argv := append([]string{w.script}, args...)
+	if n := execArgBytes(argv); n > evidenceArgBudget {
+		w.t.Fatalf("a run passes %d bytes of arguments, over the %d-byte budget: a call sized near the limits of exec fails on a host with a small stack limit (5e745160b611-5 F1); pin the exit 4 with an awk whose exec fails", n, evidenceArgBudget)
+	}
+	cmd := exec.Command("sh", argv...)
 	cmd.Dir = dir
 	cmd.Env = append([]string{"HOME=" + w.tmp, "PATH=" + os.Getenv("PATH"), "TMPDIR=" + filepath.Join(w.tmp, "tmpdir")}, extra...)
 	return overlaytest.Capture(w.t, cmd)

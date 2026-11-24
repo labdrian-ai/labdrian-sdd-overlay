@@ -417,28 +417,27 @@ func TestEvidenceStore_HoldsNoHereDocument(t *testing.T) {
 	}
 }
 
-// unforcedEnvironReads returns, for every occurrence of the word ENVIRON in an awk script that does not start a read
-// forced to text (a subscript on one line, then any blanks and ""), the rest of its line. It starts from the word, not
-// from one subscript form, so no read is missed whatever its subscript or blanks.
+// unforcedEnvironReads returns, for every line of a script that holds the word ENVIRON, that line with its leading
+// blanks dropped, unless it is exactly the one form <name> = ENVIRON["<NAME>"] "" (a plain variable assigned a read
+// forced to text). A line whose first non-blank character is # is skipped: in sh and in awk it is a comment or the
+// inside of a string, and neither is a read. One accepted form, not a list of refused ones, so a spelling no review
+// has found yet is refused too (reviews 5e745160b611-2 F2 and 5e745160b611-5 F3, T4t).
 func unforcedEnvironReads(script string) []string {
 	word := regexp.MustCompile(`\bENVIRON\b`)
-	forced := regexp.MustCompile(`^ENVIRON[ \t]*\[[^\]\n]*\][ \t]*""`)
+	form := regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]* = ENVIRON\["[A-Z_][A-Z0-9_]*"\] ""$`)
 	var found []string
-	for _, at := range word.FindAllStringIndex(script, -1) {
-		rest := script[at[0]:]
-		if forced.MatchString(rest) {
+	for _, line := range strings.Split(script, "\n") {
+		code := strings.TrimLeft(line, " \t")
+		if strings.HasPrefix(code, "#") || !word.MatchString(code) || form.MatchString(code) {
 			continue
 		}
-		if end := strings.IndexByte(rest, '\n'); end >= 0 {
-			rest = rest[:end]
-		}
-		found = append(found, rest)
+		found = append(found, code)
 	}
 	return found
 }
 
 // Every environment value that evidence.sh reads is read as a string, so the awk compares it with a cell as text and
-// never as a number (review 4f714c67e87c-5 F5, T4q; every occurrence of the word, 88fb598e73d3-5 F2, T4r).
+// never as a number (reviews 4f714c67e87c-5 F5, T4q; 88fb598e73d3-5 F2, T4r; 5e745160b611-2 F2 and -5 F3, T4t).
 func TestEvidenceStore_ReadsEveryEnvironmentValueAsAString(t *testing.T) {
 	script := readRepoFile(t, skillsRepoRoot(t), evidenceDirRel+"/evidence.sh")
 	if !regexp.MustCompile(`\bENVIRON\b`).MatchString(script) {
@@ -455,46 +454,94 @@ func TestUnforcedEnvironReadsFindsEveryRead(t *testing.T) {
 		want       int
 	}{
 		{"a read forced with one space", `x = ENVIRON["X"] ""`, 0},
-		{"a read forced with no space", `x = ENVIRON["X"]""`, 0},
-		{"a read forced after a tab", "x = ENVIRON[\"X\"]\t\"\"", 0},
-		{"a subscript with blanks inside", `x = ENVIRON[ "X" ] ""`, 0},
-		{"a variable subscript", `x = ENVIRON[name] ""`, 0},
-		{"a blank before the bracket", `x = ENVIRON ["X"] ""`, 0},
+		{"the form after blanks", `    want = ENVIRON["EVIDENCE_WANT"] ""`, 0},
+		{"the form after a tab", "\twant = ENVIRON[\"EVIDENCE_WANT\"] \"\"", 0},
+		{"a comment that names the word", `# ENVIRON is read once`, 0},
+		{"an indented comment holding a read", `  # if (ENVIRON[x] > 0)`, 0},
 		{"another word that ends in the name", `if (MYENVIRON["X"] > 0) y = 1`, 0},
+		{"a negated read", `x = -ENVIRON["X"] ""`, 1},
+		{"a read under not", `x = !ENVIRON["X"] ""`, 1},
+		{"a read under an increment", `x = ++ENVIRON["X"] ""`, 1},
+		{"a read forced with no space", `x = ENVIRON["X"]""`, 1},
+		{"a subscript with blanks inside", `x = ENVIRON[ "X" ] ""`, 1},
+		{"a variable subscript", `x = ENVIRON[name] ""`, 1},
 		{"a variable subscript used as a number", `if (ENVIRON[name] > 0) y = 1`, 1},
-		{"a subscript with blanks used as a number", `if (ENVIRON[ "X" ] > 0) y = 1`, 1},
 		{"a read added to a number", `x = ENVIRON["X"] + 0`, 1},
+		{"a forced read added to a number", `x = ENVIRON["X"] "" + 0`, 1},
+		{"a forced read and a second statement", `x = ENVIRON["X"] ""; y = 1`, 1},
+		{"a forced read and a trailing comment", `x = ENVIRON["X"] "" # note`, 1},
 		{"a loop over the array", `for (k in ENVIRON) n++`, 1},
 		{"a bracketed subscript", `x = ENVIRON[a[1]] ""`, 1},
+		{"a chained assignment", `x = y = ENVIRON["X"] ""`, 1},
+		{"the word in a printed string", `print "ENVIRON"`, 1},
 		{"a subscript broken over two lines", "x = ENVIRON[\n\"X\"] \"\"", 1},
+		{"two reads on one line", `x = ENVIRON["A"] "" ENVIRON["B"]`, 1},
 	} {
 		if got := unforcedEnvironReads(row.line); len(got) != row.want {
 			t.Errorf("%s: %q gave %d entries %q, want %d", row.name, row.line, len(got), got, row.want)
 		}
 	}
-	two := unforcedEnvironReads(`x = ENVIRON["A"] "" ENVIRON["B"]`)
-	if len(two) != 1 || !strings.HasPrefix(two[0], `ENVIRON["B"]`) {
-		t.Errorf("a forced read then an unforced one gave %q, want only the second", two)
+}
+
+// The one line of evidence.sh that splits the identifiers of reviewed-each, once its leading blanks are dropped: it
+// makes each identifier text before it is a key. No installed awk reaches the gap (gawk, mawk and busybox awk answered
+// the same without it), so the text is what holds it (reviews 88fb598e73d3-3 F1, T4r, and 5e745160b611-5 F4, T4t).
+const splitStatementLine = `if (each) { nid = split(want, ids, "\n"); for (i = 1; i <= nid; i++) { ids[i] = ids[i] ""; wanted[ids[i]] = 1 } }`
+
+// splitPinProblem says what is wrong with the splitting of a script, or "" when exactly one line that is not a
+// comment holds split(want, and that line is the statement above: the whole statement on its one code line, so it
+// cannot be reordered, left to a comment or written twice and still pass.
+func splitPinProblem(script string) string {
+	var lines []string
+	for _, line := range strings.Split(script, "\n") {
+		code := strings.TrimLeft(line, " \t")
+		if !strings.HasPrefix(code, "#") && strings.Contains(code, "split(want,") {
+			lines = append(lines, code)
+		}
+	}
+	switch {
+	case len(lines) != 1:
+		return fmt.Sprintf("%d code lines hold split(want, where exactly 1 is required", len(lines))
+	case lines[0] != splitStatementLine:
+		return fmt.Sprintf("the line is %q, want %q", lines[0], splitStatementLine)
+	}
+	return ""
+}
+
+func TestEvidenceStore_MakesSplitIdentifiersText(t *testing.T) {
+	if problem := splitPinProblem(readRepoFile(t, skillsRepoRoot(t), evidenceDirRel+"/evidence.sh")); problem != "" {
+		t.Errorf("evidence.sh: %s (5e745160b611-5 F4; no installed awk reaches the gap, so only this text holds it)", problem)
 	}
 }
 
-// reviewed-each makes the identifiers split from its one environment string text before it uses them as keys, where
-// they are made, as the read itself is. No installed awk reaches the gap (gawk, mawk and busybox awk answered the same
-// without it), so the text of the line is what holds it (review 88fb598e73d3-3 F1, T4r).
-func TestEvidenceStore_MakesSplitIdentifiersText(t *testing.T) {
-	script := readRepoFile(t, skillsRepoRoot(t), evidenceDirRel+"/evidence.sh")
-	if !strings.Contains(script, `ids[i] = ids[i] ""`) {
-		t.Error(`evidence.sh does not write ids[i] = ids[i] "" before it keys by the split identifiers; no installed awk reaches the gap, so only this text holds it (88fb598e73d3-3 F1)`)
+func TestSplitPinProblemHoldsTheWholeStatement(t *testing.T) {
+	for _, row := range []struct {
+		name, script string
+		ok           bool
+	}{
+		{"the statement as written", "    " + splitStatementLine + "\n", true},
+		{"the statement after a tab", "\t" + splitStatementLine + "\n", true},
+		{"the statement beside a comment of it", "# " + splitStatementLine + "\n    " + splitStatementLine + "\n", true},
+		{"the two steps reordered", `    if (each) { nid = split(want, ids, "\n"); for (i = 1; i <= nid; i++) { wanted[ids[i]] = 1; ids[i] = ids[i] "" } }` + "\n", false},
+		{"the statement only in a comment", "    # " + splitStatementLine + "\n", false},
+		{"the statement written twice", splitStatementLine + "\n" + splitStatementLine + "\n", false},
+		{"no statement", "x = 1\n", false},
+	} {
+		if got := splitPinProblem(row.script); (got == "") != row.ok {
+			t.Errorf("%s: problem %q, want ok %v", row.name, got, row.ok)
+		}
 	}
 }
 
 // The bound of one environment string is stated in pages, since Linux's MAX_ARG_STRLEN is 32 pages and 128 KiB only
-// where a page is 4 KiB (reviews 88fb598e73d3-5 F1 and 88fb598e73d3-4.polisher, T4r).
+// where a page is 4 KiB (reviews 88fb598e73d3-5 F1 and 88fb598e73d3-4.polisher, T4r). Both limits are named, and what
+// the caller sees past the second: ARG_MAX stops the exec of sh itself, so the script does not run (review
+// 5e745160b611-4.polisher F2, T4t).
 func TestEvidenceStore_NamesTheEnvironmentBoundInPages(t *testing.T) {
 	root := skillsRepoRoot(t)
 	for _, file := range []string{"evidence.sh", "PROVENANCE.md"} {
 		text := readRepoFile(t, root, evidenceDirRel+"/"+file)
-		for _, want := range []string{"32 pages", "128 KiB with 4 KiB pages"} {
+		for _, want := range []string{"32 pages", "128 KiB with 4 KiB pages", "ARG_MAX", "the caller's exec fails"} {
 			if !strings.Contains(text, want) {
 				t.Errorf("%s lacks %q", file, want)
 			}
