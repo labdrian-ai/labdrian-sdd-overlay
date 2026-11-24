@@ -1,0 +1,34 @@
+{
+  "kind": "polisher",
+  "base": "00c03b03f4cac496c9d6e9fb12eb6314198d0c83",
+  "head": "4b9c3789c2e0e78207f7cbe11d81769e2ef5d741",
+  "diff_sha256": "6c5b900160dd0f8a47665d9a8276308a577be51096a206ed590aadf3f0c14ca2",
+  "findings": {
+    "findings": [
+      {
+        "location": "engine/cmd/review_stop_hook.go:237",
+        "severity": "WARNING",
+        "claim": "At this head the new classification block tells the agent to \"Run the Classify step of the role-chain skill for each\" result, but the role-chain skill has no Classify step. Any agent that stops on a branch with stored results that have kept findings, in a repository with no docs/wiki/evidence.md (this repository has none), is blocked once per session and result with an order it cannot carry out. The step only arrives with T4b, which has not been started. If this head is delivered or deployed before T4b, every such stop costs an extra turn on a dead-end instruction.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "evidence": [
+          "classifyReason (engine/cmd/review_stop_hook.go, added in this diff) ends every classification block with \"Run the Classify step of the role-chain skill for each.\" stopHookAnswer now wires WithClassified(evidencesh...) into Stop, so this block is reachable in production.",
+          "rg -i 'classif' on skills/role-chain/ in the target worktree finds nothing. skills/role-chain/SKILL.md has the sections Appends, Triggers, Worktrees, Binding and Persistence, and none of them is a Classify step.",
+          "odd/tasks/merge-playbook-into-sdd-overlay.md (L85 in this diff): 'T4b is not started'. The T4 line says T4b adds 'a Classify step in skills/role-chain/SKILL.md' and needs the owner's re-approval before its commit.",
+          "Glob docs/wiki/evidence.md in the target worktree finds no file. The evidence script answers 'no' for every review when there is no page (E1 test (b)), so every result with kept findings is listed and the stop is blocked."
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full target diff /tmp/claude-1000/-home-labdrian-labdrian-sdd-overlay/45673332-5a42-429f-889a-50c9d8bcb1fc/scratchpad/t4w.diff (1167 lines).",
+      "Read engine/review/app/stop.go and engine/review/app/classify.go in the target worktree to check how the Stop/classifyRuling error and block contract matches the new guard `if !ruling.Block { return nil, err }`. Every error path of stopReview, once and classifyRuling returns an empty Ruling, so a block comes with an error only when refusals are named, which matches the design.",
+      "Read engine/cmd/review_stop_hook.go L48-185: runReviewStopHook prints the oneLine error on stderr and then the block on stdout, always with exit 0, and the panic is recovered. The oneLine/controlAt ordering puts line breaks before controls and writes valid multi-byte UTF-8 whole.",
+      "Checked engine/execrunner/execrunner.go: WaitDelay=killGrace is set and ctx.Err() is wrapped, so the 2 s timeout cannot hang on a grandchild that holds a pipe, and DeadlineExceeded reaches evidencesh.refusal.",
+      "Checked engine/cmd/deps.go environment()/env(): when deps have no environ, the child inherits the process environment. A HOME that is unset or relative makes a relative script path, which evidencesh refuses before it runs anything.",
+      "Checked engine/review/app/findings.go:88 and engine/cmd/review_findings.go: `--stored <head12>-<n>.json` is the accepted form, so the command that classifyReason prints is valid.",
+      "Checked skills/role-chain/SKILL.md and grepped skills/ for Classify; checked that docs/wiki/evidence.md does not exist in the target worktree.",
+      "No tests or commands were run (read-only review).",
+      "The judge read the whole range 81a7200c..4b9c3789 (one bind); the foreman records the same judgment on each commit of the range"
+    ]
+  }
+}

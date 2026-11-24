@@ -1,0 +1,89 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "81a7200c14c28f82b4d3c494cda7251a1099ef54",
+    "head": "4b9c3789c2e0e78207f7cbe11d81769e2ef5d741",
+    "diff_sha256": "0a688bdcc8ff5204e5e362ee03046b76ee7506688fcf19177bbc3543eed3c7f9",
+    "paths": [
+      "CHANGELOG.md",
+      "README.md",
+      "bin/lib/usage.sh",
+      "engine/architecture_test.go",
+      "engine/cmd/review_stop_hook.go",
+      "engine/cmd/review_stop_hook_classify_test.go",
+      "engine/cmd/review_stop_hook_docs_test.go",
+      "engine/cmd/review_stop_hook_oneline_test.go",
+      "engine/cmd/review_stop_hook_test.go",
+      "engine/review/app/stop.go",
+      "engine/review/evidencesh/evidencesh.go",
+      "engine/review/evidencesh/evidencesh_test.go",
+      "odd/tasks/merge-playbook-into-sdd-overlay.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "81a7200c14c28f82b4d3c494cda7251a1099ef54",
+      "head": "4b9c3789c2e0e78207f7cbe11d81769e2ef5d741",
+      "diff_sha256": "0a688bdcc8ff5204e5e362ee03046b76ee7506688fcf19177bbc3543eed3c7f9"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "README.md",
+        "bin/lib/usage.sh",
+        "engine/architecture_test.go",
+        "engine/cmd/review_stop_hook.go",
+        "engine/cmd/review_stop_hook_classify_test.go",
+        "engine/cmd/review_stop_hook_docs_test.go",
+        "engine/cmd/review_stop_hook_oneline_test.go",
+        "engine/cmd/review_stop_hook_test.go",
+        "engine/review/app/stop.go",
+        "engine/review/evidencesh/evidencesh.go",
+        "engine/review/evidencesh/evidencesh_test.go",
+        "odd/tasks/merge-playbook-into-sdd-overlay.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "CHANGELOG.md:30",
+        "claim": "The 2 s deadline is not a hard bound on the stop. execrunner.outputIn sets cmd.WaitDelay = killGrace (2 s). After the deadline kills sh, a grandchild such as awk that still holds the stdout or stderr pipe delays Output for up to 2 s more. A timed-out evidence run can therefore add about 4 s to a hook that already takes about 2.2 s. The tests only cover `exec sleep 5`, which has no grandchild, and assert a return within 1.5 s. The package doc and the CHANGELOG say 'at most 2 seconds'. Reaching this needs a hung or slow awk, so it is unlikely, and the effect is delay only, never a blocked stop.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "CHANGELOG.md:30",
+          "engine/review/evidencesh/evidencesh.go:32",
+          "engine/execrunner/execrunner.go:129"
+        ],
+        "severity": "WARNING"
+      },
+      {
+        "id": "F2",
+        "location": "engine/cmd/review_stop_hook.go:176",
+        "claim": "When the evidence script is missing, HOME is unset, or the evidence page is unreadable, every stop in a session with an unclassified kept result prints the same error line on stderr. This is not remembered per session, and the error is only shown in verbose mode. The stop still happens, so this is a nuisance and not a block. The adapter's startup cost, the sh and awk exec, is also paid at every such stop. The behaviour is deliberate (L84) but is new for repositories that have stored results and no deployed evidence store.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/cmd/review_stop_hook_classify_test.go:395"
+        ],
+        "severity": "SUGGESTION"
+      }
+    ],
+    "evidence": [
+      "Read the full diff in the scratchpad.",
+      "Read engine/cmd/review_stop_hook.go at HEAD, covering runReviewStopHook, oneLine and controlAt. Checked that the panic path still exits 0 and that the stderr line is escaped.",
+      "Read engine/cmd/deps.go env and environment. HOME comes from getenv, and the child environment comes from environ.",
+      "Read engine/execrunner/execrunner.go and confirmed WaitDelay = 2s, the output cap, and the exec env handling.",
+      "Read engine/review/app/stop.go for the Stop and Classify flow. A block with an error is now printed together, which matches the documented stop.go semantics.",
+      "Checked that the evidence script is run with argv only, with no shell string. Identifiers from stored results cannot inject, and the script itself refuses a bad identifier with exit 2.",
+      "No hook timeout setting was found in engine/cmd hook files.",
+      "Nothing was run. The tests, build and lint results quoted in the diff's L85 are the builder's claims and were not re-run.",
+      "The reviewer gave no severity and put F1 at evidencesh.go:709, a diff line (the file has 136 lines); the foreman moved F1 to the claim it names, CHANGELOG.md:30 (at most 2 seconds), and assigned WARNING to F1 (a stated bound that a grandchild can double) and SUGGESTION to F2"
+    ]
+  }
+}

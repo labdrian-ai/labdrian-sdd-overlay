@@ -1,0 +1,107 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "81a7200c14c28f82b4d3c494cda7251a1099ef54",
+    "head": "4b9c3789c2e0e78207f7cbe11d81769e2ef5d741",
+    "diff_sha256": "0a688bdcc8ff5204e5e362ee03046b76ee7506688fcf19177bbc3543eed3c7f9",
+    "paths": [
+      "CHANGELOG.md",
+      "README.md",
+      "bin/lib/usage.sh",
+      "engine/architecture_test.go",
+      "engine/cmd/review_stop_hook.go",
+      "engine/cmd/review_stop_hook_classify_test.go",
+      "engine/cmd/review_stop_hook_docs_test.go",
+      "engine/cmd/review_stop_hook_oneline_test.go",
+      "engine/cmd/review_stop_hook_test.go",
+      "engine/review/app/stop.go",
+      "engine/review/evidencesh/evidencesh.go",
+      "engine/review/evidencesh/evidencesh_test.go",
+      "odd/tasks/merge-playbook-into-sdd-overlay.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "hunt",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "81a7200c14c28f82b4d3c494cda7251a1099ef54",
+      "head": "4b9c3789c2e0e78207f7cbe11d81769e2ef5d741",
+      "diff_sha256": "0a688bdcc8ff5204e5e362ee03046b76ee7506688fcf19177bbc3543eed3c7f9"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "README.md",
+        "bin/lib/usage.sh",
+        "engine/architecture_test.go",
+        "engine/cmd/review_stop_hook.go",
+        "engine/cmd/review_stop_hook_classify_test.go",
+        "engine/cmd/review_stop_hook_docs_test.go",
+        "engine/cmd/review_stop_hook_oneline_test.go",
+        "engine/cmd/review_stop_hook_test.go",
+        "engine/review/app/stop.go",
+        "engine/review/evidencesh/evidencesh.go",
+        "engine/review/evidencesh/evidencesh_test.go",
+        "odd/tasks/merge-playbook-into-sdd-overlay.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "engine/review/evidencesh/evidencesh.go:85",
+        "severity": "WARNING",
+        "claim": "The 2-second deadline does not bound the run. When it expires, exec.CommandContext kills only `sh`. evidence.sh runs awk inside a command substitution (`out=$(run_awk \"$page\" evidence.md 2>/dev/null)`, evidence.sh:358), and that forked subshell keeps the hook's stderr pipe open, so cmd.Run waits up to execrunner's killGrace (another 2 s, set through WaitDelay) before it returns. A slow or stuck awk can therefore hold each stop for about 4 s, and the subshell and awk keep running as orphans because the runner kills no process group. README.md:1582 and CHANGELOG.md:30 still say the run takes at most 2 seconds. E1 (j) does not catch this: its stub uses `exec sleep 5`, which leaves no grandchild holding the pipes. Trigger: awk stalls on a very large or blocking page. I could not show that realistic input reaches it, so this is a WARNING.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/review/evidencesh/evidencesh.go:85",
+          "engine/execrunner/execrunner.go:129",
+          "skills/_shared/evidence/evidence.sh:358",
+          "README.md:1582",
+          "CHANGELOG.md:30",
+          "engine/review/evidencesh/evidencesh_test.go:213"
+        ]
+      },
+      {
+        "id": "F2",
+        "location": "engine/cmd/review_stop_hook.go:241",
+        "severity": "SUGGESTION",
+        "claim": "head12 duplicates app.short (engine/review/app/stop.go:137): both return the first 12 characters of an object name, or the whole name when it is shorter. The two copies can drift apart, and then the commit named in a classification line would no longer match the <head12> in the stored identifier.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/cmd/review_stop_hook.go:241",
+          "engine/review/app/stop.go:137"
+        ]
+      },
+      {
+        "id": "F3",
+        "location": "engine/review/evidencesh/evidencesh_test.go:275",
+        "severity": "SUGGESTION",
+        "claim": "The subtest name \"an exit 0 that is a signal-free exit error of sh\" is misleading: the test checks exit 126 (`exec.Command(\"sh\", \"-c\", \"exit 126\")`) and wants \"exited 126\". A reader who trusts the name would think the exit-0 answer path is covered here.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/review/evidencesh/evidencesh_test.go:275"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the whole diff file the prompt names (all 13 changed paths).",
+      "Read at head: engine/cmd/review_stop_hook.go, engine/review/app/stop.go and engine/review/app/classify.go in full, to check the Classified and Asked port contract, classifyRuling and how a refusal comes beside a block.",
+      "Read engine/execrunner/execrunner.go: WaitDelay=killGrace (2 s), the output bound, how context errors are wrapped, and that no process group is killed.",
+      "Read evidence.sh lines 270-370: reviewed-each runs awk inside a command substitution, and with no page it prints one 'no' line for each identifier.",
+      "Read engine/cmd/deps.go env and environment, and goldenEnvironment: when the test world leaves HOME unset, the script path is relative and the adapter refuses it, so the tests do not read the real HOME.",
+      "Compared the code against L84 (whole), L85 and the T4 line of odd/tasks/merge-playbook-into-sdd-overlay.md: the exit table, the stopHookAnswer guard, the classifyReason text, the controlAt ranges and the wiring all match. Only bin/lib/usage.sh changes; L85 says usage.go only names the verb.",
+      "Hunt checks: empty reviews returns []bool{} with no run; an empty or relative HOME is refused; a line other than yes or no is refused; an exec error that is not an ExitError is an error, never an answer (L82); stopHookAnswer drops no error (a block with an error prints both; an encode failure is joined to the error); no path is written or deleted.",
+      "oneLine: checked lineBreakAt before controlAt, valid multibyte UTF-8 kept whole, and lone 0x80-0x9F, C2 80-9F, C0 and DEL escaped as \\xHH, against L76 and the table rows.",
+      "Read the readability row sentence from roles/reviewer/rows.json and applied it.",
+      "Ran nothing: no build, test or timing (not run)."
+    ]
+  }
+}

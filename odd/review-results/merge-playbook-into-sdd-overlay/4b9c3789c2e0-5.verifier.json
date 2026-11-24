@@ -1,0 +1,25 @@
+{
+  "verdicts": [
+    {
+      "id": "F1",
+      "result": "reproduced",
+      "command": "Same probe as -3 F1. head: cd head/engine && HOME=$(mktemp -d) GOFLAGS=-count=1 go test ./review/evidencesh/ -run TestProbeGrandchild -v. base: test -d base/engine/review/evidencesh",
+      "output": "head: both bodies returned in 4.00 s, against the documented 2 s, with 'gave no answer within 2s: context deadline exceeded (signal: killed)'. A grandchild `sleep` was still alive after the return: in one case its ppid was 1, so it was orphaned. This matches the claim that the runner kills no process group. execrunner.go:85 and :129 set cmd.WaitDelay = killGrace, and :23 sets killGrace = 2 * time.Second. The existing test (j) at evidencesh_test.go:213 uses `exec sleep 5` with a 100ms timeout. base: printed 'base-missing-evidencesh'.",
+      "base_result": "not-reproduced"
+    },
+    {
+      "id": "F2",
+      "result": "reproduced",
+      "command": "head: rg -n 'head12|func short' -A6 head/engine/cmd/review_stop_hook.go head/engine/review/app/stop.go. base: rg -n 'func head12' base/engine/cmd/",
+      "output": "head: engine/cmd/review_stop_hook.go:241-246 is `func head12(head string) string { if len(head) > 12 { return head[:12] }; return head }`. engine/review/app/stop.go:137-139 is `func short(name string) string { return name[:min(len(name), 12)] }`. The behaviour is identical and the two are duplicated. head12 is used at review_stop_hook.go:234. base: rg exit=1, so head12 does not exist at base.",
+      "base_result": "not-reproduced"
+    },
+    {
+      "id": "F3",
+      "result": "reproduced",
+      "command": "head: Read head/engine/review/evidencesh/evidencesh_test.go lines 275-284. base: test -d base/engine/review/evidencesh",
+      "output": "head: line 275 is t.Run(\"an exit 0 that is a signal-free exit error of sh\", ...). Its body at :277 is err := exec.Command(\"sh\", \"-c\", \"exit 126\").Run(), and :283 is wantError(t, got, \"exited 126\"). The name says exit 0, but the body tests exit 126. base: the package and its test file do not exist ('base-missing-evidencesh').",
+      "base_result": "not-reproduced"
+    }
+  ]
+}
