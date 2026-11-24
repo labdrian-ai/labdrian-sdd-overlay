@@ -488,20 +488,26 @@ func TestUnforcedEnvironReadsFindsEveryRead(t *testing.T) {
 // the same without it), so the text is what holds it (reviews 88fb598e73d3-3 F1, T4r, and 5e745160b611-5 F4, T4t).
 const splitStatementLine = `if (each) { nid = split(want, ids, "\n"); for (i = 1; i <= nid; i++) { ids[i] = ids[i] ""; wanted[ids[i]] = 1 } }`
 
+var (
+	splitCall = regexp.MustCompile(`\bsplit[ \t]*\(`)
+	wantWord  = regexp.MustCompile(`\bwant\b`)
+)
+
 // splitPinProblem says what is wrong with the splitting of a script, or "" when exactly one line that is not a
-// comment holds split(want, and that line is the statement above: the whole statement on its one code line, so it
-// cannot be reordered, left to a comment or written twice and still pass.
+// comment holds both a split call and the word want, and that line is the statement above: the whole statement on its
+// one code line, so it cannot be reordered, respaced, left to a comment or written twice and still pass
+// (d0108e5f1245-5 F1, T4w-e). A line with a split call and no word want, such as the split of the page rows, stays out.
 func splitPinProblem(script string) string {
 	var lines []string
 	for _, line := range strings.Split(script, "\n") {
 		code := strings.TrimLeft(line, " \t")
-		if !strings.HasPrefix(code, "#") && strings.Contains(code, "split(want,") {
+		if !strings.HasPrefix(code, "#") && splitCall.MatchString(code) && wantWord.MatchString(code) {
 			lines = append(lines, code)
 		}
 	}
 	switch {
 	case len(lines) != 1:
-		return fmt.Sprintf("%d code lines hold split(want, where exactly 1 is required", len(lines))
+		return fmt.Sprintf("%d code lines hold a split call and the word want where exactly 1 is required", len(lines))
 	case lines[0] != splitStatementLine:
 		return fmt.Sprintf("the line is %q, want %q", lines[0], splitStatementLine)
 	}
@@ -526,6 +532,12 @@ func TestSplitPinProblemHoldsTheWholeStatement(t *testing.T) {
 		{"the statement only in a comment", "    # " + splitStatementLine + "\n", false},
 		{"the statement written twice", splitStatementLine + "\n" + splitStatementLine + "\n", false},
 		{"no statement", "x = 1\n", false},
+		{"a blank after the parenthesis", splitStatementLine + "\n" + `n = split( want, ids, "\n")` + "\n", false},
+		{"a blank before the comma", splitStatementLine + "\n" + `n = split(want , ids, "\n")` + "\n", false},
+		{"a blank before the parenthesis", splitStatementLine + "\n" + `n = split (want, ids, "\n")` + "\n", false},
+		{"a tab after the parenthesis", splitStatementLine + "\n" + "n = split(\twant, ids, \"\\n\")\n", false},
+		{"a split with no word want", splitStatementLine + "\n" + `n = split(line, raw, "|")` + "\n", true},
+		{"a longer word beside the statement", splitStatementLine + "\n" + `wantx = split(line, a, "|")` + "\n", true},
 	} {
 		if got := splitPinProblem(row.script); (got == "") != row.ok {
 			t.Errorf("%s: problem %q, want ok %v", row.name, got, row.ok)
@@ -549,5 +561,11 @@ func TestEvidenceStore_NamesTheEnvironmentBoundInPages(t *testing.T) {
 		if strings.Contains(text, "128 KiB on Linux") {
 			t.Errorf("%s says 128 KiB on Linux, which holds only with 4 KiB pages", file)
 		}
+		if strings.Contains(text, "follows the stack limit") {
+			t.Errorf("%s says ARG_MAX follows the stack limit, where the text may state only what was measured (d0108e5f1245-5 F2)", file)
+		}
+	}
+	if text := readRepoFile(t, root, evidenceDirRel+"/evidence.sh"); !strings.Contains(text, "between 128 KiB and 6 MiB") {
+		t.Errorf("evidence.sh lacks %q, the measured range of ARG_MAX (d0108e5f1245-5 F2)", "between 128 KiB and 6 MiB")
 	}
 }

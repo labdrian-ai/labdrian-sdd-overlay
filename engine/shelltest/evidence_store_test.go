@@ -87,7 +87,7 @@ func newEvidenceWorld(t *testing.T, page string) evidenceWorld {
 }
 
 // evidenceArgBudget is the most a run may pass as arguments, 32 KiB. A call near the limits of exec makes a test
-// depend on the host (ARG_MAX follows the stack limit), and the identifiers of reviewed-each are the only strings
+// depend on the host (ARG_MAX depends on the stack limit), and the identifiers of reviewed-each are the only strings
 // that grow, so no test sizes a call from the host: the exit 4 of an awk that cannot start is pinned with an awk whose
 // exec fails (T4t, 5e745160b611-5 F1). 32 KiB is far under the smallest ARG_MAX the reviews met (131072).
 const evidenceArgBudget = 32 << 10

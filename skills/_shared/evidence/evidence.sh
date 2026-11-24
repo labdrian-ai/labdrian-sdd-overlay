@@ -50,7 +50,8 @@
 #   on stdout. The identifiers reach sh as arguments and awk in one environment
 #   string. Linux limits one string to MAX_ARG_STRLEN (32 pages:
 #   128 KiB with 4 KiB pages), and the arguments and environment of one exec
-#   together to ARG_MAX (getconf ARG_MAX, which follows the stack limit). Past
+#   together to ARG_MAX (getconf ARG_MAX; measured with glibc: a quarter of the
+#   stack limit, kept between 128 KiB and 6 MiB). Past
 #   either when awk starts, awk cannot start and the mode exits 4, with the
 #   awk-failed line. Past ARG_MAX when sh starts, this script does not run and
 #   the caller's exec fails. A missing or empty wiki
