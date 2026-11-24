@@ -5,10 +5,12 @@
 // header of evidence.sh names them) the call is an error. Nothing it is told is remembered. Its bound is the timeout and
 // the grace of the Runner: at the deadline the Runner kills sh, and the call can wait up to the Runner's grace more
 // (execrunner's KillGrace, 2 seconds) while a process the script started holds its output. That process is not killed and
-// can outlive the call.
+// can outlive the call. The grace itself is tested on every system by execrunner's tests, and the stop hook's use of it on
+// Linux only (SH15 of engine/cmd).
 //
 // What each run means, the first row that applies:
 //   - no reviews: nothing runs, the answer is empty;
+//   - a script path that is not absolute (HOME unset or relative, in the stop hook): an error that says so, with no run;
 //   - nothing at the script's path, also under a path part that is not a directory: an error that says the evidence store
 //     is not deployed, with no run, wrapping the error of the stat. The error repeats at every stop that reaches the
 //     question, because nothing of an answer is remembered (the owner's L72);

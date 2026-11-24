@@ -53,7 +53,7 @@ func TestTheTextsStateTheBoundOfTheRunner(t *testing.T) {
 		return string(data)
 	}
 	for _, tc := range []struct{ name, text string }{
-		{"the README section of the review stop-hook", textBetween(t, "README.md", read("README.md"), "gentle-ai-overlay review stop-hook\n", "overlay --help\n")},
+		{"the README section of the review stop-hook", textBetween(t, "README.md", read("README.md"), "gentle-ai-overlay review stop-hook\n", "gentle-ai-overlay roles builder-guard\n")},
 		{"CHANGELOG.md", textBetween(t, "CHANGELOG.md", read("CHANGELOG.md"), "- The Stop hook (`labdrian review stop-hook`)", "\n- ")},
 	} {
 		for _, want := range []string{stopped, more} {

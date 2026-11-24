@@ -20,9 +20,13 @@ import (
 // (`x=$(read -r _ < fifo)`), which only the test frees. At the 2-second timeout `sh` is killed; the stop is back after at
 // least those 2 seconds, which load cannot shorten, and before the test freed the FIFO, with one stderr line that says no
 // answer within 2s. A stop that waited for the pipe to close would return only after the release, at the 20-second backstop,
-// so the flag would be set. The test frees the subshell itself, once, at its end or at the backstop, so no process it
-// started outlives it. Linux only: an open of a FIFO for reading and writing never blocks there and frees a blocked reader
-// (fifo(7)).
+// so the flag would be set. The backstop is started just before the stop, after the stub and the records, so its 20 seconds
+// count the stop alone: a correct build fails only when one stop takes 20 seconds or more, and a stop that waits for the
+// pipe can never pass (T4b-e, `c67f772ff05b-6` F4). The test frees the subshell itself, once, at its end or at the backstop,
+// so no process it started outlives it. Linux only: an open of a FIFO for reading and writing never blocks there and frees
+// a blocked reader (fifo(7)). It is also the one test of the stop hook's use of the runner's grace, so macOS and the BSDs
+// do not test it; the grace itself is held on every system by execrunner's own test, which has no build tag (T4b-e,
+// `c67f772ff05b-3` F1).
 func TestStopHookStatesTheBoundOfTheEvidenceRun(t *testing.T) {
 	overlaytest.RequirePrograms(t, "/bin/sh")
 	s := newStopWorld(t)
@@ -38,14 +42,15 @@ func TestStopHookStatesTheBoundOfTheEvidenceRun(t *testing.T) {
 	release := sync.OnceFunc(func() {
 		released.Store(true)
 		if f, err := os.OpenFile(fifo, os.O_RDWR, 0); err == nil {
-			f.Close()
+			// The end was opened only to free a blocked reader, so its close error is not the test's subject.
+			_ = f.Close()
 		}
 	})
 	t.Cleanup(release)
-	backstop := time.AfterFunc(20*time.Second, release)
-	t.Cleanup(func() { backstop.Stop() })
 	overlaytest.WriteFile(t, s.userHome, filepath.Join(".claude", "skills", "_shared", "evidence", "evidence.sh"), "x=$(read -r _ < '"+fifo+"')\n")
 	s.recordRangeKept(s.head, s.c4, "introduced")
+	backstop := time.AfterFunc(20*time.Second, release)
+	t.Cleanup(func() { backstop.Stop() })
 	start := time.Now()
 
 	stdout, stderr, exits := s.stop("s1", false)

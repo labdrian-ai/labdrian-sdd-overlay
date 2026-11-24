@@ -38,7 +38,8 @@ func TestClassified_RefusesAFIFOWithoutOpeningIt(t *testing.T) {
 	case <-time.After(5 * time.Second):
 		f, err := os.OpenFile(path, os.O_RDWR, 0)
 		if err == nil {
-			f.Close()
+			// The end was opened only to free a blocked open, so its close error is not the test's subject.
+			_ = f.Close()
 		}
 		t.Fatalf("the call did not answer in 5 seconds: the script was opened before its mode was checked")
 	}

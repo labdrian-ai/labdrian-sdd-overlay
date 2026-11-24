@@ -17,8 +17,8 @@ import (
 	"time"
 )
 
-// KillGrace is how long Run waits, after it has stopped a program at its deadline, for the
-// program's output pipes to close. A grandchild that kept them open must not hold Run past a
+// KillGrace is how long Run and Output wait, after they have stopped a program at its deadline, for the
+// program's output pipes to close. A grandchild that kept them open must not hold them past a
 // deadline that has already expired. It is exported so a caller that states this bound in a text
 // reads it from here, and a test holds the text against it.
 const KillGrace = 2 * time.Second

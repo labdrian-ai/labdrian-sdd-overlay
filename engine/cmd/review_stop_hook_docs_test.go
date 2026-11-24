@@ -27,7 +27,7 @@ func readRepositoryFile(t *testing.T, name string) string {
 // The hook is installed by install-hooks and run by Claude Code on every Stop, so the README says what it asks for,
 // once for what, what counts as reviewed, that it never blocks on an error, and what a user must do to get it.
 func TestDocsDescribeTheReviewStopHook(t *testing.T) {
-	section := docSection(t, readRepositoryFile(t, "README.md"), "gentle-ai-overlay review stop-hook\n", "overlay --help\n")
+	section := docSection(t, readRepositoryFile(t, "README.md"), "gentle-ai-overlay review stop-hook\n", "gentle-ai-overlay roles builder-guard\n")
 
 	for _, want := range []string{
 		"review stop-hook",
@@ -168,7 +168,7 @@ func TestChangelogRecordsTheReviewStopHook(t *testing.T) {
 func TestTextsOfTheReviewStopHookStateTheBoundOfTheEvidenceRun(t *testing.T) {
 	readme := readRepositoryFile(t, "README.md")
 	for _, tc := range []struct{ name, text string }{
-		{"the README section of the review stop-hook", docSection(t, readme, "gentle-ai-overlay review stop-hook\n", "overlay --help\n")},
+		{"the README section of the review stop-hook", docSection(t, readme, "gentle-ai-overlay review stop-hook\n", "gentle-ai-overlay roles builder-guard\n")},
 		{"CHANGELOG.md", docSection(t, readRepositoryFile(t, "CHANGELOG.md"), "- The Stop hook (`labdrian review stop-hook`)", "\n- ")},
 	} {
 		text := normalizeDocText(tc.text)
@@ -186,16 +186,17 @@ func TestTextsOfTheReviewStopHookStateTheBoundOfTheEvidenceRun(t *testing.T) {
 }
 
 // What the evidence run cannot tell is told as it is (T4x, `4b9c3789c2e0-3` F2): a store that is not deployed is named, and
-// the line repeats at each stop because nothing of it is remembered. Every refusal made before a run is named (T4z,
-// `c9440b24b20f-6` F6): not deployed, not a regular file, cannot be checked, cannot be read.
+// the line repeats at each stop because nothing of it is remembered. The refusals made before a run are held by evidencesh's
+// TestTheTextsNameEveryRefusalBeforeARun, against the errors of the adapter (T4b-e); this test keeps the wording that is
+// not a refusal.
 func TestTextsOfTheReviewStopHookSayTheLineOfAnUndeployedStoreRepeats(t *testing.T) {
 	readme := readRepositoryFile(t, "README.md")
 	for _, tc := range []struct{ name, text string }{
-		{"the README section of the review stop-hook", docSection(t, readme, "gentle-ai-overlay review stop-hook\n", "overlay --help\n")},
+		{"the README section of the review stop-hook", docSection(t, readme, "gentle-ai-overlay review stop-hook\n", "gentle-ai-overlay roles builder-guard\n")},
 		{"CHANGELOG.md", docSection(t, readRepositoryFile(t, "CHANGELOG.md"), "- The Stop hook (`labdrian review stop-hook`)", "\n- ")},
 	} {
 		text := normalizeDocText(tc.text)
-		for _, want := range []string{"not deployed", "is not a regular file", "cannot be checked", "cannot be read", "repeats at each stop", "of it is remembered"} {
+		for _, want := range []string{"not deployed", "repeats at each stop", "of it is remembered"} {
 			if !strings.Contains(text, want) {
 				t.Errorf("%s does not say %q", tc.name, want)
 			}
@@ -209,7 +210,7 @@ func TestTextsOfTheReviewStopHookSayItAsksForClassification(t *testing.T) {
 	readme := readRepositoryFile(t, "README.md")
 	for _, tc := range []struct{ name, text string }{
 		{"the stop-hook entry of README.md", docSection(t, readme, "    stop-hook\n", "overlay memory <verb>")},
-		{"the README section of the review stop-hook", docSection(t, readme, "gentle-ai-overlay review stop-hook\n", "overlay --help\n")},
+		{"the README section of the review stop-hook", docSection(t, readme, "gentle-ai-overlay review stop-hook\n", "gentle-ai-overlay roles builder-guard\n")},
 		{"bin/lib/usage.sh", docSection(t, readRepositoryFile(t, "bin/lib/usage.sh"), "                                   stop-hook\n", "Only launch starts an agent")},
 		{"CHANGELOG.md", docSection(t, readRepositoryFile(t, "CHANGELOG.md"), "- The Stop hook (`labdrian review stop-hook`)", "\n- ")},
 	} {

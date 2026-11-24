@@ -17,14 +17,13 @@ const shortNameHome = "gitobject/gitobject.go"
 
 // shortNameCuts names every place of a Go source that cuts a name at 12: a slice expression whose high bound is 12
 // (`name[:12]`), or a call of min with 12 among its arguments (`name[:min(len(name), 12)]`), where 12 is the integer literal
-// or a name the same file binds to that literal by its own value (`const n = 12`, `const n int = 12`, `var n = 12`, `n := 12`).
-// A bound name is matched by its text across the whole file, whatever scope binds it: a name bound to 12 in one place makes a
-// cut by the same name anywhere in the file a hit. Such a hit is false but loud, and is fixed by renaming the bound or by
-// gitobject.Short. The first 12 characters of an object name are written once, as gitobject.Short (T4y, `36d5bc62df38-4` F3,
-// which widens T4x's `4b9c3789c2e0-5` F2): two copies of the cut existed outside the walk of the first lint, and this is the
-// known-error check of the class. What it does not follow: a name that a const group repeats implicitly (`const ( a = 12; b )`
-// gives b no value of its own), a name bound to 12 in another file, and a value computed (`6 * 2`). A cut it does not follow
-// is read by review.
+// written `12`, or a name the same file declares or defines with that literal as its own value (`const n = 12`,
+// `const n int = 12`, `var n = 12`, `n := 12`). A bound name is matched by its text across the whole file, whatever scope
+// binds it: a name bound to 12 in one place makes a cut by the same name anywhere in the file a hit. Such a hit is false but
+// loud, and is fixed by renaming the bound or by gitobject.Short. The first 12 characters of an object name are written once,
+// as gitobject.Short (T4y, `36d5bc62df38-4` F3, which widens T4x's `4b9c3789c2e0-5` F2): two copies of the cut existed
+// outside the walk of the first lint, and this is the known-error check of the class. It follows nothing else: every other
+// way of writing or binding 12 is not followed, and a cut written so is read by review.
 func shortNameCuts(fset *token.FileSet, file *ast.File) []string {
 	isLiteral := func(e ast.Expr) bool {
 		lit, ok := e.(*ast.BasicLit)
