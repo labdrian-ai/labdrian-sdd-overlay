@@ -111,7 +111,8 @@ func (s Script) Classified(root string, reviews []string) ([]bool, error) {
 // checkScript says, before anything runs, whether a regular file that sh can open is at path, so a script sh cannot open
 // never reads as the script's own exit 2. Nothing, or a path part that is not a directory, is the evidence store not
 // deployed; anything else that cannot be checked, a path that is not a regular file and a regular file that cannot be
-// opened are each named. The open comes after the regular-file check, so a FIFO never blocks the hook. What it leaves: a
+// opened are each named. The open comes after the regular-file check, so a FIFO never blocks the hook. The close error of
+// the probe is dropped, the open having answered. What it leaves: a
 // file changed between the check and the run, which sh still reports as its exit 2.
 func checkScript(path string) error {
 	info, err := os.Stat(path)
@@ -127,7 +128,10 @@ func checkScript(path string) error {
 	if err != nil {
 		return fmt.Errorf("the evidence script %s cannot be read: %w", path, err)
 	}
-	return f.Close()
+	// The file was opened only to learn that sh can open it, which the open has answered; a close error of a read-only probe
+	// changes nothing, and if sh then cannot read the script its exit 2 is an error, never an answer.
+	_ = f.Close()
+	return nil
 }
 
 // refusal is the error of a run that failed, as the package doc words it. said is the first line of stderr whole, its

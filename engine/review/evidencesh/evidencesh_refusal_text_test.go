@@ -5,14 +5,18 @@ package evidencesh_test
 // test ties the texts to the code: it reads the format string of every fmt.Errorf of Classified and checkScript, the errors
 // returned before a run (the errors after it come from refusal and answers, which it does not read), and holds each to one
 // fragment of a table, each fragment to some error, and each fragment to the one sentence of the README and of the CHANGELOG
-// that names the refusals. A refusal added without a fragment, or a fragment a text drops, fails. It reads the source of two
-// functions, so an error moved into a helper fails it for a reason that is not a text; the fix is one table row or one moved
-// line.
+// that names the refusals. A refusal added without a fragment, or a fragment a text drops, fails. It also reads every return
+// of the two bodies (not a function literal in them), so an errors.New or a bare `return err` cannot pass unseen
+// (`20b8b0cf75fb-6` F1): the error of a return is nil, a literal fmt.Errorf held as above, or one of three named exceptions,
+// each matched once and each with its reason; a return with no result, another expression, an exception matched twice or
+// not at all fails. It reads the source of two functions, so an error moved into a helper, or a harmless rewrite of an
+// exception's return, fails it for a reason that is not a text; the fix is one table row or one moved line.
 
 import (
 	"go/ast"
 	"go/parser"
 	"go/token"
+	"go/types"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -75,6 +79,60 @@ func errorFormats(t *testing.T, path string) []string {
 	return formats
 }
 
+// errorException is a return of Classified or checkScript whose error is not a literal fmt.Errorf and is not a refusal before
+// a run that a text must name. expr is the returned error as types.ExprString prints it.
+type errorException struct{ fn, expr, reason string }
+
+var errorExceptions = []errorException{
+	{"Classified", "err", "the error of checkScript, whose own returns this test holds"},
+	{"Classified", "s.refusal(run, stderr, err)", "after the run: the package doc's row of a failed run, not a refusal before it"},
+	{"Classified", "answers(run, stdout, len(reviews))", "after the run: the package doc's row of its output, not a refusal before it"},
+}
+
+// errorReturns are "<function>: <expr>" for the last result of every return of Classified and checkScript, not entering a
+// function literal, but nil and a literal fmt.Errorf call, which errorFormats holds. A return with no result fails here.
+func errorReturns(t *testing.T, path string) []string {
+	t.Helper()
+	file, err := parser.ParseFile(token.NewFileSet(), path, nil, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var out []string
+	for _, decl := range file.Decls {
+		fn, ok := decl.(*ast.FuncDecl)
+		if !ok || fn.Body == nil || !(fn.Name.Name == "Classified" && fn.Recv != nil) && fn.Name.Name != "checkScript" {
+			continue
+		}
+		ast.Inspect(fn.Body, func(n ast.Node) bool {
+			if _, ok := n.(*ast.FuncLit); ok {
+				return false
+			}
+			ret, ok := n.(*ast.ReturnStmt)
+			if !ok {
+				return true
+			}
+			if len(ret.Results) == 0 {
+				t.Errorf("%s: a return with no result hides its error: name the result", fn.Name.Name)
+				return true
+			}
+			last := ret.Results[len(ret.Results)-1]
+			if id, ok := last.(*ast.Ident); ok && id.Name == "nil" {
+				return true
+			}
+			if call, ok := last.(*ast.CallExpr); ok {
+				if sel, ok := call.Fun.(*ast.SelectorExpr); ok && sel.Sel.Name == "Errorf" {
+					if pkg, ok := sel.X.(*ast.Ident); ok && pkg.Name == "fmt" {
+						return true
+					}
+				}
+			}
+			out = append(out, fn.Name.Name+": "+types.ExprString(last))
+			return true
+		})
+	}
+	return out
+}
+
 func TestTheTextsNameEveryRefusalBeforeARun(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 	root := overlaytest.RepoRoot(t)
@@ -87,7 +145,27 @@ func TestTheTextsNameEveryRefusalBeforeARun(t *testing.T) {
 		return string(data)
 	}
 
-	formats := errorFormats(t, filepath.Join(root, "engine", "review", "evidencesh", "evidencesh.go"))
+	source := filepath.Join(root, "engine", "review", "evidencesh", "evidencesh.go")
+	matched := make([]int, len(errorExceptions))
+	for _, ret := range errorReturns(t, source) {
+		named := false
+		for i, e := range errorExceptions {
+			if ret == e.fn+": "+e.expr {
+				matched[i]++
+				named = true
+			}
+		}
+		if !named {
+			t.Errorf("%s is an error return that is not nil or a literal fmt.Errorf: give it a fragment of the table with an fmt.Errorf, or name it in errorExceptions with its reason", ret)
+		}
+	}
+	for i, e := range errorExceptions {
+		if matched[i] != 1 {
+			t.Errorf("the exception %s: %s (%s) is matched by %d returns, want exactly 1: drop a stale row or give the extra return a fragment", e.fn, e.expr, e.reason, matched[i])
+		}
+	}
+
+	formats := errorFormats(t, source)
 	if len(formats) < len(refusalFragments) {
 		t.Fatalf("found %d errors before a run in Classified and checkScript, want at least %d: the parse no longer finds them", len(formats), len(refusalFragments))
 	}
