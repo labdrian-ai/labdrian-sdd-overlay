@@ -1,0 +1,31 @@
+{
+  "kind": "polisher",
+  "base": "b02f677258470a6dcca7d6d904570c133e7c52b3",
+  "head": "7aedb91e4881a665e6a9b15c7aa8be7a319e0e75",
+  "diff_sha256": "0c2b1deb6958114d2f0460b44c28dfa82ad845cfdd1f374de4b3c2b59a3cb4cd",
+  "findings": {
+    "findings": [
+      {
+        "location": "engine/cmd/review_stop_hook_docs_test.go:198",
+        "severity": "SUGGESTION",
+        "claim": "In the README, the needle \"cannot be read\" does not check the new sentence about the script being refused. The README already says \"a stored file it cannot read\". If the script's \"cannot be read\" refusal were removed from the README, this test would still pass, so the README is not checked for every refusal the test comment says it names.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "evidence": [
+          "The target adds \"cannot be read\" to the needle list at engine/cmd/review_stop_hook_docs_test.go:198. The comment at :189-190 says the test pins every refusal before a run: not deployed, not a regular file, cannot be checked, cannot be read.",
+          "README.md:1583 at head already has \"a stored file it cannot read\" (the stored-file sentence). normalizeDocText runs on the README stop-hook section, so the needle is found there whether or not line 1584 says \"cannot be read\".",
+          "The builder's own L91 entry in odd/tasks/merge-playbook-into-sdd-overlay.md (diff line 539) confirms it: \"README already held `cannot be read` (the stored-file sentence), so its RED was `is not a regular file` and `cannot be checked`\". Mutation Mg1 only reverted the CHANGELOG, not the README."
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full diff b02f6772..c67f772f (/tmp/claude-1000/-home-labdrian-labdrian-sdd-overlay/45673332-5a42-429f-889a-50c9d8bcb1fc/scratchpad/t4z.diff): CHANGELOG, README, the short-name lint doc and its rows, the H34 row, the new SH15 Linux FIFO test and the deleted unix test, the docs test, the KillGrace export and its renames, the gitobject docs, the evidencesh doc, the new bound-text test, the new FIFO test (z) and the task-document L91 entry.",
+      "Checked that each refusal in README:1584 and the CHANGELOG matches an error that checkScript in engine/review/evidencesh/evidencesh.go:114-126 actually returns: not deployed (:118), cannot be checked (:120), not a regular file (:122), cannot be read (:126).",
+      "Checked that both cmd.WaitDelay sites (execrunner.go:86 and :130) now use KillGrace, that no 'killGrace' remains in any Go file, and that the stop hook builds evidencesh over execrunner.New() (engine/cmd/review_stop_hook.go:176). The stated 2s+2s bound still matches DefaultTimeout (evidencesh.go:46) and KillGrace (execrunner.go:24).",
+      "Checked the markers TestTheTextsStateTheBoundOfTheRunner relies on: README.md:1545 'gentle-ai-overlay review stop-hook' comes before README.md:1641 'overlay --help', and overlaytest.RepoRoot exists (engine/overlaytest/overlaytest.go:34).",
+      "Reasoned through SH15's FIFO lifecycle by reading the code. The release cleanup runs before the TempDir removal (t.Cleanup runs last-in, first-out). The O_RDWR open does not block and frees the blocked reader on Linux. The backstop at 20s keeps a stop that waits for the pipe from hanging the test. I found no leftover process and no flakiness defect.",
+      "Ran no tests or commands. All checks were done by reading files and diffs (Read and Grep only).",
+      "The judge read the whole range b02f6772..c67f772f (one bind); the foreman records the same judgment on each commit of the range"
+    ]
+  }
+}

@@ -1,0 +1,60 @@
+{
+  "kind": "sweep",
+  "base": "7aedb91e4881a665e6a9b15c7aa8be7a319e0e75",
+  "head": "c67f772ff05b4d595e8cada04d3f5375c55f3cbb",
+  "diff_sha256": "e1394f1239e82622a70eeaf3c469c949f71c12d6009ad69839beb5e184cd432b",
+  "outcome": "fired",
+  "t1": {
+    "deleted_or_renamed": [
+      "engine/cmd/review_stop_hook_bound_unix_test.go"
+    ],
+    "removed_names": [
+      {
+        "name": "killGrace",
+        "hits": [
+          "odd/review-results/merge-playbook-into-sdd-overlay/00c03b03f4ca-2.polisher.json",
+          "odd/review-results/merge-playbook-into-sdd-overlay/00c03b03f4ca-3.polisher.json",
+          "odd/review-results/merge-playbook-into-sdd-overlay/36d5bc62df38-4.json",
+          "odd/review-results/merge-playbook-into-sdd-overlay/36d5bc62df38-4.verifier.json",
+          "odd/review-results/merge-playbook-into-sdd-overlay/36d5bc62df38-5.polisher.json",
+          "odd/review-results/merge-playbook-into-sdd-overlay/36d5bc62df38-6.json",
+          "odd/review-results/merge-playbook-into-sdd-overlay/36d5bc62df38-6.verifier.json",
+          "odd/review-results/merge-playbook-into-sdd-overlay/4b9c3789c2e0-2.polisher.json",
+          "odd/review-results/merge-playbook-into-sdd-overlay/4b9c3789c2e0-3.json",
+          "odd/review-results/merge-playbook-into-sdd-overlay/4b9c3789c2e0-4.polisher.json",
+          "odd/review-results/merge-playbook-into-sdd-overlay/4b9c3789c2e0-5.json",
+          "odd/review-results/merge-playbook-into-sdd-overlay/4b9c3789c2e0-5.verifier.json",
+          "odd/review-results/merge-playbook-into-sdd-overlay/5175def31aa7-3.polisher.json",
+          "odd/review-results/merge-playbook-into-sdd-overlay/5175def31aa7-4.polisher.json",
+          "odd/review-results/merge-playbook-into-sdd-overlay/5551f0ca4a09-2.polisher.json",
+          "odd/review-results/merge-playbook-into-sdd-overlay/5551f0ca4a09-3.polisher.json",
+          "odd/review-results/merge-playbook-into-sdd-overlay/8f5afb50d0c8-4.polisher.json",
+          "odd/review-results/merge-playbook-into-sdd-overlay/a9d68871ead5-2.polisher.json",
+          "odd/review-results/merge-playbook-into-sdd-overlay/a9d68871ead5-3.polisher.json",
+          "odd/review-results/merge-playbook-into-sdd-overlay/c193276c57ad-3.polisher.json",
+          "odd/review-results/merge-playbook-into-sdd-overlay/c9440b24b20f-3.polisher.json",
+          "odd/review-results/merge-playbook-into-sdd-overlay/c9440b24b20f-5.polisher.json",
+          "odd/review-results/merge-playbook-into-sdd-overlay/c9440b24b20f-6.json",
+          "odd/review-results/merge-playbook-into-sdd-overlay/f71d9dcbea12-2.polisher.json",
+          "odd/review-results/merge-playbook-into-sdd-overlay/f71d9dcbea12-3.polisher.json",
+          "odd/tasks/consolidation-phase9.md"
+        ]
+      }
+    ]
+  },
+  "t2": [
+    {
+      "tool": "errcheck",
+      "module": "engine",
+      "new": [
+        "cmd/review_stop_hook_bound_linux_test.go: unchecked error: f.Close()",
+        "review/evidencesh/evidencesh_fifo_linux_test.go: unchecked error: f.Close()"
+      ]
+    }
+  ],
+  "t3": [],
+  "t4": {
+    "leftovers": [],
+    "orphaned_fixtures": []
+  }
+}
