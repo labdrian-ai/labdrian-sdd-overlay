@@ -445,7 +445,10 @@ Commands:
                                              the stop for the first commit that misses anything review check asks of
                                              it, with the command for each thing it misses, asking for each thing once
                                              for each session and commit, and never for the whole branch; it lets the
-                                             stop happen on anything it cannot tell (exit 0 always, 1 usage error)
+                                             stop happen on anything it cannot tell (exit 0 always, 1 usage error). With
+                                             no commit to review it asks for the classification of each stored result of
+                                             the branch whose kept findings docs/wiki/evidence.md lacks, once for each
+                                             session and result, through the deployed evidence.sh reviewed-each
                                    Only launch starts an agent, the reviewer on Codex; no other verb launches an
                                    agent or dispatches work.
   memory <verb>                    Forward memory-directive verbs to the engine unchanged.

@@ -1,8 +1,9 @@
 package main
 
 // Every error the stop hook prints is one line of stderr (S6, L72): CR, LF, VT, FF and the UTF-8 forms of NEL, LS and PS
-// fold, every other byte is kept (L74). The line form is the printer's concern, so the errors of review/app keep their
-// own texts.
+// fold (L74), and the control bytes are escaped (L76): every C0 byte but those four, DEL, a lone byte 0x80-0x9F and the
+// UTF-8 form of U+0080-U+009F but NEL, each byte written as \x and two lowercase hex digits. Every other byte is kept. The
+// line form is the printer's concern, so the errors of review/app keep their own texts.
 
 import (
 	"errors"
@@ -32,6 +33,17 @@ func TestStopHookPrintsAnErrorOfManyLinesOnOneLine(t *testing.T) {
 		stdout, stderr, exits := runStopHook(d, stopInput("s1", "relative/dir", false))
 
 		want := "review stop-hook: cannot determine the working directory: a\xffb c\n"
+		if stdout != "" || stderr != want || !equalInts(exits, []int{0}) {
+			t.Errorf("stdout = %q, stderr = %q, exits = %v; want nothing, %q and [0]", stdout, stderr, exits, want)
+		}
+	})
+	t.Run("control bytes", func(t *testing.T) { // SH14
+		d := s.hookDeps()
+		d.getwd = func() (string, error) { return "", errors.New("a\x1b[31mb\x9bc") }
+
+		stdout, stderr, exits := runStopHook(d, stopInput("s1", "relative/dir", false))
+
+		want := "review stop-hook: cannot determine the working directory: a\\x1b[31mb\\x9bc\n"
 		if stdout != "" || stderr != want || !equalInts(exits, []int{0}) {
 			t.Errorf("stdout = %q, stderr = %q, exits = %v; want nothing, %q and [0]", stdout, stderr, exits, want)
 		}
@@ -68,9 +80,20 @@ func TestOneLineJoinsTheLinesOfAText(t *testing.T) {
 		{"\xe2\x80\xa9a\f", "a"},
 		// every other byte is printed as it is.
 		{"a\xffb\nc", "a\xffb c"},
-		{"a\x85b", "a\x85b"},
-		{"a\xe2\x80", "a\xe2\x80"},
 		{"\xc3\xa9\n\xc3\xbc", "\xc3\xa9 \xc3\xbc"},
+		// a control is written as \x and two lowercase hex digits per byte (L76): the escape is four ASCII characters.
+		{"a\x85b", "a\\x85b"},
+		{"a\xe2\x80", "a\xe2\\x80"},
+		{"a\x1bb", "a\\x1bb"},
+		{"a\x00b", "a\\x00b"},
+		{"a\tb", "a\\x09b"},
+		{"a\x7fb", "a\\x7fb"},
+		{"a\x9bb", "a\\x9bb"},
+		{"a\xc2\x9bb", "a\\xc2\\x9bb"},
+		{"\x1ba", "\\x1ba"},
+		{"a\x1b\nb", "a\\x1b b"},
+		{"\xe2\x82\xac", "\xe2\x82\xac"},
+		{"a\xc2\x85b", "a b"},
 	} {
 		if got := oneLine(tc.in); got != tc.want {
 			t.Errorf("oneLine(%q) = %q, want %q", tc.in, got, tc.want)

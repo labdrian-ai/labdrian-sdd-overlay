@@ -160,3 +160,22 @@ func TestChangelogRecordsTheReviewStopHook(t *testing.T) {
 		}
 	}
 }
+
+// The texts that say what the hook asks for also say that it asks for the classification of results (S6, T4w, L84): the
+// README entry and section, the help of the wrapper and the CHANGELOG, each naming the page and the script it asks through.
+func TestTextsOfTheReviewStopHookSayItAsksForClassification(t *testing.T) {
+	readme := readRepositoryFile(t, "README.md")
+	for _, tc := range []struct{ name, text string }{
+		{"the stop-hook entry of README.md", docSection(t, readme, "    stop-hook\n", "overlay memory <verb>")},
+		{"the README section of the review stop-hook", docSection(t, readme, "gentle-ai-overlay review stop-hook\n", "overlay --help\n")},
+		{"bin/lib/usage.sh", docSection(t, readRepositoryFile(t, "bin/lib/usage.sh"), "                                   stop-hook\n", "Only launch starts an agent")},
+		{"CHANGELOG.md", docSection(t, readRepositoryFile(t, "CHANGELOG.md"), "- The Stop hook (`labdrian review stop-hook`)", "\n- ")},
+	} {
+		text := normalizeDocText(tc.text)
+		for _, want := range []string{"classification", "docs/wiki/evidence.md", "evidence.sh reviewed-each"} {
+			if !strings.Contains(text, normalizeDocText(want)) {
+				t.Errorf("%s does not say %q", tc.name, want)
+			}
+		}
+	}
+}

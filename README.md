@@ -892,7 +892,10 @@ overlay review <verb>
     stop-hook
         Not run by a person: the Claude Code Stop hook that `install-hooks` wires (the review stop-hook, described
         below as `gentle-ai-overlay review stop-hook`). It asks the agent for what the first commit with unfinished
-        review steps misses, each thing once for each session and commit. Exit 0 always, 1 usage error.
+        review steps misses, each thing once for each session and commit. When no commit misses anything it also asks,
+        once for each session and result, for the classification of each stored review result of the branch whose kept
+        findings `docs/wiki/evidence.md` does not hold yet, through the deployed `evidence.sh reviewed-each`. Exit 0
+        always, 1 usage error.
 
 overlay memory <verb>
     Forward memory-directive verbs to the engine unchanged. Read-only: it only plans what memory
@@ -1573,6 +1576,11 @@ gentle-ai-overlay review stop-hook
     default branch, once for each session), remembered under $XDG_STATE_HOME/labdrian/review-stop/ (default ~/.local/state), outside the
     working tree; a session with no session_id counts as one session. It never blocks the stop of an agent that a stop
     hook is already making continue (stop_hook_active).
+    When no commit misses anything, it also asks, once for each session and result, for the classification of each
+    stored review result of the branch whose kept findings `docs/wiki/evidence.md` does not hold yet. It asks the
+    evidence store deployed under `~/.claude/skills/_shared/evidence/` once at each stop, through `evidence.sh
+    reviewed-each` (at most 2 seconds), and names every result still lacking, the ones asked before included. What the
+    script cannot tell, and a stored file it cannot read, is one line on stderr, and can come beside the block.
     Input: the hook JSON on stdin, at most 1 MiB (more is input it cannot use). Only session_id, cwd, hook_event_name
     and stop_hook_active are read, and an event other than Stop is ignored.
     Output: nothing (the stop happens), or exactly one JSON object, {"decision":"block","reason":"..."}, with exit 0.

@@ -2,7 +2,9 @@ package main
 
 // review subcommand, verb 'stop-hook': the Claude Code Stop hook that blocks the stop of an agent, once for each session,
 // commit and need, when a commit of its branch misses anything 'review check' asks of it: a Risk trailer, a sweep record,
-// the sweeper's answer to a fired sweep, a polisher record for a declared item, a review (own-rdd T6a, T6b6, S6, L18). It is an internal hook command, not one
+// the sweeper's answer to a fired sweep, a polisher record for a declared item, a review (own-rdd T6a, T6b6, S6, L18). When no
+// commit misses anything it asks, once for each session and result, for the classification of the stored results of the
+// branch whose kept findings docs/wiki/evidence.md does not hold yet (S6, T4w). It is an internal hook command, not one
 // a person runs: Claude Code starts it when the agent is about to stop, hands it the event as JSON on stdin, and reads what
 // it prints. `install-hooks` installs it (the settings review stop-hook family); Claude Code loads hook changes only when
 // it starts, so an existing install must re-run install-hooks and restart Claude Code. The tests feed it hook JSON
@@ -21,8 +23,10 @@ package main
 //     and hands stderr to the agent as the reason: whatever goes wrong (input that cannot be read or decoded, a repository
 //     or a store that cannot be read, a panic) the stop happens, so a hook that is broken never keeps an agent from
 //     stopping. What the hook could not tell is one line on stderr, with CR, LF, VT, FF and the UTF-8 forms of NEL, LS and
-//     PS folded to a space and every other byte kept (oneLine), which Claude Code shows only in verbose mode; input it cannot use is silent on both streams, and so is every case with
-//     nothing to ask.
+//     PS folded to a space, the control bytes written as \xHH (C0 but those four, DEL, a lone byte 0x80-0x9F and the UTF-8
+//     form of U+0080-U+009F but NEL) and every other byte kept (oneLine), which Claude Code shows only in verbose mode; a
+//     block can come with such a line, the block on stdout and the line on stderr, both with exit 0. Input it cannot use is
+//     silent on both streams, and so is every case with nothing to ask.
 //
 // It asks git and reads the working tree, and writes one marker in the state home when it blocks a stop (review/fsstore's
 // Asked). It binds nothing, makes no worktree and stores no result: the agent runs the command the block names.
@@ -30,11 +34,15 @@ package main
 import (
 	"fmt"
 	"io"
+	"path/filepath"
 	"strings"
+	"unicode/utf8"
 
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/execrunner"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/hookwire"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/review"
 	reviewapp "github.com/labdrian-ai/labdrian-sdd-overlay/engine/review/app"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/review/evidencesh"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/review/fsstore"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/statestore"
 )
@@ -69,8 +77,11 @@ func runReviewStopHook(p process, d deps, args []string) {
 }
 
 // oneLine is text with each run of line breaks made one space, and the runs at its start and its end dropped: what the
-// hook prints on stderr, which is one line. It works on bytes: every byte that is not part of a line break is written as
-// it is, invalid UTF-8 included. The line breaks are those of lineBreakAt.
+// hook prints on stderr, which is one line. The line breaks are those of lineBreakAt, found first; then a control, which
+// controlAt names, is written as \x and two lowercase hex digits for each of its bytes, so the escape is ASCII; every other
+// byte is written as it is, invalid UTF-8 included, and a valid UTF-8 character of more than one byte is written whole,
+// so a continuation byte inside it is not mistaken for a lone one. An escape is not a line break: it is kept at the start
+// of the text.
 func oneLine(text string) string {
 	var b strings.Builder
 	broken := false
@@ -84,10 +95,33 @@ func oneLine(text string) string {
 			b.WriteByte(' ')
 		}
 		broken = false
-		b.WriteByte(text[i])
-		i++
+		if n := controlAt(text, i); n > 0 {
+			for _, c := range []byte(text[i : i+n]) {
+				fmt.Fprintf(&b, "\\x%02x", c)
+			}
+			i += n
+			continue
+		}
+		_, n := utf8.DecodeRuneInString(text[i:]) // 1 for ASCII and for a byte that is not UTF-8
+		b.WriteString(text[i : i+n])
+		i += n
 	}
 	return b.String()
+}
+
+// controlAt is the length in bytes of the control that starts at text[i], and 0 when none does: a C0 byte (0x00-0x1F), DEL
+// (0x7F), a byte 0x80-0x9F that starts no valid UTF-8 character, and the UTF-8 form of U+0080-U+009F (C2 80 to C2 9F). The
+// ranges are written out, not asked of unicode.IsControl. It does not ask whether the control is a line break (CR, LF, VT,
+// FF, NEL): oneLine asks lineBreakAt first, so those never reach it, and a caller that asks it first escapes them.
+func controlAt(text string, i int) int {
+	b := text[i]
+	switch {
+	case b <= 0x1F, b == 0x7F, b >= 0x80 && b <= 0x9F:
+		return 1
+	case b == 0xC2 && i+1 < len(text) && text[i+1] >= 0x80 && text[i+1] <= 0x9F:
+		return 2
+	}
+	return 0
 }
 
 // lineBreakAt is the length in bytes of the line break that starts at text[i], and 0 when none does: CR, LF, VT and FF
@@ -112,6 +146,9 @@ func lineBreakAt(text string, i int) int {
 // stopHookAnswer reads the hook input and returns what the hook prints on stdout: the block of the stop, or nothing. Input
 // that cannot be read or used is nothing, in silence, and so is the input of another event; what the hook could not tell
 // is an error with no block, because a block that cannot be backed by the stores or by git would be asked at every stop.
+// A block can come with an error (a result the pass refused, named beside the ruling): both are returned and both are
+// printed, because a refusal returned beside a ruling is recorded as named. The classification question runs the evidence
+// store deployed under HOME (evidenceScript) through evidencesh.
 // One byte past the bound is enough for the decoder to see the input is over it, and no more of an endless input is
 // ever read.
 func stopHookAnswer(p process, d deps) ([]byte, error) {
@@ -135,11 +172,31 @@ func stopHookAnswer(p process, d deps) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	ruling, err := newReviewService(d).WithAsked(asked).Stop(dir, in.SessionID, in.Continuing)
-	if err != nil || !ruling.Block {
+	classified := evidencesh.New(execrunner.New().WithMaxOutput(evidenceScriptMaxOutput), evidencesh.Options{Script: evidenceScript(d), Environ: d.environment()})
+	ruling, err := newReviewService(d).WithAsked(asked).WithClassified(classified).Stop(dir, in.SessionID, in.Continuing)
+	if !ruling.Block {
 		return nil, err
 	}
-	return hookwire.StopReply{Block: true, Reason: stopReason(ruling)}.Encode()
+	out, encErr := hookwire.StopReply{Block: true, Reason: stopReason(ruling)}.Encode()
+	switch {
+	case encErr == nil:
+		return out, err
+	case err == nil:
+		return nil, fmt.Errorf("encode the block: %w", encErr)
+	}
+	return nil, fmt.Errorf("%w; encode the block: %w", err, encErr)
+}
+
+// evidenceScriptMaxOutput bounds what the evidence script may print on a stream: its answer is four bytes for each result
+// at most, and an error line is short.
+const evidenceScriptMaxOutput = 1 << 20
+
+// evidenceScript is the path of the evidence.sh the Claude Code skills tree holds: <HOME>/.claude/skills/_shared/evidence/
+// evidence.sh, where `labdrian apply` deploys the evidence store by the claude-skill route (T20). HOME is read through the
+// deps' environment; unset or relative it makes a relative path, which the adapter refuses at the call, so the review
+// question never depends on it and the error appears only at a stop that has a result with kept findings.
+func evidenceScript(d deps) string {
+	return filepath.Join(d.env("HOME"), ".claude", "skills", "_shared", "evidence", "evidence.sh")
 }
 
 // stopReason words the question of a block for the agent that reads it (own-rdd T6b6c, S6 e): for the one commit asked,
@@ -148,6 +205,9 @@ func stopHookAnswer(p process, d deps) ([]byte, error) {
 // question of a repository that tells no default branch has its own reason. <feature> is left for the agent to fill, as
 // the hook reads the records of every feature of the tree.
 func stopReason(r reviewapp.Ruling) string {
+	if len(r.Classify) > 0 {
+		return classifyReason(r.Classify)
+	}
 	q := r.Question
 	if r.NoDefault {
 		return fmt.Sprintf("The repository does not tell the default branch of branch %s (origin/HEAD is not set, and there is no branch main or master), "+
@@ -162,6 +222,27 @@ func stopReason(r reviewapp.Ruling) string {
 		"<feature> is the feature whose odd/tasks/<feature>.md holds the task of the commit. A record counts once it is stored and binds the commit, "+
 		"whatever its outcome; 'labdrian review check' judges the outcome. The stop hook asks for each thing a commit misses once for each session and commit.",
 		q.Head, q.Branch, q.Base, strings.Join(lines, "\n"))
+}
+
+// classifyReason words the block that asks for the classification of results (S6, L67, L84): a block with no review
+// question, so it names no branch or commit to review. Each line names the result, its commit and its kept findings, and
+// the command that lists them; <feature> and <stored> are the parts of the identifier before and after its first "/".
+func classifyReason(results []reviewapp.KeptResult) string {
+	lines := make([]string, len(results))
+	for i, r := range results {
+		feature, stored, _ := strings.Cut(r.Review, "/")
+		lines[i] = fmt.Sprintf("- %s (commit %s, %d kept): labdrian review findings --feature %s --stored %s.json", r.Review, head12(r.Head), r.Kept, feature, stored)
+	}
+	return "Review results of the branch hold findings that docs/wiki/evidence.md does not hold yet:\n\n" + strings.Join(lines, "\n") + "\n\n" +
+		"Run the Classify step of the role-chain skill for each. The stop hook names each result once for each session, and names it again beside a result it has not named yet."
+}
+
+// head12 is the first 12 characters of a commit name, the whole name when it is shorter.
+func head12(head string) string {
+	if len(head) > 12 {
+		return head[:12]
+	}
+	return head
 }
 
 // needLine is the line of the block for one thing the commit of q misses.
