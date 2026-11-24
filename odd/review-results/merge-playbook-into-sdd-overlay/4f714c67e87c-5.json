@@ -1,0 +1,115 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "edeeed7758b3ced30985e711bc5f7163dd4496e7",
+    "head": "4f714c67e87c03638ece204ef69cb0e27ab8d0ac",
+    "diff_sha256": "f61921308f73c0d1fd3aad6f9c7d79c17ceead205e6d5e1907d07f9c1e1264c9",
+    "paths": [
+      "engine/shelltest/evidence_store_each_test.go",
+      "engine/shelltest/evidence_store_shells_test.go",
+      "engine/shelltest/evidence_store_test.go",
+      "engine/skills/evidence_store_artifact_test.go",
+      "odd/tasks/merge-playbook-into-sdd-overlay.md",
+      "skills/_shared/evidence/PROVENANCE.md",
+      "skills/_shared/evidence/evidence.sh"
+    ]
+  },
+  "rows": [
+    "recall",
+    "hunt",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "edeeed7758b3ced30985e711bc5f7163dd4496e7",
+      "head": "4f714c67e87c03638ece204ef69cb0e27ab8d0ac",
+      "diff_sha256": "f61921308f73c0d1fd3aad6f9c7d79c17ceead205e6d5e1907d07f9c1e1264c9"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/shelltest/evidence_store_each_test.go",
+        "engine/shelltest/evidence_store_shells_test.go",
+        "engine/shelltest/evidence_store_test.go",
+        "engine/skills/evidence_store_artifact_test.go",
+        "odd/tasks/merge-playbook-into-sdd-overlay.md",
+        "skills/_shared/evidence/PROVENANCE.md",
+        "skills/_shared/evidence/evidence.sh"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "engine/skills/evidence_store_artifact_test.go:216",
+        "severity": "WARNING",
+        "claim": "The task-document lint now misses real task identifiers that the T4i pattern caught. taskDocumentReferences drops every match followed by '-' and a letter, not only a match that ends in a bare number. Example: in 'T4k-only', the new pattern cannot take '-o' as a dashed part, because \\b fails between 'o' and 'n'. It backtracks to 'T4k', whose next bytes are '-o', so the match is dropped. The T4i pattern `\\b[STL][0-9]+[a-z]*(-[a-z0-9]+)*\\b` matched the whole 'T4k-only' and flagged it. A deployed PROVENANCE.md or evidence.sh that says 'T4k-only', 'L72-style', 'T3c-abc' or 'OD-11-era' now passes TestEvidenceStore_NamesNoSectionTaskOrLogEntryOfATaskDocument. L67 (iii) gives the reason for the drop: 'a real dashed part follows a letter suffix and the pattern takes it'. That reason does not hold for a letter-suffixed id followed by a dashed prose word. The table test pins only L2-cache and S5-based, which are bare numbers, so nothing catches this.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/skills/evidence_store_artifact_test.go:216",
+          "engine/skills/evidence_store_artifact_test.go:210"
+        ]
+      },
+      {
+        "id": "F2",
+        "location": "engine/shelltest/evidence_store_each_test.go:68",
+        "severity": "SUGGESTION",
+        "claim": "L72 (h) asks for parity 'for each page state of B12 and B13', but the parity states map leaves several of them out. Missing from B13: a page of mode 000, a wiki directory that cannot be searched (mode 600), a dash-prefixed wiki directory that cannot be searched, and an awk that exits 1. Missing from B12: an empty existing wiki directory and a dash-prefixed wiki directory that holds nothing. The parity evidence also has no backslash row, which is covered only outside the parity loop. Today these paths go through the shared page_state and awk_cannot_answer, so a divergence is unlikely. But if one mode later gets its own page check, B14 would not show it.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/shelltest/evidence_store_each_test.go:68",
+          "engine/shelltest/evidence_store_test.go:294"
+        ]
+      },
+      {
+        "id": "F3",
+        "location": "skills/_shared/evidence/PROVENANCE.md:15",
+        "severity": "SUGGESTION",
+        "claim": "PROVENANCE.md says reviewed-each 'exits 4, 3 and 2 where reviewed does, with the same stderr lines'. That is false for exit 3. With no awk, evidence.sh:97 prints the mode name, so reviewed-each prints 'evidence.sh: awk is not on PATH; reviewed-each cannot run', while reviewed prints '...; reviewed cannot run'. The B11 test pins this difference (evidence_store_test.go, args[0] in the expected line). The header comment of evidence.sh claims 'same stderr line' only for exit 4, which is correct. The PROVENANCE wording widens that claim to exit 3, where it is wrong. T4w's adapter reports the first stderr line, so this text describes a contract that adapter consumes.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "skills/_shared/evidence/PROVENANCE.md:15",
+          "skills/_shared/evidence/evidence.sh:97"
+        ]
+      },
+      {
+        "id": "F4",
+        "location": "engine/skills/evidence_store_artifact_test.go:248",
+        "severity": "SUGGESTION",
+        "claim": "shellCalls does not model here-documents, and its stated bound (variable, eval, command, backquotes) does not mention them. If evidence.sh later gets a here-doc whose body holds an apostrophe or a double quote (for example \"don't\"), the scanner's quote state flips for the rest of the file. Every later cd, dirname or basename that lacks ' -- ' is then silently not reported. The 'seen' guard only fails when a word is never found at all, so it does not catch a partial loss. evidence.sh has no here-doc today, so the trigger is not reachable yet.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/skills/evidence_store_artifact_test.go:248"
+        ]
+      },
+      {
+        "id": "F5",
+        "location": "skills/_shared/evidence/evidence.sh:180",
+        "severity": "SUGGESTION",
+        "claim": "reviewed-each matches with an array subscript (`rv in wanted`, a string key). reviewed matches with `rv == want`. In POSIX awk, both ENVIRON values and split() fields are numeric strings when they look numeric, so `==` can compare them as numbers. A cell written without surrounding blanks, such as '|01|' or '|1.0|', is not changed by trim's sub() and stays a numeric string. Asked with identifier '1', reviewed can then exit 0 while reviewed-each prints 'no', which breaks the parity that B14 asserts. The parity ids are all non-numeric, so the test does not cover this. Realistic review identifiers are not numeric, so the trigger is unlikely.",
+        "evidence_class": "inferential",
+        "causal_disposition": "unknown",
+        "proof_refs": [
+          "skills/_shared/evidence/evidence.sh:180",
+          "skills/_shared/evidence/evidence.sh:179"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full diff t4k.diff (846 lines) across all 7 changed paths",
+      "Read evidence.sh lines 55-353 in the worktree: argument parsing, run_awk BEGIN/END, page_state, awk_cannot_answer, answered_each, the reviewed and reviewed-each branches",
+      "Grepped evidence.sh for here-docs, backquotes, cd, dirname and basename: lines 108, 235, 290, 309, 319, 357 all use --; no here-doc",
+      "Read PROVENANCE.md (whole)",
+      "Read evidence_store_test.go lines 240-374 (B12, B13) to compare their states with the B14 parity map",
+      "Read the task document's L67 T4k design (lines 3130-3169) and L72's T4k amendment (lines 3655-3669)",
+      "Grepped the claims of 66a1a0398abe-3.json F1-F3 and 66a1a0398abe-5.json F1; each is addressed as L67 and L72 specify (cd -- at line 108, a shell-code lint over cd/dirname/basename with a table test, the pattern with T3c-a2/OD-10b and the L2-cache/S5-based drop, a per-shell end-of-options test)",
+      "Checked the regex behaviour on 'T4k-only' by hand against the old and new patterns",
+      "Read the readability row sentence from roles/reviewer/rows.json and applied it",
+      "No command was run; nothing was built or tested"
+    ]
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "verdicts": [
+    {
+      "id": "F1",
+      "result": "reproduced",
+      "command": "head: cd vf-t4k/head/skills/_shared/evidence; set -- $(seq -f 'review-%08g' 1 N); sh evidence.sh reviewed-each vf-t4k/wiki \"$@\" (wiki holds a valid evidence.md), with N=9500, N=8000 and N=8300; base: cd vf-t4k/base/skills/_shared/evidence; sh evidence.sh reviewed-each vf-t4k/wiki rev-1",
+      "output": "head N=9500 (about 152000 bytes): exit=4, stdout had 0 lines, stderr 'evidence.sh: awk failed on .../vf-t4k/wiki/evidence.md (exit 126); reviewed cannot answer'. Head N=8000 (EVIDENCE_WANT about 128000 bytes): exit=0. Head N=8300 (about 132800 bytes): exit=4. Base: the usage text, exit=2 (base has no reviewed-each).",
+      "base_result": "not-reproduced"
+    },
+    {
+      "id": "F2",
+      "result": "reproduced",
+      "command": "go test ./skills -run TestProbe -v -count=1 in vf-t4k/{head,base}/engine with HOME=$(mktemp -d). The probe zz_probe_test.go calls taskDocumentReferences(\"see \"+s+\" here\") on head and taskDocumentIdentifier.FindString(\"see \"+s+\" here\") on base (base has no taskDocumentReferences), for s in T4k-only, L72-style, T3c-ab, L72-x, OD-11-era.",
+      "output": "HEAD: \"T4k-only\" -> [], \"L72-style\" -> [], \"T3c-ab\" -> [], \"L72-x\" -> [], \"OD-11-era\" -> [] (none flagged). BASE: \"T4k-only\" -> \"T4k-only\", \"L72-style\" -> \"L72-style\", \"T3c-ab\" -> \"T3c-ab\", \"L72-x\" -> \"L72-x\", \"OD-11-era\" -> \"OD-11\" (all flagged). Both runs: PASS, ok.",
+      "base_result": "not-reproduced"
+    }
+  ]
+}
