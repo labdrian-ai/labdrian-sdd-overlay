@@ -10,6 +10,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/overlaytest"
 )
 
 // The two sleeps the tests below start, by the seconds they sleep. Each duration is unlike any
@@ -42,14 +44,13 @@ type reporter interface {
 	Errorf(format string, args ...any)
 }
 
-// requireProcessLister skips the test when the machine has no process lister. Without one a
-// grandchild could not be found again to be stopped, and it would be left running for the rest of
-// its sleep with nothing to say so: a visible skip is the lesser evil.
+// requireProcessLister asks for the process lister, as every tool check of the tests does
+// (overlaytest.RequirePrograms): the test is skipped on a developer machine without one and fails
+// on CI. Without a lister a grandchild could not be found again to be stopped, and it would be
+// left running for the rest of its sleep with nothing to say so.
 func requireProcessLister(t *testing.T) {
 	t.Helper()
-	if _, err := os.Stat(processLister); err != nil {
-		t.Skipf("no %s to find the lingering grandchild by, so it could not be stopped: %v", processLister, err)
-	}
+	overlaytest.RequirePrograms(t, processLister)
 }
 
 // lingeringGrandchild returns the body of a fake program that starts a grandchild holding the
