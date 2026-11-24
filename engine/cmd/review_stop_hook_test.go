@@ -27,8 +27,10 @@ import (
 // that keeps its features: the repository an agent stops in after it worked on a branch.
 type stopWorld struct {
 	*reviewWorld
-	home   string // the state home the hook keeps its questions in
-	c3, c4 string // the two commits of the branch, oldest first; the branch was made on w.head
+	home string // the state home the hook keeps its questions in
+	// userHome is the HOME the hook finds the deployed evidence store under; empty leaves HOME unset (useHome).
+	userHome string
+	c3, c4   string // the two commits of the branch, oldest first; the branch was made on w.head
 }
 
 // newStopWorld is the world where each commit of the branch carries the trailer Risk: none and a clean sweep, so it lacks
@@ -125,7 +127,11 @@ func (s *stopWorld) hookDeps() deps {
 	d := testDeps()
 	d.getwd = func() (string, error) { return s.cwd, nil }
 	d.environ = goldenEnvironment
-	d.getenv = environmentOf(map[string]string{"XDG_STATE_HOME": s.home})
+	vars := map[string]string{"XDG_STATE_HOME": s.home}
+	if s.userHome != "" {
+		vars["HOME"] = s.userHome
+	}
+	d.getenv = environmentOf(vars)
 	return d
 }
 
