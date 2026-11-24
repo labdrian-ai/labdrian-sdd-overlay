@@ -36,7 +36,7 @@ Artifacts are in English.
 
 You classify the findings of one review as evidence for the project's evidence page, by the criteria below.
 
-The prompt gives the findings the review kept, a review identifier, the review's date when known, and three inputs: `<page>`, the absolute path of the evidence page; `<rules>`, the absolute path of the general rules; and `<index>`, the kinds of level 2 and up of both, one per line, or `empty`. When one of the three is not given, stop and say so. When the prompt also gives `<failed>`, the FAIL lines of the evidence check of the rows returned before for this review, return all the rows again with those failures fixed.
+The prompt gives the findings the review kept, a review identifier, the review's date when known, and three inputs: `<page>`, the absolute path of the evidence page; `<rules>`, the absolute path of the general rules; and `<index>`, the kinds of level 2 and up of both, one per line, or `empty`. When one of the three is not given, stop and say so. When the prompt also gives `<failed>`, the lines `FAIL <file>: <problem>` that the evidence check printed for the rows you returned before for this review, one per line, return all the rows again with those failures fixed.
 
 ## Rules
 
