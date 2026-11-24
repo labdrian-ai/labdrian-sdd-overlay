@@ -25,7 +25,7 @@ const (
 	// alpha has three distinct reviews; beta one review on two rows; gamma two distinct reviews.
 	stdEvidence = "| alpha-kind | 1 | f/aaaa-1 | 2026-01-05 | one |\n| alpha-kind | 1 | f/bbbb-1 | 2026-02-10 | two |\n| alpha-kind | 1 | f/cccc-1 | 2026-01-20 | three |\n| beta-kind | 2 | f/dddd-1 | 2026-03-01 | four |\n| beta-kind | 2 | f/dddd-1 | 2026-03-01 | five |\n| gamma-kind | 3 | f/eeee-1 | 2026-03-05 | six |\n| gamma-kind | 3 | f/ffff-1 | 2026-03-09 | seven |\n"
 
-	evidenceUsage = "usage: sh evidence.sh check|count|rules|index [wiki directory]\n       sh evidence.sh rule <kind> [wiki directory]\n       sh evidence.sh reviewed <identifier> [wiki directory]\n"
+	evidenceUsage = "usage: sh evidence.sh check|count|rules|index [wiki directory]\n       sh evidence.sh rule <kind> [wiki directory]\n       sh evidence.sh reviewed <identifier> [wiki directory]\n       sh evidence.sh reviewed-each <wiki directory> <identifier>...\n"
 )
 
 func evidencePage(kinds, evidence string) string { return kindsHead + kinds + evidenceHead + evidence }

@@ -5,8 +5,10 @@
 # Usage: sh evidence.sh check|count|rules|index [wiki directory]
 #        sh evidence.sh rule <kind> [wiki directory]
 #        sh evidence.sh reviewed <identifier> [wiki directory]
+#        sh evidence.sh reviewed-each <wiki directory> <identifier>...
 # The wiki directory is "$CLAUDE_PROJECT_DIR/docs/wiki" when that variable is
-# set, else docs/wiki. The playbook's general rules are in evidence-rules.md,
+# set, else docs/wiki (reviewed-each takes it as its first argument, never from
+# the variable). The playbook's general rules are in evidence-rules.md,
 # next to this script.
 # The page has the title "# Evidence" and two tables, under "## Kinds" and
 # "## Evidence" (evidence-rules.md has only the first):
@@ -38,8 +40,15 @@
 #   searched, and for an awk that fails or gives no answer (its own stderr is
 #   dropped). evidence-rules.md is not read. An identifier that is missing, or
 #   holds a space, a tab or a line break, is a usage error.
-# count, rules, and index exit 0 (reviewed also exits 4, see above), but with no
-# awk on PATH every mode prints
+# - reviewed-each <wiki directory> <identifier>...: reads the page once and
+#   prints one line for each identifier, in the order given, "yes" where
+#   reviewed would exit 0 and "no" where it would exit 1 (no page, a page that
+#   fails a check, no row), then exits 0. Where reviewed exits 4 it exits 4, with
+#   the same stderr line and nothing on stdout. A missing or empty wiki
+#   directory, no identifier, or an identifier that is empty or holds a space, a
+#   tab or a line break, is a usage error.
+# count, rules, and index exit 0 (reviewed and reviewed-each also exit 4, see
+# above), but with no awk on PATH every mode prints
 # "evidence.sh: awk is not on PATH; <mode> cannot run" on stderr and exits 3
 # (a usage error still exits 2). A cell may hold "|" written as "\|". Not
 # read: a table inside a code block. A row after a line that ends the table
@@ -51,9 +60,11 @@ threshold=3
 
 usage='usage: sh evidence.sh check|count|rules|index [wiki directory]
        sh evidence.sh rule <kind> [wiki directory]
-       sh evidence.sh reviewed <identifier> [wiki directory]'
+       sh evidence.sh reviewed <identifier> [wiki directory]
+       sh evidence.sh reviewed-each <wiki directory> <identifier>...'
 mode=${1:-}
 want=
+nwant=0
 case $mode in
   check | count | rules | index) dirarg=${2:-} ;;
   rule | reviewed)
@@ -65,6 +76,20 @@ case $mode in
       esac
     fi
     dirarg=${3:-}
+    ;;
+  reviewed-each)
+    dirarg=${2:-}
+    if [ -z "$dirarg" ] || [ "$#" -lt 3 ]; then printf '%s\n' "$usage" >&2; exit 2; fi
+    shift 2
+    # The identifiers reach awk joined by line breaks, which no valid identifier holds.
+    for id in "$@"; do
+      case $id in
+        '' | *[[:space:]]*) printf '%s\n' "$usage" >&2; exit 2 ;;
+      esac
+      want=${want:+$want
+}$id
+      nwant=$((nwant + 1))
+    done
     ;;
   *) printf '%s\n' "$usage" >&2; exit 2 ;;
 esac
@@ -80,7 +105,7 @@ else
   wiki=docs/wiki
 fi
 page=$wiki/evidence.md
-general="$(cd "$(dirname -- "$0")" 2>/dev/null && pwd)/evidence-rules.md"
+general="$(cd -- "$(dirname -- "$0")" 2>/dev/null && pwd)/evidence-rules.md"
 
 # run_awk <file> <label>: reads one page in the mode of this run.
 run_awk() {
@@ -108,7 +133,13 @@ run_awk() {
     else if (m == 2) mx = ((y % 4 == 0 && y % 100 != 0) || y % 400 == 0) ? 29 : 28
     return dd <= mx
   }
-  BEGIN { want = ENVIRON["EVIDENCE_WANT"]; sec = ""; kh = "Kind|Level|Rule|Applies when|Source|Scope"; eh = "Kind|Level|Review|Date|Finding" }
+  BEGIN {
+    want = ENVIRON["EVIDENCE_WANT"]
+    # reviewed-each: want holds the identifiers one to a line; they are asked in order, repeats included.
+    each = (mode == "reviewed-each")
+    if (each) { nid = split(want, ids, "\n"); for (i = 1; i <= nid; i++) wanted[ids[i]] = 1 }
+  }
+  BEGIN { sec = ""; kh = "Kind|Level|Rule|Applies when|Source|Scope"; eh = "Kind|Level|Review|Date|Finding" }
   /^```/ { fence = !fence; next }
   fence { next }
   /^# / { if (trim(substr($0, 3)) == "Evidence") title = 1; next }
@@ -146,6 +177,7 @@ run_awk() {
       k = cell[1]; lv = cell[2]; rv = cell[3]; d = cell[4]
       ne++; ek[ne] = k
       if (rv == want) found = 1
+      if (rv in wanted) hit[rv] = 1
       if (lv !~ /^[1-9][0-9]*$/) fail("evidence of \"" k "\" has level \"" lv "\", not a positive integer")
       if (rv == "") fail("evidence of \"" k "\" has no review")
       if (!isdate(d)) fail("evidence of \"" k "\" has date \"" d "\", not YYYY-MM-DD")
@@ -158,7 +190,7 @@ run_awk() {
   }
   { if (sec == "K" && rowK > 0) doneK = 1; if (sec == "E" && rowE > 0) doneE = 1 }
   END {
-    if (mode == "check" || mode == "reviewed") {
+    if (mode == "check" || mode == "reviewed" || each) {
       if (!title) fail("missing the heading \"# Evidence\"")
       if (!hasK) fail("missing the heading \"## Kinds\"")
       else if (rowK == 0) fail("Kinds has no table")
@@ -188,8 +220,66 @@ run_awk() {
       exit 0
     }
     if (mode == "reviewed") { print ((found && !bad) ? "yes" : "no"); exit 0 }
+    if (each) { for (i = 1; i <= nid; i++) print (((ids[i] in hit) && !bad) ? "yes" : "no"); exit 0 }
     for (i = 1; i <= nr; i++) printf "- %s (level %s; applies when: %s): %s\n", rk[i], rl[i], ra[i], rr[i]
   }' "$1"
+}
+
+# page_state: for reviewed and reviewed-each. Returns 1 when there is no page: nothing at its path, under the nearest
+# path above it that exists when that is a directory that can be searched. Returns 0 for a readable regular file. For
+# anything else at the path, or a directory on the way that cannot be searched, it exits 4: that cannot be answered.
+page_state() {
+  if [ ! -e "$page" ] && [ ! -L "$page" ]; then
+    up=$page
+    while :; do
+      parent=$(dirname -- "$up")
+      if [ -e "$parent" ] || [ -L "$parent" ]; then
+        if [ -d "$parent" ] && [ -x "$parent" ]; then return 1; fi
+        break
+      fi
+      [ "$parent" != "$up" ] || break
+      up=$parent
+    done
+  fi
+  if [ ! -f "$page" ] || [ ! -r "$page" ]; then
+    printf 'evidence.sh: cannot read %s; reviewed cannot answer\n' "$page" >&2
+    exit 4
+  fi
+}
+
+# awk_cannot_answer <awk's exit status>: the exit-4 line for an awk that failed, or exited 0 with no answer.
+awk_cannot_answer() {
+  if [ "$1" -eq 0 ]; then
+    printf 'evidence.sh: awk gave no answer on %s; reviewed cannot answer\n' "$page" >&2
+  else
+    printf 'evidence.sh: awk failed on %s (exit %s); reviewed cannot answer\n' "$page" "$1" >&2
+  fi
+  exit 4
+}
+
+# answered_each <text>: succeeds when the text is one line "yes" or "no" for each identifier asked, and nothing else.
+answered_each() {
+  case $1 in
+    '' | '
+'* | *'
+
+'*) return 1 ;;
+  esac
+  n=0
+  oldifs=$IFS
+  IFS='
+'
+  set -f
+  # shellcheck disable=SC2086
+  for line in $1; do
+    case $line in
+      yes | no) n=$((n + 1)) ;;
+      *) n=-1; break ;;
+    esac
+  done
+  set +f
+  IFS=$oldifs
+  [ "$n" -eq "$nwant" ]
 }
 
 case $mode in
@@ -231,24 +321,7 @@ case $mode in
     exit 0
     ;;
   reviewed)
-    # No page is nothing at the path, under the nearest path above it that exists when that is a directory that
-    # can be searched; anything else that is not a readable regular file cannot be answered.
-    if [ ! -e "$page" ] && [ ! -L "$page" ]; then
-      up=$page
-      while :; do
-        parent=$(dirname -- "$up")
-        if [ -e "$parent" ] || [ -L "$parent" ]; then
-          if [ -d "$parent" ] && [ -x "$parent" ]; then exit 1; fi
-          break
-        fi
-        [ "$parent" != "$up" ] || break
-        up=$parent
-      done
-    fi
-    if [ ! -f "$page" ] || [ ! -r "$page" ]; then
-      printf 'evidence.sh: cannot read %s; reviewed cannot answer\n' "$page" >&2
-      exit 4
-    fi
+    page_state || exit 1
     # awk answers with one word on stdout, yes or no, and exits 0; its exit status alone never answers.
     out=$(run_awk "$page" evidence.md 2>/dev/null)
     rc=$?
@@ -257,11 +330,26 @@ case $mode in
         yes) exit 0 ;;
         no) exit 1 ;;
       esac
-      printf 'evidence.sh: awk gave no answer on %s; reviewed cannot answer\n' "$page" >&2
-      exit 4
     fi
-    printf 'evidence.sh: awk failed on %s (exit %s); reviewed cannot answer\n' "$page" "$rc" >&2
-    exit 4
+    awk_cannot_answer "$rc"
+    ;;
+  reviewed-each)
+    if ! page_state; then
+      # With no page every identifier is "no"; the answer is on stdout, so the exit is 0.
+      i=0
+      while [ "$i" -lt "$nwant" ]; do
+        printf 'no\n'
+        i=$((i + 1))
+      done
+      exit 0
+    fi
+    out=$(run_awk "$page" evidence.md 2>/dev/null)
+    rc=$?
+    if [ "$rc" -eq 0 ] && answered_each "$out"; then
+      printf '%s\n' "$out"
+      exit 0
+    fi
+    awk_cannot_answer "$rc"
     ;;
   rule)
     for f in "$page" "$general"; do
