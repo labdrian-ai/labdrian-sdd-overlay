@@ -1,7 +1,7 @@
 package app_test
 
 // What Findings says of the severe findings whose check did not run (T4d-a, L98 choice 2): Unverified, the ids that
-// reviewverdict.Decide lists as unverified, and the hold the stop hook keeps a result under until its verdict is stored.
+// reviewverdict.Decide lists as unverified, and the hold the stop hook keeps a result under until its check has run.
 
 import (
 	"fmt"
@@ -91,16 +91,17 @@ func held(t *testing.T, verdictOfF2 string) (*fakeGit, *fakeResults) {
 	return g, store
 }
 
-// U2: the stop hook does not ask for a result with an unverified severe finding until its verdict is stored, however many
-// other findings the result keeps; the same result is asked for once the verdict reproduced the severe finding, and a
-// result whose severe finding the verdict did not reproduce is asked for by its WARNING.
-func TestStopHoldsAResultWithAnUnverifiedSevereFindingUntilItsVerdictIsStored(t *testing.T) {
+// U2: the stop hook does not ask for a result with an unverified severe finding until its check has run, however many
+// other findings the result keeps; a stored not-run keeps it held; the same result is asked for once the verdict
+// reproduced the severe finding, and a result whose severe finding the verdict did not reproduce is asked for by its WARNING.
+func TestStopHoldsAResultWithAnUnverifiedSevereFindingUntilItsCheckRan(t *testing.T) {
 	for _, tc := range []struct {
 		name    string
 		verdict string // the verdict of F2, or "" for no verdict stored
 		want    app.Ruling
 	}{
 		{"a WARNING and a severe finding with no verdict", "", app.Ruling{}},
+		{"the severe finding not run", "not-run", app.Ruling{}},
 		{"the severe finding reproduced", "reproduced", app.Ruling{Block: true, Classify: []app.KeptResult{{Review: otherReview, Head: otherSHA, Kept: 2}}}},
 		{"the severe finding not reproduced, and a WARNING", "not-reproduced", app.Ruling{Block: true, Classify: []app.KeptResult{{Review: otherReview, Head: otherSHA, Kept: 1}}}},
 	} {

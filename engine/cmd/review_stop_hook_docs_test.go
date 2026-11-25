@@ -204,6 +204,28 @@ func TestTextsOfTheReviewStopHookSayTheLineOfAnUndeployedStoreRepeats(t *testing
 	}
 }
 
+// A result held for an unverified severe finding waits for the check of that finding, not for a verdict (T4e, L102): a
+// stored not-run keeps it held, and review check refuses delivery meanwhile, naming the findings not checked.
+func TestTextsOfTheReviewStopHookSayAHeldResultWaitsForItsCheck(t *testing.T) {
+	readme := readRepositoryFile(t, "README.md")
+	for _, tc := range []struct{ name, text string }{
+		{"the stop-hook entry of README.md", docSection(t, readme, "    stop-hook\n", "overlay memory <verb>")},
+		{"the README section of the review stop-hook", docSection(t, readme, "gentle-ai-overlay review stop-hook\n", "gentle-ai-overlay roles builder-guard\n")},
+		{"bin/lib/usage.sh", docSection(t, readRepositoryFile(t, "bin/lib/usage.sh"), "                                   stop-hook\n", "Only launch starts an agent")},
+		{"CHANGELOG.md", docSection(t, readRepositoryFile(t, "CHANGELOG.md"), "- The Stop hook (`labdrian review stop-hook`)", "\n- ")},
+	} {
+		text := normalizeDocText(tc.text)
+		for _, want := range []string{"until its check has run", "not-run", "findings not checked"} {
+			if !strings.Contains(text, normalizeDocText(want)) {
+				t.Errorf("%s does not say %q", tc.name, want)
+			}
+		}
+		if strings.Contains(text, normalizeDocText("until its verdict is stored")) {
+			t.Errorf("%s still says %q", tc.name, "until its verdict is stored")
+		}
+	}
+}
+
 // The texts that say what the hook asks for also say that it asks for the classification of results (S6, T4w, L84): the
 // README entry and section, the help of the wrapper and the CHANGELOG, each naming the page and the script it asks through.
 func TestTextsOfTheReviewStopHookSayItAsksForClassification(t *testing.T) {
