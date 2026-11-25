@@ -263,3 +263,21 @@ func TestTheClassifyStepEndsClassifiedOrBlocked(t *testing.T) {
 		t.Errorf("step 9 does not say that no row carries <id> when `reviewed` does not exit 0: %q", sentence)
 	}
 }
+
+// R14 (L102, L104): step 1 stops the run while a severe finding waits for the check it needs, and names what ends the wait:
+// `reproduced` or `not-reproduced` stored by `review verify`. A stored `not-run` keeps it waiting. The `unverified` member and
+// the `stop, not blocked` stay pinned by the cmd test only.
+func TestTheClassifyStepWaitsUntilTheCheckOfASevereFindingHasRun(t *testing.T) {
+	step := classifySteps(t, readRepoFile(t, skillsRepoRoot(t), classifyRel))[1]
+	for _, want := range []string{"until its check has run", "`reproduced`", "`not-reproduced`"} {
+		if !strings.Contains(step, want) {
+			t.Errorf("step 1 does not hold %s: %q", want, step)
+		}
+	}
+	if sentence, ok := sentenceFrom(step, "A stored `not-run`"); !ok || !strings.Contains(sentence, "keeps it waiting") {
+		t.Errorf("step 1 does not say that a stored `not-run` keeps the finding waiting: %q", sentence)
+	}
+	if strings.Contains(step, "waits for its verdict") {
+		t.Errorf("step 1 still says the finding waits for its verdict: %q", step)
+	}
+}
