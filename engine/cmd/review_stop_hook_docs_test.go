@@ -204,8 +204,9 @@ func TestTextsOfTheReviewStopHookSayTheLineOfAnUndeployedStoreRepeats(t *testing
 	}
 }
 
-// A result held for an unverified severe finding waits for the check of that finding, not for a verdict (T4e, L102): a
-// stored not-run keeps it held, and review check refuses delivery meanwhile, naming the findings not checked.
+// A result held for an unverified severe finding waits for the checks it needs, not for a verdict (T4e, L102, L106): a
+// stored not-run holds it for good, only a new review result runs the check again, and review check refuses the head,
+// naming the findings not checked.
 func TestTextsOfTheReviewStopHookSayAHeldResultWaitsForItsCheck(t *testing.T) {
 	readme := readRepositoryFile(t, "README.md")
 	for _, tc := range []struct{ name, text string }{
@@ -215,13 +216,15 @@ func TestTextsOfTheReviewStopHookSayAHeldResultWaitsForItsCheck(t *testing.T) {
 		{"CHANGELOG.md", docSection(t, readRepositoryFile(t, "CHANGELOG.md"), "- The Stop hook (`labdrian review stop-hook`)", "\n- ")},
 	} {
 		text := normalizeDocText(tc.text)
-		for _, want := range []string{"until its check has run", "not-run", "findings not checked"} {
+		for _, want := range []string{"until its check has run", "each check it needs", "not-run", "for good", "a new review result", "findings not checked"} {
 			if !strings.Contains(text, normalizeDocText(want)) {
 				t.Errorf("%s does not say %q", tc.name, want)
 			}
 		}
-		if strings.Contains(text, normalizeDocText("until its verdict is stored")) {
-			t.Errorf("%s still says %q", tc.name, "until its verdict is stored")
+		for _, stale := range []string{"until its verdict is stored", "meanwhile", "not-reproduced for it"} {
+			if strings.Contains(text, normalizeDocText(stale)) {
+				t.Errorf("%s still says %q", tc.name, stale)
+			}
 		}
 	}
 }

@@ -36,7 +36,7 @@ type Findings struct {
 	LeftOut []LeftOut
 	// Unverified are the ids of the kept findings that reviewverdict.Decide lists as unverified (a BLOCKER or CRITICAL
 	// whose check did not run), in the order of the reply; [] and never nil when there is none. A result with one is not
-	// ready to classify: the Classify step waits for its verdict.
+	// ready to classify: the Classify step waits until each check it needs has run, and a stored not-run holds the result for good (review verify stores no second verdict).
 	Unverified []string
 }
 

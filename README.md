@@ -895,8 +895,11 @@ overlay review <verb>
         review steps misses, each thing once for each session and commit. When no commit misses anything it also asks,
         once for each session and result, for the classification of each stored review result of the branch whose kept
         findings `docs/wiki/evidence.md` does not hold yet, through the deployed `evidence.sh reviewed-each`. It does
-        not ask for a result with an unverified severe finding until its check has run (a verdict of `not-run` keeps it
-        held, and `review check` refuses delivery meanwhile: findings not checked). Exit 0 always, 1 usage error.
+        not ask for a result with an unverified severe finding until its check has run (the verifier stored
+        `reproduced` or `not-reproduced` for each check it needs). A verdict of `not-run` holds the result for good:
+        `review verify` stores no second verdict, so only a new review result of the same head runs the check again,
+        and `review check` refuses the head while the held result is stored: findings not checked. Exit 0 always, 1
+        usage error.
 
 overlay memory <verb>
     Forward memory-directive verbs to the engine unchanged. Read-only: it only plans what memory
@@ -1580,8 +1583,10 @@ gentle-ai-overlay review stop-hook
     When no commit misses anything, it also asks, once for each session and result, for the classification of each
     stored review result of the branch whose kept findings `docs/wiki/evidence.md` does not hold yet; a result with an
     unverified severe finding (a BLOCKER or CRITICAL whose check did not run) is not asked for until its check has run
-    (the verifier stored `reproduced` or `not-reproduced` for it); a verdict of `not-run` keeps it held, and
-    `review check` refuses delivery meanwhile, naming the findings not checked. It asks the
+    (the verifier stored `reproduced` or `not-reproduced` for each check it needs); a verdict of `not-run` holds it
+    for good, for `review verify` stores no second verdict, so only a new review result of the same head runs the
+    check again, and `review check` refuses the head while the held result is stored, naming the findings not
+    checked. It asks the
     evidence store deployed under `~/.claude/skills/_shared/evidence/` once at each stop, through `evidence.sh
     reviewed-each` (stopped at 2 seconds; the stop can wait up to 2 seconds more while a process the script started holds its output, and that process can outlive the stop), and names every result still lacking, the ones asked before included. What the
     script cannot tell, and a stored file it cannot read, is one line on stderr, and can come beside the block.

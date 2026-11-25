@@ -45,7 +45,7 @@ func (s Service) WithClassified(c Classified) Service {
 // Only a result that is about another commit than the one whose name it carries (its binding says so, and only the
 // first 12 characters of its name said it was about this one), a result with no kept finding, and a result held until the
 // check of its severe finding has run (a BLOCKER or CRITICAL that reviewverdict.Decide lists as unverified: a stored
-// not-run keeps it held, and review check refuses delivery meanwhile, see Findings.Unverified) are skipped. A result
+// not-run holds it for good, and review check refuses its head, see Findings.Unverified) are skipped. A result
 // that cannot be read, that does not hold, or that does not bind its commit is a refusal, the second value, as 'review
 // check' refuses the same file (its text is the error's, its review the identifier of the file, whatever the error says);
 // it is left out and the pass goes on, so one bad file hides no other result. What the

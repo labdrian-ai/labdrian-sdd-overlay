@@ -452,8 +452,11 @@ Commands:
                                              the branch whose kept findings docs/wiki/evidence.md lacks, once for each
                                              session and result, through the deployed evidence.sh reviewed-each; it
                                              does not ask for a result with an unverified severe finding until its
-                                             check has run; a not-run verdict keeps it held and review check
-                                             refuses delivery: findings not checked
+                                             check has run (reproduced or not-reproduced stored for each check it
+                                             needs); a not-run verdict holds it for good, for review verify stores no
+                                             second verdict, so only a new review result of the same head runs the
+                                             check again, and review check refuses the head while the held result is
+                                             stored: findings not checked
                                    Only launch starts an agent, the reviewer on Codex; no other verb launches an
                                    agent or dispatches work.
   memory <verb>                    Forward memory-directive verbs to the engine unchanged.
