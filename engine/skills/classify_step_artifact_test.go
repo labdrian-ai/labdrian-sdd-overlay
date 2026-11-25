@@ -97,10 +97,14 @@ func TestTheClassifyStepNamesEachExitOfTheScript(t *testing.T) {
 	if three == "" || four == "" {
 		t.Fatalf("%s lacks step 3 or step 4: %d steps", classifyRel, len(steps))
 	}
-	for _, want := range []string{"Exit 0", "Exit 1", "Exit 2", " 3 (", " 4 (", "stop, blocked"} {
+	for _, want := range []string{"Exit 0", "Exit 1", "Exit 2", " 3 (", " 4 (", "stop, blocked", "Any other exit"} {
 		if !strings.Contains(three, want) {
 			t.Errorf("step 3 (reviewed) does not name %q", want)
 		}
+	}
+	// A script that is not a regular file is not deployed: step 2 stops, blocked, before step 3 runs it (`8ee5ac95b287-5` F1, L98).
+	if sentence, ok := sentenceFrom(steps[2], "not a regular file"); !ok || !strings.Contains(sentence, "stop, blocked") {
+		t.Errorf("step 2 does not stop, blocked, on a <script> that is not a regular file: %q", sentence)
 	}
 	for _, exit := range []string{"Exit 2:", "Exit 3:"} {
 		sentence, ok := sentenceFrom(four, exit)
@@ -118,7 +122,7 @@ func TestTheClassifyStepNamesEachExitOfTheScript(t *testing.T) {
 
 // roleChainClassifyLine is the Classify step as SKILL.md holds it (L94): one line of the Binding section, right after the
 // severe-finding line and before the next-subtask line, so the skill keeps its five sections and its recommended budget.
-const roleChainClassifyLine = "- Classify, Claude Code only: after `review record`, follow `references/classify.md`."
+const roleChainClassifyLine = "- Classify, Claude Code only: after `review record` and `verify`: `references/classify.md`."
 
 // R3 (L47, L94): the steps run in the order that keeps the page whole: findings, the reviewed question, the check and the
 // index, the classifier, a backup before the append, the check again, the page put back, the one relaunch. SKILL.md points
@@ -180,9 +184,82 @@ func TestTheClassifyStepRelaunchesOnceWithTheFailedLines(t *testing.T) {
 	if !ok || !strings.Contains(other, "stop, blocked") {
 		t.Errorf("step 9 does not stop, blocked, on any other exit: %q", other)
 	}
+	// Every "Any other exit" sentence of step 9 stops, blocked: one of them is the exit of the `reviewed` run that follows a
+	// passing check, which must never end in a report of success (L98 choice 3).
+	for rest := nine; ; {
+		_, after, found := strings.Cut(rest, "Any other exit")
+		if !found {
+			break
+		}
+		sentence, _, _ := strings.Cut(after, ". ")
+		if !strings.Contains(sentence, "stop, blocked") {
+			t.Errorf("a sentence of step 9 that starts %q does not stop, blocked: %q", "Any other exit", sentence)
+		}
+		rest = after
+	}
+	// The relaunch is for a failure the classifier can fix: step 10 opens with its condition, that every FAIL line of the check
+	// names the page, and a line of another file (the general rules) stops, blocked, with no relaunch (`8ee5ac95b287-2` F1, L98).
+	const pageLabel = "`FAIL evidence.md: `"
+	if missing, ok := inOrder(ten, pageLabel, "launch the classifier again"); !ok {
+		t.Errorf("step 10 does not hold %q before the relaunch, in that order", missing)
+	}
+	if sentence, ok := sentenceFrom(ten, "names another file"); !ok || !strings.Contains(sentence, "stop, blocked") {
+		t.Errorf("step 10 does not stop, blocked, on a FAIL line of another file: %q", sentence)
+	}
 	for _, relaunch := range []string{"<failed>", "once more"} {
 		if strings.Contains(nine, relaunch) {
 			t.Errorf("step 9 names %q: a relaunch belongs to step 10 alone", relaunch)
 		}
+	}
+}
+
+// R13 (`8ee5ac95b287-5` F1, L98 choice 5): a step that runs the script says what any other exit does, or points at the step
+// that does, so no step runs it with an exit left open. The class is a step with a run and no ending for every exit.
+func TestEveryStepThatRunsTheScriptSaysWhatAnyOtherExitDoes(t *testing.T) {
+	steps := classifySteps(t, readRepoFile(t, skillsRepoRoot(t), classifyRel))
+	runs := 0
+	for n, text := range steps {
+		if !strings.Contains(text, `sh "<script>"`) {
+			continue
+		}
+		runs++
+		if !strings.Contains(text, "Any other exit") && !strings.Contains(text, "exits as in step ") {
+			t.Errorf("step %d of %s runs the script and says neither %q nor %q", n, classifyRel, "Any other exit", "exits as in step ")
+		}
+	}
+	if runs < 4 {
+		t.Errorf("%d steps of %s run the script, want at least 4 (reviewed, check, index, count): the scan reads nothing", runs, classifyRel)
+	}
+}
+
+// classifiedWithoutEvidenceHeading, classifiedWithoutEvidenceHeader and classifiedWithoutEvidenceRow are what step 8 writes
+// for a review the classifier found no evidence in (L98 choice 3); shelltest's R4 holds the same strings against evidence.sh.
+const (
+	classifiedWithoutEvidenceHeading = "## Classified without evidence"
+	classifiedWithoutEvidenceHeader  = "| Review | Date |"
+	classifiedWithoutEvidenceRow     = "| <id> | <date> |"
+)
+
+// R11 (`665b99f747e2-3.polisher` W2, L98 choice 3): a run of the step ends with the result classified or blocked, never a
+// report of success with no row. An empty Evidence fence is no error (step 7); step 8 appends a row of the table of reviews
+// classified without evidence; and after a passing check step 9 asks `reviewed` and goes back to the backup unless it exits 0.
+func TestTheClassifyStepEndsClassifiedOrBlocked(t *testing.T) {
+	steps := classifySteps(t, readRepoFile(t, skillsRepoRoot(t), classifyRel))
+	if !strings.Contains(steps[7], "empty Evidence fence") {
+		t.Errorf("step 7 does not say what an empty Evidence fence is: %q", steps[7])
+	}
+	for _, want := range []string{
+		"`" + classifiedWithoutEvidenceHeading + "`", "`" + classifiedWithoutEvidenceHeader + "`", "`|--------|------|`",
+		"`" + classifiedWithoutEvidenceRow + "`", "`date +%F`",
+	} {
+		if !strings.Contains(steps[8], want) {
+			t.Errorf("step 8 does not hold %s", want)
+		}
+	}
+	if missing, ok := inOrder(steps[9], "Exit 0", "reviewed", "count", "copy the backup back"); !ok {
+		t.Errorf("step 9 does not hold %q after the words before it, in that order", missing)
+	}
+	if sentence, ok := sentenceFrom(steps[9], "Any other exit of that run:"); !ok || !strings.Contains(sentence, "no row carries `<id>`") {
+		t.Errorf("step 9 does not say that no row carries <id> when `reviewed` does not exit 0: %q", sentence)
 	}
 }

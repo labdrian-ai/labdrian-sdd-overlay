@@ -35,12 +35,20 @@ func TestTheMidLineOfModelsNamesEveryMidRole(t *testing.T) {
 	if len(sentences) < 3 {
 		t.Fatalf("the Mid line %q has no second sentence that lists the roles", line)
 	}
-	var got []string
+	// A role the generator deploys to Claude Code alone carries the mark " (Claude Code only)" after its name (`8ee5ac95b287-5`
+	// F3, L98 choice 7), so a parent on another runtime does not look for it; no other role carries it.
+	const claudeOnlyMark = " (Claude Code only)"
+	var got, marked []string
 	for _, name := range strings.Split(sentences[1], ",") {
-		got = append(got, strings.TrimSpace(name))
+		name = strings.TrimSpace(name)
+		if trimmed, ok := strings.CutSuffix(name, claudeOnlyMark); ok {
+			name = trimmed
+			marked = append(marked, name)
+		}
+		got = append(got, name)
 	}
 
-	var want []string
+	var want, wantMarked []string
 	for _, r := range roles {
 		if r.tier == tierMid {
 			want = append(want, r.name)
@@ -49,11 +57,20 @@ func TestTheMidLineOfModelsNamesEveryMidRole(t *testing.T) {
 	for _, r := range claudeOnlyRoles {
 		if r.tier == tierMid {
 			want = append(want, r.name)
+			wantMarked = append(wantMarked, r.name)
 		}
 	}
 	slices.Sort(got)
 	slices.Sort(want)
 	if !slices.Equal(got, want) {
 		t.Errorf("the Mid line of models.md names %q, want the mid roles of the generator %q", got, want)
+	}
+	slices.Sort(marked)
+	slices.Sort(wantMarked)
+	if len(wantMarked) == 0 {
+		t.Fatal("the generator has no Claude-only mid role, so the mark is checked against nothing")
+	}
+	if !slices.Equal(marked, wantMarked) {
+		t.Errorf("the Mid line of models.md marks %q %q, want exactly the Claude-only mid roles %q", claudeOnlyMark, marked, wantMarked)
 	}
 }
