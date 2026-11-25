@@ -1,0 +1,34 @@
+{
+  "kind": "polisher",
+  "base": "041a65f90549789c16c192d1812b6943ce91eb8d",
+  "head": "bbb2b3eaa158e0ec31370c2f12d3ad3c6cb03a48",
+  "diff_sha256": "aa2e863a9e70c53bd389f1b7fc4e0d9f6609db9b6ec2790ebb7555cd64db4f3c",
+  "findings": {
+    "findings": [
+      {
+        "location": "engine/review/app/classify.go:96",
+        "severity": "WARNING",
+        "claim": "A result stays held back from classification for good when its stored verdict marks a severe finding `not-run`, or when it has no verdict because the verifier cannot run. The CHANGELOG, README and usage text promise a result is held only 'until its verdict is stored'. In fact the hold lasts until the severe finding is reproduced or not-reproduced. A result whose verdict is stored with `not-run` is never asked for by the stop hook and is never classified. Its kept WARNING or SUGGESTION findings never reach `docs/wiki/evidence.md`, and the hook prints nothing about it.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "evidence": [
+          "classify.go:96 skips the result when `len(unverifiedOf(h.result, h.verdicts)) > 0`.",
+          "`unverifiedOf` returns `reviewverdict.Decide(...).Unverified`.",
+          "In engine/reviewverdict/decide.go:114-120, `severeFinding` returns `fateUnchecked` for any `v.Result` that is neither Reproduced nor NotReproduced. This includes a stored `not-run`, and a missing verdict, which reads as the zero value.",
+          "So a stored verdict of `not-run` keeps the finding in `Unverified`, and the skip at classify.go:96 applies at every stop.",
+          "The new test `held()` in engine/review/app/findings_unverified_test.go stores `not-run` for F1 only; it does not cover a stored `not-run` on the severe finding.",
+          "The wording 'until its verdict is stored' is in CHANGELOG.md, README.md and bin/lib/usage.sh in this diff.",
+          "I did not run this; the conclusion comes from reading the code."
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full diff at /tmp/claude-1000/-home-labdrian-labdrian-sdd-overlay/45673332-5a42-429f-889a-50c9d8bcb1fc/scratchpad/t4d.diff, excluding the task text under odd/. I did not read diff lines 480-1012, which cover the Go adapter and test files, the shelltest files and the odd/ text.",
+      "Read /home/labdrian/labdrian-sdd-overlay-worktrees/review-bbb2b3eaa158/skills/_shared/evidence/evidence.sh around the new `Classified without evidence` section (lines 133-223 and 254). The section is read by `check`, `reviewed` and `reviewed-each` through the same `found` and `hit` variables as the Evidence table. Its heading, header, separator, cell-count, empty-Review and date checks, and the `doneC` after-table check, mirror those of the other two tables. I found no defect in the deployed page format or its readers.",
+      "Read engine/reviewverdict/decide.go (Decide and severeFinding) and compared it with the new `unverifiedOf` and the `kept` filter in engine/review/app. I found no other disagreement between the findings feed, the stop-hook hold and `review verify`.",
+      "Read the classify.md steps 1-10 and the SKILL.md change. The sequence is coherent: classify runs after verify, and ends classified or blocked.",
+      "No commands or tests were run.",
+      "The judge read the whole range 3340c4b6..bbb2b3ea (one bind); the foreman records the same judgment on each commit of the range; the finding is in cf39e0c6 code and texts"
+    ]
+  }
+}
