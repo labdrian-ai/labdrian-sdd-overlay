@@ -1,0 +1,31 @@
+{
+  "kind": "polisher",
+  "base": "9dc8f8116b9b40c713a4e5b44b0cbca9c67b37eb",
+  "head": "19d59ac19897cf7b96b8995d05925347e5443ebb",
+  "diff_sha256": "67c74c21298508aa41acc20307a071aa9a5a9306722deaf705c6f7aa02dd7f95",
+  "findings": {
+    "findings": [
+      {
+        "location": "README.md:1583",
+        "severity": "SUGGESTION",
+        "claim": "The README and the CHANGELOG say a held result is released once the verifier stored `reproduced` or `not-reproduced` for the finding. For a finding of causal_disposition unknown that is not enough. A head `reproduced` with a base `not-run` keeps it held, because the base check must run too. The wording also lets a `not-run` base_result slip past the rule it states. The words 'for it' are loose about which check, head or base, counts.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "evidence": [
+          "engine/reviewverdict/decide.go:102-112: for DispositionUnknown, any Base other than Reproduced or NotReproduced returns fateUnchecked, so Unverified lists the finding, unless Result is NotReproduced.",
+          "engine/reviewverdict/decide.go:103: only a head `not-reproduced` releases the finding without a base check.",
+          "README.md:1583 and the CHANGELOG Stop hook line (diff line 10) were added by 9dc8f811. Both reduce the release condition to head `reproduced` or `not-reproduced`.",
+          "skills/role-chain/references/classify.md:5 says 'each check it needs', which is accurate, so the texts disagree with each other."
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the diff lines 1-168 of 241. The remaining 73 lines are task-document text, so I did not read them.",
+      "Read engine/reviewverdict/decide.go, engine/reviewverdict/reviewverdict.go and the grep of 'Unverified' across the head worktree.",
+      "The claim that a stored not-run keeps a result held is true. decide.go:119-120 and :111 return fateUnchecked for NotRun. check.go:140 refuses delivery with 'findings not checked' for Decision.Unverified.",
+      "Read skills/role-chain/references/classify.md:5 at head.",
+      "I ran no tests.",
+      "The judge read the range b3515c1b..19d59ac1 (one bind); the foreman records the same judgment on each commit of the range"
+    ]
+  }
+}
