@@ -1,0 +1,19 @@
+{
+  "kind": "polisher",
+  "base": "5c0bd28fb9f116c0eeb0039322c371ed93ee9cf5",
+  "head": "41a6814e9c086d155f0bc20ca3deb3e86c542a51",
+  "diff_sha256": "64a06c9cbfe1960b4a6d67dfec1d8fce615d9a076c07c70754a018cf36670b14",
+  "findings": {
+    "findings": [],
+    "evidence": [
+      "Read the full diff t4a.diff and the final evidence.sh",
+      "reviewed with no identifier exits 2 with the usage; awk check runs first so it exits 3 without awk",
+      "A missing page exits 1; END exit found ? 0 : 1 reaches the caller",
+      "found is set only from the Review cell of Evidence rows, compared exactly; prefixes do not count",
+      "The mode writes nothing",
+      "Edge: awk -v turns backslash escapes in the identifier; review identifiers contain none",
+      "Edge: a row check would reject still counts as classified, consistent with the design",
+      "Not run: Go tests, shellcheck"
+    ]
+  }
+}

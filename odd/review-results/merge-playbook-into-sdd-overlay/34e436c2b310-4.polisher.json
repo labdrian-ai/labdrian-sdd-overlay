@@ -1,0 +1,32 @@
+{
+  "kind": "polisher",
+  "base": "6cc18ea485a94e2f49b7ca4b905aa0a84dbb7673",
+  "head": "34e436c2b3102513a90c9ce58d3e89ea5e00e40a",
+  "diff_sha256": "b3b327f723c2afa56914a18a67d3da306760832b9c1029c561e2a02078cf27c8",
+  "findings": {
+    "findings": [
+      {
+        "location": "engine/review/app/classify.go:173",
+        "severity": "SUGGESTION",
+        "claim": "The page-state stamp is read once, before any Classified call. Each answer is then stored under that early stamp, even if the page changed between Stamp and the Classified call. If the page changes to a state where it holds the row while the pass runs, a 'classified' answer is stored under the old stamp, when the page lacked the row. If the page later returns to exactly that old state (the row removed again), remembered() reads the stale classified- memo. The port is not asked, and the lacking result is hidden for the rest of the session. That is the defect -6 F1 this round was meant to close. It needs a race plus an exact revert of the page, so the chance is low. Today it has no effect, because no production type implements Classified (the stop hook at engine/cmd/review_stop_hook.go:96 never calls WithClassified).",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "evidence": [
+          "classify.go:173 runs `stamp, err := s.classified.Stamp(repo.Root)` once per pass. classify.go:187 calls `s.classified.Classified(repo.Root, result.Review)` later, once for each result in the loop. classify.go:195 records `memoKey(prefix, result.Review, stamp)` with the stamp from line 173, not the state Classified actually read.",
+          "The port's own doc in the diff (classify.go, the doc comment of Stamp) says 'Stamp is the state of everything Classified(root, review) reads ... equal stamps give equal answers'. The code does not keep that promise when the page changes between line 173 and line 187.",
+          "remembered() (diff lines 226-237) returns the classified- memo first and skips the port, so a stale classified memo under a stamp that comes back hides the result. The base had no stamp, so this race window is new in this commit.",
+          "Reachability: rg of the target worktree shows WithClassified is called only in tests. The production Stop at engine/cmd/review_stop_hook.go:96 builds the service with no Classified port, so this runs only once T4w wires the adapter."
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full target diff /tmp/claude-1000/-home-labdrian-labdrian-sdd-overlay/45673332-5a42-429f-889a-50c9d8bcb1fc/scratchpad/t4m.diff (853 lines: classify.go, classify_test.go, export_test.go, stop.go, the task document).",
+      "Read /home/labdrian/labdrian-sdd-overlay-worktrees/review-5276daf542e3/engine/review/app/stop.go in full (Stop, stopReview, once). The new (Ruling, error) shape is returned only through classifyRuling, after stopReview did not block.",
+      "Read /home/labdrian/labdrian-sdd-overlay-worktrees/review-5276daf542e3/engine/cmd/review_stop_hook.go:60-130. stopHookAnswer drops the block whenever err != nil (line 97). With the classification path that would lose a block whose classify- keys once() already recorded. This is not reported, because no Classified adapter is wired (line 96 has no WithClassified), and L69 assigns printing a block together with an error to T4w.",
+      "Grep of production code for `.Stop(` and `WithClassified(`: only review_stop_hook.go:96 and the method's own definition. Nothing in production implements or wires Classified, so changing the port to add Stamp breaks no compiled consumer.",
+      "Checked by hand: the memoKey byte counts (11+16=27, 8+16=24) match the doc. withIncomplete keeps the output on one line unless an underlying error contains a newline, and that behavior was already there before this commit. heldResult errors become refusals while Features/Standing/Names errors still abort the pass, as the J1 and M1 pins say.",
+      "No commands run: no go test, build or vet was run in this review.",
+      "The judge was given the range 6cc18ea4..5276daf5; its finding is in the code commit 34e436c2; the tests commit 5276daf5 is recorded with no finding"
+    ]
+  }
+}

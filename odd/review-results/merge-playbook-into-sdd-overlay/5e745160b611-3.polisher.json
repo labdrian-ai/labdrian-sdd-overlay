@@ -1,0 +1,34 @@
+{
+  "kind": "polisher",
+  "base": "47d83bb7abb987bb6d0fd2812accd39e6862757f",
+  "head": "5e745160b6113f71831d342bbd39fbf810d5b161",
+  "diff_sha256": "3799b36e894c3f3dcf27f96a767e86fea66779767626e3874999760f374c7d39",
+  "findings": {
+    "findings": [
+      {
+        "location": "engine/shelltest/evidence_store_each_test.go:119",
+        "severity": "WARNING",
+        "claim": "The ARG_MAX guard protects only the past case. The under case always runs, and its identifiers reach sh once as arguments and once in the environment. On hosts with large pages the exec of sh itself can fail with E2BIG, and the test then fails although evidence.sh is correct. This is the case the change sizes the test for.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "evidence": [
+          "The size of the under case follows the page size: underN is bound/18-64, and bound is 32*PAGESIZE (line 99).",
+          "On 64 KiB pages (arm64 or ppc64), bound is 2 MiB, so under is about 2 MiB of arguments plus about 2 MiB of EVIDENCE_WANT.",
+          "Kernel ARG_MAX is typically 2 MiB (a quarter of an 8 MiB stack). Arguments and environment share it, so about 4 MiB exceeds it.",
+          "The commit's own check at line 111 (pastN*joined >= argMax/2) shows the author knew this. It skips only the past case. The under case at lines 119-120 has no guard, and the comment at lines 65-66 says the same limit applies to the exec of sh.",
+          "Before T4r the sizes were fixed (9000 and 6000 identifiers), so the old test did not depend on the page size.",
+          "Not run: only a 4 KiB-page host is available. The commit itself reports only that host (4096, ARG_MAX 2097152)."
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full diff at /tmp/claude-1000/-home-labdrian/labdrian-sdd-overlay/45673332-5a42-429f-889a-50c9d8bcb1fc/scratchpad/t4r.diff.",
+      "Grepped ENVIRON in evidence.sh in the worktree. There is a single read, line 144, already forced to text, so the new lint passes.",
+      "Read the under and past sizing in engine/shelltest/evidence_store_each_test.go in the worktree.",
+      "Checked the arithmetic of the 4 KiB case: 17-byte identifiers, 18 joined, past 132210 and under 129906 bytes. Both fall on the correct sides of the 131072 bound, with the 14-byte EVIDENCE_WANT= prefix included.",
+      "Checked that the header and PROVENANCE.md carry the strings that TestEvidenceStore_NamesTheEnvironmentBoundInPages requires.",
+      "The new awk line ids[i] = ids[i] \"\" is behaviour-neutral for the answers. It is syntactically valid and sits inside the existing if block.",
+      "Ran no tests or commands."
+    ]
+  }
+}

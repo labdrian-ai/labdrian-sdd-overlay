@@ -1,0 +1,74 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "edeeed7758b3ced30985e711bc5f7163dd4496e7",
+    "head": "4f714c67e87c03638ece204ef69cb0e27ab8d0ac",
+    "diff_sha256": "f61921308f73c0d1fd3aad6f9c7d79c17ceead205e6d5e1907d07f9c1e1264c9",
+    "paths": [
+      "engine/shelltest/evidence_store_each_test.go",
+      "engine/shelltest/evidence_store_shells_test.go",
+      "engine/shelltest/evidence_store_test.go",
+      "engine/skills/evidence_store_artifact_test.go",
+      "odd/tasks/merge-playbook-into-sdd-overlay.md",
+      "skills/_shared/evidence/PROVENANCE.md",
+      "skills/_shared/evidence/evidence.sh"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "edeeed7758b3ced30985e711bc5f7163dd4496e7",
+      "head": "4f714c67e87c03638ece204ef69cb0e27ab8d0ac",
+      "diff_sha256": "f61921308f73c0d1fd3aad6f9c7d79c17ceead205e6d5e1907d07f9c1e1264c9"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/shelltest/evidence_store_each_test.go",
+        "engine/shelltest/evidence_store_shells_test.go",
+        "engine/shelltest/evidence_store_test.go",
+        "engine/skills/evidence_store_artifact_test.go",
+        "odd/tasks/merge-playbook-into-sdd-overlay.md",
+        "skills/_shared/evidence/PROVENANCE.md",
+        "skills/_shared/evidence/evidence.sh"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "skills/_shared/evidence/evidence.sh:113",
+        "claim": "reviewed-each puts every identifier into one environment string (EVIDENCE_WANT, joined by line breaks) for awk. Linux caps a single environment string at 128 KiB (MAX_ARG_STRLEN). Past that cap the exec of awk fails, and the script reports 'awk failed (exit 126/127)' and exits 4. T4w's batched stop hook would then fail on a very large batch of kept reviews. The effect is fail-safe, not wrong output. It needs roughly 9,000 identifiers of 14 characters each, so it is unlikely on realistic branches, but nothing bounds or documents the limit.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "skills/_shared/evidence/evidence.sh:89",
+          "skills/_shared/evidence/evidence.sh:113"
+        ],
+        "severity": "SUGGESTION"
+      },
+      {
+        "id": "F2",
+        "location": "engine/skills/evidence_store_artifact_test.go:368",
+        "claim": "The new taskDocumentIdentifier pattern, together with the dash-and-letter drop in taskDocumentReferences, no longer flags a task-document reference that has a multi-letter dashed suffix or a bare number followed by a dash and a letter. For example, 'T3c-ab' backtracks to 'T3c', is followed by '-a', and is dropped. 'L72-x' is dropped the same way. The previous pattern flagged both. This narrows the lint that keeps task references out of the deployed evidence files, so such a reference could ship unnoticed. The cost is accepted for the 'L2-cache' case, but the table does not pin the trade-off.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "worsened",
+        "proof_refs": [
+          "engine/skills/evidence_store_artifact_test.go:368",
+          "engine/skills/evidence_store_artifact_test.go:374"
+        ],
+        "severity": "WARNING"
+      }
+    ],
+    "evidence": [
+      "Read the full diff of the 7 changed paths.",
+      "Read evidence.sh in the head worktree, lines 56-145, to check argument parsing, the wiki directory handling and run_awk's environment passing.",
+      "Traced the reviewed-each flow by reading: argument validation, the awk hit and wanted maps, answered_each, page_state, the exit-4 paths, and parity with reviewed.",
+      "Read the shellCalls scanner and the end-of-options lint.",
+      "Ran no commands: the review was read-only.",
+      "The reviewer gave no severity; the foreman assigned WARNING to F2 (a deterministic narrowing of a lint, worsened) and SUGGESTION to F1 (needs about 9,000 identifiers, fail-safe exit 4)"
+    ]
+  }
+}

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/gitobject"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/review"
 )
 
@@ -29,6 +30,10 @@ type Ruling struct {
 	// NoDefault says that the question is that the repository does not tell its default branch, so the commits of the
 	// branch that need a review cannot be told.
 	NoDefault bool
+	// Classify are the stored results of the branch's commits whose kept findings the evidence page does not hold yet
+	// (keptResultsOf, Classified), when the block asks for their classification (S6). It is set only when no review
+	// question blocks, and then Question is empty.
+	Classify []KeptResult
 }
 
 // Stop decides whether the stop of the agent of session is blocked, in the repository that holds dir (absolute):
@@ -42,6 +47,17 @@ type Ruling struct {
 // whole question, the needs already asked included. A stop is not blocked on what cannot be told or cannot be
 // remembered: the error is returned with no block, since a block that could not be recorded would be asked again at
 // every stop. The questions are the Asked port's: a Service made without one (WithAsked) cannot run Stop.
+//
+// When no review question blocks and the Service has a Classified port (WithClassified), the stop is blocked once for each
+// session and stored result of the branch's commits that has a kept finding the evidence page lacks (keptResultsOf, S6):
+// Ruling.Classify names those results, each keyed classify- and a digest of its identifier. Nothing the port says is
+// remembered: the port is asked once at each stop, for every kept result, so a page that changed is read again; the
+// block names every result still lacking, the ones asked before included, so a lost record never hides a result. A
+// result that cannot be read, hold or bind is left out and named in an error returned beside the ruling, once for each
+// session and stored file, recorded when the stop returns its ruling with no error of the pass, so a block and an error
+// can come together: a ruling that blocks can come with an error, and a caller shows both, because a refusal returned
+// beside a ruling is recorded as named. What the pass as a whole cannot tell is an error with no block, and names the refusals again at the
+// next stop. A Service without the port is as it was.
 func (s Service) Stop(dir, session string, continuing bool) (Ruling, error) {
 	if s.asked == nil {
 		return Ruling{}, errors.New("review: the stop hook has no store of the questions it has put")
@@ -49,6 +65,16 @@ func (s Service) Stop(dir, session string, continuing bool) (Ruling, error) {
 	if continuing {
 		return Ruling{}, nil
 	}
+	ruling, err := s.stopReview(dir, session)
+	if err != nil || ruling.Block || s.classified == nil {
+		return ruling, err
+	}
+	return s.classifyRuling(dir, session)
+}
+
+// stopReview is the part of Stop that asks for a review: the question of the first commit of the branch that lacks
+// anything, or that the repository does not tell its default branch.
+func (s Service) stopReview(dir, session string) (Ruling, error) {
 	question, ask, err := s.NextUnreviewed(dir)
 	var noDefault *NoDefaultBranchError
 	switch {
@@ -57,7 +83,7 @@ func (s Service) Stop(dir, session string, continuing bool) (Ruling, error) {
 	case err != nil || !ask:
 		return Ruling{}, err
 	}
-	prefix := short(question.Base) + "-" + short(question.Head) + "-"
+	prefix := gitobject.Short(question.Base) + "-" + gitobject.Short(question.Head) + "-"
 	keys := make([]string, 0, len(question.Needs))
 	for _, need := range question.Needs {
 		keys = append(keys, prefix+needKey(need.Missing))
@@ -106,9 +132,4 @@ func (s Service) once(session string, keys []string, ruling Ruling) (Ruling, err
 		}
 	}
 	return ruling, nil
-}
-
-// short is the first 12 characters of a full object name, as the names of the stored files use them.
-func short(name string) string {
-	return name[:min(len(name), 12)]
 }

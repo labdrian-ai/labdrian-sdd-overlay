@@ -1,0 +1,18 @@
+{
+  "verdicts": [
+    {
+      "id": "F1",
+      "result": "reproduced",
+      "command": "head: a throwaway test at /tmp/claude-1000/-home-labdrian-labdrian-sdd-overlay/45673332-5a42-429f-889a-50c9d8bcb1fc/scratchpad/vf-t4w/head/engine/review/evidencesh/probe_test.go uses w.adapter(w.stub(...), 0), which is execrunner.New() with the default 2 s timeout. It runs two stub bodies: `out=$(sleep 6.4141; echo yes)` and `x=$(sleep 6.4242)`. Run with: cd head/engine && HOME=$(mktemp -d) GOFLAGS=-count=1 go test ./review/evidencesh/ -run TestProbeGrandchild -v. After each call returns, the test lists `pgrep -x sleep` with ps pid/ppid/args. base: test -d base/engine/review/evidencesh",
+      "output": "head: subst-sleep-echo took=4.003283825s err='... reviewed-each gave no answer within 2s: context deadline exceeded (signal: killed)'. A sleep was still running after the return: '3374262 3374261 sleep 6.4141'. subst-sleep took=4.001391077s with the same error, and the leftover was '3374455 1 sleep 6.4242' (reparented to init). The first run gave the same timings, 4.003627257s and 4.003623503s. The call returns at about 4.0 s, not within 2 s, and the grandchild sleep outlives it as an orphan. I ran kill 3374455, but the process had already exited ('No such process'). Afterwards pgrep found no probe sleeps. base: printed 'base-missing-evidencesh', so the package does not exist at base.",
+      "base_result": "not-reproduced"
+    },
+    {
+      "id": "F2",
+      "result": "reproduced",
+      "command": "head: a throwaway test at head/engine/cmd/probe_repeat_test.go (package main). It uses newStopWorld with useHome(false), so no script is deployed, plus recordRangeKept, then runs s.stop(\"s1\", false) three times in the same session. Run with: cd head/engine && HOME=$(mktemp -d) GOFLAGS=-count=1 go test ./cmd/ -run TestProbeRepeatedStderr -v. Code read: head engine/review/app/classify.go:237-239, engine/cmd/review_stop_hook.go:69-72 and 175-179. base: rg -n 'WithClassified|evidenceScript|func head12|Classify step' base/engine/cmd/",
+      "output": "head: stops 1, 2 and 3 each print stdout=\"\", exits=[0] and the identical stderr 'review stop-hook: tell whether the results with kept findings are classified: sh <tmp>/.claude/skills/_shared/evidence/evidence.sh reviewed-each exited 2: sh: 0: cannot open <tmp>/.claude/skills/_shared/evidence/evidence.sh: No such file'. Code: classify.go:237-239 returns Ruling{} plus the port error without calling once/named, so nothing is recorded for the session. review_stop_hook.go:177-178 returns nil and the error when the stop is not blocked, and :70-71 prints it on stderr at every stop. The record's proof_ref review_stop_hook_classify_test.go:395 does not exist: the file has 229 lines, and the nearest test is SH9 at :132-160, which runs only one stop. base: rg exit=1, so the classification is not wired into the hook at base.",
+      "base_result": "not-reproduced"
+    }
+  ]
+}

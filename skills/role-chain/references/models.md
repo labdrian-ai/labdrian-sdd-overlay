@@ -3,7 +3,7 @@
 Three tiers, the same on every provider. You, the parent that launches the roles, are frontier at medium effort. You are not a generated role file.
 
 - Frontier, medium: comprehension, reasoning, and high-complexity work. shaper, reviewer, verifier. Claude alias `opus`. Pi `pi-claude-cli/claude-opus-5`.
-- Mid, medium: development, polishing, exploration, sweeps. builder, polisher, prototyper, sweeper. Claude alias `sonnet`. Pi `pi-claude-cli/claude-sonnet-5`.
+- Mid, medium: development, polishing, exploration, sweeps. builder, polisher, prototyper, sweeper, classifier (Claude Code only). Claude alias `sonnet`. Pi `pi-claude-cli/claude-sonnet-5`.
 - Light, low: delivery and repetitive low-reasoning work. delivery. Claude alias `haiku`. Pi `pi-claude-cli/claude-haiku-4-5`.
 
 On Pi the agent file names the model and the effort (`thinking`). On Claude the agent file names the model. A per-launch `model` still overrides it: the second blind review, a refusal retry, and judgment-day's second judge.

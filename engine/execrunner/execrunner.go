@@ -17,10 +17,11 @@ import (
 	"time"
 )
 
-// killGrace is how long Run waits, after it has stopped a program at its deadline, for the
-// program's output pipes to close. A grandchild that kept them open must not hold Run past a
-// deadline that has already expired.
-const killGrace = 2 * time.Second
+// KillGrace is how long Run and Output wait, after they have stopped a program at its deadline, for the
+// program's output pipes to close. A grandchild that kept them open must not hold them past a
+// deadline that has already expired. It is exported so a caller that states this bound in a text
+// reads it from here, and a test holds the text against it.
+const KillGrace = 2 * time.Second
 
 // ErrOutputTooLarge is what Output returns when a program prints more on either stream than the
 // bound the runner was given, after it has stopped the program.
@@ -80,9 +81,9 @@ func (Runner) LookPath(name string) (string, error) { return exec.LookPath(name)
 // and waits for it. It returns what the program printed on both streams, even when it failed.
 // The program is stopped when ctx ends, and the error then wraps the reason (context.DeadlineExceeded
 // for a deadline) next to what the stopped process reported.
-func (Runner) Run(ctx context.Context, bin string, args ...string) ([]byte, error) {
+func (r Runner) Run(ctx context.Context, bin string, args ...string) ([]byte, error) {
 	cmd := exec.CommandContext(ctx, bin, args...)
-	cmd.WaitDelay = killGrace
+	cmd.WaitDelay = KillGrace
 	out, err := cmd.CombinedOutput()
 	if err != nil && ctx.Err() != nil {
 		return out, fmt.Errorf("%w (%v)", ctx.Err(), err)
@@ -126,7 +127,7 @@ func (r Runner) outputIn(ctx context.Context, dir string, env []string, in io.Re
 	cmd.Dir = dir
 	cmd.Env = env
 	cmd.Stdin = in
-	cmd.WaitDelay = killGrace
+	cmd.WaitDelay = KillGrace
 	out := &cappedBuffer{max: r.maxOutput, cancel: cancel}
 	errOut := &cappedBuffer{max: r.maxOutput, cancel: cancel}
 	cmd.Stdout = out

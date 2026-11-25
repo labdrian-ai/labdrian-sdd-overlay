@@ -1,0 +1,17 @@
+{
+  "kind": "polisher",
+  "base": "239b17a699c443f2e2683a3d91d103c32f584f12",
+  "head": "c0b641e0eb82a3936b4952c8239a9bb3f318c39b",
+  "diff_sha256": "a28b1c93fed44e7a994d3215e430acfbc3eda09aa52115983ea17f6522cdda06",
+  "findings": {
+    "findings": [],
+    "evidence": [
+      "Read the full diff t4s.diff",
+      "ClaudeInstructions is called only from claude_test.go",
+      "claude.go: comments before name: accepted only when name: is a noticeRole and the first comment equals noticeHeader(); noticeComments uses the same noticeHeader()",
+      "agentgen.go: an empty or blank notice appends a sourceError and build returns false so Generate writes nothing; problemLine reports a projecting error wrapping ErrNotExist as cannot be projected",
+      "Body and agents/classifier.md change only the two Output lines; K1 updated",
+      "Tests not run"
+    ]
+  }
+}

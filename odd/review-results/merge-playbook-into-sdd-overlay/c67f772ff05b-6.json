@@ -1,0 +1,140 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "b02f677258470a6dcca7d6d904570c133e7c52b3",
+    "head": "c67f772ff05b4d595e8cada04d3f5375c55f3cbb",
+    "diff_sha256": "722a264c2018365c1dbb8dd1ae02aca1e7814ee21e70a4066e377e9375ebded9",
+    "paths": [
+      "CHANGELOG.md",
+      "README.md",
+      "engine/architecture_short_name_test.go",
+      "engine/architecture_test.go",
+      "engine/cmd/review_stop_hook_bound_linux_test.go",
+      "engine/cmd/review_stop_hook_bound_unix_test.go",
+      "engine/cmd/review_stop_hook_docs_test.go",
+      "engine/execrunner/execrunner.go",
+      "engine/execrunner/execrunner_test.go",
+      "engine/execrunner/lingering_test.go",
+      "engine/gitobject/gitobject.go",
+      "engine/review/evidencesh/evidencesh.go",
+      "engine/review/evidencesh/evidencesh_bound_text_test.go",
+      "engine/review/evidencesh/evidencesh_fifo_linux_test.go",
+      "odd/tasks/merge-playbook-into-sdd-overlay.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "hunt",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "b02f677258470a6dcca7d6d904570c133e7c52b3",
+      "head": "c67f772ff05b4d595e8cada04d3f5375c55f3cbb",
+      "diff_sha256": "722a264c2018365c1dbb8dd1ae02aca1e7814ee21e70a4066e377e9375ebded9"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "README.md",
+        "engine/architecture_short_name_test.go",
+        "engine/architecture_test.go",
+        "engine/cmd/review_stop_hook_bound_linux_test.go",
+        "engine/cmd/review_stop_hook_bound_unix_test.go",
+        "engine/cmd/review_stop_hook_docs_test.go",
+        "engine/execrunner/execrunner.go",
+        "engine/execrunner/execrunner_test.go",
+        "engine/execrunner/lingering_test.go",
+        "engine/gitobject/gitobject.go",
+        "engine/review/evidencesh/evidencesh.go",
+        "engine/review/evidencesh/evidencesh_bound_text_test.go",
+        "engine/review/evidencesh/evidencesh_fifo_linux_test.go",
+        "odd/tasks/merge-playbook-into-sdd-overlay.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "engine/cmd/review_stop_hook_docs_test.go:198",
+        "severity": "SUGGESTION",
+        "claim": "For the README, the new needle 'cannot be read' does not test the refusal sentence that resolves c9440b24b20f-6 F6. The README cut runs from 'gentle-ai-overlay review stop-hook\\n' to the next 'overlay --help\\n' (README.md:1641), so it also takes in the whole 'roles builder-guard' section. That section already says 'a document that cannot be read' (README.md:1612). Deleting 'or cannot be read' from the stop-hook sentence at README.md:1584 would still pass TestTextsOfTheReviewStopHookSayTheLineOfAnUndeployedStoreRepeats. L91 admits that the README already held the phrase, and mutation Mg1 mutated only the CHANGELOG. The README half of F6 is therefore stated but not pinned. Fix: end the cut at the stop-hook section, for example at 'gentle-ai-overlay roles builder-guard', or use a needle specific to the sentence.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/cmd/review_stop_hook_docs_test.go:198",
+          "engine/cmd/review_stop_hook_docs_test.go:194",
+          "README.md:1612",
+          "README.md:1641",
+          "README.md:1584"
+        ]
+      },
+      {
+        "id": "F2",
+        "location": "engine/cmd/review_stop_hook_docs_test.go:189",
+        "severity": "SUGGESTION",
+        "claim": "The test comment says 'Every refusal made before a run is named', and the T4 line says the README and the CHANGELOG 'name every refusal before a run'. The texts list four: not deployed, not a regular file, cannot be checked, cannot be read. Classified has a fifth refusal before any run: a script path that is not absolute (evidencesh.go:93). It is reached when HOME is unset or relative, because evidenceScript joins HOME as given, and review_stop_hook.go:197 documents that case. Neither README.md:1584 nor the CHANGELOG entry names it, so the claim of completeness that resolves -6 F6 does not hold.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/cmd/review_stop_hook_docs_test.go:189",
+          "engine/review/evidencesh/evidencesh.go:93",
+          "engine/cmd/review_stop_hook.go:197",
+          "README.md:1584"
+        ]
+      },
+      {
+        "id": "F3",
+        "location": "engine/architecture_short_name_test.go:25",
+        "severity": "SUGGESTION",
+        "claim": "The narrowed lint doc lists 'What it does not follow' as three items: a const group's implicit repeat, a name bound in another file, and a computed value. The parser leaves out more than that. isLiteral matches only the BasicLit text '12' (line 31), so 's[:0xc]', 's[:014]', 's[:1_2]' and the parenthesized 's[:(12)]' (a ParenExpr) are not hits. bind records only const/var specs and ':=' (line 50), so 'var n int; n = 12' followed by 's[:n]' is not a hit either. These are the same doc-versus-behaviour class as c9440b24b20f-6 F2: the list reads as exhaustive but is not. The closing sentence 'A cut it does not follow is read by review' softens this without naming the gaps.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/architecture_short_name_test.go:25",
+          "engine/architecture_short_name_test.go:31",
+          "engine/architecture_short_name_test.go:50"
+        ]
+      },
+      {
+        "id": "F4",
+        "location": "engine/cmd/review_stop_hook_bound_linux_test.go:57",
+        "severity": "SUGGESTION",
+        "claim": "SH15 dropped its explicit 6 s ceiling, but the 20 s backstop is still a wall-clock upper bound, and it can only fail a correct build. The timer starts at line 45, before the stub write and recordRangeKept. A correct stop that returns more than 20 s after that point sets the flag before it returns and fails at line 57. The mutant Mb1 can never pass, because its pipe closes only after a release. L90 (odd/tasks/merge-playbook-into-sdd-overlay.md:4760) records the inverse risk: 'would let Mb1 pass, never fail a correct build'. -4 F1, which was about false failures under load, is therefore narrowed but not removed, and the recorded tradeoff is wrong. The task document should be corrected, and the backstop could be started just before s.stop.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/cmd/review_stop_hook_bound_linux_test.go:57",
+          "engine/cmd/review_stop_hook_bound_linux_test.go:45",
+          "odd/tasks/merge-playbook-into-sdd-overlay.md:4760"
+        ]
+      },
+      {
+        "id": "F5",
+        "location": "engine/execrunner/execrunner.go:20",
+        "severity": "SUGGESTION",
+        "claim": "The doc of the newly exported KillGrace says it is 'how long Run waits' and invites callers that state the bound to read it. The caller this change ties to it, evidencesh, goes through Output, which also sets WaitDelay = KillGrace in outputIn (execrunner.go:130). The public contract names only Run, so a reader of evidencesh's texts cannot confirm from this doc that the grace applies to their path.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "worsened",
+        "proof_refs": [
+          "engine/execrunner/execrunner.go:20",
+          "engine/execrunner/execrunner.go:130"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the whole diff (567 lines, 15 paths, including the deleted review_stop_hook_bound_unix_test.go) and, at head, every changed file or the changed regions of it.",
+      "Read L90 (odd/tasks/merge-playbook-into-sdd-overlay.md:4645-4760), the c9440b24b20f-4.json and c9440b24b20f-6.json records, and the readability row of roles/reviewer/rows.json:9, which I applied.",
+      "-4 F1: resolved as L90 says. SH15 holds its process on a FIFO that it frees once (sync.OnceFunc in Cleanup and a 20 s AfterFunc), with no stray sleep and no 6 s ceiling. F4 covers the 20 s residue and the inverted risk text.",
+      "-4 F2 and -6 F1: resolved. The doc of shortNameCuts states matching by text across the whole file and the loud false hit. The message is the one L90 gives, and the row 'a name bound to 12 in another function' (want 1) pins it.",
+      "-6 F2: resolved. The doc names the const group's implicit repeat as not followed, and the row 'a const group that repeats 12' (want 0) pins it. F3 covers further unlisted spellings.",
+      "-6 F3: resolved. checkScript stats before it opens (evidencesh.go:115-124). TestClassified_RefusesAFIFOWithoutOpeningIt runs Classified in a goroutine with a 5 s select and an O_RDWR release; countingRunner and wantError exist in evidencesh_test.go.",
+      "-6 F4: resolved. KillGrace is exported. TestTheTextsStateTheBoundOfTheRunner builds 'stopped at N seconds' from DefaultTimeout and 'up to N seconds more' from KillGrace, and finds 'KillGrace, N seconds' in evidencesh.go. The stop hook uses DefaultTimeout, because it passes no Timeout (review_stop_hook.go:176). Grep found no other text stating the evidence-run bound.",
+      "-6 F5: resolved. The gitobject package doc, ShortLength's doc and the H34 row (architecture_test.go:124-128) name the users. A grep of gitobject.Short and ShortLength matches cmd, pipkg, review/app and review; pipkg/source_test.go:221 pins DeployTip as fakeTip[:12].",
+      "-6 F6: resolved in the text for README.md:1584 and CHANGELOG.md:30, which match the four messages of checkScript. F1 covers the vacuous README needle, and F2 covers the fifth refusal, which is not named.",
+      "Checked the authored-line counts in L91 against the diff hunks (7aedb91e 21+9; the second commit's per-file counts). They match.",
+      "Ran nothing. No build, test, vet or timing was run; every check not listed above is not run."
+    ]
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "kind": "polisher",
+  "base": "5c0bd28fb9f116c0eeb0039322c371ed93ee9cf5",
+  "head": "41a6814e9c086d155f0bc20ca3deb3e86c542a51",
+  "diff_sha256": "64a06c9cbfe1960b4a6d67dfec1d8fce615d9a076c07c70754a018cf36670b14",
+  "findings": {
+    "findings": [],
+    "evidence": [
+      "Read the full diff t4a.diff and evidence.sh at the target",
+      "Empty identifier exits 2; missing awk 3; missing page 1; found set only for 5-cell Evidence rows; awk exit status passes through",
+      "Unreadable page exits 2, which the consumer design (task line 2266: any outcome other than 0 or 1 does not ask) treats safely",
+      "Risk 3: stop-hook and Classify step read 0 as classified and 1 as ask; classifier writes the plain identifier, matching the exact comparison",
+      "Identifiers of the form feature/head12-n are never numeric and contain no backslash",
+      "Risk 5: no deployed-copy hash or golden pins the script; usage pinned only by evidenceUsage, updated",
+      "Not run: tests, shellcheck"
+    ]
+  }
+}

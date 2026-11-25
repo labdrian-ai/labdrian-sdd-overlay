@@ -1,0 +1,78 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "b02f677258470a6dcca7d6d904570c133e7c52b3",
+    "head": "c67f772ff05b4d595e8cada04d3f5375c55f3cbb",
+    "diff_sha256": "722a264c2018365c1dbb8dd1ae02aca1e7814ee21e70a4066e377e9375ebded9",
+    "paths": [
+      "CHANGELOG.md",
+      "README.md",
+      "engine/architecture_short_name_test.go",
+      "engine/architecture_test.go",
+      "engine/cmd/review_stop_hook_bound_linux_test.go",
+      "engine/cmd/review_stop_hook_bound_unix_test.go",
+      "engine/cmd/review_stop_hook_docs_test.go",
+      "engine/execrunner/execrunner.go",
+      "engine/execrunner/execrunner_test.go",
+      "engine/execrunner/lingering_test.go",
+      "engine/gitobject/gitobject.go",
+      "engine/review/evidencesh/evidencesh.go",
+      "engine/review/evidencesh/evidencesh_bound_text_test.go",
+      "engine/review/evidencesh/evidencesh_fifo_linux_test.go",
+      "odd/tasks/merge-playbook-into-sdd-overlay.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "b02f677258470a6dcca7d6d904570c133e7c52b3",
+      "head": "c67f772ff05b4d595e8cada04d3f5375c55f3cbb",
+      "diff_sha256": "722a264c2018365c1dbb8dd1ae02aca1e7814ee21e70a4066e377e9375ebded9"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "README.md",
+        "engine/architecture_short_name_test.go",
+        "engine/architecture_test.go",
+        "engine/cmd/review_stop_hook_bound_linux_test.go",
+        "engine/cmd/review_stop_hook_bound_unix_test.go",
+        "engine/cmd/review_stop_hook_docs_test.go",
+        "engine/execrunner/execrunner.go",
+        "engine/execrunner/execrunner_test.go",
+        "engine/execrunner/lingering_test.go",
+        "engine/gitobject/gitobject.go",
+        "engine/review/evidencesh/evidencesh.go",
+        "engine/review/evidencesh/evidencesh_bound_text_test.go",
+        "engine/review/evidencesh/evidencesh_fifo_linux_test.go",
+        "odd/tasks/merge-playbook-into-sdd-overlay.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "engine/cmd/review_stop_hook_bound_linux_test.go:1",
+        "severity": "SUGGESTION",
+        "claim": "The SH15 test for the stop hook's evidence-run bound was gated `//go:build unix` and is now `//go:build linux`. It no longer runs on darwin or the BSDs. The `KillGrace` bound (`WaitDelay`) has no coverage there, even though the production code is not Linux-specific. The Linux restriction is only needed for the O_RDWR FIFO release trick, so this is a real loss of coverage on those platforms.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/cmd/review_stop_hook_bound_linux_test.go:1",
+          "diff: engine/cmd/review_stop_hook_bound_unix_test.go deleted, header `//go:build unix`"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full diff.",
+      "Confirmed in evidencesh.go that the refusal messages named in README and CHANGELOG exist: not deployed, cannot be checked, not a regular file, cannot be read.",
+      "Confirmed DefaultTimeout is 2s and that the stop hook builds evidencesh.Options without a Timeout (review_stop_hook.go:176), so the texts and the bound-text test describe the real timeout.",
+      "Confirmed the README markers used by the bound-text test exist (README.md:1545 and :1641).",
+      "Checked that the KillGrace rename is applied everywhere in the diff (execrunner.go, tests, comments).",
+      "Checked the SH15 FIFO release logic: sync.OnceFunc plus a backstop, and the O_RDWR open then close frees the blocked reader."
+    ]
+  }
+}

@@ -197,17 +197,13 @@ func (c Candidate) Binding() reviewresult.Binding {
 // Ref is the range as the record of the role chain names it, <base>..<head>.
 func (c Candidate) Ref() string { return c.Base + ".." + c.Head }
 
-// shortLength is how many characters of the head name its files: 12 hexadecimal characters, which git
-// itself still prints unambiguously in large repositories.
-const shortLength = 12
-
-// Short is the first 12 characters of the head: the name of the stored results and of the worktree of
-// the candidate. The zero Candidate names nothing, so its short name is empty.
+// Short is the first 12 characters of the head (gitobject.Short): the name of the stored results and of
+// the worktree of the candidate. The zero Candidate names nothing, so its short name is empty.
 func (c Candidate) Short() string {
-	if len(c.Head) < shortLength {
+	if len(c.Head) < gitobject.ShortLength {
 		return ""
 	}
-	return c.Head[:shortLength]
+	return gitobject.Short(c.Head)
 }
 
 // OverLimit reports whether the diff is larger than DiffLimitBytes.

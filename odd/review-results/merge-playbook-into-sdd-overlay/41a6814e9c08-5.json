@@ -1,0 +1,117 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "5c0bd28fb9f116c0eeb0039322c371ed93ee9cf5",
+    "head": "41a6814e9c086d155f0bc20ca3deb3e86c542a51",
+    "diff_sha256": "64a06c9cbfe1960b4a6d67dfec1d8fce615d9a076c07c70754a018cf36670b14",
+    "paths": [
+      "engine/shelltest/evidence_store_test.go",
+      "odd/tasks/merge-playbook-into-sdd-overlay.md",
+      "skills/_shared/evidence/PROVENANCE.md",
+      "skills/_shared/evidence/evidence.sh"
+    ]
+  },
+  "rows": [
+    "recall",
+    "hunt",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "5c0bd28fb9f116c0eeb0039322c371ed93ee9cf5",
+      "head": "41a6814e9c086d155f0bc20ca3deb3e86c542a51",
+      "diff_sha256": "64a06c9cbfe1960b4a6d67dfec1d8fce615d9a076c07c70754a018cf36670b14"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/shelltest/evidence_store_test.go",
+        "odd/tasks/merge-playbook-into-sdd-overlay.md",
+        "skills/_shared/evidence/PROVENANCE.md",
+        "skills/_shared/evidence/evidence.sh"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "skills/_shared/evidence/evidence.sh:224",
+        "severity": "WARNING",
+        "claim": "An existing but unreadable page makes awk exit 2, so reviewed exits 2, the code the header and L55 reserve for a usage error; the header does not document an unreadable page; under T4w (any outcome but 0/1 does not ask) a permanently unreadable page silently turns off the question; no test covers it.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "skills/_shared/evidence/evidence.sh:221",
+          "skills/_shared/evidence/evidence.sh:31",
+          "odd/tasks/merge-playbook-into-sdd-overlay.md:2265"
+        ]
+      },
+      {
+        "id": "F2",
+        "location": "skills/_shared/evidence/evidence.sh:136",
+        "severity": "SUGGESTION",
+        "claim": "found is set before the row checks, so a row check rejects (bad level, bad date, unknown kind, after the table, no title) still counts as classified; B12 pins neither choice.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "skills/_shared/evidence/evidence.sh:133",
+          "engine/shelltest/evidence_store_test.go:116"
+        ]
+      },
+      {
+        "id": "F3",
+        "location": "skills/_shared/evidence/evidence.sh:76",
+        "severity": "SUGGESTION",
+        "claim": "want passes through awk -v escape processing; an identifier with a backslash never matches its literal cell; ENVIRON would avoid it.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "skills/_shared/evidence/evidence.sh:76",
+          "skills/_shared/evidence/evidence.sh:136"
+        ]
+      },
+      {
+        "id": "F4",
+        "location": "skills/_shared/evidence/evidence.sh:55",
+        "severity": "SUGGESTION",
+        "claim": "A blank or padded identifier passes the non-empty guard, is never trimmed and can never match a trimmed cell, so it answers 1 instead of a usage error.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "skills/_shared/evidence/evidence.sh:53",
+          "skills/_shared/evidence/evidence.sh:77"
+        ]
+      },
+      {
+        "id": "F5",
+        "location": "skills/_shared/evidence/PROVENANCE.md:14",
+        "severity": "SUGGESTION",
+        "claim": "PROVENANCE says in the present tense that the stop hook reads the mode, but no consumer exists at this head (T4h/T4w not built).",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "skills/_shared/evidence/PROVENANCE.md:14",
+          "odd/tasks/merge-playbook-into-sdd-overlay.md:2736"
+        ]
+      },
+      {
+        "id": "F6",
+        "location": "engine/shelltest/evidence_store_test.go:222",
+        "severity": "SUGGESTION",
+        "claim": "B12 does not cover the CLAUDE_PROJECT_DIR route, a page with no Evidence heading or table, an unreadable page, or a row check rejects.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/shelltest/evidence_store_test.go:219"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full diff (4 paths) and evidence.sh at head",
+      "Read the test helpers and B1-B12",
+      "Read PROVENANCE hunk, T4 line, L55 and L59",
+      "Readability row applied",
+      "L59 line counts match the hunks; no command run"
+    ]
+  }
+}

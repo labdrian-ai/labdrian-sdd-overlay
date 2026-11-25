@@ -1,0 +1,89 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "a6927b09cefec494defdbf502f3fbbad4cd764bb",
+    "head": "83424e3c72e24ef2159198cf7aac13c6a95867ed",
+    "diff_sha256": "9556fccea3afa1daa6d7875cea525862f6cbee04572013601f5522a3b819feef",
+    "paths": [
+      "engine/cmd/review_stop_hook.go",
+      "engine/cmd/review_stop_hook_oneline_test.go",
+      "engine/review/app/classify.go",
+      "engine/review/app/classify_batch_test.go",
+      "engine/review/app/classify_test.go",
+      "engine/review/app/stop.go",
+      "odd/tasks/merge-playbook-into-sdd-overlay.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "hunt"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "a6927b09cefec494defdbf502f3fbbad4cd764bb",
+      "head": "83424e3c72e24ef2159198cf7aac13c6a95867ed",
+      "diff_sha256": "9556fccea3afa1daa6d7875cea525862f6cbee04572013601f5522a3b819feef"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/cmd/review_stop_hook.go",
+        "engine/cmd/review_stop_hook_oneline_test.go",
+        "engine/review/app/classify.go",
+        "engine/review/app/classify_batch_test.go",
+        "engine/review/app/classify_test.go",
+        "engine/review/app/stop.go",
+        "odd/tasks/merge-playbook-into-sdd-overlay.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "engine/cmd/review_stop_hook.go:85",
+        "severity": "SUGGESTION",
+        "claim": "oneLine changes the bytes of the error, not only its line breaks. It rebuilds the text with `for _, r := range text` and `b.WriteRune(r)`. In Go, ranging over a string turns each byte that is not valid UTF-8 into utf8.RuneError, and WriteRune writes that as the 3 bytes of U+FFFD. Before this change the hook printed the error's bytes as they were (`%v`). Now any invalid byte in the text is replaced. That includes a working directory or a stored-result path with a non-UTF-8 name (reviewPath's `cannot determine the working directory`, a refusal naming a file) and raw git stderr. The printed line then no longer names the real path. No test covers text that is not UTF-8; the oneLine table has only ASCII cases. A byte loop that touches only '\\r' and '\\n' would keep every other byte.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/cmd/review_stop_hook.go:85",
+          "engine/cmd/review_stop_hook.go:63"
+        ]
+      },
+      {
+        "id": "F2",
+        "location": "engine/cmd/review_stop_hook.go:77",
+        "severity": "SUGGESTION",
+        "claim": "oneLine treats only '\\r' and '\\n' as line breaks. Vertical tab, form feed, NEL (U+0085) and the Unicode line and paragraph separators (U+2028, U+2029) pass through unchanged. Some terminals and log viewers break a line on these, so text from an outside source (git stderr wrapped by gitexec, a panic value) can still show as more than one line. That breaks the doc's promise of 'one line on stderr, whatever line breaks its text holds' (review_stop_hook.go:23). I could not show that real input reaches this, so it is a SUGGESTION. The table in TestOneLineJoinsTheLinesOfAText pins only CR and LF.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/cmd/review_stop_hook.go:77",
+          "engine/cmd/review_stop_hook.go:23"
+        ]
+      },
+      {
+        "id": "F3",
+        "location": "engine/review/app/classify.go:150",
+        "severity": "SUGGESTION",
+        "claim": "A refusal is remembered under refusedKey(refusal.Error()), a hash of its whole text. If one stored file keeps failing but the error text differs from stop to stop (for example, it carries git or filesystem stderr with a temporary path, a PID or a time in it), each stop sees a new key. The refusal is then named again at every stop, which -2 F4 was meant to stop, and one new refused- marker is written to the session store per stop. L72 assumes these markers are 'bounded by the distinct refusal texts of a session'; that holds only if the texts stay the same. Neither M11 nor M3 pins a refusal whose text changes. Keying on the stored file's name (feature, name) instead of the full text would make the count independent of the text. I did not show which refusal texts can vary, so it is a SUGGESTION.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/review/app/classify.go:150",
+          "engine/review/app/classify.go:159"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the whole candidate diff: 995 lines over the 7 paths (code commit d8e2d28c and tests commit 83424e3c).",
+      "In the worktree at head, read engine/review/app/classify.go (whole), engine/cmd/review_stop_hook.go (whole), stop.go lines 40-138, and reviewPath in engine/cmd/review.go lines 219-233. reviewPath confirms that a relative cwd reaches workingDir, the print site that SH11's 'an error' case relies on.",
+      "Read the T4m review records 5276daf542e3-2.json (F1-F4), 5276daf542e3-5.json (F1-F3), 34e436c2b310-3.polisher.json and 34e436c2b310-4.polisher.json, and L72 (lines 3534-3705) of the task document.",
+      "Each prior finding against L72's dispositions: -2 F1 and -3.polisher (a block dropped beside an error, classify- keys already recorded): the hook's guard is unchanged (review_stop_hook.go:117). This is placed in T4w by the T4n line and the T4 line, as L72 says. It is still unreachable because nothing in production calls WithClassified. -2 F2, -5 F1, -5 F3 and -4.polisher: closed by removal. Stamp, memoKey, remembered and the classified-/lacking- prefixes are gone; a Grep of engine/ for 'Stamp(|memoKey|lacking-|classified-|stamps' finds no code hits. The port is asked once per stop (classify.go:202). M5 pins it; M13 and the length check at classify.go:206 pin the empty or wrong answer. -2 F3: no memo key is written; M14 pins it. -2 F4: unnamed and refusedKey (classify.go:140-164), pinned by M11, M2 and M3. -5 F2: oneLine is used at both print sites (review_stop_hook.go:57 and :63), pinned by SH11 and the table.",
+      "Steps 1-7 of classifyRuling match L72. The Has error of unnamed is a pass error joined with every refusal (classify.go:193). Port errors and a wrong count are errors with no block and no once call. refused- keys are 24 bytes of lowercase letters, hex digits and a dash, the same form as classify- keys.",
+      "Hexagonal check: classify.go imports only fmt, strings, engine/review and engine/sha256hex, so there is no adapter code in app. oneLine lives in engine/cmd, the driver.",
+      "Tests read: fakeClassified, addFailsWithPrefix, hasFailsWithPrefix, M11-M14, SH11 and the changed pins (SH1, SH3, SH4, SH7, J4, J5, M2, M3, M5). By hand: the oneLine table's expected values follow from the code, for example 'a\\n\\n b' gives 'a  b'.",
+      "Builder claims in L73 (test runs, mutations, vet, gofmt) were not checked by me. I ran no build, test, vet or mutation; per the reviewer contract they are not run."
+    ]
+  }
+}

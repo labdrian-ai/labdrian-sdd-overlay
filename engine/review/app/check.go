@@ -153,30 +153,50 @@ func (s Service) exemptedHead(repo Repository, feature, name, head string) (revi
 // reviewedResult reads the stored result called name and holds it as Check says. It reports false for a result
 // that is about another commit than head, which only the first 12 characters of the name say it is not.
 func (s Service) reviewedResult(repo Repository, feature, name, head string) (review.Reviewed, bool, error) {
+	h, binds, err := s.heldResult(repo, feature, name, head)
+	if err != nil || !binds {
+		return review.Reviewed{}, false, err
+	}
+	return review.Reviewed{Candidate: h.candidate, Result: h.path, Verdict: h.verdictPath, Decision: reviewverdict.Decide(h.result, h.verdicts)}, true, nil
+}
+
+// held is a stored result read back and held to the files and to git, with the verdict stored beside it.
+type held struct {
+	candidate   review.Candidate
+	path        string
+	result      reviewresult.Result
+	verdicts    []reviewverdict.Verdict
+	verdictPath string
+}
+
+// heldResult reads the stored result called name, and the verdict beside it, once, and holds them as Check says. It
+// reports false, with no error, for a result that is about another commit than head, which only the first 12
+// characters of the name say it is not; every other failure is an error.
+func (s Service) heldResult(repo Repository, feature, name, head string) (held, bool, error) {
 	path := review.ResultPath(feature, name)
 	file, err := s.results.Read(repo.Root, feature, name)
 	if err != nil {
-		return review.Reviewed{}, false, fmt.Errorf("read %s: %w", path, err)
+		return held{}, false, fmt.Errorf("read %s: %w", path, err)
 	}
 	stored, result, err := judged(file)
 	if err != nil {
-		return review.Reviewed{}, false, fmt.Errorf("%s: %w", path, err)
+		return held{}, false, fmt.Errorf("%s: %w", path, err)
 	}
 	if stored.Head != head {
-		return review.Reviewed{}, false, nil
+		return held{}, false, nil
 	}
 	candidate, err := s.bind(repo, stored.Base, head)
 	if err != nil {
-		return review.Reviewed{}, false, fmt.Errorf("%s: %w", path, err)
+		return held{}, false, fmt.Errorf("%s: %w", path, err)
 	}
 	if err := review.CheckBinding(stored, candidate); err != nil {
-		return review.Reviewed{}, false, fmt.Errorf("%s: %w", path, err)
+		return held{}, false, fmt.Errorf("%s: %w", path, err)
 	}
 	verdicts, verdictPath, err := s.verdictsOf(repo, feature, name, result)
 	if err != nil {
-		return review.Reviewed{}, false, err
+		return held{}, false, err
 	}
-	return review.Reviewed{Candidate: candidate, Result: path, Verdict: verdictPath, Decision: reviewverdict.Decide(result, verdicts)}, true, nil
+	return held{candidate: candidate, path: path, result: result, verdicts: verdicts, verdictPath: verdictPath}, true, nil
 }
 
 // verdictsOf reads the verdict stored beside the result called name and holds it to the result it answers. It

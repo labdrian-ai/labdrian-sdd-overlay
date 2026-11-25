@@ -1,0 +1,73 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "b3515c1bb1e1b963a8c12045ae8a2cbf78e859aa",
+    "head": "19d59ac19897cf7b96b8995d05925347e5443ebb",
+    "diff_sha256": "d79317a8ed39b854b23696bad6fbf24682f5b860d070ecb453725765459a5148",
+    "paths": [
+      "CHANGELOG.md",
+      "README.md",
+      "bin/lib/usage.sh",
+      "engine/cmd/review_stop_hook_docs_test.go",
+      "engine/review/app/classify.go",
+      "engine/review/app/findings_unverified_test.go",
+      "engine/skills/classify_step_artifact_test.go",
+      "odd/tasks/merge-playbook-into-sdd-overlay.md",
+      "skills/role-chain/.approval.json",
+      "skills/role-chain/references/classify.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "hunt"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "b3515c1bb1e1b963a8c12045ae8a2cbf78e859aa",
+      "head": "19d59ac19897cf7b96b8995d05925347e5443ebb",
+      "diff_sha256": "d79317a8ed39b854b23696bad6fbf24682f5b860d070ecb453725765459a5148"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "README.md",
+        "bin/lib/usage.sh",
+        "engine/cmd/review_stop_hook_docs_test.go",
+        "engine/review/app/classify.go",
+        "engine/review/app/findings_unverified_test.go",
+        "engine/skills/classify_step_artifact_test.go",
+        "odd/tasks/merge-playbook-into-sdd-overlay.md",
+        "skills/role-chain/.approval.json",
+        "skills/role-chain/references/classify.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "skills/role-chain/references/classify.md:5",
+        "severity": "WARNING",
+        "claim": "The new step 1 tells the parent what to do when a severe finding has a stored `not-run`: 'run the check again' and 'classify once `review verify` has stored `reproduced` or `not-reproduced` for each check it needs'. For that result this cannot happen. `review verify` never writes over an existing verdict file. A second verify of the same `<head12>-<n>` is refused with ErrAlreadyVerified ('the result already has a verdict'), exits 1 and stores nothing. A parent that follows step 1 therefore reruns the verifier and gets exit 1. The wait it was told to keep never ends: unverifiedOf stays non-empty, so the stop hook never asks for the result and the step never classifies it. The step does not say that only a new review result (a new `-<n>`) or the owner can end the hold. The diff adds this instruction; the base step said only 'classify after `review verify`'. Verifiers store `not-run` as a normal value when they cannot run a check, so real use reaches this path.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "skills/role-chain/references/classify.md:5",
+          "engine/review/app/verify.go:111",
+          "engine/review/app/classify.go:96"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the whole diff t4e.diff (241 lines, 10 paths), including the L103-L105 entries and the T4e/T4e-b clauses of the task document.",
+      "Fix closure, cf39e0c60133-2.polisher WARNING and bbb2b3eaa158-2 F1: CHANGELOG.md, README.md (entry at line 898 and the stop-hook section), bin/lib/usage.sh and the classify.go keptResultsOf doc no longer say 'until its verdict is stored'. They now say a result is held until its check has run, that a stored `not-run` keeps it held, and that `review check` refuses delivery. Checked against the code: reviewverdict/decide.go:114-120 makes any result other than reproduced or not-reproduced fateUnchecked, and decide.go:106-111 does the same for an unknown-disposition base check. classify.go:96 skips such a result. review/check.go:140 refuses with 'findings not checked'. The texts now match the behavior, so both findings are closed as L102 designs them. The polisher's other point, that the hold is silent, is answered by the texts naming the refusal of `review check`.",
+      "The U2 row 'the severe finding not run' (findings_unverified_test.go:104): held() stores F1 and F2 as not-run, Decide lists F2 as Unverified, and the expected Ruling{} with no port call matches classify.go:96. The rename and comment changes break nothing.",
+      "The new docs test TestTextsOfTheReviewStopHookSayAHeldResultWaitsForItsCheck reuses the docSection anchors of the existing TestTextsOfTheReviewStopHookSayItAsksForClassification. Each anchored section in the diff contains 'until its check has run', 'not-run' and 'findings not checked', and none still contains 'until its verdict is stored'.",
+      "R14 (classify_step_artifact_test.go:266-283): step 1 at head contains 'until its check has run', '`reproduced`' and '`not-reproduced`', has a sentence starting 'A stored `not-run`' that holds 'keeps it waiting', and no longer contains 'waits for its verdict'. It keeps '`unverified`' and 'stop, not blocked', which classify_step_unverified_test needs (per L104).",
+      "Read engine/review/app/verify.go:60-118 and README.md:678-693. A verdict is stored 'never over an existing file', and the Create path returns ErrAlreadyVerified on ErrExists. This is the basis of F1.",
+      "Searched the worktree, outside odd/, for 'verdict is stored', 'waits for its verdict' and 'after `review verify`'. The only remaining stale wording is the comment at engine/review/app/findings.go:39. It is unchanged by this diff, L104 puts it out of scope, and it changes no behavior, so it is not reported.",
+      "skills/role-chain/.approval.json: only sha256 and approved_at change. L105 says the owner ran `skills approve`. I did not recompute the hash.",
+      "No commands were run: no build, test or hash check. Everything above comes from reading files."
+    ]
+  }
+}

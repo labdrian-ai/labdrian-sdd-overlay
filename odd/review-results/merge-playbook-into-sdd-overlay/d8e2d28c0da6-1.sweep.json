@@ -1,0 +1,98 @@
+{
+  "kind": "sweep",
+  "base": "a6927b09cefec494defdbf502f3fbbad4cd764bb",
+  "head": "d8e2d28c0da6654c5e419e5118dba153204b6cca",
+  "diff_sha256": "251f1d36e67b0eb5c35e1ebc50602a55fff9c2c30dc36d3b57f812891f60f490",
+  "outcome": "fired",
+  "t1": {
+    "deleted_or_renamed": [],
+    "removed_names": [
+      {
+        "name": "Stamp",
+        "hits": [
+          "engine/skills/project_register_plan.go",
+          "odd/review-results/merge-playbook-into-sdd-overlay/34e436c2b310-3.polisher.json",
+          "odd/review-results/merge-playbook-into-sdd-overlay/34e436c2b310-4.polisher.json",
+          "odd/review-results/merge-playbook-into-sdd-overlay/5276daf542e3-2.json",
+          "odd/review-results/merge-playbook-into-sdd-overlay/5276daf542e3-2.verifier.json",
+          "odd/review-results/merge-playbook-into-sdd-overlay/5276daf542e3-3.polisher.json",
+          "odd/review-results/merge-playbook-into-sdd-overlay/5276daf542e3-4.polisher.json",
+          "odd/review-results/merge-playbook-into-sdd-overlay/5276daf542e3-5.json",
+          "odd/review-results/merge-playbook-into-sdd-overlay/5276daf542e3-5.verifier.json"
+        ]
+      },
+      {
+        "name": "classifiedKey",
+        "hits": [
+          "odd/review-results/merge-playbook-into-sdd-overlay/319810f5614a-3.polisher.json",
+          "odd/review-results/merge-playbook-into-sdd-overlay/319810f5614a-4.json",
+          "odd/review-results/merge-playbook-into-sdd-overlay/319810f5614a-6.json"
+        ]
+      },
+      {
+        "name": "memoKey",
+        "hits": [
+          "odd/review-results/merge-playbook-into-sdd-overlay/34e436c2b310-4.polisher.json",
+          "odd/review-results/merge-playbook-into-sdd-overlay/5276daf542e3-4.polisher.json",
+          "odd/review-results/merge-playbook-into-sdd-overlay/5276daf542e3-5.json"
+        ]
+      },
+      {
+        "name": "remembered",
+        "hits": [
+          "CHANGELOG.md",
+          "README.md",
+          "engine/cmd/opencode_bridge_session_e2e_test.go",
+          "engine/cmd/review_stop_hook_test.go",
+          "engine/cmd/usage.go",
+          "engine/review/app/stop_test.go",
+          "engine/runtime/labdrian-runtime-parity-plugin.mjs",
+          "engine/runtime/opencode_bridge_failure_test.go",
+          "engine/runtime/opencode_memorycard_plugin_test.go",
+          "engine/runtime/ownerrules_text_test.go",
+          "engine/skills/actuals_instrumentation_contract_test.go",
+          "instructions/owner-rules.md",
+          "longterm-mem/cmd/longterm-mem/testdata/project-identity-golden/project-identity-45-a-name-the-ledger-remembers.golden",
+          "longterm-mem/internal/adoption/adoption.go",
+          "longterm-mem/internal/adoption/adoption_test.go",
+          "longterm-mem/internal/memorycard/source.go",
+          "longterm-mem/internal/memorycard/source_cache_test.go",
+          "longterm-mem/internal/projectid/adopt_test.go",
+          "longterm-mem/internal/projectid/projectid.go",
+          "longterm-mem/internal/sourcefs/sourcefs_test.go",
+          "odd/review-results/README.md",
+          "odd/review-results/labdrian-orchestrator-opencode/46521de87cbb-5.json",
+          "odd/review-results/merge-playbook-into-sdd-overlay/34e436c2b310-3.polisher.json",
+          "odd/review-results/merge-playbook-into-sdd-overlay/34e436c2b310-4.polisher.json",
+          "odd/review-results/merge-playbook-into-sdd-overlay/5276daf542e3-2.json",
+          "odd/review-results/merge-playbook-into-sdd-overlay/5276daf542e3-3.polisher.json",
+          "odd/review-results/merge-playbook-into-sdd-overlay/5276daf542e3-5.json",
+          "odd/review-results/merge-playbook-into-sdd-overlay/d8f981b110fc-4.json",
+          "odd/review-results/merge-playbook-into-sdd-overlay/d8f981b110fc-5.json",
+          "odd/review-results/merge-playbook-into-sdd-overlay/d8f981b110fc-5.verifier.json",
+          "odd/review-results/own-rdd/7f451d854751-2.json",
+          "odd/review-results/phase9-store-agnostic-promotion/71cb65f88939-3.json",
+          "odd/review-results/phase9-store-agnostic-promotion/dcc676858989-3.json",
+          "odd/tasks/consolidation-phase9.md",
+          "odd/tasks/own-rdd.md",
+          "openspec/specs/longterm-mem-memory-access/spec.md",
+          "skills/cognitive-doc-design/SKILL.md"
+        ]
+      }
+    ]
+  },
+  "t2": [
+    {
+      "tool": "staticcheck",
+      "module": "engine",
+      "new": [
+        "review/app/classify_test.go: const secondReview is unused (U1000)"
+      ]
+    }
+  ],
+  "t3": [],
+  "t4": {
+    "leftovers": [],
+    "orphaned_fixtures": []
+  }
+}

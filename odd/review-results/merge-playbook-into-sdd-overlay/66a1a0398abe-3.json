@@ -1,0 +1,83 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "18d006168daaa2f4e46bd2bcfefb8bae4be618df",
+    "head": "66a1a0398abee3fd6e5bc26c7388e7394b277a08",
+    "diff_sha256": "f0748a58a3c553dc6d4f9fd494ec91f473b6333107cd5cb18aed434c2caa5d65",
+    "paths": [
+      "engine/agentgen/agentgen.go",
+      "engine/agentgen/messages_pin_test.go",
+      "engine/shelltest/evidence_store_test.go",
+      "engine/skills/evidence_store_artifact_test.go",
+      "odd/tasks/merge-playbook-into-sdd-overlay.md",
+      "skills/_shared/evidence/evidence.sh"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "18d006168daaa2f4e46bd2bcfefb8bae4be618df",
+      "head": "66a1a0398abee3fd6e5bc26c7388e7394b277a08",
+      "diff_sha256": "f0748a58a3c553dc6d4f9fd494ec91f473b6333107cd5cb18aed434c2caa5d65"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/agentgen/agentgen.go",
+        "engine/agentgen/messages_pin_test.go",
+        "engine/shelltest/evidence_store_test.go",
+        "engine/skills/evidence_store_artifact_test.go",
+        "odd/tasks/merge-playbook-into-sdd-overlay.md",
+        "skills/_shared/evidence/evidence.sh"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "skills/_shared/evidence/evidence.sh:83",
+        "severity": "SUGGESTION",
+        "claim": "The script relies on every sh it meets treating dirname -- and basename -- as end of options; only dash with GNU coreutils was checked. If an implementation printed --, $general at line 83 would point to the wrong rules file and every kind rule would silently disappear. POSIX specifies --, so the risk is low but unproved.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "skills/_shared/evidence/evidence.sh:83",
+          "skills/_shared/evidence/evidence.sh:200"
+        ]
+      },
+      {
+        "id": "F2",
+        "location": "engine/skills/evidence_store_artifact_test.go:116",
+        "severity": "SUGGESTION",
+        "claim": "The widened pattern accepts only lowercase suffixes, missing uppercase or dotted forms, and can match prose like L2-cache or S5-based as false positives; not reachable in current files.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/skills/evidence_store_artifact_test.go:116"
+        ]
+      },
+      {
+        "id": "F3",
+        "location": "engine/skills/evidence_store_artifact_test.go:136",
+        "severity": "SUGGESTION",
+        "claim": "The -- lint skips only lines starting with #; a trailing comment or message string naming dirname or basename fails it falsely, and a split or variable-built call is not seen.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/skills/evidence_store_artifact_test.go:133"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full diff and evidence.sh lines 60-276",
+      "Traced the reviewed walk for a -w directory and for a regular file at docs/wiki: exit 4 with the expected line",
+      "The no-answer branch is reached only when awk exits 0 with neither yes nor no",
+      "No consumer of the changed strings outside tests and odd/",
+      "evidence.sh has a single copy",
+      "The reviewer returned a head SHA with invented trailing digits (66a1a0398abe81e9...); the foreman recorded the bound head 66a1a0398abee3fd6e5bc26c7388e7394b277a08",
+      "Not run: tests, scripts"
+    ]
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "verdicts": [
+    {
+      "id": "F1",
+      "result": "reproduced",
+      "command": "go test ./skills -run TestProbe -v -count=1 in vf-t4k/{head,base}/engine with HOME=$(mktemp -d). The probe calls taskDocumentReferences on head and taskDocumentIdentifier.FindString on base, on \"see <s> here\" for s in T4k-only, L72-style, T3c-ab, L72-x, OD-11-era.",
+      "output": "HEAD: all five give [] (not flagged). BASE: T4k-only, L72-style, T3c-ab and L72-x are flagged whole; OD-11-era is flagged as \"OD-11\".",
+      "base_result": "not-reproduced"
+    },
+    {
+      "id": "F2",
+      "result": "reproduced",
+      "command": "Read head engine/shelltest/evidence_store_each_test.go:65-113 and evidence_store_test.go:239-373 (B12, B13). Then, with head evidence.sh, in each missing state: sh evidence.sh reviewed rev-1 <wiki>; sh evidence.sh reviewed zz <wiki>; sh evidence.sh reviewed-each <wiki> rev-1 zz. Base: test -e vf-t4k/base/engine/shelltest/evidence_store_each_test.go",
+      "output": "The parity map holds: a valid page, no page, a directory at the page path, a link to a missing file, a regular file as the wiki directory, an awk that fails (exit 2), an awk that gives no answer, and the failing pages. It is missing a page of mode 000, a wiki directory of mode 600, a dash wiki directory of mode 600, an awk that exits 1, an empty wiki directory, and a dash wiki directory that holds nothing. Its evidence also has no backslash row (line 67, against B12 line 244). Run as uid 1000, both modes agree in every missing state. Mode 000 page, wiki of mode 600, and -w of mode 600: all calls exit 4 with the same line, 'evidence.sh: cannot read wiki/evidence.md; reviewed cannot answer' (for -w: '-w/evidence.md'). Empty wiki and empty -w: reviewed exits 1 and 1; reviewed-each prints no, no and exits 0. Awk exits 1: both exit 4 with 'evidence.sh: awk failed on wiki/evidence.md (exit 1); reviewed cannot answer'. Base: base-no-each-test (base has no parity map).",
+      "base_result": "not-reproduced"
+    },
+    {
+      "id": "F3",
+      "result": "reproduced",
+      "command": "cd vf-t4k; PATH=vf-t4k/noawk /bin/sh <v>/skills/_shared/evidence/evidence.sh reviewed rev-1 wiki; PATH=vf-t4k/noawk /bin/sh <v>/skills/_shared/evidence/evidence.sh reviewed-each wiki rev-1, for v in head and base; rg -n 'exits 4, 3 and 2' on head and base PROVENANCE.md",
+      "output": "head: reviewed gives 'evidence.sh: awk is not on PATH; reviewed cannot run', exit=3; reviewed-each gives 'evidence.sh: awk is not on PATH; reviewed-each cannot run', exit=3. The stderr lines differ, while head PROVENANCE.md:15 says 'exits 4, 3 and 2 where reviewed does, with the same stderr lines'. base: reviewed gives the same line, exit=3; reviewed-each gives the usage text, exit=2. Base PROVENANCE.md has no such line.",
+      "base_result": "not-reproduced"
+    },
+    {
+      "id": "F4",
+      "result": "reproduced",
+      "command": "go test ./skills -run TestProbeHeredoc -v -count=1 in vf-t4k/head/engine with HOME=$(mktemp -d). The probe runs shellCalls(\"cat <<EOF\\nit's here\\nEOF\\ncd /x\\n\") and, as a control, shellCalls(\"cd /x\\n\").",
+      "output": "HEAD heredoc calls: [] (the cd /x without -- is not reported). HEAD control calls: [{1 cd  /x}]. Base has no shellCalls (its lint TestEvidenceStore_EveryDirnameAndBasenameEndsItsOptions is line-based), so no base probe was run.",
+      "base_result": "not-run"
+    },
+    {
+      "id": "F5",
+      "result": "reproduced",
+      "command": "The page vf-t4k/wiki/evidence.md holds the Evidence row '| a-kind | 1 |01| 2026-01-01 | f |'. For v in head and base, and awk in gawk, mawk and busybox (through a PATH wrapper): cd vf-t4k; sh <v>/skills/_shared/evidence/evidence.sh reviewed 1 wiki; ... reviewed 01 wiki; ... reviewed-each wiki 1 01",
+      "output": "head gawk: reviewed 1 exits 0, reviewed 01 exits 0, reviewed-each prints no, yes (exit 0), so the modes disagree. head mawk: the same as gawk, they disagree. head busybox: reviewed 1 exits 1, reviewed 01 exits 0, reviewed-each prints no, yes, so they agree. base: gawk and mawk give reviewed 1 exit 0; busybox gives reviewed 1 exit 1; reviewed-each prints the usage text and exits 2 (no such mode), so there is no parity to break.",
+      "base_result": "not-reproduced"
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "kind": "polisher",
+  "base": "de7c6e99a305d330961e4f5b6df09b82cd960a69",
+  "head": "d0108e5f1245937319a943dd19be91f131637894",
+  "diff_sha256": "d931a741b195f2f798ad2d105784aa00cf56dc6f586458b17685b91f54110be0",
+  "findings": {
+    "findings": [],
+    "evidence": [
+      "Read the full diff at /tmp/claude-1000/-home-labdrian-labdrian-sdd-overlay/45673332-5a42-429f-889a-50c9d8bcb1fc/scratchpad/t4t.diff, covering engine/shelltest/evidence_store_each_test.go, engine/shelltest/evidence_store_test.go, engine/skills/evidence_store_artifact_test.go, odd/tasks/merge-playbook-into-sdd-overlay.md (T4t line and L83), skills/_shared/evidence/PROVENANCE.md:15 and skills/_shared/evidence/evidence.sh:50-56.",
+      "Declared risk 5 (deployed script): the change to evidence.sh is limited to header comment lines. No code line changes, so no answer or exit of the script changes.",
+      "Declared risk 3 (documentation contract): the evidence.sh header and PROVENANCE.md say the same thing. Each names MAX_ARG_STRLEN as 32 pages (128 KiB with 4 KiB pages) and ARG_MAX, and says that past ARG_MAX when sh starts the script does not run and the caller's exec fails. That matches how Linux exec works: sh receives the identifiers as arguments, and awk receives them in the EVIDENCE_WANT environment string. TestEvidenceStore_NamesTheEnvironmentBoundInPages checks both texts for these phrases.",
+      "Grep of the target worktree's evidence.sh for external commands: the only ones are printf (a shell builtin) and awk, checked with command -v at line 105. So a PATH that holds only the stub awk plus links to dirname and basename is enough for the script to reach awk. With the stub, the page from onePage exists, so awk is actually started and fails, which leads to the awk-failed line and exit 4 at line 266.",
+      "The stub subtest sets PATH twice in cmd.Env, the host value and then the stub/tools value appended by extra. Go's exec.Cmd uses the last value of a duplicated key, so the stub PATH applies. Go resolves sh itself from the test process's own PATH, so the stub PATH does not prevent sh from starting.",
+      "ENVIRON lint: the only ENVIRON line in evidence.sh, at line 147 (`    want = ENVIRON[\"EVIDENCE_WANT\"] \"\"`), matches the single accepted form once its leading blanks are dropped. Skipping lines that start with # is sound, because an awk string cannot span lines.",
+      "Split pin: splitPinProblem needs exactly one non-comment line containing split(want, and that line must equal the whole statement. The table test covers a reordered statement, a statement only in a comment, a duplicated statement and a missing statement.",
+      "evidenceArgBudget and execArgBytes count each argument's bytes, its end byte and an 8-byte pointer. 32 KiB is far below the 131072-byte minimum ARG_MAX. Normal runs pass only a few identifiers, so the check does not fire in existing tests.",
+      "Not run: no go test, shellcheck or mutation run was performed in this review. Command results recorded in L83 were not re-checked."
+    ]
+  }
+}

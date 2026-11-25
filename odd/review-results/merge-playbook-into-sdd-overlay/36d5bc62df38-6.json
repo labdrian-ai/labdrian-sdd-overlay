@@ -1,0 +1,146 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "eecc474dba1a167740265394614869d976029f23",
+    "head": "36d5bc62df38a1964a2f0533e8fae903c384b62f",
+    "diff_sha256": "23ee043d4d85bb6c328c84ee37db2565e1c23b61804b049f0c5d813ab02d93c7",
+    "paths": [
+      "CHANGELOG.md",
+      "README.md",
+      "engine/architecture_short_name_test.go",
+      "engine/cmd/review_stop_hook.go",
+      "engine/cmd/review_stop_hook_classify_test.go",
+      "engine/cmd/review_stop_hook_docs_test.go",
+      "engine/cmd/review_stop_hook_group_unix_test.go",
+      "engine/execrunner/execrunner.go",
+      "engine/execrunner/group_other.go",
+      "engine/execrunner/group_unix.go",
+      "engine/execrunner/group_unix_test.go",
+      "engine/overlaytest/grandchild_unix.go",
+      "engine/review/app/stop.go",
+      "engine/review/candidate_test.go",
+      "engine/review/evidencesh/evidencesh.go",
+      "engine/review/evidencesh/evidencesh_test.go",
+      "engine/review/evidencesh/evidencesh_unix_test.go",
+      "engine/review/review.go",
+      "engine/shelltest/evidence_store_text_test.go",
+      "engine/skills/evidence_store_artifact_test.go",
+      "odd/tasks/merge-playbook-into-sdd-overlay.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "hunt",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "eecc474dba1a167740265394614869d976029f23",
+      "head": "36d5bc62df38a1964a2f0533e8fae903c384b62f",
+      "diff_sha256": "23ee043d4d85bb6c328c84ee37db2565e1c23b61804b049f0c5d813ab02d93c7"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "README.md",
+        "engine/architecture_short_name_test.go",
+        "engine/cmd/review_stop_hook.go",
+        "engine/cmd/review_stop_hook_classify_test.go",
+        "engine/cmd/review_stop_hook_docs_test.go",
+        "engine/cmd/review_stop_hook_group_unix_test.go",
+        "engine/execrunner/execrunner.go",
+        "engine/execrunner/group_other.go",
+        "engine/execrunner/group_unix.go",
+        "engine/execrunner/group_unix_test.go",
+        "engine/overlaytest/grandchild_unix.go",
+        "engine/review/app/stop.go",
+        "engine/review/candidate_test.go",
+        "engine/review/evidencesh/evidencesh.go",
+        "engine/review/evidencesh/evidencesh_test.go",
+        "engine/review/evidencesh/evidencesh_unix_test.go",
+        "engine/review/review.go",
+        "engine/shelltest/evidence_store_text_test.go",
+        "engine/skills/evidence_store_artifact_test.go",
+        "odd/tasks/merge-playbook-into-sdd-overlay.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "engine/overlaytest/grandchild_unix.go:41",
+        "severity": "WARNING",
+        "claim": "NewGrandchild always skips when /bin/sh, /bin/sleep or /bin/ps is missing, even when CI is \"true\". L86 says these tests skip locally and fail on CI without their tools, as overlaytest.RequireShAndAwk does (overlaytest.go:67-70). The helper's unconditional t.Skipf breaks that. On a CI image without /bin/ps, which is common in minimal containers and busybox images, X1, E1 (t) and SH15 all skip and pass. Those three tests are the only regression checks for 4b9c3789c2e0-3 F1 and -5 F1, so the fixed WARNING can come back with green CI. Today's ubuntu runners have /bin/ps, so this is not triggered yet.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/overlaytest/grandchild_unix.go:41",
+          "engine/overlaytest/overlaytest.go:67"
+        ]
+      },
+      {
+        "id": "F2",
+        "location": "engine/execrunner/group_unix.go:16",
+        "severity": "SUGGESTION",
+        "claim": "Setpgid moves sh out of the hook's process group. Only labdrian's own context deadline now kills the run. If the hook process is killed from outside before its 2 s deadline (SIGKILL or a signal sent to the hook's group, for example by Claude Code's own hook timeout), Cancel never runs. The run's group then survives as an orphan. The stuck-awk case that motivated this change would then run with no limit, where before a kill sent to the hook's group would have reached it. L86 accepted this tradeoff without verifying how Claude Code stops a hook. No test covers it, and the README and CHANGELOG do not mention it.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/execrunner/group_unix.go:16",
+          "engine/cmd/review_stop_hook.go:176"
+        ]
+      },
+      {
+        "id": "F3",
+        "location": "engine/execrunner/group_unix.go:18",
+        "severity": "SUGGESTION",
+        "claim": "Cancel sends syscall.Kill(-cmd.Process.Pid, SIGKILL) by raw pid. It skips os.Process.Kill, which tracks whether the process was already waited for and uses a pidfd on Linux. exec.Cmd can call Cancel from its context goroutine while Wait reaps the process at the same moment; X3 tests Cancel after Run has fully returned. If the deadline expires just as the group's last process exits and is reaped, and the pid is reused as the pgid of an unrelated new group, that group gets SIGKILL. The window is very small, but the kill is a SIGKILL to processes this code does not own.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/execrunner/group_unix.go:18",
+          "engine/execrunner/group_unix_test.go:56"
+        ]
+      },
+      {
+        "id": "F4",
+        "location": "engine/execrunner/group_unix_test.go:20",
+        "severity": "SUGGESTION",
+        "claim": "X1 (and E1 (t) at engine/review/evidencesh/evidencesh_unix_test.go:21) gives the stub 200 ms, then calls g.Started, which fails when the pid file is missing. On a loaded machine (`go test ./...` running packages in parallel), the group kill can land before the subshell writes `$!`, or while it is writing it; an empty file fails pid()'s Atoi. Both tests then fail even though the code is correct. This also contradicts RequireGone's doc (grandchild_unix.go:86), which treats a grandchild that never started as gone, a case Started always turns into a failure.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/execrunner/group_unix_test.go:20",
+          "engine/overlaytest/grandchild_unix.go:86"
+        ]
+      },
+      {
+        "id": "F5",
+        "location": "engine/execrunner/group_other.go:7",
+        "severity": "SUGGESTION",
+        "claim": "The doc says that on a build that is not Unix \"a process it forked can outlive the call, up to killGrace\". That is wrong: killGrace limits how long the call waits for the pipes (WaitDelay), not how long the forked process lives. A grandchild that is never killed outlives the call for as long as it runs. A reader who trusts the comment would think non-Unix builds leave no orphans after 2 s.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/execrunner/group_other.go:7",
+          "engine/execrunner/execrunner.go:20"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the whole diff /tmp/claude-1000/-home-labdrian-labdrian-sdd-overlay/45673332-5a42-429f-889a-50c9d8bcb1fc/scratchpad/t4x.diff (1062 lines, 21 paths).",
+      "Read L86 (odd/tasks/merge-playbook-into-sdd-overlay.md:4408-4479) and L87 in the diff, and the review records 4b9c3789c2e0-3.json, -5.json, -4.polisher.json and 81a7200c14c2-7.json.",
+      "4b9c3789c2e0-3 F1 and -5 F1: resolved as L86 choice 1 says. WithProcessGroup and ProcessGroup were added, Run and outputIn call ownGroup when the option is set, Setpgid and the group SIGKILL are in group_unix.go with ESRCH mapped to os.ErrProcessDone, group_other.go does nothing, the stop hook's wiring is at review_stop_hook.go:176, and the README and CHANGELOG texts were changed. X1, X2, X3, E1 (t) and SH15 exist; see F1 for their CI skip.",
+      "-3 F2: resolved. evidencesh.go:92-94 stats the script and returns the 'not deployed' error wrapping fs.ErrNotExist without running it; SH9 (i) and (iii) and E1 (h) and (u) exist, and README and CHANGELOG say the line repeats.",
+      "-5 F2: resolved. review.ShortName is at review.go:216-218. app.short and head12 are gone; Grep for `[:12]` and min-12 cuts outside tests finds only pipkg's shortSHA, which is out of scope. The lint test is at engine/architecture_short_name_test.go. Grep found no .go files in testdata under review or cmd, so the lint's WalkDir does not parse fixtures.",
+      "-5 F3: resolved. The subtest is renamed 'an exit 126 of sh is not an answer'.",
+      "81a7200c14c2-7 F1: resolved. splitPinProblem and its tests were removed, and B15's doc in evidence_store_text_test.go states the behavioural pin. F2: resolved. prose() is used for every needle of TestEvidenceStore_NamesTheEnvironmentBoundInPages, and the 'fmt' and 'regexp' imports are still used in the file.",
+      "-4.polisher (WARNING): still present at head. classifyReason at review_stop_hook.go:238 names a 'Classify step' that skills/role-chain/SKILL.md does not have yet. L86 choice 2 defers this to T4b and the T4 line forbids delivery before T4b, so it is consistent with L86 and not reported as new.",
+      "Effect on the other callers of execrunner: Grep shows WithProcessGroup() is used in production only at review_stop_hook.go:176. New() leaves group false. Naming Run's receiver changes nothing. No caller builds an execrunner.Runner literal or compares Runner values, so the new field does not affect them.",
+      "Read in the worktree execrunner.go, evidencesh.go, review_stop_hook.go lines 140-250, app/stop.go lines 1-135, review.go lines 185-218, evidence_store_artifact_test.go lines 484-538, evidencesh_test.go helpers (newWorld, stub, adapter, wantError), review_stop_hook_classify_test.go helpers (useHome, requireOneErrorLine, cannotTellPrefix), review_stop_hook_test.go (newStopWorld, stop, blocked), and overlaytest.RequireShAndAwk.",
+      "Read the readability row sentence from roles/reviewer/rows.json:9 and applied it.",
+      "Ran nothing: no build, test, vet or timing was run (not run)."
+    ]
+  }
+}

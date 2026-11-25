@@ -1,0 +1,19 @@
+{
+  "kind": "polisher",
+  "base": "81a7200c14c28f82b4d3c494cda7251a1099ef54",
+  "head": "f71d9dcbea12d6ad0249df6a06e9b4b58e46b72d",
+  "diff_sha256": "545d72e106246831b28225a8817b5dd352879f7502c784f3dc90d68302f0f065",
+  "findings": {
+    "findings": [],
+    "evidence": [
+      "Read the full diff at /tmp/claude-1000/-home-labdrian-labdrian-sdd-overlay/45673332-5a42-429f-889a-50c9d8bcb1fc/scratchpad/t4w.diff, 1167 lines in two reads.",
+      "Read /home/labdrian/labdrian-sdd-overlay-worktrees/review-4b9c3789c2e0/engine/cmd/review_stop_hook.go, lines 44-193. The hook prints stderr and stdout and exits 0 on every path. The old guard `err != nil || !ruling.Block` is gone, so a block that comes with an error is returned with the error and both are printed. If the block cannot be encoded, only the error is returned.",
+      "Traced oneLine and controlAt against lineBreakAt. Line breaks are matched first, so NEL, LS and PS still fold. A multi-byte character is written whole, so its continuation bytes are not escaped. A lone byte 0x80-0x9F, C2 80-9F, DEL and the C0 bytes are escaped as \\xHH. I found no input that reaches an escape wrongly.",
+      "Read engine/review/evidencesh/evidencesh.go from the diff. Every failure path returns an error and never an answer: exec failure, deadline, signal, non-zero exit, wrong line count, a word other than yes or no, a missing final line feed. A relative script path is refused before any run.",
+      "Checked engine/execrunner/execrunner.go. The runner sets `cmd.WaitDelay = killGrace` and supports WithMaxOutput, so an awk child that holds the pipes after the 2 s deadline does not hang the hook.",
+      "Checked the Classify handling in engine/review/app/stop.go (lines 32-71). Classification runs only when no review question blocks and a Classified port is wired.",
+      "Not run: no tests, and no timing of the hook. The extra run of about 2 s per stop (the hook already takes about 2.2 s here) is recorded in L85 as the owner's accepted decision, so I did not report it.",
+      "The judge read the whole range 81a7200c..4b9c3789 (one bind); the foreman records the same judgment on each commit of the range"
+    ]
+  }
+}

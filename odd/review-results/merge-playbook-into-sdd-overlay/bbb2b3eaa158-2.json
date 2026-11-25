@@ -1,0 +1,103 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "3340c4b689fe1523d7b8b9505f5d2e9b8a001bb6",
+    "head": "bbb2b3eaa158e0ec31370c2f12d3ad3c6cb03a48",
+    "diff_sha256": "aa4870de22e9c6820f8438d3fc35eef29bcc838c52a979711909daf2ed3cd2ad",
+    "paths": [
+      "CHANGELOG.md",
+      "README.md",
+      "bin/lib/usage.sh",
+      "engine/agentgen/models_mid_line_internal_test.go",
+      "engine/cmd/classify_step_unverified_test.go",
+      "engine/cmd/review_findings.go",
+      "engine/cmd/review_findings_test.go",
+      "engine/cmd/usage.go",
+      "engine/review/app/classify.go",
+      "engine/review/app/findings.go",
+      "engine/review/app/findings_unverified_test.go",
+      "engine/review/evidencesh/evidencesh.go",
+      "engine/review/evidencesh/evidencesh_refusal_text_test.go",
+      "engine/shelltest/classify_step_check_test.go",
+      "engine/shelltest/evidence_store_classified_test.go",
+      "engine/shelltest/evidence_store_each_test.go",
+      "engine/skills/classify_step_artifact_test.go",
+      "odd/review-results/README.md",
+      "odd/tasks/merge-playbook-into-sdd-overlay.md",
+      "skills/_shared/evidence/PROVENANCE.md",
+      "skills/_shared/evidence/evidence.sh",
+      "skills/role-chain/.approval.json",
+      "skills/role-chain/SKILL.md",
+      "skills/role-chain/references/classify.md",
+      "skills/role-chain/references/models.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "hunt"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "3340c4b689fe1523d7b8b9505f5d2e9b8a001bb6",
+      "head": "bbb2b3eaa158e0ec31370c2f12d3ad3c6cb03a48",
+      "diff_sha256": "aa4870de22e9c6820f8438d3fc35eef29bcc838c52a979711909daf2ed3cd2ad"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "README.md",
+        "bin/lib/usage.sh",
+        "engine/agentgen/models_mid_line_internal_test.go",
+        "engine/cmd/classify_step_unverified_test.go",
+        "engine/cmd/review_findings.go",
+        "engine/cmd/review_findings_test.go",
+        "engine/cmd/usage.go",
+        "engine/review/app/classify.go",
+        "engine/review/app/findings.go",
+        "engine/review/app/findings_unverified_test.go",
+        "engine/review/evidencesh/evidencesh.go",
+        "engine/review/evidencesh/evidencesh_refusal_text_test.go",
+        "engine/shelltest/classify_step_check_test.go",
+        "engine/shelltest/evidence_store_classified_test.go",
+        "engine/shelltest/evidence_store_each_test.go",
+        "engine/skills/classify_step_artifact_test.go",
+        "odd/review-results/README.md",
+        "odd/tasks/merge-playbook-into-sdd-overlay.md",
+        "skills/_shared/evidence/PROVENANCE.md",
+        "skills/_shared/evidence/evidence.sh",
+        "skills/role-chain/.approval.json",
+        "skills/role-chain/SKILL.md",
+        "skills/role-chain/references/classify.md",
+        "skills/role-chain/references/models.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "README.md:898",
+        "severity": "SUGGESTION",
+        "claim": "The new texts say the stop hook holds back a result with an unverified severe finding only 'until its verdict is stored'. The same wording is in CHANGELOG.md:30 and in the usage.sh stop-hook entry, and classify.md:5 says 'classify after `review verify`'. The hold in keptResultsOf (classify.go:96) actually reads reviewverdict.Decide's Unverified. Decide still lists a finding as unverified when its stored verdict has result and base_result both `not-run` (Verdict.ran). So a stored verdict of `not-run` keeps the result held, and the stop hook never asks for it. A parent that follows step 1 and has already run `review verify` gets no instruction beyond 'classify after review verify'. This is consistent with `review check`, which also refuses Unverified. The texts promise a release that a stored not-run verdict never gives: they should say the hold lasts until the severe finding's check ran, not until a verdict is stored.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/reviewverdict/reviewverdict.go:158",
+          "engine/review/app/classify.go:96"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the whole diff t4d.diff (25 paths, including the T4d entries L99-L101 of odd/tasks/merge-playbook-into-sdd-overlay.md) and the findings it fixes: 665b99f747e2-3.polisher.json W1 and W2, 8ee5ac95b287-2.json F1, 8ee5ac95b287-5.json F1-F3.",
+      "W1 closed: the SKILL.md:38 Binding line now names `verify`. classify.md step 1 stops, not blocked, on a non-empty `unverified`. The `unverified` member is always present (review_findings.go, Unverified initialized to []string{}). keptResultsOf skips a result where unverifiedOf is non-empty, so the stop hook does not ask before the verdict. classify_step_unverified_test pins that the member name is the same in the command and in classify.md.",
+      "W2 closed: step 7 accepts an empty Evidence fence. Step 8 appends a `| <id> | <date> |` row under `## Classified without evidence`. Step 9 runs `reviewed` after a passing check, restores the backup and stops, blocked, unless `reviewed` exits 0. At head, evidence.sh:160-186 parses section C with header, separator, 2-cell, blank-review, date and after-end checks. It sets found/hit only for that section, and row data stays out of count/index/rules/rule. reviewed and reviewed-each still require !bad (evidence.sh:254-255).",
+      "Deployed page format compatibility: before this change, any `## ` heading other than Kinds or Evidence set sec=\"\" and its rows were skipped (evidence.sh:164-172), so an older deployed evidence.sh passes a page with the new table. PROVENANCE.md states this. The rules file run of check also goes through run_awk; section C there is harmless.",
+      "Stop hook: the classify reason still names the Classify step, and the SKILL.md line still starts `- Classify, `. The hold is applied only in keptResultsOf, which feeds only the classification question, so the review question is unchanged.",
+      "8ee5ac95b287-5 F1 closed: step 2 stops, blocked, when <script> is not a regular file, and step 3 adds 'Any other exit'. R13 pins every step that runs the script. F2 closed: returnsOfCheckScript binds the bare `err` only to returns directly in the body of an if whose init assigns `err` from a call of checkScript, and the exception must match exactly once. F3 closed: models.md marks `classifier (Claude Code only)`, and the Mid-line test strips the mark and requires exactly the Claude-only mid roles.",
+      "8ee5ac95b287-2 F1 closed: step 10 relaunches only when every FAIL line starts with `FAIL evidence.md: ` and stops, blocked, on a line of another file. TestACheckLabelsTheFailLinesOfTheRulesFileApartFromThoseOfThePage pins both labels.",
+      "Checked other parsers of models.md (engine/agentgen/models.go, tests). L101 records a full suite pass after the mark; I did not re-run it.",
+      "Read engine/reviewverdict decide.go and reviewverdict.go: Verdict.ran() is false when result and base are both not-run, which is the basis of F1.",
+      "No commands run: no build, test or script execution. All checks were done by reading files."
+    ]
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "kind": "polisher",
+  "base": "255abff5451e43c8b46e6743bc162d69e2d38cba",
+  "head": "88fb598e73d339f72e439792edfa96d1b2dd4041",
+  "diff_sha256": "392b616593eee7c8968f1ca6b7ce4eb20f4903001807aa05393a445110e118bb",
+  "findings": {
+    "findings": [
+      {
+        "location": "engine/shelltest/evidence_store_each_test.go:82",
+        "severity": "WARNING",
+        "claim": "The new bound test (k) and the documented bound both assume a 128 KiB limit for one environment string on every Linux, but the kernel sets that limit at 32 pages. On Linux kernels with 16 KiB or 64 KiB pages (Asahi on Apple Silicon, RHEL arm64/ppc64le with 64 KiB pages) the limit is 512 KiB or 2 MiB. On those kernels the 9000-identifier call (about 162 KB in EVIDENCE_WANT) starts awk and answers with exit 0 instead of exit 4, so `go test ./shelltest/` fails there. The bound that the header and PROVENANCE.md give users is also wrong on those kernels.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "evidence": [
+          "The test only skips when runtime.GOOS != \"linux\" (evidence_store_each_test.go:71-73). It then requires exit 4 and the awk-failed line for manyIDs(9000) (line 82 plus the regexp check that follows). Each id is \"f/review-%08d\" (17 bytes) plus a joining newline, so about 9000*18 = 162,000 bytes go into EVIDENCE_WANT through run_awk (evidence.sh:118).",
+          "Linux defines MAX_ARG_STRLEN as (PAGE_SIZE * 32) in include/uapi/linux/binfmts.h. That is 131072 bytes only with 4 KiB pages; it is 524288 with 16 KiB pages and 2097152 with 64 KiB pages, where a 162 KB string execs normally.",
+          "The commit adds the fixed figure in three places: evidence.sh:51 ('128 KiB on Linux'), PROVENANCE.md:15 ('128 KiB on Linux'), and a needle '128 KiB' in evidence_store_artifact_test.go, so the wrong bound is pinned as the contract.",
+          "Not run on a non-4K-page host. The builder's L79 record says the figure was measured on this machine only and MAX_ARG_STRLEN was not read."
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full diff /tmp/claude-1000/-home-labdrian-labdrian-sdd-overlay/45673332-5a42-429f-889a-50c9d8bcb1fc/scratchpad/t4q.diff (evidence.sh, PROVENANCE.md, evidence_store_each_test.go, new evidence_store_text_test.go, evidence_store_artifact_test.go, task document).",
+      "Read /home/labdrian/labdrian-sdd-overlay-worktrees/review-88fb598e73d3/skills/_shared/evidence/evidence.sh lines 60-370: mode parsing, run_awk BEGIN (want = ENVIRON[\"EVIDENCE_WANT\"] \"\"), the rule comparison (ak[i] == want), the reviewed comparison (rv == want), the reviewed-each set lookup, page_state and awk_cannot_answer. The new \"$mode\" in the exit-4 lines is only reached from reviewed or reviewed-each, so reviewed's stderr is unchanged. The string concatenation makes want a string, so comparisons with strnum cells are string comparisons.",
+      "Read shellCalls in the target's evidence_store_artifact_test.go (lines 270-344). The '<<' case comes after the double-quote and '$(' cases. Single-quoted text and '#' comments at word start are consumed before a later '<' is seen. The arith flag is set only for '$((' and popped on its closing ')'.",
+      "Searched the target's non-test code under engine/ for consumers of 'cannot answer' or 'reviewed-each' and found none, so the changed exit-4 stderr text has no in-tree consumer yet (T4w not built).",
+      "Ran a Glob for **/evidence.sh in the target: only skills/_shared/evidence/evidence.sh exists, so no stale copy diverges.",
+      "No shell or go test command was run: this agent has no shell tool, so runtime results (B14, B15, the parity states, lints) are not run here."
+    ]
+  }
+}

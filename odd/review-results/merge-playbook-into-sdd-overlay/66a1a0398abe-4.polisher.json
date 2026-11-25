@@ -1,0 +1,18 @@
+{
+  "kind": "polisher",
+  "base": "18d006168daaa2f4e46bd2bcfefb8bae4be618df",
+  "head": "66a1a0398abee3fd6e5bc26c7388e7394b277a08",
+  "diff_sha256": "f0748a58a3c553dc6d4f9fd494ec91f473b6333107cd5cb18aed434c2caa5d65",
+  "findings": {
+    "findings": [],
+    "evidence": [
+      "Read the full diff t4i.diff and evidence.sh lines 60-274",
+      "All six dirname/basename calls take --; the awk file operand follows the program so a - path is a file",
+      "Walk: a missing -w ends at . and exits 1; a 0600 -w exits 4; a regular-file docs/wiki exits 4",
+      "The no-answer branch writes one stderr line and exits 4, keeping the exit contract",
+      "Only the script and its shelltest read the changed lines; the T4w adapter is not built; one copy of evidence.sh",
+      "agentgen.go:102 compares the whole first line, so must be is accurate; the Expat case pins it",
+      "Not run: go test, shellcheck"
+    ]
+  }
+}

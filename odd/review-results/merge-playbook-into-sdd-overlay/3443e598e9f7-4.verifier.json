@@ -1,0 +1,18 @@
+{
+  "verdicts": [
+    {
+      "id": "F1",
+      "result": "reproduced",
+      "command": "S=/tmp/claude-1000/-home-labdrian-labdrian-sdd-overlay/45673332-5a42-429f-889a-50c9d8bcb1fc/scratchpad/vf-t4o; I copied the probe $S/probes/probe_f1_test.go (TestProbeF1) into {head,base}/engine/review/app/ and ran: cd $S/<tree>/engine && HOME=$(mktemp -d) GOFLAGS=-count=1 go test ./review/app/ -run TestProbeF1 -v. The setup is classifyWorld plus the refused file own-rdd/333333333333-9.json ('not a result'), with fakeAsked and fakeClassified. port.err='script failed' at stop 1 and nil at stops 2 and 3, all in session-1. Each (Block, err) result goes through a verbatim copy of the guard: if err != nil || !ruling.Block { return nil, err }",
+      "output": "HEAD: stop 1: Block=false Classify=0 err=tell whether the results with kept findings are classified: script failed; classify the results with kept findings: odd/review-results/own-rdd/333333333333-9.json: review: invalid stored file: invalid character 'o' in literal null (expecting 'u') | guard output block=false guardErr!=nil=true. Stop 2: Block=true Classify=1 err=classify the results with kept findings: odd/review-results/own-rdd/333333333333-9.json: review: invalid stored file: ... | guard output block=false guardErr!=nil=true. Stop 3: Block=false Classify=0 err=<nil> | guard output block=false. 'classification block shown in session: false'. ok. BASE: stop 1 is the same as on head. Stop 2: Block=true Classify=1 err=<nil> | guard output block=true. Stop 3: Block=false err=<nil>. 'classification block shown in session: true'. ok. On head the guard drops the block from stop 2, and stop 3 does not block again. On base the block reaches the hook output at stop 2. The finding is worsened as claimed.",
+      "base_result": "not-reproduced"
+    },
+    {
+      "id": "F2",
+      "result": "reproduced",
+      "command": "S=/tmp/claude-1000/-home-labdrian-labdrian-sdd-overlay/45673332-5a42-429f-889a-50c9d8bcb1fc/scratchpad/vf-t4o; I copied the probe $S/probes/probe_f2_test.go (TestProbeF2, package main, which prints oneLine(\"a\\x9bb\") and its bytes) into {head,base}/engine/cmd/ and ran: cd $S/<tree>/engine && HOME=$(mktemp -d) GOFLAGS=-count=1 go test ./cmd/ -run TestProbeF2 -v",
+      "output": "HEAD: PROBE oneLine(\"a\\x9bb\") = \"a\\x9bb\" bytes=61 9b 62 rawC1=true. ok. BASE: PROBE oneLine(\"a\\x9bb\") = \"a\\ufffdb\" bytes=61 ef bf bd 62 rawC1=false. ok. On head the lone 0x9B byte is written raw. Base replaced it with U+FFFD.",
+      "base_result": "not-reproduced"
+    }
+  ]
+}

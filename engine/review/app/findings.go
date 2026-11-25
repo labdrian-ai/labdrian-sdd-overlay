@@ -34,6 +34,10 @@ type Findings struct {
 	Kept []reviewresult.Finding
 	// LeftOut are the others, in the same order, each with the one reason that left it out.
 	LeftOut []LeftOut
+	// Unverified are the ids of the kept findings that reviewverdict.Decide lists as unverified (a BLOCKER or CRITICAL
+	// whose check did not run), in the order of the reply; [] and never nil when there is none. A result with one is not
+	// ready to classify: the Classify step waits until each check it needs has run, and a stored not-run holds the result for good (review verify stores no second verdict).
+	Unverified []string
 }
 
 // LeftOut is a finding that is not evidence and why.
@@ -53,7 +57,7 @@ type LeftOut struct {
 // first), or when it is BLOCKER or CRITICAL and the verdict found it not-reproduced on head, or when it is BLOCKER
 // or CRITICAL of unknown disposition and the verdict found it on base (reviewverdict.Decide carries it as a fate of
 // the base). Every other finding is kept: a verdict that reproduced it or did not run, and a WARNING or SUGGESTION,
-// which a verdict does not judge.
+// which a verdict does not judge. Unverified lists, among the kept, the ids that Decide lists as unverified.
 func (s Service) Findings(dir, feature, stored string) (Findings, error) {
 	if err := review.CheckFeature(feature); err != nil {
 		return Findings{}, err
@@ -78,15 +82,39 @@ func (s Service) Findings(dir, feature, stored string) (Findings, error) {
 	if err != nil {
 		return Findings{}, err
 	}
-	out := Findings{Review: feature + "/" + strings.TrimSuffix(stored, ".json"), Verdict: verdictPath, Kept: []reviewresult.Finding{}, LeftOut: []LeftOut{}}
+	kept, leftOut := keptFindings(result, verdicts)
+	return Findings{Review: reviewID(feature, stored), Verdict: verdictPath, Kept: kept, LeftOut: leftOut, Unverified: unverifiedOf(result, verdicts)}, nil
+}
+
+// unverifiedOf is the ids reviewverdict.Decide lists as unverified for result, in the order of the reply, and never nil:
+// the one rule of "its check did not run", so the listing and the hold of the stop hook (keptResultsOf) read it alike.
+func unverifiedOf(result reviewresult.Result, verdicts []reviewverdict.Verdict) []string {
+	ids := reviewverdict.Decide(result, verdicts).Unverified
+	if ids == nil {
+		return []string{}
+	}
+	return ids
+}
+
+// reviewID is the identifier of the stored result called stored in feature, <feature>/<head12>-<n>: the name of the
+// stored file without its ending.
+func reviewID(feature, stored string) string {
+	return feature + "/" + strings.TrimSuffix(stored, ".json")
+}
+
+// keptFindings splits the findings of result in the ones that count as evidence and the ones that do not, each of those
+// with its reason, both in the order the reviewer wrote them and never nil. It is the one rule of what is evidence: the
+// listing of Findings and the question of the stop hook (keptResultsOf) both read it, so they cannot disagree.
+func keptFindings(result reviewresult.Result, verdicts []reviewverdict.Verdict) (kept []reviewresult.Finding, leftOut []LeftOut) {
+	kept, leftOut = []reviewresult.Finding{}, []LeftOut{}
 	for _, f := range result.Findings {
 		if reason := leftOutReason(f, verdicts); reason != "" {
-			out.LeftOut = append(out.LeftOut, LeftOut{ID: f.ID, Severity: f.Severity, Reason: reason})
+			leftOut = append(leftOut, LeftOut{ID: f.ID, Severity: f.Severity, Reason: reason})
 			continue
 		}
-		out.Kept = append(out.Kept, f)
+		kept = append(kept, f)
 	}
-	return out, nil
+	return kept, leftOut
 }
 
 // leftOutReason is why f is not evidence, or "" when it is.

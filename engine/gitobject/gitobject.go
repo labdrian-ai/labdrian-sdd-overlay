@@ -5,6 +5,11 @@
 // files all decide whether a string is a full name, and they decide it here, so
 // no one of them has a rule of its own for what git calls an object.
 //
+// It also writes the short form of a name, its first ShortLength characters (Short), the one place the engine cuts a name so,
+// held by the engine-wide lint TestTheShortNameOfAnObjectIsWrittenOnce. Its users are the stored review results, the worktree
+// of a candidate and the stop hook's markers and reasons (review, cmd), and the deploy tip of the Pi package report (pipkg's
+// DeployTip).
+//
 // It is a domain package: pure standard library, no file, no process.
 package gitobject
 
@@ -14,6 +19,17 @@ const (
 	sha1Length   = 40
 	sha256Length = 64
 )
+
+// ShortLength is how many characters of an object name the short form keeps: 12, which names the stored results of a review,
+// the worktree of a candidate and the markers of the stop hook. The deploy tip of the Pi package report (pipkg's DeployTip) is
+// cut to it too, which pipkg/source_test.go pins.
+const ShortLength = 12
+
+// Short is the first ShortLength characters of an object name, the whole name when it is shorter. It is the one place the
+// engine cuts a name so (a lint of the engine holds it, whoever names a commit).
+func Short(name string) string {
+	return name[:min(len(name), ShortLength)]
+}
 
 // IsName reports whether s is a full object name as git writes one: exactly 40
 // lowercase hexadecimal characters or exactly 64, nothing before, after or

@@ -1,0 +1,20 @@
+{
+  "kind": "sweeper",
+  "base": "88622bdc140f01ee3019097448532e498ddb06c6",
+  "head": "ae0d6bb0b2e579b507f8bb8844f110a02c678357",
+  "diff_sha256": "6750aedceebb22a11a6ae469928a0ad2e5a7c1b0ff0cfdd92ed9fe0403ab4b63",
+  "sweep": "ae0d6bb0b2e5-1.sweep.json",
+  "commit": null,
+  "candidates": [
+    {
+      "candidate": "T2 deadcode engine: review/app/classify.go: unreachable func: Service.KeptResults",
+      "disposition": "finding",
+      "evidence": "Exported; no non-test caller (rg KeptResults engine --glob !*_test.go finds only classify.go:47); Stop uses keptResultsOf (classify.go:131); tests call it at classify_test.go:213,237,264; L55 designs it public and T4w names no consumer. Keep or drop is for the shaper."
+    },
+    {
+      "candidate": "T2 deadcode engine: review/app/classify.go: unreachable func: Service.WithClassified",
+      "disposition": "live",
+      "evidence": "L55 T4w (task doc :2620) wires WithClassified(evidencesh.New(...)) in engine/cmd/review_stop_hook.go; it sets the classified port Stop reads (service.go:34, stop.go:50); tests call it; fired only because ae0d6bb0 lands before T4w."
+    }
+  ]
+}

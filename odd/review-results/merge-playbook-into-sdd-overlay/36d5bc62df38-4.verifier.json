@@ -1,0 +1,39 @@
+{
+  "verdicts": [
+    {
+      "id": "F1",
+      "result": "reproduced",
+      "command": "Probe built from head and from base (engine/cmd/zzprobehook in scratch copies probe2h and probe2b). It runs Output(ctx 10s, PATH=, /bin/sh -c \"x=$(/bin/sleep 41.3 & echo $! > pidfile; wait)\"). On head the runner is execrunner.New().WithProcessGroup(); on base it is execrunner.New(). Each was started with setsid and then got either kill -KILL <hook pid> or kill -KILL -- -<hook pgid>. After 0.5s: ps -o stat=,pgid=,args= -p <grandchild>",
+      "output": "head kill-pid: hook pgid=3807792, grandchild pgid=3807799 -> 'S 3807799 /bin/sleep 41.3' (alive). head kill-group: hook pgid=3807821, grandchild pgid=3807828 -> 'S 3807828 /bin/sleep 41.3' (alive). base kill-pid: grandchild pgid=3807850 (the hook's own group) -> alive. base kill-group: -> GONE. On head, a signal sent to the hook's process group does not reach the script's group, which outlives the hook. A SIGKILL to the hook pid alone leaves the grandchild alive on both head and base. The surviving grandchildren were then killed by their PIDs.",
+      "base_result": "not-reproduced"
+    },
+    {
+      "id": "F2",
+      "result": "reproduced",
+      "command": "rg -n 'every process it started' README.md CHANGELOG.md engine/... (head and base). Then a head probe with ctx 200ms and WithProcessGroup(), body \"x=$(/usr/bin/setsid /bin/sleep 41.3 & echo $! > pidfile; wait)\", timed with date, then ps -p <grandchild> 1s after return",
+      "output": "head: README.md:1582 and CHANGELOG.md:30 say 'on Unix stopped at 2 seconds with every process it started'. engine/cmd/review_stop_hook_docs_test.go:173 pins 'with every process it started'. Probe: 'returned: context deadline exceeded (signal: killed)', 'call took 2.208035276s', and 1s after return 'Ss 3809182 /bin/sleep 41.3' (alive, in its own session). The descendant that called setsid escaped the group kill and held the call for about killGrace. base: rg found no 'every process it started' (printed base-no-phrase).",
+      "base_result": "not-reproduced"
+    },
+    {
+      "id": "F3",
+      "result": "reproduced",
+      "command": "In the scratch copy probe3 of head, added execrunner/zz_probe_short.go ('func probeShort(s string) string { return s[:12] }') and ran HOME=$(mktemp -d) go test . -run TestTheShortNameOfAnObjectIsWrittenOnce -v. Then moved the same file to review/ as a control and ran it again",
+      "output": "architecture_short_name_test.go:47 walks only []string{\"review\", \"cmd\"}, and line 49 skips _test.go. The lines 17-18 comment concedes the `n := 12` case, and line 78 pins it to 0 hits. With [:12] in execrunner/: '--- PASS: TestTheShortNameOfAnObjectIsWrittenOnce', 'ok'. With the same file in review/: 'review/zz_probe_short.go:3:43: a slice cut at the literal 12: write the short name of an object once, as review.ShortName', '--- FAIL'. Base has no architecture_short_name_test.go, so no check ran there.",
+      "base_result": "not-run"
+    },
+    {
+      "id": "F4",
+      "result": "reproduced",
+      "command": "Built cmd/zzenotdir from head and from base. It calls evidencesh.New(execrunner.New(), Options{Script: os.Args[1], Environ: PATH}).Classified(root, [\"abc123def456-1.json\"]). Ran it with <scratch>/notadir/evidence.sh, where notadir is a regular file, and as a control with <scratch>/missingdir/evidence.sh",
+      "output": "head ENOTDIR: 'error: sh .../notadir/evidence.sh reviewed-each exited 2: sh: 0: cannot open .../notadir/evidence.sh: No such file'. head control (missing dir): 'error: the evidence store is not deployed: nothing is at .../missingdir/evidence.sh (labdrian apply deploys it to Claude Code): stat ...: no such file or directory'. Base printed the same exited-2 line for both paths, because it has no os.Stat check (rg printed base-no-stat). Note: the head package doc at evidencesh.go:12-13 says 'any other error of the stat goes on to the run'.",
+      "base_result": "reproduced"
+    },
+    {
+      "id": "F5",
+      "result": "not-reproduced",
+      "command": "Head only (the tests do not exist on base). Ran HOME=$(mktemp -d) go test ./execrunner/ ./review/evidencesh/ ./cmd/ -run 'TestProcessGroupKillsTheGrandchildAtTheDeadline|TestClassified_AGrandchildDoesNotOutliveTheTimeoutOverAGroupRunner|TestStopHookBoundsTheEvidenceScriptWithEveryProcessItStarted' -count=20 -p 8 -v twice: once with 8 and once with 40 `yes > /dev/null` burners that I started and then killed by PID (nproc=20)",
+      "output": "8 burners: rc=0, 60 PASS. Slowest SH15 2.63s (bound 3.5s), slowest X1 0.29s (bound 1.5s). 40 burners: rc=0, 60 PASS. Slowest SH15 3.00s, X1 0.34s, E1 0.33s. No failure, but the SH15 margin shrank to 0.5s. Afterwards no yes, no sleep 30.7 and no probe processes were left. Base lacks group_unix_test.go and review_stop_hook_group_unix_test.go.",
+      "base_result": "not-run"
+    }
+  ]
+}

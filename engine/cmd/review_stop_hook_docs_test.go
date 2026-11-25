@@ -27,7 +27,7 @@ func readRepositoryFile(t *testing.T, name string) string {
 // The hook is installed by install-hooks and run by Claude Code on every Stop, so the README says what it asks for,
 // once for what, what counts as reviewed, that it never blocks on an error, and what a user must do to get it.
 func TestDocsDescribeTheReviewStopHook(t *testing.T) {
-	section := docSection(t, readRepositoryFile(t, "README.md"), "gentle-ai-overlay review stop-hook\n", "overlay --help\n")
+	section := docSection(t, readRepositoryFile(t, "README.md"), "gentle-ai-overlay review stop-hook\n", "gentle-ai-overlay roles builder-guard\n")
 
 	for _, want := range []string{
 		"review stop-hook",
@@ -157,6 +157,93 @@ func TestChangelogRecordsTheReviewStopHook(t *testing.T) {
 	} {
 		if !strings.Contains(entry, want) {
 			t.Errorf("the CHANGELOG entry of the review stop-hook does not say %q", want)
+		}
+	}
+}
+
+// The bound of the evidence run is told as the runner has it (T4y, `36d5bc62df38-4` F2): the stop can wait while a process
+// the script started holds its output, and that process can outlive the stop. No text says that the stop takes at most 2
+// seconds or that it stops every process the script started. The seconds themselves are held by evidencesh's
+// TestTheTextsStateTheBoundOfTheRunner, against evidencesh.DefaultTimeout and execrunner.KillGrace (T4z).
+func TestTextsOfTheReviewStopHookStateTheBoundOfTheEvidenceRun(t *testing.T) {
+	readme := readRepositoryFile(t, "README.md")
+	for _, tc := range []struct{ name, text string }{
+		{"the README section of the review stop-hook", docSection(t, readme, "gentle-ai-overlay review stop-hook\n", "gentle-ai-overlay roles builder-guard\n")},
+		{"CHANGELOG.md", docSection(t, readRepositoryFile(t, "CHANGELOG.md"), "- The Stop hook (`labdrian review stop-hook`)", "\n- ")},
+	} {
+		text := normalizeDocText(tc.text)
+		for _, want := range []string{"can outlive the stop"} {
+			if !strings.Contains(text, want) {
+				t.Errorf("%s does not say %q", tc.name, want)
+			}
+		}
+		for _, refused := range []string{"with every process it started", "at most 2 seconds"} {
+			if strings.Contains(text, refused) {
+				t.Errorf("%s still says %q", tc.name, refused)
+			}
+		}
+	}
+}
+
+// What the evidence run cannot tell is told as it is (T4x, `4b9c3789c2e0-3` F2): a store that is not deployed is named, and
+// the line repeats at each stop because nothing of it is remembered. The refusals made before a run are held by evidencesh's
+// TestTheTextsNameEveryRefusalBeforeARun, against the errors of the adapter (T4b-e); this test keeps the wording that is
+// not a refusal.
+func TestTextsOfTheReviewStopHookSayTheLineOfAnUndeployedStoreRepeats(t *testing.T) {
+	readme := readRepositoryFile(t, "README.md")
+	for _, tc := range []struct{ name, text string }{
+		{"the README section of the review stop-hook", docSection(t, readme, "gentle-ai-overlay review stop-hook\n", "gentle-ai-overlay roles builder-guard\n")},
+		{"CHANGELOG.md", docSection(t, readRepositoryFile(t, "CHANGELOG.md"), "- The Stop hook (`labdrian review stop-hook`)", "\n- ")},
+	} {
+		text := normalizeDocText(tc.text)
+		for _, want := range []string{"not deployed", "repeats at each stop", "of it is remembered"} {
+			if !strings.Contains(text, want) {
+				t.Errorf("%s does not say %q", tc.name, want)
+			}
+		}
+	}
+}
+
+// A result held for an unverified severe finding waits for the checks it needs, not for a verdict (T4e, L102, L106): a
+// stored not-run holds it for good, only a new review result runs the check again, and review check refuses the head,
+// naming the findings not checked.
+func TestTextsOfTheReviewStopHookSayAHeldResultWaitsForItsCheck(t *testing.T) {
+	readme := readRepositoryFile(t, "README.md")
+	for _, tc := range []struct{ name, text string }{
+		{"the stop-hook entry of README.md", docSection(t, readme, "    stop-hook\n", "overlay memory <verb>")},
+		{"the README section of the review stop-hook", docSection(t, readme, "gentle-ai-overlay review stop-hook\n", "gentle-ai-overlay roles builder-guard\n")},
+		{"bin/lib/usage.sh", docSection(t, readRepositoryFile(t, "bin/lib/usage.sh"), "                                   stop-hook\n", "Only launch starts an agent")},
+		{"CHANGELOG.md", docSection(t, readRepositoryFile(t, "CHANGELOG.md"), "- The Stop hook (`labdrian review stop-hook`)", "\n- ")},
+	} {
+		text := normalizeDocText(tc.text)
+		for _, want := range []string{"until its check has run", "each check it needs", "not-run", "for good", "a new review result", "findings not checked"} {
+			if !strings.Contains(text, normalizeDocText(want)) {
+				t.Errorf("%s does not say %q", tc.name, want)
+			}
+		}
+		for _, stale := range []string{"until its verdict is stored", "meanwhile", "not-reproduced for it"} {
+			if strings.Contains(text, normalizeDocText(stale)) {
+				t.Errorf("%s still says %q", tc.name, stale)
+			}
+		}
+	}
+}
+
+// The texts that say what the hook asks for also say that it asks for the classification of results (S6, T4w, L84): the
+// README entry and section, the help of the wrapper and the CHANGELOG, each naming the page and the script it asks through.
+func TestTextsOfTheReviewStopHookSayItAsksForClassification(t *testing.T) {
+	readme := readRepositoryFile(t, "README.md")
+	for _, tc := range []struct{ name, text string }{
+		{"the stop-hook entry of README.md", docSection(t, readme, "    stop-hook\n", "overlay memory <verb>")},
+		{"the README section of the review stop-hook", docSection(t, readme, "gentle-ai-overlay review stop-hook\n", "gentle-ai-overlay roles builder-guard\n")},
+		{"bin/lib/usage.sh", docSection(t, readRepositoryFile(t, "bin/lib/usage.sh"), "                                   stop-hook\n", "Only launch starts an agent")},
+		{"CHANGELOG.md", docSection(t, readRepositoryFile(t, "CHANGELOG.md"), "- The Stop hook (`labdrian review stop-hook`)", "\n- ")},
+	} {
+		text := normalizeDocText(tc.text)
+		for _, want := range []string{"classification", "docs/wiki/evidence.md", "evidence.sh reviewed-each"} {
+			if !strings.Contains(text, normalizeDocText(want)) {
+				t.Errorf("%s does not say %q", tc.name, want)
+			}
 		}
 	}
 }

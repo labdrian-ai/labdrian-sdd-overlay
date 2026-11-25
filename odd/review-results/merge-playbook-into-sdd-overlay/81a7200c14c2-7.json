@@ -1,0 +1,67 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "78cc9bd4a1812a840891f4359c78ba1fa16a56ca",
+    "head": "81a7200c14c28f82b4d3c494cda7251a1099ef54",
+    "diff_sha256": "4277e41222dde8dc3da51a3ab5518f9beeb88fe6bf3e9ce5fe25cc4ea0b6e711",
+    "paths": [
+      "engine/shelltest/evidence_store_test.go",
+      "engine/skills/evidence_store_artifact_test.go",
+      "skills/_shared/evidence/evidence.sh"
+    ]
+  },
+  "rows": [
+    "recall",
+    "hunt",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "78cc9bd4a1812a840891f4359c78ba1fa16a56ca",
+      "head": "81a7200c14c28f82b4d3c494cda7251a1099ef54",
+      "diff_sha256": "4277e41222dde8dc3da51a3ab5518f9beeb88fe6bf3e9ce5fe25cc4ea0b6e711"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/shelltest/evidence_store_test.go",
+        "engine/skills/evidence_store_artifact_test.go",
+        "skills/_shared/evidence/evidence.sh"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "engine/skills/evidence_store_artifact_test.go:504",
+        "severity": "SUGGESTION",
+        "claim": "The new rule counts only code lines where a split call and the word `want` sit on the same line. If the identifiers are split again through another name, the pin does not see it. Example: a later awk line `w = want` followed by `n = split(w, ids, \"\\n\")`. Neither line has both a split call and `want`, so splitPinProblem still finds exactly one line, equal to splitStatementLine, and returns \"\". The doc comment at lines 496-499 says the statement cannot be 'written twice and still pass', and this kind of rewrite passes. The keys built from split elements that are not forced to text (5e745160b611-5 F4) could then come back without the test failing. A split read straight from `ENVIRON[\"EVIDENCE_WANT\"]` is also missed by this regex (the match is case-sensitive), but TestUnforcedEnvironReadsFindsEveryRead refuses that form. The alias form is caught by nothing. d0108e5f1245-5 F1 (the spacing variants) is resolved as L84 says: the four blank and tab rows and the two rows with no word `want` are in the table at lines 535-540. This gap was there before the change, which reworded the claim but did not create it. The fix could be narrowing the doc claim to 'a split of the word want', or adding a test row with an alias.",
+        "evidence_class": "inferential",
+        "causal_disposition": "pre-existing",
+        "proof_refs": [
+          "engine/skills/evidence_store_artifact_test.go:504"
+        ]
+      },
+      {
+        "id": "F2",
+        "location": "engine/skills/evidence_store_artifact_test.go:564",
+        "severity": "SUGGESTION",
+        "claim": "The new negative pin searches the raw file for the exact text `follows the stack limit`, line breaks included. evidence.sh's header is wrapped at about 80 columns. If the old claim is put back wrapped across two lines, for example `...which follows the` on one line and `#   stack limit` on the next, the test passes even though the text again says something that was not measured. Mutation Mw3 restores the old parenthetical only on one line, so it does not test this. To close it, the pin could remove the `#` prefixes and join the lines before searching, or search for a shorter text such as `follows the`.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/skills/evidence_store_artifact_test.go:564"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the whole diff t4we.diff (3 paths, matching L84's T4w-e file list: evidence.sh, evidence_store_test.go comment, evidence_store_artifact_test.go).",
+      "Read the criteria in odd/tasks/merge-playbook-into-sdd-overlay.md lines 4260-4354 (choice 6 F1/F2, the T4w-e commit, tests, mutations Mw1-Mw3, 'Not changed', risks) and odd/review-results/merge-playbook-into-sdd-overlay/d0108e5f1245-5.json (F1, F2).",
+      "F1 check: evidence_store_artifact_test.go:491-546 at head. splitCall is `\\bsplit[ \\t]*\\(` and wantWord is `\\bwant\\b`, as L84 states. The four spacing rows and the `split(line, raw, \"|\")` and `wantx` rows are present with the oks L84 specifies. evidence.sh line 130 (`n = split(line, raw, \"|\")`) has no word `want`. Line 152 equals splitStatementLine. Grep of `want` in evidence.sh shows no other line with a split call. `regexp` was already imported (line 10). splitCall and wantWord are defined only once in engine/skills.",
+      "F2 check: evidence.sh lines 53-54 match the two lines L84 prescribes byte for byte. `128 KiB with 4 KiB pages` and `between 128 KiB and 6 MiB` are each on one line. The measured facts given in the prompt (256 KiB stack gives 131072, 8192 gives 2097152, 65536 and unlimited give 6291456) match 'a quarter of the stack limit, kept between 128 KiB and 6 MiB'. PROVENANCE.md line 15 has no stack-limit parenthetical and is unchanged, as L84 says. The evidenceArgBudget comment (evidence_store_test.go:90) now says 'depends on'. The bound-text test pins both files and the new needle.",
+      "Hunt: the empty script gives 0 lines and a problem. No error is swallowed in the changed code. No path is written or deleted. Only a header comment of the deployed script changed (Risk: 5 is consistent): no code, exit or stderr line of evidence.sh is in the diff.",
+      "Readability row (from roles/reviewer/rows.json line 9) applied: the doc comments cite d0108e5f1245-5 F1/F2 and T4w-e, and the error messages describe the new rule. No misleading name or dead logic found.",
+      "No command was run: nothing was built, tested or executed."
+    ]
+  }
+}

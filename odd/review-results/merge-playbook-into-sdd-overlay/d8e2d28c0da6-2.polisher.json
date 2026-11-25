@@ -1,0 +1,18 @@
+{
+  "kind": "polisher",
+  "base": "a6927b09cefec494defdbf502f3fbbad4cd764bb",
+  "head": "d8e2d28c0da6654c5e419e5118dba153204b6cca",
+  "diff_sha256": "251f1d36e67b0eb5c35e1ebc50602a55fff9c2c30dc36d3b57f812891f60f490",
+  "findings": {
+    "findings": [],
+    "evidence": [
+      "Read the full diff t4n.diff and classify.go:95-227",
+      "classifyRuling: Locate, keptResultsOf, unnamed, one batched Classified call, the answer-count check, lacking and classifyKey, once; every early return carries the unnamed problems; a count mismatch blocks and records nothing",
+      "The batched call runs only with results; answers[i] is guarded by the length check",
+      "The only Classified implementation is the test fake; WithClassified is not wired outside tests",
+      "oneLine is applied to the error and the recovered-panic print; CR/LF runs match its table test",
+      "Not run: tests",
+      "The judge was given the range a6927b09..83424e3c; recorded with no finding on each commit"
+    ]
+  }
+}

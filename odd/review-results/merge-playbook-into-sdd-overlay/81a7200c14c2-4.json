@@ -1,0 +1,42 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "78cc9bd4a1812a840891f4359c78ba1fa16a56ca",
+    "head": "81a7200c14c28f82b4d3c494cda7251a1099ef54",
+    "diff_sha256": "4277e41222dde8dc3da51a3ab5518f9beeb88fe6bf3e9ce5fe25cc4ea0b6e711",
+    "paths": [
+      "engine/shelltest/evidence_store_test.go",
+      "engine/skills/evidence_store_artifact_test.go",
+      "skills/_shared/evidence/evidence.sh"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "78cc9bd4a1812a840891f4359c78ba1fa16a56ca",
+      "head": "81a7200c14c28f82b4d3c494cda7251a1099ef54",
+      "diff_sha256": "4277e41222dde8dc3da51a3ab5518f9beeb88fe6bf3e9ce5fe25cc4ea0b6e711"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/shelltest/evidence_store_test.go",
+        "engine/skills/evidence_store_artifact_test.go",
+        "skills/_shared/evidence/evidence.sh"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "I read the full diff. The only change to the deployed evidence.sh is header comment lines 53-54, and no code line, exit or stderr line changes. That matches the Risk: 5 line and the T4w-e description in the task file.",
+      "In evidence.sh, only line 152 holds both a split call and the word want on a non-comment line. Line 130 (split(line, raw, ...)) has no word want, and line 151 is a comment. The tightened splitPinProblem therefore still finds exactly one matching line, which equals splitStatementLine.",
+      "The new regexes splitCall and wantWord are valid, and \"regexp\" is already imported in evidence_store_artifact_test.go (line 10). The new table rows are consistent with the logic. Respaced split variants are rejected, and a split line without want, or a longer word such as wantx, stays out.",
+      "The new evidence.sh text 'between 128 KiB and 6 MiB' sits on one comment line (line 54), so the strings.Contains check passes. The banned phrase 'follows the stack limit' appears only in the test's own error string. The tests read evidence.sh and PROVENANCE.md, neither of which contains it.",
+      "The evidence_store_test.go change edits one comment word and touches no code.",
+      "I ran no tests (not run). This review is by reading only.",
+      "The reviewer truncated candidate.head to 12 characters; the foreman wrote the bound full head"
+    ]
+  }
+}

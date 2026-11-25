@@ -1,0 +1,29 @@
+{
+  "kind": "polisher",
+  "base": "78cc9bd4a1812a840891f4359c78ba1fa16a56ca",
+  "head": "81a7200c14c28f82b4d3c494cda7251a1099ef54",
+  "diff_sha256": "4277e41222dde8dc3da51a3ab5518f9beeb88fe6bf3e9ce5fe25cc4ea0b6e711",
+  "findings": {
+    "findings": [
+      {
+        "location": "skills/_shared/evidence/evidence.sh:53",
+        "severity": "SUGGESTION",
+        "claim": "The reworded header says getconf ARG_MAX is 'a quarter of the stack limit, kept between 128 KiB and 6 MiB' on glibc. The 6 MiB ceiling is the kernel's execve cap (3/4 of the 8 MiB _STK_LIM). As I recall glibc's sysconf, it returns rlim_cur/4 with a 128 KiB floor and no upper cap. If so, a stack limit above 24 MiB would make getconf report more than 6 MiB, and the new text would be wrong about what getconf prints. The edit exists to say only what was measured, and the added test pins the string 'between 128 KiB and 6 MiB'.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "evidence": [
+          "The diff changes evidence.sh lines 50-54 and adds the pinned string in TestEvidenceStore_NamesTheEnvironmentBoundInPages (evidence_store_artifact_test.go:568).",
+          "I could not run getconf under different ulimit -s values, so the range was not measured. The claim rests on my memory of glibc's sysconf source.",
+          "This is a comment only. The code path is unaffected, and the awk-failed exit 4 behaviour is unchanged."
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full diff (t4we.diff).",
+      "Grepped evidence.sh in the worktree for split and the word want. Only line 152 holds both a split call and the word want, so the widened splitPinProblem still passes on the real script. Line 130 (split(line, raw, ...)) has no want and is correctly left out. Line 151 is a comment and is skipped.",
+      "Read the test TestEvidenceStore_NamesTheEnvironmentBoundInPages. The phrase 'follows the stack limit' appears in the repo only as the test's own forbidden string, so the new negative check does not fail on evidence.sh or PROVENANCE.md.",
+      "The new regexes `\\bsplit[ \\t]*\\(` and `\\bwant\\b` match the new test rows: blank, tab and space variants fail as intended, and 'wantx' and 'split(line...' pass.",
+      "I ran no tests or commands. The Go tests are not run."
+    ]
+  }
+}

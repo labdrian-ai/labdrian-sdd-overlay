@@ -127,7 +127,7 @@ func TestRunStartsNothingAfterTheDeadline(t *testing.T) {
 
 // A grandchild that keeps the output pipes open must not hold Run past its grace period: the
 // shell below is stopped at 200ms, but the sleep it started still holds the pipes for thirty
-// seconds, and Run gives up on them after killGrace instead of waiting for it. The bound is the
+// seconds, and Run gives up on them after KillGrace instead of waiting for it. The bound is the
 // grace period plus a margin for a loaded machine, far under the sleep, so a Run that waited for
 // the pipes (no WaitDelay) is caught, and one that waited past the grace is too. The sleep is
 // stopped when the test ends, so no process outlives it.
@@ -141,7 +141,7 @@ func TestRunDoesNotWaitForAGrandchildHoldingThePipes(t *testing.T) {
 	if err == nil {
 		t.Fatal("Run reported success for a program stopped at its deadline")
 	}
-	if elapsed, bound := time.Since(started), killGrace+5*time.Second; elapsed > bound {
+	if elapsed, bound := time.Since(started), KillGrace+5*time.Second; elapsed > bound {
 		t.Errorf("Run took %v, want it back within %v: it waited for the grandchild that kept the pipes open", elapsed, bound)
 	}
 }
@@ -209,7 +209,7 @@ func TestOutputStopsAtTheDeadlineAndSaysWhy(t *testing.T) {
 	if !errors.Is(err, context.DeadlineExceeded) {
 		t.Fatalf("err = %v, want it to wrap context.DeadlineExceeded", err)
 	}
-	if elapsed := time.Since(started); elapsed > killGrace+5*time.Second {
+	if elapsed := time.Since(started); elapsed > KillGrace+5*time.Second {
 		t.Errorf("Output took %v: it did not stop the program at its deadline", elapsed)
 	}
 }
@@ -224,7 +224,7 @@ func TestOutputDoesNotWaitForAGrandchildHoldingThePipes(t *testing.T) {
 	if _, _, err := New().Output(ctx, nil, bin); err == nil {
 		t.Fatal("Output reported success for a program stopped at its deadline")
 	}
-	if elapsed, bound := time.Since(started), killGrace+5*time.Second; elapsed > bound {
+	if elapsed, bound := time.Since(started), KillGrace+5*time.Second; elapsed > bound {
 		t.Errorf("Output took %v, want it back within %v", elapsed, bound)
 	}
 }
@@ -273,7 +273,7 @@ exec /bin/sleep 30`)
 	if !errors.Is(err, ErrOutputTooLarge) {
 		t.Fatalf("err = %v, want ErrOutputTooLarge", err)
 	}
-	if elapsed, bound := time.Since(started), killGrace+5*time.Second; elapsed > bound {
+	if elapsed, bound := time.Since(started), KillGrace+5*time.Second; elapsed > bound {
 		t.Errorf("Output took %v, want it back within %v: the program was waited for", elapsed, bound)
 	}
 }

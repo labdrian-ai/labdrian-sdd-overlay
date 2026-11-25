@@ -51,7 +51,7 @@ func TestClassifierBodyIsTheClassifyAgentAdapted(t *testing.T) {
 			t.Errorf("the Steps of roles/classifier/body.md do not hold %q", anchor)
 		}
 	}
-	for _, anchor := range []string{"<rules>", "Kinds rows:", "Evidence rows:", "When one of the three is not given, stop and say so.", "<failed>"} {
+	for _, anchor := range []string{"<rules>", "Kinds rows:", "Evidence rows:", "When one of the three is not given, stop and say so.", "the lines `FAIL <file>: <problem>`"} {
 		if !strings.Contains(body, anchor) {
 			t.Errorf("roles/classifier/body.md does not hold %q", anchor)
 		}
@@ -99,8 +99,8 @@ var classifierGotchas = []string{
 }
 
 var classifierOutput = []string{
-	"- A line `Kinds rows:`, then one fence opened by ```markdown with the Kinds rows to add, one per line, with no header; an empty fence when there are none.",
-	"- A line `Evidence rows:`, then one fence opened by ```markdown with the Evidence rows to add, the same way.",
+	"- A line `Kinds rows:`, then one fence opened by `` ```markdown `` with the Kinds rows to add, one per line, with no header; an empty fence when there are none.",
+	"- A line `Evidence rows:`, then one fence opened by `` ```markdown `` with the Evidence rows to add, the same way.",
 	"- Any finding skipped, with the reason.",
 }
 

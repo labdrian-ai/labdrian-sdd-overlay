@@ -1,0 +1,22 @@
+{
+  "kind": "polisher",
+  "base": "a6ebb3985d93bfdd36e6017810646ebf097a12cc",
+  "head": "4f714c67e87c03638ece204ef69cb0e27ab8d0ac",
+  "diff_sha256": "2c12962a0e029e20df5714c72b12cea7a4aacf29d25314cdf12fd37158f49c7b",
+  "findings": {
+    "findings": [],
+    "evidence": [
+      "Read the whole diff /tmp/claude-1000/-home-labdrian-labdrian-sdd-overlay/45673332-5a42-429f-889a-50c9d8bcb1fc/scratchpad/t4k.diff (846 lines). I did not recompute its sha256.",
+      "Read /home/labdrian/labdrian-sdd-overlay-worktrees/review-4f714c67e87c/skills/_shared/evidence/evidence.sh lines 55-258: argument parsing, run_awk, the awk BEGIN, Evidence-row and END blocks, page_state and awk_cannot_answer.",
+      "Declared risk 3, the output and exit contract. reviewed-each fills hit[] from the same Evidence-row path that sets found for reviewed: after the ncell!=5 `next`, the same trimmed rv with \\| read as |. Its END runs the same page checks as reviewed (`mode == \"check\" || mode == \"reviewed\" || each`) and prints only after them, guarded by !bad, as reviewed does. Exit 3 (awk check before the page) and exit 4 (page_state and awk_cannot_answer are shared, so the stderr text is byte-identical) fall in the same order as in reviewed. Usage refusals use the same [[:space:]] class plus the empty case.",
+      "Shell-side validation. answered_each refuses empty output, a leading line break and an embedded blank line (the IFS split would hide those) and counts only yes/no lines against nwant. Trailing line breaks are stripped by $( ), so they cannot hide a short answer. set -f stops globbing of the lines.",
+      "awk split(want, ids, \"\\n\") uses a one-character literal separator. Identifiers reach awk through ENVIRON, which avoids -v escape processing, so the backslash case holds. A repeated identifier gives a line each because ids[] is walked in order.",
+      "Declared risk 5, the deployed script. Glob found only one evidence.sh in the worktree, so no other copy can drift. The new `cd -- \"$(dirname -- \"$0\")\"` keeps its 2>/dev/null and && pwd composition. A Grep of evidence.sh for heredocs, cd, dirname and basename found no heredoc. Every cd, dirname and basename call (lines 108, 235, 290, 309, 319, 357) has `--`.",
+      "Lint scanner shellCalls. I traced it by hand on the nested `\"$(cd -- \"$(dirname -- \"$0\")\" ...)\"` at line 108: the quote and substitution stack pushes and pops correctly. The `$((...))` depth handling and single quotes that span lines are covered by the table cases.",
+      "Task-document pattern. Traced L2-cache, S5-based, T3c-f, T3c-a2, OD-10b, and ranges like L67-L72: the second identifier is still flagged, so a real reference is still caught.",
+      "Tests. The Go 1.21 loop-variable capture is safe: the stored closures copy `page`, and t.Run without t.Parallel runs synchronously. In the shells test, tmp is resolved through EvalSymlinks, so the expected pwd output is right.",
+      "Not run: go test, shellcheck, or any execution of the script. No command was executed in this review; every conclusion above comes from reading the code.",
+      "The judge was given the range edeeed77..4f714c67; recorded with no finding on each commit"
+    ]
+  }
+}

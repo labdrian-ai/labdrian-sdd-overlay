@@ -1,0 +1,30 @@
+{
+  "kind": "polisher",
+  "base": "ad8cfe87b4aa0cc79108532e9e022c5ec8926dc3",
+  "head": "9b030f225615af3feb4c2dd9acc802e690e6454e",
+  "diff_sha256": "092081cb2870933af0aeeffe85cf662c6254dfca8d914e7eb63753b23ca81b2f",
+  "findings": {
+    "findings": [
+      {
+        "location": "skills/_shared/evidence/evidence.sh:255",
+        "severity": "SUGGESTION",
+        "claim": "When awk exits 0 but prints neither yes nor no, reviewed exits 4 with the line awk failed on <page> (exit 0), a self-contradictory reason that cannot be told from a real awk failure; awk stderr is dropped so it is the only diagnostic. The no-answer subtest pins this text.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "evidence": [
+          "The yes/no case is reached only when rc is 0; other output falls through to the awk failed printf with rc 0",
+          "evidence_store_test.go subtest an awk that gives no answer pins the text",
+          "At base the line could never print with exit 0"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full diff t4g.diff and evidence.sh at the target",
+      "Traced the dirname walk for missing wiki, dangling symlinks, file-as-directory, unsearchable dirs and directory pages: exits 1 or 4 as documented; the awk-exists test still runs first",
+      "No engine or hook code calls reviewed yet",
+      "The new first-line notice check matches ClaudeInstructions; roles/classifier/LICENSE starts with MIT License",
+      "evidence-rules.md has no S/T/L/OD token so the new lint passes",
+      "No commands run"
+    ]
+  }
+}

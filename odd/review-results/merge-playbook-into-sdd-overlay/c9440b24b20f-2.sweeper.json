@@ -1,0 +1,60 @@
+{
+  "kind": "sweeper",
+  "base": "5175def31aa738d1b3fe9150e3e2fe9ccb3908d4",
+  "head": "c9440b24b20f22aa7bf74c14d9a5cf2297fc5061",
+  "diff_sha256": "224cacfd67bd2020203560dd6c897d889e32df499d8d0f761afdab2497b6a65f",
+  "sweep": "c9440b24b20f-1.sweep.json",
+  "commit": null,
+  "candidates": [
+    {
+      "candidate": "T1 path: engine/overlaytest/grandchild_unix.go",
+      "disposition": "live",
+      "evidence": "Removed on purpose by L88 (choice b drops the process group and its tests; commit 3 replaces review.ShortName, shortLength and pipkg shortSHA with gitobject.Short and deletes the grandchild helper); rg outside odd/ finds no leftover reference: the only hits are the unrelated test names TestCandidateRefAndShortName, TestTheZeroCandidateHasAnEmptyShortName and the lint tests TestTheShortNameOfAnObjectIsWrittenOnce and TestShortNameCutsSeesTheSpellingsOfTheShortName."
+    },
+    {
+      "candidate": "T1 name: Grandchild",
+      "disposition": "live",
+      "evidence": "Removed on purpose by L88 (choice b drops the process group and its tests; commit 3 replaces review.ShortName, shortLength and pipkg shortSHA with gitobject.Short and deletes the grandchild helper); rg outside odd/ finds no leftover reference: the only hits are the unrelated test names TestCandidateRefAndShortName, TestTheZeroCandidateHasAnEmptyShortName and the lint tests TestTheShortNameOfAnObjectIsWrittenOnce and TestShortNameCutsSeesTheSpellingsOfTheShortName."
+    },
+    {
+      "candidate": "T1 name: NewGrandchild",
+      "disposition": "live",
+      "evidence": "Removed on purpose by L88 (choice b drops the process group and its tests; commit 3 replaces review.ShortName, shortLength and pipkg shortSHA with gitobject.Short and deletes the grandchild helper); rg outside odd/ finds no leftover reference: the only hits are the unrelated test names TestCandidateRefAndShortName, TestTheZeroCandidateHasAnEmptyShortName and the lint tests TestTheShortNameOfAnObjectIsWrittenOnce and TestShortNameCutsSeesTheSpellingsOfTheShortName."
+    },
+    {
+      "candidate": "T1 name: RequireGone",
+      "disposition": "live",
+      "evidence": "Removed on purpose by L88 (choice b drops the process group and its tests; commit 3 replaces review.ShortName, shortLength and pipkg shortSHA with gitobject.Short and deletes the grandchild helper); rg outside odd/ finds no leftover reference: the only hits are the unrelated test names TestCandidateRefAndShortName, TestTheZeroCandidateHasAnEmptyShortName and the lint tests TestTheShortNameOfAnObjectIsWrittenOnce and TestShortNameCutsSeesTheSpellingsOfTheShortName."
+    },
+    {
+      "candidate": "T1 name: ShortName",
+      "disposition": "live",
+      "evidence": "Removed on purpose by L88 (choice b drops the process group and its tests; commit 3 replaces review.ShortName, shortLength and pipkg shortSHA with gitobject.Short and deletes the grandchild helper); rg outside odd/ finds no leftover reference: the only hits are the unrelated test names TestCandidateRefAndShortName, TestTheZeroCandidateHasAnEmptyShortName and the lint tests TestTheShortNameOfAnObjectIsWrittenOnce and TestShortNameCutsSeesTheSpellingsOfTheShortName."
+    },
+    {
+      "candidate": "T1 name: Started",
+      "disposition": "live",
+      "evidence": "Removed on purpose by L88 (choice b drops the process group and its tests; commit 3 replaces review.ShortName, shortLength and pipkg shortSHA with gitobject.Short and deletes the grandchild helper); rg outside odd/ finds no leftover reference: the only hits are the unrelated test names TestCandidateRefAndShortName, TestTheZeroCandidateHasAnEmptyShortName and the lint tests TestTheShortNameOfAnObjectIsWrittenOnce and TestShortNameCutsSeesTheSpellingsOfTheShortName."
+    },
+    {
+      "candidate": "T1 name: grandchildLister",
+      "disposition": "live",
+      "evidence": "Removed on purpose by L88 (choice b drops the process group and its tests; commit 3 replaces review.ShortName, shortLength and pipkg shortSHA with gitobject.Short and deletes the grandchild helper); rg outside odd/ finds no leftover reference: the only hits are the unrelated test names TestCandidateRefAndShortName, TestTheZeroCandidateHasAnEmptyShortName and the lint tests TestTheShortNameOfAnObjectIsWrittenOnce and TestShortNameCutsSeesTheSpellingsOfTheShortName."
+    },
+    {
+      "candidate": "T1 name: pid",
+      "disposition": "live",
+      "evidence": "Removed on purpose by L88 (choice b drops the process group and its tests; commit 3 replaces review.ShortName, shortLength and pipkg shortSHA with gitobject.Short and deletes the grandchild helper); rg outside odd/ finds no leftover reference: the only hits are the unrelated test names TestCandidateRefAndShortName, TestTheZeroCandidateHasAnEmptyShortName and the lint tests TestTheShortNameOfAnObjectIsWrittenOnce and TestShortNameCutsSeesTheSpellingsOfTheShortName."
+    },
+    {
+      "candidate": "T1 name: shortLength",
+      "disposition": "live",
+      "evidence": "Removed on purpose by L88 (choice b drops the process group and its tests; commit 3 replaces review.ShortName, shortLength and pipkg shortSHA with gitobject.Short and deletes the grandchild helper); rg outside odd/ finds no leftover reference: the only hits are the unrelated test names TestCandidateRefAndShortName, TestTheZeroCandidateHasAnEmptyShortName and the lint tests TestTheShortNameOfAnObjectIsWrittenOnce and TestShortNameCutsSeesTheSpellingsOfTheShortName."
+    },
+    {
+      "candidate": "T1 name: shortSHA",
+      "disposition": "live",
+      "evidence": "Removed on purpose by L88 (choice b drops the process group and its tests; commit 3 replaces review.ShortName, shortLength and pipkg shortSHA with gitobject.Short and deletes the grandchild helper); rg outside odd/ finds no leftover reference: the only hits are the unrelated test names TestCandidateRefAndShortName, TestTheZeroCandidateHasAnEmptyShortName and the lint tests TestTheShortNameOfAnObjectIsWrittenOnce and TestShortNameCutsSeesTheSpellingsOfTheShortName."
+    }
+  ]
+}

@@ -1,0 +1,32 @@
+{
+  "kind": "polisher",
+  "base": "1a6b141993d1a04f846b6d511059616eaf517852",
+  "head": "3443e598e9f7d12e20b6909788e000c83e12982c",
+  "diff_sha256": "6df9c485cfb1a273c22fc9db279736cac51dde9eabf7d2dfc4eacadb8a5e4172",
+  "findings": {
+    "findings": [
+      {
+        "location": "engine/review/app/classify.go:260",
+        "severity": "WARNING",
+        "claim": "When a stop blocks to ask for classification and a stored file is refused in the same stop, `named` saves the file's `refused-` key. The installed stop hook then throws the error away because the ruling blocks. The refusal is never printed, and every later stop in that session skips it, so the user never learns that the stored file is broken. This commit keeps that path on purpose: its rule is to save the key when the stop returns its ruling, but a returned ruling is not the same as a printed one.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "pre-existing",
+        "evidence": [
+          "classify.go:260 `return ruling, withIncomplete(nil, s.named(session, fresh))` runs `asked.Add(session, refusedKey(r.review))` for each fresh refusal when `once` returns `Ruling{Block: true, Classify: lacking}`.",
+          "engine/cmd/review_stop_hook.go:138-142 `ruling, err := ...Stop(...); if err != nil || !ruling.Block { return nil, err }; return hookwire.StopReply{Block: true, ...}.Encode()`: when Block is true, err is dropped and runReviewStopHook prints nothing on stderr.",
+          "At the next stop, `unnamed` (classify.go:171-179) finds the key with `Has` and drops the refusal, so it is never printed in that session.",
+          "This was already true at base 1a6b1419: the old `unnamed` called `asked.Add` for every fresh refusal before the ruling was decided, so the loss came before this commit. The commit's own task note (L74 in odd/tasks/merge-playbook-into-sdd-overlay.md) says 'returned' is not yet 'printed' for a block and leaves the fix to T4w. Until T4w changes stopHookAnswer, the Risk 3 contract (the error Stop returns) is not delivered end to end on the block path."
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full target diff /tmp/claude-1000/-home-labdrian-labdrian-sdd-overlay/45673332-5a42-429f-889a-50c9d8bcb1fc/scratchpad/t4o.diff (classify.go, stop.go, export_test.go, review_stop_hook.go, classify_batch_test.go, review_stop_hook_oneline_test.go, task doc).",
+      "Read engine/cmd/review_stop_hook.go:110-189 (stopHookAnswer, stopReason) in the worktree /home/labdrian/labdrian-sdd-overlay-worktrees/review-3443e598e9f7.",
+      "Read engine/review/app/stop.go:45-94 (Stop, stopReview) and engine/review/app/findings.go:85-89 (reviewID strips .json and gives <feature>/<head12>-<n>).",
+      "Grepped the callers of keptResultsOf, unnamed and refusedKey: the only users of the changed []refusal return type are classifyRuling and export_test.go's KeptResults, so no other consumer breaks.",
+      "Checked lineBreakAt by hand: 0xC2 and 0xE2 can never be UTF-8 continuation bytes, so matching NEL, LS and PS byte by byte cannot split a valid multibyte character; a lone 0x85 and cut sequences are kept as they are.",
+      "Checked the error paths: the port error, the wrong answer count and once's error join the fresh refusals into the error with no Add, and an error from unnamed joins all refusals. None of these records a key, as the commit says.",
+      "No tests or builds were run (read-only review): not run."
+    ]
+  }
+}

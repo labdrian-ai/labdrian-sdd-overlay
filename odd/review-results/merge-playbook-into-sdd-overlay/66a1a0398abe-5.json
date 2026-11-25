@@ -1,0 +1,65 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "18d006168daaa2f4e46bd2bcfefb8bae4be618df",
+    "head": "66a1a0398abee3fd6e5bc26c7388e7394b277a08",
+    "diff_sha256": "f0748a58a3c553dc6d4f9fd494ec91f473b6333107cd5cb18aed434c2caa5d65",
+    "paths": [
+      "engine/agentgen/agentgen.go",
+      "engine/agentgen/messages_pin_test.go",
+      "engine/shelltest/evidence_store_test.go",
+      "engine/skills/evidence_store_artifact_test.go",
+      "odd/tasks/merge-playbook-into-sdd-overlay.md",
+      "skills/_shared/evidence/evidence.sh"
+    ]
+  },
+  "rows": [
+    "recall",
+    "hunt",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "18d006168daaa2f4e46bd2bcfefb8bae4be618df",
+      "head": "66a1a0398abee3fd6e5bc26c7388e7394b277a08",
+      "diff_sha256": "f0748a58a3c553dc6d4f9fd494ec91f473b6333107cd5cb18aed434c2caa5d65"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/agentgen/agentgen.go",
+        "engine/agentgen/messages_pin_test.go",
+        "engine/shelltest/evidence_store_test.go",
+        "engine/skills/evidence_store_artifact_test.go",
+        "odd/tasks/merge-playbook-into-sdd-overlay.md",
+        "skills/_shared/evidence/evidence.sh"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "skills/_shared/evidence/evidence.sh:83",
+        "severity": "SUGGESTION",
+        "claim": "cd on the dirname -- \"$0\" line has no --, so running the script as sh -- -x/evidence.sh makes cd -x fail, general becomes /evidence-rules.md and every mode silently drops the general rules; the new lint checks only dirname and basename.",
+        "evidence_class": "inferential",
+        "causal_disposition": "pre-existing",
+        "proof_refs": [
+          "skills/_shared/evidence/evidence.sh:83",
+          "engine/skills/evidence_store_artifact_test.go:224"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full diff and every changed path at head",
+      "-2 F1 resolved: six dirname/basename calls take --, lint and B7/B12/B13 cases",
+      "-4.polisher resolved: awk gave no answer line, exit 4",
+      "-5 F1 resolved: shared pattern and table test",
+      "-5 F2 resolved: must be message, exact comparison unchanged, Expat case",
+      "-5 F3 resolved: regular-file docs/wiki 0755 case, not skipped as root",
+      "Readability: new messages accurate; no caller quotes the old text",
+      "L65 agrees with the code",
+      "No commands run"
+    ]
+  }
+}

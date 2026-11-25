@@ -1,0 +1,87 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "3a141be270b83f1d6d246bea0395660381267d3c",
+    "head": "319810f5614a97c4e93a89c45c37bcc515c52077",
+    "diff_sha256": "dd72d0144f3218829645c6d56c1ee61c65dbb76be6d4c91d4dd13c901d5ddfe6",
+    "paths": [
+      "engine/review/app/check.go",
+      "engine/review/app/classify.go",
+      "engine/review/app/classify_test.go",
+      "engine/review/app/export_test.go",
+      "engine/review/app/findings.go",
+      "engine/review/app/stop.go",
+      "odd/tasks/merge-playbook-into-sdd-overlay.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "3a141be270b83f1d6d246bea0395660381267d3c",
+      "head": "319810f5614a97c4e93a89c45c37bcc515c52077",
+      "diff_sha256": "dd72d0144f3218829645c6d56c1ee61c65dbb76be6d4c91d4dd13c901d5ddfe6"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/review/app/check.go",
+        "engine/review/app/classify.go",
+        "engine/review/app/classify_test.go",
+        "engine/review/app/export_test.go",
+        "engine/review/app/findings.go",
+        "engine/review/app/stop.go",
+        "odd/tasks/merge-playbook-into-sdd-overlay.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "engine/review/app/classify.go:136",
+        "severity": "WARNING",
+        "claim": "The old filter that skipped results already asked about in the session before running the port is removed. Every result still lacking now goes to the Classified port at every non-continuing stop, in every session, including stops that no longer block. For T4w's adapter this means one run of `evidence.sh reviewed` per lacking result per stop for the whole session. Cost grows with the number of unclassified kept results on the branch. Only a result found classified is cached for the session. This is deliberate in L68 and SH4 pins it, but nothing bounds the cost.",
+        "evidence_class": "inferential",
+        "causal_disposition": "worsened",
+        "proof_refs": [
+          "engine/review/app/classify.go:128",
+          "engine/review/app/classify_test.go: TestStopAsksForAResultOnceForEachSession now expects 2 port calls"
+        ]
+      },
+      {
+        "id": "F2",
+        "location": "engine/review/app/classify.go:77",
+        "severity": "WARNING",
+        "claim": "Any unreadable, malformed or non-binding stored result for any commit of the branch now returns an error from `keptResultsOf`. Before, such a result was skipped. The error is never recorded in the session, so `Stop` and then the stop hook (`review_stop_hook.go:96-98`, which returns err) fail at every stop until the file is repaired or removed. The classification pass is non-blocking by design, and a single bad historical file now disables it for the whole branch, with no per-session once-only behaviour for the error. The change is intentional and matches `review check`, but a stray file whose name starts with a commit's first 12 characters is enough to trigger it. Because 12 characters is only a prefix match, such a file is reachable.",
+        "evidence_class": "inferential",
+        "causal_disposition": "behavior-activated",
+        "proof_refs": [
+          "engine/review/app/classify.go:73",
+          "engine/cmd/review_stop_hook.go:96",
+          "engine/review/app/classify_test.go: TestKeptResultsRefusesWhatItCannotReadHoldOrBind"
+        ]
+      },
+      {
+        "id": "F3",
+        "location": "engine/review/app/classify.go:141",
+        "severity": "SUGGESTION",
+        "claim": "A failed `Add` of the `classified-` key aborts the whole pass with an error even though the port already answered 'classified', which is the only good outcome for that result. The error also discards the verdicts on later results, and nothing is blocked. A failure to cache an optimisation should not fail the stop. The same pass can also return an error after some `classified-` keys were recorded, which is harmless, but it leaves the results after the failing one unasked in that stop.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/review/app/classify.go:140",
+          "engine/review/app/classify_test.go: TestStopDoesNotBlockWhenAQuestionCannotBeRecorded classified case"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full diff at the scratchpad path t4j.diff",
+      "Read the worktree's engine/review/app/classify.go (keptResultsOf, classifiedKey, classifyRuling) and stop.go (Stop, once)",
+      "Read the worktree's engine/cmd/review_stop_hook.go call site: it returns the Stop error and blocks only on Ruling.Block",
+      "Grepped the test fakes: fakeAsked.fail, fakeResults.fail, fakeGit.fail and sha256Of exist, so the new tests have their helpers",
+      "Not run: no tests, build or vet (reviewer is read-only)",
+      "The reviewer returned the head as 12 characters; the foreman recorded the full bound head"
+    ]
+  }
+}

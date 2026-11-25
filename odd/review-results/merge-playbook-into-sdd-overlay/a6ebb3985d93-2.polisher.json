@@ -1,0 +1,19 @@
+{
+  "kind": "polisher",
+  "base": "edeeed7758b3ced30985e711bc5f7163dd4496e7",
+  "head": "a6ebb3985d93bfdd36e6017810646ebf097a12cc",
+  "diff_sha256": "7700b8368b053d70c237397f5647b5b774db7b5be07cc0622093e263cc5d247e",
+  "findings": {
+    "findings": [],
+    "evidence": [
+      "Read the whole diff at t4k.diff (846 lines, both pages): evidence.sh, PROVENANCE.md, the new B14 and shells tests, the scanner and pattern tests, and the task document.",
+      "Traced reviewed-each in evidence.sh from usage and argument checks through page_state, the awk END branch and answered_each to the exit codes. The mode matches reviewed on no page (every line no, exit 0), a failing page (all no) and an unreadable path (exit 4 with the same stderr line). Without awk it exits 3 before the page is read. page_state calls exit inside a function that runs in the main shell, so exit 4 propagates under the `if ! page_state` form.",
+      "Checked that the refactor leaves reviewed unchanged. `page_state || exit 1` keeps the old no-page exit 1. awk_cannot_answer reproduces both old exit-4 messages.",
+      "Checked the identifier handling. The line-break join, the [[:space:]] and empty-identifier usage errors, repeated identifiers, backslashes and `\\|` cells all reach awk consistently, and `shift 2` leaves exactly the identifiers.",
+      "Read the shellCalls scanner against evidence.sh constructs (case patterns, `$((...))`, single-quoted awk program, `${#x}`, continued lines). It sees the real cd, dirname and basename calls, including the new `cd -- `.",
+      "Read the task-document pattern and the dash-and-letter drop. It treats L2-cache and S5-based as prose and still flags T3c-a2 and OD-10b.",
+      "Not run: no tests, shells or awk variants were executed. The review is static, from the diff only. The one remote risk I saw is that a very large identifier list could exceed the per-string environment limit of the awk ENVIRON value. I judged that not realistic for one branch's results, so I did not report it.",
+      "The judge was given the range edeeed77..4f714c67; recorded with no finding on each commit"
+    ]
+  }
+}

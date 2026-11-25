@@ -1,0 +1,17 @@
+{
+  "kind": "polisher",
+  "base": "81ead2737a36bf9be21f35457e334592ae8ceda1",
+  "head": "20b8b0cf75fb4d1e448116e5af9c262181b5dc13",
+  "diff_sha256": "304987f46ae8cd49ac6459042adf6259efad8731128042084c10f21ce9b33006",
+  "findings": {
+    "findings": [],
+    "evidence": [
+      "Read the full diff, 391 lines, at /tmp/claude-1000/-home-labdrian-labdrian-sdd-overlay/45673332-5a42-429f-889a-50c9d8bcb1fc/scratchpad/t4be.diff.",
+      "In the head worktree, evidencesh.go:90-129: Classified and checkScript hold exactly five fmt.Errorf calls before the run. Their texts match the five fragments of the new test, each in exactly one error. The other fmt.Errorf calls (lines 144-155) are in other functions, so the parse does not read them.",
+      "The new test's README and CHANGELOG cuts match the edited prose. README.md:1545 and :1595 hold the 'review stop-hook' and 'roles builder-guard' markers, so the new section end exists.",
+      "engine/cmd/review_stop_hook.go:199-201 builds the script path with filepath.Join(d.env(\"HOME\"), ...). With HOME unset this gives a relative path, so the new 'HOME unset or relative' wording in README and CHANGELOG is accurate.",
+      "The remaining changes are comments, an explicit `_ = f.Close()` and a backstop timer moved after the stub and records. None of them changes behaviour.",
+      "Not run: no tests or builds. This was a read-only review."
+    ]
+  }
+}

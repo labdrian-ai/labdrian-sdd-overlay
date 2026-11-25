@@ -1,0 +1,25 @@
+{
+  "kind": "sweep",
+  "base": "3a141be270b83f1d6d246bea0395660381267d3c",
+  "head": "319810f5614a97c4e93a89c45c37bcc515c52077",
+  "diff_sha256": "dd72d0144f3218829645c6d56c1ee61c65dbb76be6d4c91d4dd13c901d5ddfe6",
+  "outcome": "fired",
+  "t1": {
+    "deleted_or_renamed": [],
+    "removed_names": [
+      {
+        "name": "keptOf",
+        "hits": [
+          "odd/review-results/merge-playbook-into-sdd-overlay/d8f981b110fc-4.json",
+          "odd/review-results/merge-playbook-into-sdd-overlay/d8f981b110fc-5.json"
+        ]
+      }
+    ]
+  },
+  "t2": [],
+  "t3": [],
+  "t4": {
+    "leftovers": [],
+    "orphaned_fixtures": []
+  }
+}

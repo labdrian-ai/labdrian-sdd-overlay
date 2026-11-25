@@ -1,0 +1,19 @@
+{
+  "kind": "polisher",
+  "base": "18d006168daaa2f4e46bd2bcfefb8bae4be618df",
+  "head": "66a1a0398abee3fd6e5bc26c7388e7394b277a08",
+  "diff_sha256": "f0748a58a3c553dc6d4f9fd494ec91f473b6333107cd5cb18aed434c2caa5d65",
+  "findings": {
+    "findings": [],
+    "evidence": [
+      "Read the full diff t4i.diff and evidence.sh lines 60-276",
+      "Every dirname and basename call now takes --; the walk logic is unchanged; a path starting with - is only an operand",
+      "The no-answer branch prints one stderr line and exits 4; the exit-non-zero line is unchanged and pinned",
+      "No consumer left on the old wording outside odd/",
+      "The widened pattern is shared by the lint and its table test; negative cases pinned",
+      "Minor: the -- lint reads text lines, so a dirname word inside a printf string would be a false positive; none exists",
+      "Pre-existing: cd \"$(dirname -- \"$0\")\" misreads a directory starting with -; not reachable from the wiki argument",
+      "Not run: Go tests, shellcheck, other sh images"
+    ]
+  }
+}

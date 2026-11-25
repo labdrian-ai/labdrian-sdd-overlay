@@ -435,7 +435,9 @@ Commands:
                                              verdict found not-reproduced (reason verdict not-reproduced), or when
                                              it is a BLOCKER or CRITICAL of causal_disposition unknown the verdict
                                              found reproduced on base (reason verdict base-reproduced). Both lists
-                                             are always there. A result that is not
+                                             are always there. The member unverified, always there too, lists the
+                                             ids of the kept BLOCKER and CRITICAL findings whose check did not run,
+                                             as review verify decides, which the Classify step waits for. A result that is not
                                              stored, is not one, or whose verdict does not hold is refused, never an
                                              empty list; store nothing
                                              (exit 0 listed, 1 usage error, a result that cannot be read or any other failure)
@@ -445,7 +447,16 @@ Commands:
                                              the stop for the first commit that misses anything review check asks of
                                              it, with the command for each thing it misses, asking for each thing once
                                              for each session and commit, and never for the whole branch; it lets the
-                                             stop happen on anything it cannot tell (exit 0 always, 1 usage error)
+                                             stop happen on anything it cannot tell (exit 0 always, 1 usage error). With
+                                             no commit to review it asks for the classification of each stored result of
+                                             the branch whose kept findings docs/wiki/evidence.md lacks, once for each
+                                             session and result, through the deployed evidence.sh reviewed-each; it
+                                             does not ask for a result with an unverified severe finding until its
+                                             check has run (reproduced or not-reproduced stored for each check it
+                                             needs); a not-run verdict holds it for good, for review verify stores no
+                                             second verdict, so only a new review result of the same head runs the
+                                             check again, and review check refuses the head while the held result is
+                                             stored: findings not checked
                                    Only launch starts an agent, the reviewer on Codex; no other verb launches an
                                    agent or dispatches work.
   memory <verb>                    Forward memory-directive verbs to the engine unchanged.

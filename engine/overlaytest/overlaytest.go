@@ -13,6 +13,8 @@
 //   - NewOverlay, InitOverlay, Git: the fixture repository.
 //   - Run, Capture, Combined, Source, ExitCode: running the script, or the functions it defines.
 //   - WriteTool, StubEngine, ToolchainEnv: programs of the test's own, and the caches of the go command.
+//   - RequireBash, RequireShAndAwk, RequirePrograms: the tools a test needs, which skip the test on a
+//     developer machine and fail it when CI is "true".
 //
 // The engine the script asks for is enginetest's.
 package overlaytest
@@ -49,11 +51,12 @@ func Script(t testing.TB) string {
 	return p
 }
 
-// RequireBash skips the test on a machine that has no bash: the script is a bash script.
+// RequireBash is what a test of the overlay script asks of the machine: a bash on PATH, the script
+// being a bash script. Without one it skips on a developer machine, and fails when CI is "true".
 func RequireBash(t testing.TB) {
 	t.Helper()
 	if _, err := exec.LookPath("bash"); err != nil {
-		t.Skipf("bash is not available: %v", err)
+		lacking(t, "bash", err)
 	}
 }
 
@@ -64,12 +67,31 @@ func RequireShAndAwk(t testing.TB) {
 	t.Helper()
 	for _, name := range []string{"sh", "awk"} {
 		if _, err := exec.LookPath(name); err != nil {
-			if os.Getenv("CI") == "true" {
-				t.Fatalf("%s is not on PATH, and CI needs it: %v", name, err)
-			}
-			t.Skipf("%s is not on PATH: %v", name, err)
+			lacking(t, name, err)
 		}
 	}
+}
+
+// RequirePrograms is what a test that starts programs by their absolute path asks of the machine: each
+// of them is there. Without one it skips on a developer machine, and fails when CI is "true", so a runner
+// that lost one cannot pass by skipping.
+func RequirePrograms(t testing.TB, paths ...string) {
+	t.Helper()
+	for _, path := range paths {
+		if _, err := os.Stat(path); err != nil {
+			lacking(t, path, err)
+		}
+	}
+}
+
+// lacking ends a test that needs a tool the machine does not have: a skip, and a failure when CI is
+// "true". Every Require helper ends in it, and TestEveryRequireHelperFailsOnCI holds each of them to it.
+func lacking(t testing.TB, tool string, err error) {
+	t.Helper()
+	if os.Getenv("CI") == "true" {
+		t.Fatalf("%s is not available, and CI needs it: %v", tool, err)
+	}
+	t.Skipf("%s is not available: %v", tool, err)
 }
 
 // Env is the environment a run of the script takes, and only that: the home and the overlay it is told

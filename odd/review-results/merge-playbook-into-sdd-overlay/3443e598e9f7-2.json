@@ -1,0 +1,48 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "1a6b141993d1a04f846b6d511059616eaf517852",
+    "head": "3443e598e9f7d12e20b6909788e000c83e12982c",
+    "diff_sha256": "6df9c485cfb1a273c22fc9db279736cac51dde9eabf7d2dfc4eacadb8a5e4172",
+    "paths": [
+      "engine/cmd/review_stop_hook.go",
+      "engine/cmd/review_stop_hook_oneline_test.go",
+      "engine/review/app/classify.go",
+      "engine/review/app/classify_batch_test.go",
+      "engine/review/app/export_test.go",
+      "engine/review/app/stop.go",
+      "odd/tasks/merge-playbook-into-sdd-overlay.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "1a6b141993d1a04f846b6d511059616eaf517852",
+      "head": "3443e598e9f7d12e20b6909788e000c83e12982c",
+      "diff_sha256": "6df9c485cfb1a273c22fc9db279736cac51dde9eabf7d2dfc4eacadb8a5e4172"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/cmd/review_stop_hook.go",
+        "engine/cmd/review_stop_hook_oneline_test.go",
+        "engine/review/app/classify.go",
+        "engine/review/app/classify_batch_test.go",
+        "engine/review/app/export_test.go",
+        "engine/review/app/stop.go",
+        "odd/tasks/merge-playbook-into-sdd-overlay.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "Read the whole diff (565 lines) at the scratchpad path t4o.diff. I ran nothing: no tests, no build.",
+      "Read engine/cmd/review_stop_hook.go lines 108-197 in the worktree. stopHookAnswer returns (nil, err) whenever Stop returns an error, even if the ruling blocks. This is the base behaviour that L74 and L75 name as T4w's work. The candidate does not change stopHookAnswer, so I did not count it as introduced or worsened.",
+      "Checked that every classifyRuling return path records refusals (named) only where the stop returns its ruling with no pass error. The three error returns (port error, wrong answer count, once error) join the fresh refusals into the error and record nothing. I saw no path where a refusal is recorded and never printed.",
+      "Confirmed reviewID is defined in findings.go:87 and used at classify.go:87 and :97. The refused-key identifier is therefore the same <feature>/<head12>-<n> form that KeptResult uses.",
+      "Checked oneLine and lineBreakAt by reading the code. The byte scan matches only the exact sequences C2 85, E2 80 A8 and E2 80 A9. C2 and E2 are never UTF-8 continuation bytes, so a match cannot start inside another multibyte character. A lone 0x85 and a cut sequence pass through unchanged. The first-run and last-run trimming logic still holds."
+    ]
+  }
+}

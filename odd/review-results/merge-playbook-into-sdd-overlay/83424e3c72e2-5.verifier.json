@@ -1,0 +1,25 @@
+{
+  "verdicts": [
+    {
+      "id": "F1",
+      "result": "reproduced",
+      "command": "head: cd head/engine && HOME=$(mktemp -d) go test ./cmd -run TestZZProbe -v -count=1 (oneLine(\"a\\xffb\\nc\") directly, and the same text sent through getwd's error into the real hook); base: cd base/engine && HOME=$(mktemp -d) go test ./cmd -run TestZZProbeHookStderr -v -count=1",
+      "output": "head: oneLine(\"a\\xffb\\nc\") = \"a\\uFFFDb c\" (the %q output shows the U+FFFD replacement character), and the hook's stderr is \"review stop-hook: cannot determine the working directory: a\\uFFFDb c\\n\". The \\xff byte is replaced. base: the hook's stderr is \"review stop-hook: cannot determine the working directory: a\\xffb\\nc\\n\", so the byte is printed as it was.",
+      "base_result": "not-reproduced"
+    },
+    {
+      "id": "F2",
+      "result": "reproduced",
+      "command": "same as 83424e3c72e2-3 F2: <tree>/engine: HOME=$(mktemp -d) go test ./cmd -run TestZZProbe -v -count=1 with the probes copied into engine/cmd (oneLine probe on head only)",
+      "output": "head: oneLine and the hook's stderr keep VT, FF, U+0085, U+2028 and U+2029 unchanged, e.g. oneLine(\"a\\u2028b\")=\"a\\u2028b\" and stderr \"review stop-hook: cannot determine the working directory: a\\u2028b\\n\". base: the hook's stderr keeps the same characters too, and it also keeps LF (base has no folding).",
+      "base_result": "reproduced"
+    },
+    {
+      "id": "F3",
+      "result": "reproduced",
+      "command": "head and base: cd <tree>/engine && HOME=$(mktemp -d) go test ./review/app -run TestZZProbe -v -count=1 (TestZZProbeF3b: classifyWorld plus 333333333333-9.json stored, with store.fail[\"Read 333333333333-9.json\"]=fmt.Errorf(\"transient failure #%d\", i) set before each of 3 stops in session-1, counting the \" refused-\" keys in fakeAsked.put)",
+      "output": "head: stop=1 refusalNamed=true refusedMarkers=1; stop=2 refusalNamed=true refusedMarkers=2; stop=3 refusalNamed=true refusedMarkers=3 (err=classify the results with kept findings: read odd/review-results/own-rdd/333333333333-9.json: transient failure #N). Each stop names the refusal again and writes one new marker. base: refusalNamed=true at all 3 stops with refusedMarkers=0. Base names every refusal at every stop by design and writes no refused- marker, so it has no per-text key.",
+      "base_result": "not-reproduced"
+    }
+  ]
+}

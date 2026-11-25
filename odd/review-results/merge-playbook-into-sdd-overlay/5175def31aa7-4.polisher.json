@@ -1,0 +1,20 @@
+{
+  "kind": "polisher",
+  "base": "5551f0ca4a09b4ed01dd2a07e626550668d0b8c9",
+  "head": "5175def31aa738d1b3fe9150e3e2fe9ccb3908d4",
+  "diff_sha256": "ae89dfc5a8327c974a3add84540a8e0cf58500c00193a03f5cb9fe9860b474ef",
+  "findings": {
+    "findings": [],
+    "evidence": [
+      "Read the whole target diff /tmp/claude-1000/-home-labdrian-labdrian-sdd-overlay/45673332-5a42-429f-889a-50c9d8bcb1fc/scratchpad/t4y.diff (lines 1-1397), covering CHANGELOG.md, README.md, engine/architecture_short_name_test.go, engine/cmd/review_stop_hook.go, engine/cmd/review_stop_hook_bound_unix_test.go, engine/cmd/review_stop_hook_docs_test.go, engine/execrunner/{execrunner.go,group_linux_test.go,lingering_test.go} and the deleted group_unix.go, group_other.go and group_unix_test.go, engine/gitobject/{gitobject.go,gitobject_test.go}, engine/overlaytest/{overlaytest.go,require_test.go} and the deleted grandchild_unix.go, engine/pipkg/comparison.go, engine/review/{app/stop.go,names.go,review.go,candidate_test.go}, engine/review/evidencesh/{evidencesh.go,evidencesh_test.go} and the deleted evidencesh_unix_test.go, and odd/tasks/merge-playbook-into-sdd-overlay.md.",
+      "Declared Risk 3 (the stop hook's run of the evidence store): the process-group code is removed cleanly. Run and outputIn set only cmd.WaitDelay = killGrace, and execrunner.go:23 at head has killGrace = 2 * time.Second. Go's exec.Cmd closes the I/O pipes WaitDelay after the context is done, so 'stopped at 2 seconds; up to 2 seconds more while a process the script started holds its output, which can outlive the stop' in README and CHANGELOG matches the runner's real bound.",
+      "A grep of the head worktree outside odd/ for 'with every process it started', 'ShortName(', 'WithProcessGroup', 'NewGrandchild' and 'process group|every process' finds no stale production caller or document claim. The remaining process-group matches belong to synctrigger/osproc and to the cmd test helpers ownProcessGroup, which the target does not touch.",
+      "gitobject.Short (name[:min(len(name), 12)]) behaves the same as the removed review.ShortName and pipkg.shortSHA for every length, and Candidate.Short keeps its empty result for a head shorter than 12. names.go now reads gitobject.ShortLength, which is 12 as before.",
+      "checkScript order is Stat (ErrNotExist or ENOTDIR means not deployed, any other error means cannot be checked), then a regular-file check, then Open. Because os.Stat follows symlinks, a symlink to a FIFO gets the not-regular error before the open, so it cannot block the hook. A deployed regular, readable script still reaches the run as before.",
+      "The new failure on CI in RequirePrograms, RequireBash, RequireShAndAwk and requireProcessLister (/bin/ps) cannot break existing CI on a missing tool. .github/workflows/ci.yml runs every job on ubuntu-latest with no container, and that image has /bin/sh, /bin/sleep, /bin/ps, bash and awk.",
+      "Considered and not reported because it does not affect users: the shortNameCuts lint matches a name bound to 12 by its text and ignores scope, so it could flag an unrelated variable with the same name in the same file. It does not catch a slice written with the selector gitobject.ShortLength. Its effect is limited to lint precision for developers.",
+      "No command was run (read-only review). go test, go vet and the CI run are not run by this reviewer.",
+      "The judge read the whole range 75cdbb84..c9440b24 (one bind); the foreman records the same judgment on each commit of the range"
+    ]
+  }
+}

@@ -1,0 +1,89 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "ad8cfe87b4aa0cc79108532e9e022c5ec8926dc3",
+    "head": "9b030f225615af3feb4c2dd9acc802e690e6454e",
+    "diff_sha256": "092081cb2870933af0aeeffe85cf662c6254dfca8d914e7eb63753b23ca81b2f",
+    "paths": [
+      "engine/agentgen/agentgen.go",
+      "engine/agentgen/messages_pin_test.go",
+      "engine/shelltest/evidence_store_test.go",
+      "engine/skills/evidence_store_artifact_test.go",
+      "odd/tasks/merge-playbook-into-sdd-overlay.md",
+      "skills/_shared/evidence/PROVENANCE.md",
+      "skills/_shared/evidence/evidence.sh"
+    ]
+  },
+  "rows": [
+    "recall",
+    "hunt",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "ad8cfe87b4aa0cc79108532e9e022c5ec8926dc3",
+      "head": "9b030f225615af3feb4c2dd9acc802e690e6454e",
+      "diff_sha256": "092081cb2870933af0aeeffe85cf662c6254dfca8d914e7eb63753b23ca81b2f"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/agentgen/agentgen.go",
+        "engine/agentgen/messages_pin_test.go",
+        "engine/shelltest/evidence_store_test.go",
+        "engine/skills/evidence_store_artifact_test.go",
+        "odd/tasks/merge-playbook-into-sdd-overlay.md",
+        "skills/_shared/evidence/PROVENANCE.md",
+        "skills/_shared/evidence/evidence.sh"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "engine/skills/evidence_store_artifact_test.go:221",
+        "severity": "SUGGESTION",
+        "claim": "The lint pattern \\b(S|T|L)[0-9]+\\b misses task IDs with a letter suffix (T4g, T4f, T4s, T3c-f), the form this document uses, so a deployed file naming them passes.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/skills/evidence_store_artifact_test.go:221",
+          "odd/tasks/merge-playbook-into-sdd-overlay.md:237"
+        ]
+      },
+      {
+        "id": "F2",
+        "location": "engine/agentgen/agentgen.go:274",
+        "severity": "SUGGESTION",
+        "claim": "Check says the notice must start with MIT License but agentgen.go:102 requires the first line to equal it exactly, so MIT License (Expat) is refused under a message it satisfies.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/agentgen/agentgen.go:102",
+          "engine/agentgen/agentgen.go:274",
+          "engine/agentgen/messages_pin_test.go:76"
+        ]
+      },
+      {
+        "id": "F3",
+        "location": "skills/_shared/evidence/evidence.sh:241",
+        "severity": "SUGGESTION",
+        "claim": "No test pins a non-directory where the wiki directory should be; dropping [ -d ] from the parent check makes an executable regular docs/wiki exit 1 with every test passing.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "skills/_shared/evidence/evidence.sh:240",
+          "skills/_shared/evidence/evidence.sh:241",
+          "engine/shelltest/evidence_store_test.go:165"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full diff (7 paths) and every changed path at head",
+      "Every T4f finding resolved per L62 (-2.polisher, -3 F1 F2, -5 F1-F5)",
+      "dirname walk terminates for relative and absolute paths",
+      "Readability row applied",
+      "Not run: go test, shellcheck, gadu-generate --check"
+    ]
+  }
+}

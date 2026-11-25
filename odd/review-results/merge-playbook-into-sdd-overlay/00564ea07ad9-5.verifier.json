@@ -1,0 +1,39 @@
+{
+  "verdicts": [
+    {
+      "id": "F1",
+      "result": "reproduced",
+      "command": "Put a stub awk first on PATH (`echo \"awk: fatal: simulated\" >&2; exit 2`). With the page `# Evidence`, run `sh skills/_shared/evidence/evidence.sh reviewed f/aaaa-1 <dir>` on head 00564ea0 and on base f7b48045.",
+      "output": "Head exits 4 with 2 stderr lines: first `awk: fatal: simulated`, then `evidence.sh: awk failed on <page> (exit 2); reviewed cannot answer`. This contradicts the promised 'one stderr line'. Base exits 2 with 1 stderr line, `awk: fatal: simulated`; base promises no exit 4 or one-line contract, so the finding does not apply there.",
+      "base_result": "not-reproduced"
+    },
+    {
+      "id": "F2",
+      "result": "reproduced",
+      "command": "Scratch probe test `TestProbeBOMThenText`, run on head and on base: seededRoot, roles/classifier/LICENSE prefixed with the bytes EF BB BF, agentgen.Generate, then agentgen.ClaudeInstructions on agents/classifier.md.",
+      "output": "On both, Generate returns nil and line 4 is `# \\ufeffMIT License`. On head, ClaudeInstructions refuses it: `not an agent file the generator wrote: the comment lines after the header are not the notice of role \"classifier\"`. On base it returns nil, because base does not check the third line. No existing test covers this.",
+      "base_result": "not-reproduced"
+    },
+    {
+      "id": "F3",
+      "result": "reproduced",
+      "command": "Put a stub awk first on PATH (`echo \"awk: fatal: simulated\" >&2; exit 1`) and run `sh evidence.sh reviewed f/aaaa-1 <dir>` on head and on base. Also `gawk|mawk|nawk|busybox awk '{print}' <missing file>`.",
+      "output": "Head exits 1, the 'not classified' answer, with 1 stderr line and no 4, which contradicts the head header's '4 ... when awk fails on it'. Base also exits 1, but base's header makes no awk-failure promise, so there is nothing to contradict. Real awks on a missing file: gawk, mawk and nawk exit 2; busybox awk exits 1.",
+      "base_result": "not-reproduced"
+    },
+    {
+      "id": "F4",
+      "result": "reproduced",
+      "command": "`rg -n 'stop hook' skills/_shared/evidence/PROVENANCE.md`, `rg -n 'evidence' overlay.manifest`, and `rg -l S6 skills/_shared/evidence/`, on head and on base.",
+      "output": "Head PROVENANCE.md:14 says `the mode is written for the stop hook of S6`. overlay.manifest lines 108-111 ship _shared/evidence/{evidence.sh,evidence-rules.md,LICENSE,PROVENANCE.md}. The only file in the shipped directory naming S6 is PROVENANCE.md itself, which does not define it. Base line 14 says `the stop hook reads it`, with no S6 (rg rc=1).",
+      "base_result": "not-reproduced"
+    },
+    {
+      "id": "F5",
+      "result": "reproduced",
+      "command": "Read evidence_store_test.go lines 249-258 at head. Then, in a copy of head with Mf3 and Mf4 applied, `go test -count=1 ./shelltest/ -run 'TestEvidenceStoreReviewedAnswersByExitWhetherAnEvidenceRowHoldsTheReview$'`. On base, `rg -n 'A page that fails a check'`.",
+      "output": "The comment at line 249 reads `A page that fails a check of check answers 1 even when a row holds the identifier`. Pages 257 (`kindsHead + kind`) and 258 (heading, `nothing yet`) hold no f/aaaa-1 row. Under Mf3 and Mf4, only 5 pages fail at :260 (level 0, date, kind not in Kinds, row after table, no title); the two pages at 257 and 258 pass. The comment and loop are absent at base (rg found nothing).",
+      "base_result": "not-reproduced"
+    }
+  ]
+}

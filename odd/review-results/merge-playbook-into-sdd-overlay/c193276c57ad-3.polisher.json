@@ -1,0 +1,22 @@
+{
+  "kind": "polisher",
+  "base": "eecc474dba1a167740265394614869d976029f23",
+  "head": "c193276c57ad85d0a936e59987c0e660012df811",
+  "diff_sha256": "3e3fc29aaf08043aa2dd1a17808548b4c5be961041749af64ff843ce177114cd",
+  "findings": {
+    "findings": [],
+    "evidence": [
+      "Read the full target diff /tmp/claude-1000/-home-labdrian-labdrian-sdd-overlay/45673332-5a42-429f-889a-50c9d8bcb1fc/scratchpad/t4x.diff (1062 lines), covering eecc474d..36d5bc62 in the detached worktree /home/labdrian/labdrian-sdd-overlay-worktrees/review-36d5bc62df38.",
+      "Declared Risk 3, the stop hook's evidence run (process groups): engine/execrunner/group_unix.go sets Setpgid and makes Cmd.Cancel send SIGKILL to -pid, mapping ESRCH to os.ErrProcessDone. execrunner.go calls ownGroup only when r.group is set, in both Run and outputIn. A grep of the head worktree found killGrace = 2s and WaitDelay = killGrace at lines 100 and 147, unchanged. The output-bound cancel of cappedBuffer shares the derived context, so it also reaches the group. New().ProcessGroup() stays false, so callers other than the stop hook keep their old behaviour.",
+      "Wiring: engine/cmd/review_stop_hook.go is the only caller of .WithProcessGroup() in the diff. The hook runs under Claude Code, not a terminal, so the lost Ctrl-C reach that the option's doc names does not affect this caller.",
+      "engine/execrunner/group_other.go (!unix) is a no-op, so the kill on other platforms stays as it was before the change.",
+      "Undeployed store: evidencesh.Classified runs os.Stat after the absolute-path check and refuses only on fs.ErrNotExist, wrapping that error with no run. Any other stat error goes on to the run as before. The stop hook prints this as one stderr line and remembers nothing; that matches README/CHANGELOG and the SH9 (iii) repeat test.",
+      "ShortName: review.ShortName(name) = name[:min(len(name), shortLength)] behaves the same as the removed app.short and head12 (whole name when shorter, no panic). Candidate.Short keeps its guard that returns an empty string for a name shorter than shortLength, so its output does not change. stop.go marker prefixes and classifyReason commit names are unchanged byte for byte.",
+      "Lint engine/architecture_short_name_test.go walks review/ and cmd/ from the engine package directory, skips _test.go files, and only affects tests.",
+      "Text pins: prose() in engine/skills/evidence_store_artifact_test.go and the removed split pin change tests only. B15's doc comment in shelltest is comment-only.",
+      "Test helper engine/overlaytest/grandchild_unix.go is test-only. Its cleanup kills a pid only when the command line exactly matches '/bin/sleep 30.7', so it cannot kill an unrelated process.",
+      "Not run: no go test, go vet or other command was run by this reviewer. The builder's recorded results in L87 were not re-verified.",
+      "The judge read the whole range eecc474d..36d5bc62 (one bind); the foreman records the same judgment on each commit of the range"
+    ]
+  }
+}

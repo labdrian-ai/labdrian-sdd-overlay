@@ -1,0 +1,30 @@
+{
+  "kind": "sweeper",
+  "base": "7aedb91e4881a665e6a9b15c7aa8be7a319e0e75",
+  "head": "c67f772ff05b4d595e8cada04d3f5375c55f3cbb",
+  "diff_sha256": "e1394f1239e82622a70eeaf3c469c949f71c12d6009ad69839beb5e184cd432b",
+  "sweep": "c67f772ff05b-1.sweep.json",
+  "commit": null,
+  "candidates": [
+    {
+      "candidate": "T1 path: engine/cmd/review_stop_hook_bound_unix_test.go",
+      "disposition": "live",
+      "evidence": "Renamed by git mv to engine/cmd/review_stop_hook_bound_linux_test.go (L90: SH15 waits on a FIFO, Linux only); no leftover reference."
+    },
+    {
+      "candidate": "T1 name: killGrace",
+      "disposition": "live",
+      "evidence": "Renamed to the exported execrunner.KillGrace (L90, -6 F4); rg killGrace in engine prints nothing."
+    },
+    {
+      "candidate": "T2 errcheck engine: cmd/review_stop_hook_bound_linux_test.go: unchecked error: f.Close()",
+      "disposition": "live",
+      "evidence": "New unchecked f.Close() in the FIFO release of the new Linux test (line 41 of the file named); not dead code, so not the sweeper's to remove: carried by the foreman to the T4z review round as a fix (check or explicitly discard the error)."
+    },
+    {
+      "candidate": "T2 errcheck engine: review/evidencesh/evidencesh_fifo_linux_test.go: unchecked error: f.Close()",
+      "disposition": "live",
+      "evidence": "New unchecked f.Close() in the FIFO release of the new Linux test (line 41 of the file named); not dead code, so not the sweeper's to remove: carried by the foreman to the T4z review round as a fix (check or explicitly discard the error)."
+    }
+  ]
+}

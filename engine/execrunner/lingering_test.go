@@ -10,13 +10,15 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/overlaytest"
 )
 
 // The two sleeps the tests below start, by the seconds they sleep. Each duration is unlike any
 // other the tests use, because it is how stopRecordedProcess recognizes the process it started: it
 // reads the command line of an id and kills it only when the line is exactly the one it expects,
 // so an id that was reused by an unrelated process is left alone. Both outlast every bound the
-// tests wait for (killGrace and a few seconds), so a Run that waited for the grandchild is caught,
+// tests wait for (KillGrace and a few seconds), so a Run that waited for the grandchild is caught,
 // and both end by themselves in under half a minute, so a process nobody stopped is bounded.
 const (
 	lingeringSeconds = "29.5" // the grandchild of the fake programs, which holds the output pipes
@@ -42,14 +44,13 @@ type reporter interface {
 	Errorf(format string, args ...any)
 }
 
-// requireProcessLister skips the test when the machine has no process lister. Without one a
-// grandchild could not be found again to be stopped, and it would be left running for the rest of
-// its sleep with nothing to say so: a visible skip is the lesser evil.
+// requireProcessLister asks for the process lister, as every tool check of the tests does
+// (overlaytest.RequirePrograms): the test is skipped on a developer machine without one and fails
+// on CI. Without a lister a grandchild could not be found again to be stopped, and it would be
+// left running for the rest of its sleep with nothing to say so.
 func requireProcessLister(t *testing.T) {
 	t.Helper()
-	if _, err := os.Stat(processLister); err != nil {
-		t.Skipf("no %s to find the lingering grandchild by, so it could not be stopped: %v", processLister, err)
-	}
+	overlaytest.RequirePrograms(t, processLister)
 }
 
 // lingeringGrandchild returns the body of a fake program that starts a grandchild holding the

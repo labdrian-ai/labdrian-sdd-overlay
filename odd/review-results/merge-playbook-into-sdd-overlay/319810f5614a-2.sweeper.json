@@ -1,0 +1,15 @@
+{
+  "kind": "sweeper",
+  "base": "3a141be270b83f1d6d246bea0395660381267d3c",
+  "head": "319810f5614a97c4e93a89c45c37bcc515c52077",
+  "diff_sha256": "dd72d0144f3218829645c6d56c1ee61c65dbb76be6d4c91d4dd13c901d5ddfe6",
+  "sweep": "319810f5614a-1.sweep.json",
+  "commit": null,
+  "candidates": [
+    {
+      "candidate": "T1 name: keptOf",
+      "disposition": "live",
+      "evidence": "No Go symbol keptOf remains in engine/ (T4j replaced it with heldResult in check.go). The hits are stored review records d8f981b110fc-4.json and -5.json that quote the reviewed commit d8f981b1 and are bound to it by diff_sha256; editing them would falsify the record."
+    }
+  ]
+}

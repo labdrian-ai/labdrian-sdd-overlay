@@ -4,16 +4,23 @@
 # and prints its rules. It never writes a file.
 # Usage: sh evidence.sh check|count|rules|index [wiki directory]
 #        sh evidence.sh rule <kind> [wiki directory]
+#        sh evidence.sh reviewed <identifier> [wiki directory]
+#        sh evidence.sh reviewed-each <wiki directory> <identifier>...
 # The wiki directory is "$CLAUDE_PROJECT_DIR/docs/wiki" when that variable is
-# set, else docs/wiki. The playbook's general rules are in evidence-rules.md,
+# set, else docs/wiki (reviewed-each takes it as its first argument, never from
+# the variable). The playbook's general rules are in evidence-rules.md,
 # next to this script.
 # The page has the title "# Evidence" and two tables, under "## Kinds" and
 # "## Evidence" (evidence-rules.md has only the first):
 #   Kinds:    | Kind | Level | Rule | Applies when | Source | Scope |
 #   Evidence: | Kind | Level | Review | Date | Finding |
+# An optional third table, under "## Classified without evidence", lists a
+# review that was classified and gave no evidence row:
+#   Classified without evidence: | Review | Date |
 # A kind is kebab-case and unique; a level is a positive integer, 1 meaning
 # that the kind has no rule yet; a date is YYYY-MM-DD; a scope is general or
-# project; every kind of the evidence is in Kinds.
+# project; every kind of the evidence is in Kinds; a Review of the third table
+# is not blank.
 # - check: prints "FAIL <file>: <problem>" for each problem and exits 1; else
 #   prints one line and exits 0. With no page it says so and exits 0.
 # - count: one line per kind and level of the evidence: the number of distinct
@@ -26,10 +33,40 @@
 #   The SubagentStart hook gives this index, not the rules (seed-evidence-31).
 # - rule <kind>: the level, rule, applies when, and source of that kind, at any
 #   level, from the page first and then evidence-rules.md; when the kind is in
-#   neither, a message on stderr and exit 1 (seed-evidence-31).
-# count, rules, and index exit 0, but with no awk on PATH every mode prints
+#   neither, a message on stderr and exit 1 (seed-evidence-31). The kind is
+#   compared with a cell as text, never as a number: a kind 01 is not 1.
+# - reviewed <identifier>: prints nothing; exits 0 when the page passes every
+#   check of "check" and a row of its Evidence table, or of its table of
+#   Classified without evidence, has the identifier as its
+#   Review cell, exactly (a cell is trimmed, "\|" in it is read as "|", and the
+#   identifier is compared as the bytes given, as text, never as a number: a
+#   cell 01 is not 1); 1 when none does, when the page
+#   fails a check, or when nothing is at the page's path under a directory that
+#   can be searched; 4, with one stderr line, for anything else at the path that
+#   is not a readable regular file, for a directory on the way that cannot be
+#   searched, and for an awk that fails or gives no answer (its own stderr is
+#   dropped). evidence-rules.md is not read. An identifier that is missing, or
+#   holds a space, a tab or a line break, is a usage error.
+# - reviewed-each <wiki directory> <identifier>...: reads the page once and
+#   prints one line for each identifier, in the order given, "yes" where
+#   reviewed would exit 0 and "no" where it would exit 1 (no page, a page that
+#   fails a check, no row), then exits 0. Where reviewed exits 4 it exits 4, with
+#   the stderr line of reviewed, naming reviewed-each as its mode, and nothing
+#   on stdout. The identifiers reach sh as arguments and awk in one environment
+#   string. Linux limits one string to MAX_ARG_STRLEN (32 pages:
+#   128 KiB with 4 KiB pages), and the arguments and environment of one exec
+#   together to ARG_MAX (getconf ARG_MAX; measured with glibc: a quarter of the
+#   stack limit, kept between 128 KiB and 6 MiB). Past
+#   either when awk starts, awk cannot start and the mode exits 4, with the
+#   awk-failed line. Past ARG_MAX when sh starts, this script does not run and
+#   the caller's exec fails. A missing or empty wiki
+#   directory, no identifier, or an identifier that is empty or holds a space, a
+#   tab or a line break, is a usage error.
+# count, rules, and index exit 0 (reviewed and reviewed-each also exit 4, see
+# above), but with no awk on PATH every mode prints
 # "evidence.sh: awk is not on PATH; <mode> cannot run" on stderr and exits 3
-# (a usage error still exits 2). A cell may hold "|" written as "\|". Not
+# (a usage error still exits 2). count, rules, index and rule do not read the
+# table of Classified without evidence. A cell may hold "|" written as "\|". Not
 # read: a table inside a code block. A row after a line that ends the table
 # (a blank line, for one) is still read, and check fails on it.
 
@@ -38,15 +75,37 @@
 threshold=3
 
 usage='usage: sh evidence.sh check|count|rules|index [wiki directory]
-       sh evidence.sh rule <kind> [wiki directory]'
+       sh evidence.sh rule <kind> [wiki directory]
+       sh evidence.sh reviewed <identifier> [wiki directory]
+       sh evidence.sh reviewed-each <wiki directory> <identifier>...'
 mode=${1:-}
 want=
+nwant=0
 case $mode in
   check | count | rules | index) dirarg=${2:-} ;;
-  rule)
+  rule | reviewed)
     want=${2:-}
     [ -n "$want" ] || { printf '%s\n' "$usage" >&2; exit 2; }
+    if [ "$mode" = reviewed ]; then
+      case $want in
+        *[[:space:]]*) printf '%s\n' "$usage" >&2; exit 2 ;;
+      esac
+    fi
     dirarg=${3:-}
+    ;;
+  reviewed-each)
+    dirarg=${2:-}
+    if [ -z "$dirarg" ] || [ "$#" -lt 3 ]; then printf '%s\n' "$usage" >&2; exit 2; fi
+    shift 2
+    # The identifiers reach awk joined by line breaks, which no valid identifier holds.
+    for id in "$@"; do
+      case $id in
+        '' | *[[:space:]]*) printf '%s\n' "$usage" >&2; exit 2 ;;
+      esac
+      want=${want:+$want
+}$id
+      nwant=$((nwant + 1))
+    done
     ;;
   *) printf '%s\n' "$usage" >&2; exit 2 ;;
 esac
@@ -62,11 +121,12 @@ else
   wiki=docs/wiki
 fi
 page=$wiki/evidence.md
-general="$(cd "$(dirname "$0")" 2>/dev/null && pwd)/evidence-rules.md"
+general="$(cd -- "$(dirname -- "$0")" 2>/dev/null && pwd)/evidence-rules.md"
 
 # run_awk <file> <label>: reads one page in the mode of this run.
 run_awk() {
-  awk -v mode="$mode" -v want="$want" -v file="$2" -v threshold="$threshold" '
+  # The identifier or kind goes through the environment, which awk reads without escape processing; -v would turn "\b" into a backspace.
+  EVIDENCE_WANT=$want awk -v mode="$mode" -v file="$2" -v threshold="$threshold" '
   function trim(s) { sub(/^[ \t]+/, "", s); sub(/[ \t\r]+$/, "", s); return s }
   function fail(msg) { bad = 1; if (mode == "check") print "FAIL " file ": " msg }
   # Splits a table row into cells[1..ncell], with "\|" kept as "|".
@@ -89,7 +149,15 @@ run_awk() {
     else if (m == 2) mx = ((y % 4 == 0 && y % 100 != 0) || y % 400 == 0) ? 29 : 28
     return dd <= mx
   }
-  BEGIN { sec = ""; kh = "Kind|Level|Rule|Applies when|Source|Scope"; eh = "Kind|Level|Review|Date|Finding" }
+  BEGIN {
+    # Read as text (the empty string makes it one), so every comparison with a cell is one of text.
+    want = ENVIRON["EVIDENCE_WANT"] ""
+    # reviewed-each: want holds the identifiers one to a line; they are asked in order, repeats included.
+    each = (mode == "reviewed-each")
+    # The elements split makes are text too (the empty string makes each one), so a key is the bytes of an identifier on every awk.
+    if (each) { nid = split(want, ids, "\n"); for (i = 1; i <= nid; i++) { ids[i] = ids[i] ""; wanted[ids[i]] = 1 } }
+  }
+  BEGIN { sec = ""; kh = "Kind|Level|Rule|Applies when|Source|Scope"; eh = "Kind|Level|Review|Date|Finding"; ch = "Review|Date" }
   /^```/ { fence = !fence; next }
   fence { next }
   /^# / { if (trim(substr($0, 3)) == "Evidence") title = 1; next }
@@ -97,12 +165,26 @@ run_awk() {
     h = trim(substr($0, 4)); sec = ""
     if (h == "Kinds") { sec = "K"; hasK = 1; rowK = 0; doneK = 0 }
     else if (h == "Evidence") { sec = "E"; hasE = 1; rowE = 0; doneE = 0 }
+    else if (h == "Classified without evidence") { sec = "C"; rowC = 0; doneC = 0 }
     next
   }
   /^\|/ {
     if (sec == "") next
-    if (sec == "K" && doneK || sec == "E" && doneE) fail("a table row after the table of " (sec == "K" ? "Kinds" : "Evidence") " ended, by a line that is not a row: " $0)
+    if (sec == "K" && doneK || sec == "E" && doneE || sec == "C" && doneC) fail("a table row after the table of " (sec == "K" ? "Kinds" : sec == "E" ? "Evidence" : "Classified without evidence") " ended, by a line that is not a row: " $0)
     cells($0)
+    if (sec == "C") {
+      # A review classified with no evidence row: | Review | Date |. Read by check, reviewed and reviewed-each only.
+      rowC++
+      if (rowC == 1) { if (joined() != ch) fail("the header row of Classified without evidence is not: | " ch " |"); next }
+      if (rowC == 2) { if (isseparator($0)) next; fail("the second row of Classified without evidence is not the separator row") }
+      if (ncell != 2) { fail("a row of Classified without evidence has " ncell " cells, not 2: " cell[1]); next }
+      rv = cell[1]; d = cell[2]
+      if (rv == want) found = 1
+      if (rv in wanted) hit[rv] = 1
+      if (rv == "") fail("a row of Classified without evidence has no review")
+      if (!isdate(d)) fail("classified review \"" rv "\" has date \"" d "\", not YYYY-MM-DD")
+      next
+    }
     if (sec == "K") {
       rowK++
       if (rowK == 1) { if (joined() != kh) fail("the header row of Kinds is not: | " kh " |") ; next }
@@ -126,6 +208,8 @@ run_awk() {
       if (ncell != 5) { fail("a row of Evidence has " ncell " cells, not 5: " cell[1]); next }
       k = cell[1]; lv = cell[2]; rv = cell[3]; d = cell[4]
       ne++; ek[ne] = k
+      if (rv == want) found = 1
+      if (rv in wanted) hit[rv] = 1
       if (lv !~ /^[1-9][0-9]*$/) fail("evidence of \"" k "\" has level \"" lv "\", not a positive integer")
       if (rv == "") fail("evidence of \"" k "\" has no review")
       if (!isdate(d)) fail("evidence of \"" k "\" has date \"" d "\", not YYYY-MM-DD")
@@ -136,9 +220,9 @@ run_awk() {
     }
     next
   }
-  { if (sec == "K" && rowK > 0) doneK = 1; if (sec == "E" && rowE > 0) doneE = 1 }
+  { if (sec == "K" && rowK > 0) doneK = 1; if (sec == "E" && rowE > 0) doneE = 1; if (sec == "C" && rowC > 0) doneC = 1 }
   END {
-    if (mode == "check") {
+    if (mode == "check" || mode == "reviewed" || each) {
       if (!title) fail("missing the heading \"# Evidence\"")
       if (!hasK) fail("missing the heading \"## Kinds\"")
       else if (rowK == 0) fail("Kinds has no table")
@@ -147,7 +231,7 @@ run_awk() {
         else if (rowE == 0) fail("Evidence has no table")
         for (i = 1; i <= ne; i++) if (!(ek[i] in kind)) fail("evidence of kind \"" ek[i] "\" has no row in Kinds")
       }
-      exit bad
+      if (mode == "check") exit bad
     }
     if (mode == "count") {
       for (i = 1; i <= ng; i++) {
@@ -167,8 +251,67 @@ run_awk() {
       }
       exit 0
     }
+    if (mode == "reviewed") { print ((found && !bad) ? "yes" : "no"); exit 0 }
+    if (each) { for (i = 1; i <= nid; i++) print (((ids[i] in hit) && !bad) ? "yes" : "no"); exit 0 }
     for (i = 1; i <= nr; i++) printf "- %s (level %s; applies when: %s): %s\n", rk[i], rl[i], ra[i], rr[i]
   }' "$1"
+}
+
+# page_state: for reviewed and reviewed-each. Returns 1 when there is no page: nothing at its path, under the nearest
+# path above it that exists when that is a directory that can be searched. Returns 0 for a readable regular file. For
+# anything else at the path, or a directory on the way that cannot be searched, it exits 4: that cannot be answered.
+page_state() {
+  if [ ! -e "$page" ] && [ ! -L "$page" ]; then
+    up=$page
+    while :; do
+      parent=$(dirname -- "$up")
+      if [ -e "$parent" ] || [ -L "$parent" ]; then
+        if [ -d "$parent" ] && [ -x "$parent" ]; then return 1; fi
+        break
+      fi
+      [ "$parent" != "$up" ] || break
+      up=$parent
+    done
+  fi
+  if [ ! -f "$page" ] || [ ! -r "$page" ]; then
+    printf 'evidence.sh: cannot read %s; %s cannot answer\n' "$page" "$mode" >&2
+    exit 4
+  fi
+}
+
+# awk_cannot_answer <awk's exit status>: the exit-4 line for an awk that failed, or exited 0 with no answer.
+awk_cannot_answer() {
+  if [ "$1" -eq 0 ]; then
+    printf 'evidence.sh: awk gave no answer on %s; %s cannot answer\n' "$page" "$mode" >&2
+  else
+    printf 'evidence.sh: awk failed on %s (exit %s); %s cannot answer\n' "$page" "$1" "$mode" >&2
+  fi
+  exit 4
+}
+
+# answered_each <text>: succeeds when the text is one line "yes" or "no" for each identifier asked, and nothing else.
+answered_each() {
+  case $1 in
+    '' | '
+'* | *'
+
+'*) return 1 ;;
+  esac
+  n=0
+  oldifs=$IFS
+  IFS='
+'
+  set -f
+  # shellcheck disable=SC2086
+  for line in $1; do
+    case $line in
+      yes | no) n=$((n + 1)) ;;
+      *) n=-1; break ;;
+    esac
+  done
+  set +f
+  IFS=$oldifs
+  [ "$n" -eq "$nwant" ]
 }
 
 case $mode in
@@ -176,7 +319,7 @@ case $mode in
     rc=0
     for f in "$general" "$page"; do
       [ -f "$f" ] || continue
-      label=$(basename "$f")
+      label=$(basename -- "$f")
       out=$(run_awk "$f" "$label") || rc=1
       [ -z "$out" ] || printf '%s\n' "$out"
     done
@@ -195,7 +338,7 @@ case $mode in
     out=
     for f in "$page" "$general"; do
       [ -f "$f" ] || continue
-      r=$(run_awk "$f" "$(basename "$f")" 2>/dev/null)
+      r=$(run_awk "$f" "$(basename -- "$f")" 2>/dev/null)
       [ -z "$r" ] || out="$out$r
 "
     done
@@ -205,14 +348,45 @@ case $mode in
   index)
     for f in "$page" "$general"; do
       [ -f "$f" ] || continue
-      run_awk "$f" "$(basename "$f")" 2>/dev/null
+      run_awk "$f" "$(basename -- "$f")" 2>/dev/null
     done
     exit 0
+    ;;
+  reviewed)
+    page_state || exit 1
+    # awk answers with one word on stdout, yes or no, and exits 0; its exit status alone never answers.
+    out=$(run_awk "$page" evidence.md 2>/dev/null)
+    rc=$?
+    if [ "$rc" -eq 0 ]; then
+      case $out in
+        yes) exit 0 ;;
+        no) exit 1 ;;
+      esac
+    fi
+    awk_cannot_answer "$rc"
+    ;;
+  reviewed-each)
+    if ! page_state; then
+      # With no page every identifier is "no"; the answer is on stdout, so the exit is 0.
+      i=0
+      while [ "$i" -lt "$nwant" ]; do
+        printf 'no\n'
+        i=$((i + 1))
+      done
+      exit 0
+    fi
+    out=$(run_awk "$page" evidence.md 2>/dev/null)
+    rc=$?
+    if [ "$rc" -eq 0 ] && answered_each "$out"; then
+      printf '%s\n' "$out"
+      exit 0
+    fi
+    awk_cannot_answer "$rc"
     ;;
   rule)
     for f in "$page" "$general"; do
       [ -f "$f" ] || continue
-      r=$(run_awk "$f" "$(basename "$f")" 2>/dev/null)
+      r=$(run_awk "$f" "$(basename -- "$f")" 2>/dev/null)
       [ -z "$r" ] || { printf '%s\n' "$r"; exit 0; }
     done
     printf 'evidence.sh: no kind "%s" in %s or %s\n' "$want" "$page" "$general" >&2

@@ -1,0 +1,20 @@
+{
+  "kind": "polisher",
+  "base": "b02f677258470a6dcca7d6d904570c133e7c52b3",
+  "head": "7aedb91e4881a665e6a9b15c7aa8be7a319e0e75",
+  "diff_sha256": "0c2b1deb6958114d2f0460b44c28dfa82ad845cfdd1f374de4b3c2b59a3cb4cd",
+  "findings": {
+    "findings": [],
+    "evidence": [
+      "Read the full diff at /tmp/claude-1000/-home-labdrian-labdrian-sdd-overlay/45673332-5a42-429f-889a-50c9d8bcb1fc/scratchpad/t4z.diff (567 lines, both pages) and judged it by reading. I ran no tests or commands, so every test result below is not run.",
+      "Declared Risk 3 covers the exported KillGrace and the stop hook's evidence run. Every change to execrunner.go is a pure rename of killGrace to KillGrace, with the same value of 2s and the same two WaitDelay uses. The rename touches no behaviour.",
+      "Grep of /home/labdrian/labdrian-sdd-overlay-worktrees/review-c67f772ff05b/README.md found both markers that textBetween uses. 'gentle-ai-overlay review stop-hook' followed by a newline is at line 1545, and 'overlay --help' is at line 1641. The earlier match at line 894 has trailing text, so it does not match the newline-terminated marker.",
+      "Grep of engine/review/evidencesh/evidencesh.go shows checkScript with the 'is not a regular file', 'cannot be checked' and 'cannot be read' refusals at lines 114-126. The README and CHANGELOG wording matches these refusals, and the docs test needles match that wording.",
+      "The package doc in the diff reads \"(execrunner's KillGrace, 2 seconds)\". The new bound-text test strips the '//' margins and so finds 'KillGrace, 2 seconds' even if the line is re-wrapped.",
+      "The SH15 Linux test frees the FIFO through sync.OnceFunc from t.Cleanup and a 20s backstop, so no process outlives it. The release is registered after t.TempDir, so it runs before the directory is removed. Its asserted bound (at least 2s, not past the release) is consistent with timeout plus WaitDelay.",
+      "The FIFO test for the adapter has a 5s select and frees the blocked open itself on failure. It is Linux-gated with a linux build tag.",
+      "The change from the unix to the linux build tag drops SH15 coverage on macOS. That is a stated design choice and not a user-facing defect.",
+      "The judge read the whole range b02f6772..c67f772f (one bind); the foreman records the same judgment on each commit of the range"
+    ]
+  }
+}

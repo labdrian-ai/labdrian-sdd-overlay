@@ -1,0 +1,11 @@
+{
+  "verdicts": [
+    {
+      "id": "F1",
+      "result": "not-reproduced",
+      "command": "In each of the head and base trees, I symlinked bin-<awk>/awk to /usr/bin/gawk, /usr/bin/mawk and /usr/bin/busybox. The page vf-t4q/awkprobe/wiki/evidence.md has one Evidence row whose Review cell is `1.0`. For each awk I ran: PATH=bin-<awk>:/usr/bin:/bin sh <tree>/skills/_shared/evidence/evidence.sh reviewed-each <wiki> 1 1.0 1e0; then sh evidence.sh reviewed <id> <wiki> for each id in 1, 1.0 and 1e0.",
+      "output": "Head, on gawk, mawk and busybox alike: reviewed-each printed 'no yes no'; reviewed 1 exited 1, reviewed 1.0 exited 0 and reviewed 1e0 exited 1. The two modes agree on every awk, and no awk turned the subscript `1.0` into `1`. Which awks are installed: gawk, mawk, busybox, and nawk, which resolves to /usr/bin/gawk. original-awk, bwk-awk and onetrue-awk are absent. So no installed awk disagrees, and an awk that normalises numeric-string subscripts was not available to test.",
+      "base_result": "not-reproduced"
+    }
+  ]
+}

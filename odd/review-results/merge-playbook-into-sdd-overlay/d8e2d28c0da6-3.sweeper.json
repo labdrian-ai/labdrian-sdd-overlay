@@ -1,0 +1,35 @@
+{
+  "kind": "sweeper",
+  "base": "a6927b09cefec494defdbf502f3fbbad4cd764bb",
+  "head": "d8e2d28c0da6654c5e419e5118dba153204b6cca",
+  "diff_sha256": "251f1d36e67b0eb5c35e1ebc50602a55fff9c2c30dc36d3b57f812891f60f490",
+  "sweep": "d8e2d28c0da6-1.sweep.json",
+  "commit": null,
+  "candidates": [
+    {
+      "candidate": "T1 name: Stamp",
+      "disposition": "live",
+      "evidence": "Only hit outside odd/review-results is engine/skills/project_register_plan.go:62, the verb stamp, unrelated to Classified.Stamp; rg Stamp\\( outside odd/review-results finds no code; the rest are stored records and task history."
+    },
+    {
+      "candidate": "T1 name: classifiedKey",
+      "disposition": "live",
+      "evidence": "d8e2d28c already removed it from code; the three hits are stored review records 319810f5614a-* bound to earlier commits and are not edited; outside them only task history names it. Recorded live because no sweep commit removed anything."
+    },
+    {
+      "candidate": "T1 name: memoKey",
+      "disposition": "live",
+      "evidence": "d8e2d28c already removed it from code; the hits are stored review records 34e436c2b310-4.polisher, 5276daf542e3-4.polisher, 5276daf542e3-5, not edited. Recorded live because no sweep commit removed anything."
+    },
+    {
+      "candidate": "T1 name: remembered",
+      "disposition": "live",
+      "evidence": "Common word. README.md:1573, CHANGELOG.md:88 and engine/cmd/usage.go:324 describe the review-stop Asked store, which still exists; stop_test.go and review_stop_hook_test.go refer to the same store; other hits are unrelated uses."
+    },
+    {
+      "candidate": "T2 staticcheck engine: review/app/classify_test.go: const secondReview is unused (U1000)",
+      "disposition": "live",
+      "evidence": "True at d8e2d28c, gone at 83424e3c: classify_batch_test.go uses secondReview at lines 99-104; staticcheck ./... in engine at HEAD exited 0."
+    }
+  ]
+}

@@ -1,0 +1,136 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "eecc474dba1a167740265394614869d976029f23",
+    "head": "36d5bc62df38a1964a2f0533e8fae903c384b62f",
+    "diff_sha256": "23ee043d4d85bb6c328c84ee37db2565e1c23b61804b049f0c5d813ab02d93c7",
+    "paths": [
+      "CHANGELOG.md",
+      "README.md",
+      "engine/architecture_short_name_test.go",
+      "engine/cmd/review_stop_hook.go",
+      "engine/cmd/review_stop_hook_classify_test.go",
+      "engine/cmd/review_stop_hook_docs_test.go",
+      "engine/cmd/review_stop_hook_group_unix_test.go",
+      "engine/execrunner/execrunner.go",
+      "engine/execrunner/group_other.go",
+      "engine/execrunner/group_unix.go",
+      "engine/execrunner/group_unix_test.go",
+      "engine/overlaytest/grandchild_unix.go",
+      "engine/review/app/stop.go",
+      "engine/review/candidate_test.go",
+      "engine/review/evidencesh/evidencesh.go",
+      "engine/review/evidencesh/evidencesh_test.go",
+      "engine/review/evidencesh/evidencesh_unix_test.go",
+      "engine/review/review.go",
+      "engine/shelltest/evidence_store_text_test.go",
+      "engine/skills/evidence_store_artifact_test.go",
+      "odd/tasks/merge-playbook-into-sdd-overlay.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "eecc474dba1a167740265394614869d976029f23",
+      "head": "36d5bc62df38a1964a2f0533e8fae903c384b62f",
+      "diff_sha256": "23ee043d4d85bb6c328c84ee37db2565e1c23b61804b049f0c5d813ab02d93c7"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "README.md",
+        "engine/architecture_short_name_test.go",
+        "engine/cmd/review_stop_hook.go",
+        "engine/cmd/review_stop_hook_classify_test.go",
+        "engine/cmd/review_stop_hook_docs_test.go",
+        "engine/cmd/review_stop_hook_group_unix_test.go",
+        "engine/execrunner/execrunner.go",
+        "engine/execrunner/group_other.go",
+        "engine/execrunner/group_unix.go",
+        "engine/execrunner/group_unix_test.go",
+        "engine/overlaytest/grandchild_unix.go",
+        "engine/review/app/stop.go",
+        "engine/review/candidate_test.go",
+        "engine/review/evidencesh/evidencesh.go",
+        "engine/review/evidencesh/evidencesh_test.go",
+        "engine/review/evidencesh/evidencesh_unix_test.go",
+        "engine/review/review.go",
+        "engine/shelltest/evidence_store_text_test.go",
+        "engine/skills/evidence_store_artifact_test.go",
+        "odd/tasks/merge-playbook-into-sdd-overlay.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "engine/execrunner/group_unix.go:16",
+        "severity": "SUGGESTION",
+        "claim": "The new option puts the program in its own process group, so a stop-hook run is no longer in the terminal's foreground group. If Claude Code kills the hook at its own timeout, or the hook dies, the evidence script and its children are not reached by the group signal and can outlive the hook. The only backstop is the in-process Cancel, which does not run once the hook itself is gone. The execrunner doc comment names the Ctrl-C case but not this one. I could not show a realistic trigger, because the hook's own 2s timeout is shorter than any plausible host timeout.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/execrunner/group_unix.go:16",
+          "engine/cmd/review_stop_hook.go:176"
+        ]
+      },
+      {
+        "id": "F2",
+        "location": "engine/execrunner/execrunner.go:313",
+        "severity": "SUGGESTION",
+        "claim": "The README, CHANGELOG and evidencesh docs say the run is stopped 'with every process it started'. The kill only reaches processes that stayed in the group. A descendant that calls setsid or setpgid escapes it, and a grandchild that still holds the pipes then keeps the call up to killGrace. The execrunner comment admits killGrace stays as a backstop, but the user-facing text and the doc test that pins the phrase state it without that exception.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/execrunner/execrunner.go:313",
+          "engine/cmd/review_stop_hook_docs_test.go:216"
+        ]
+      },
+      {
+        "id": "F3",
+        "location": "engine/architecture_short_name_test.go:83",
+        "severity": "SUGGESTION",
+        "claim": "The lint for the literal 12 walks only the `review` and `cmd` trees and skips test files. A copy of the cut in any other engine package, such as a new adapter, or one written as `n := 12` or `name[:shortLen]`, is not caught. The known-error check therefore covers only the two copies already found. The test's own comment concedes the variable case.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/architecture_short_name_test.go:83"
+        ]
+      },
+      {
+        "id": "F4",
+        "location": "engine/review/evidencesh/evidencesh.go:92",
+        "severity": "SUGGESTION",
+        "claim": "The new os.Stat check treats only ErrNotExist as 'not deployed'. A dangling symlink gives ErrNotExist and is reported as an undeployed store, which is plausible. A script path whose parent is not a directory gives ENOTDIR, which falls through to the run and so to an 'exited 2' error line, and that line is not the 'not deployed' line the docs promise. This case is minor and unlikely.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/review/evidencesh/evidencesh.go:92"
+        ]
+      },
+      {
+        "id": "F5",
+        "location": "engine/cmd/review_stop_hook_group_unix_test.go:277",
+        "severity": "SUGGESTION",
+        "claim": "SH15 and X1 assert wall-clock bounds (3.5s for a 2s timeout, 1.5s for a 200ms timeout) on a real process kill. They can flake on a loaded CI host. The recorded margin is about 1s (2.37 to 2.47s against 3.5s), and the test file cannot widen it on a slow machine.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/cmd/review_stop_hook_group_unix_test.go:277",
+          "engine/execrunner/group_unix_test.go:423"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the whole diff, 1062 lines, across all 21 changed paths.",
+      "Grepped the head worktree for SysProcAttr, Setpgid and Cancel. execrunner's new ownGroup is the only Setpgid or Cancel use in the shared runner. The other match, synctrigger/osproc, is a separate adapter that is not changed here, so there is no conflict with an existing SysProcAttr on Run or outputIn.",
+      "Grepped for shortLength. The only users are review.go (Short, ShortName) and names.go, so ShortName replaces both old copies and Short keeps its empty result for names under 12 characters.",
+      "Checked the opt-in default: New() leaves group false, so other callers of execrunner are unchanged, and only the stop hook's evidence runner sets it.",
+      "Checked the ESRCH to os.ErrProcessDone mapping and the build tags (unix and !unix). No defect found.",
+      "Ran no commands, because this review is read-only."
+    ]
+  }
+}

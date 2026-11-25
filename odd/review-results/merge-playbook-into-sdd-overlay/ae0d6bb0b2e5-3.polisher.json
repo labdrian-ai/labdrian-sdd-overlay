@@ -1,0 +1,17 @@
+{
+  "kind": "polisher",
+  "base": "88622bdc140f01ee3019097448532e498ddb06c6",
+  "head": "ae0d6bb0b2e579b507f8bb8844f110a02c678357",
+  "diff_sha256": "6750aedceebb22a11a6ae469928a0ad2e5a7c1b0ff0cfdd92ed9fe0403ab4b63",
+  "findings": {
+    "findings": [],
+    "evidence": [
+      "Read the full diff t4h.diff; no tests run",
+      "once records keys only for questions not yet put; classification asked once per session and result; classifyRuling runs only when stopReview gives no block and a Classified port is set; without the port Stop behaves as before",
+      "KeptResults applies the same binding rule as NextUnreviewed and the same kept-finding rule as Findings via keptFindings",
+      "Classified, KeptResult and Ruling.Classify are new and unconsumed; the Findings refactor leaves output unchanged",
+      "A port error returns an error with no block; unreadable or unbound results are skipped, as documented and tested by SH5",
+      "The judge was given the range 88622bdc..d8f981b1 (both commits); the foreman records the same judgment on each commit, since polisher records are per commit"
+    ]
+  }
+}

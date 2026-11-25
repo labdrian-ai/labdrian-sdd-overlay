@@ -1,0 +1,18 @@
+{
+  "kind": "polisher",
+  "base": "665b99f747e245c97cad19b45e2ea9f144bf2395",
+  "head": "8ee5ac95b287935866a0d837bb0eb0acb945e73b",
+  "diff_sha256": "7e6e3ff2bc17b02f7ed51c63e06bf3f5e931e9afbdbee54e5f0ed9a2b501b183",
+  "findings": {
+    "findings": [],
+    "evidence": [
+      "Read the whole diff, /tmp/claude-1000/-home-labdrian-labdrian-sdd-overlay/45673332-5a42-429f-889a-50c9d8bcb1fc/scratchpad/t4bc.diff, lines 1-768.",
+      "Read classify.md steps 1-10 against skills/_shared/evidence/evidence.sh at head. A check with no page exits 0, which matches step 8 creating the empty page. `reviewed` exits 1 with no page, and the check, index and count exits match the exits steps 3-5 and 9 name.",
+      "Read the deployed agents/classifier.md frontmatter, which has model: sonnet and tools Read, Grep, Glob. roles.go lists the classifier in claudeOnlyRoles, so the Mid-line test has a role to match.",
+      "Checked that engine/cmd/review_findings.go accepts --feature and --stored, the flags step 1 uses.",
+      "Read the refusal-walk test and the checkScript change. A dropped probe close error only lets the run start, and sh's exit 2 still surfaces as an error. I found no user-impacting defect.",
+      "Not run: no tests or commands, because I am read-only. The builder's pass results in L96/L97 were not re-verified.",
+      "The judge read the whole range ee092d9e..8ee5ac95 (one bind); the foreman records the same judgment on each commit of the range"
+    ]
+  }
+}

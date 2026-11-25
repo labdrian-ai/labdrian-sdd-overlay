@@ -1,0 +1,95 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "88622bdc140f01ee3019097448532e498ddb06c6",
+    "head": "d8f981b110fc8f45bba9e60ca9c5e3f6e5972907",
+    "diff_sha256": "f8d3142a4db00dc2f4810e513b626e49e81593a834ba3bdf92d2b9b28f5ca164",
+    "paths": [
+      "engine/review/app/classify.go",
+      "engine/review/app/classify_test.go",
+      "engine/review/app/findings.go",
+      "engine/review/app/service.go",
+      "engine/review/app/stop.go",
+      "odd/tasks/merge-playbook-into-sdd-overlay.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "88622bdc140f01ee3019097448532e498ddb06c6",
+      "head": "d8f981b110fc8f45bba9e60ca9c5e3f6e5972907",
+      "diff_sha256": "f8d3142a4db00dc2f4810e513b626e49e81593a834ba3bdf92d2b9b28f5ca164"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/review/app/classify.go",
+        "engine/review/app/classify_test.go",
+        "engine/review/app/findings.go",
+        "engine/review/app/service.go",
+        "engine/review/app/stop.go",
+        "odd/tasks/merge-playbook-into-sdd-overlay.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "engine/cmd/review_stop_hook.go:109",
+        "claim": "The stop-hook consumer of Ruling builds its block text from r.Question, and this change adds a Block ruling that leaves Question empty and sets only Classify. No code in the diff teaches the consumer about Classify. Once WithClassified is wired (T4w), a classification block would reach the consumer with an empty or branch-less question text. This is latent, because nothing wires WithClassified in this commit. The Ruling contract that cmd consumes changed, though, and no test in this diff covers the consumer side.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/review/app/classify.go:159",
+          "engine/cmd/review_stop_hook.go:109",
+          "engine/review/app/stop.go:31"
+        ],
+        "severity": "SUGGESTION"
+      },
+      {
+        "id": "F2",
+        "location": "engine/review/app/classify.go:89",
+        "claim": "KeptResults and classifyRuling swallow every error from reviewedResult and keptOf (unreadable file, corrupt verdict, a failing verdictsOf or store read) with `continue`. A result with an unreadable verdict is then never asked for. It is also never reported, so the learning loop drops evidence without a signal. The doc comment says this is intended, but the same function returns errors for other store failures, so the policy is inconsistent. A transient read error or git diff failure hides a result for that stop only. A corrupt verdict file hides it permanently.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/review/app/classify.go:89"
+        ],
+        "severity": "WARNING"
+      },
+      {
+        "id": "F3",
+        "location": "engine/review/app/classify.go:145",
+        "claim": "On every Stop with no review question, classifyRuling re-walks every stored result of every branch commit. That means a git diff bind per result (reviewedResult), a re-read of the result and verdict (keptOf), and one Classified.Classified call per result. In T4w that call is a shell script run. The Has filter drops only results already asked in this session. In each new session every result that is already classified still runs the script once, and classified results are never remembered. Stop cost therefore grows with branch size and session count.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/review/app/classify.go:85-100",
+          "engine/review/app/classify.go:145-161"
+        ],
+        "severity": "SUGGESTION"
+      },
+      {
+        "id": "F4",
+        "location": "engine/review/app/classify.go:165",
+        "claim": "classifyRuling goes through `once` with every lacking key. If a key was added to the session after the Has filter but before `once` (concurrent stops of one session), or Add fails midway, the ruling still names all lacking results, not only the newly recorded ones. A partial Add failure returns an error and no block, and the keys already added stay recorded. Those results are then never asked for in that session, and their question is lost. This is the same behavior as the review keys in `once`, but here it silently drops the classification question.",
+        "evidence_class": "inferential",
+        "causal_disposition": "behavior-activated",
+        "proof_refs": [
+          "engine/review/app/stop.go:108-128",
+          "engine/review/app/classify.go:165"
+        ],
+        "severity": "SUGGESTION"
+      }
+    ],
+    "evidence": [
+      "Read the full diff of 6 paths",
+      "Read engine/review/app/stop.go in the worktree (Stop, stopReview, once)",
+      "Searched the worktree engine/ for consumers of Ruling, Question and NoDefault; found engine/cmd/review_stop_hook.go:109 reading r.Question",
+      "Ran no commands; no tests executed",
+      "The reviewer gave no severity; the foreman assigned F2 WARNING (same defect as the main review F1) and SUGGESTION to F1, F3 and F4 (latent until T4w, load, partial Add)"
+    ]
+  }
+}

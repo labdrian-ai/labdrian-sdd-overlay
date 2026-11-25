@@ -1,0 +1,89 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "88622bdc140f01ee3019097448532e498ddb06c6",
+    "head": "d8f981b110fc8f45bba9e60ca9c5e3f6e5972907",
+    "diff_sha256": "f8d3142a4db00dc2f4810e513b626e49e81593a834ba3bdf92d2b9b28f5ca164",
+    "paths": [
+      "engine/review/app/classify.go",
+      "engine/review/app/classify_test.go",
+      "engine/review/app/findings.go",
+      "engine/review/app/service.go",
+      "engine/review/app/stop.go",
+      "odd/tasks/merge-playbook-into-sdd-overlay.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "hunt"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "88622bdc140f01ee3019097448532e498ddb06c6",
+      "head": "d8f981b110fc8f45bba9e60ca9c5e3f6e5972907",
+      "diff_sha256": "f8d3142a4db00dc2f4810e513b626e49e81593a834ba3bdf92d2b9b28f5ca164"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/review/app/classify.go",
+        "engine/review/app/classify_test.go",
+        "engine/review/app/findings.go",
+        "engine/review/app/service.go",
+        "engine/review/app/stop.go",
+        "odd/tasks/merge-playbook-into-sdd-overlay.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "engine/review/app/classify.go:89",
+        "severity": "WARNING",
+        "claim": "keptResultsOf drops every error from reviewedResult (line 89) and keptOf (line 93) with a bare continue. That includes git failures inside s.bind and store read errors other than not-found, such as a verdict file that cannot be read for lack of permission. The doc comment at classify.go:51-52 says 'What git or the store cannot tell is an error', but here a transient git or I/O failure becomes 'no kept findings'. The stop hook then does not block, and the session gets no classification question for that result. When the same skip happens in links (NextUnreviewed), the commit is asked for review again, so that path fails loud. Here it fails silent and the learning loop loses the result without any signal. Concrete case: git diff fails for one commit during s.bind, Stop returns Ruling{} with a nil error, and that result's kept WARNING is never asked for. L55 asked for this skip ('as links skips it'), so this finding concerns the silent loss and the contradiction with the doc comment.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/review/app/classify.go:50-52 (doc: git/store errors are errors)",
+          "engine/review/app/classify.go:89-95 (err != nil -> continue)",
+          "engine/review/app/check.go:168-178 (reviewedResult returns s.bind and verdictsOf errors)",
+          "engine/review/app/unreviewed.go:135-152 (links skip makes NextUnreviewed ask, i.e. fail loud)"
+        ]
+      },
+      {
+        "id": "F2",
+        "location": "engine/review/app/classify_test.go:318",
+        "severity": "SUGGESTION",
+        "claim": "Several error branches of the new code have no test, so a mutation that turns them into success would survive. (1) Has failing inside classifyRuling (classify.go:147-150). In classifyWorld stopReview puts no review question and never calls Has, so this is the first Has call and fakeAsked.fail[\"Has\"] would reach it. A mutation such as 'before, _ := s.asked.Has(...)' would call the port and block anyway. (2) KeptResults' Features, Standing and Names errors (classify.go:63-66, 70-73, 79-82) through the public KeptResults. A mutation that returns nil, nil on a Standing error is not caught. (3) Add failing in once for classify keys. SH5 covers only the error from the port.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/review/app/classify_test.go:316-328 (only the port error is tested)",
+          "engine/review/app/stop_test.go:27-42 (fakeAsked supports fail[\"Has\"]/fail[\"Add\"], unused by classify_test.go)"
+        ]
+      },
+      {
+        "id": "F3",
+        "location": "engine/review/app/classify.go:154",
+        "severity": "SUGGESTION",
+        "claim": "A result found classified is never remembered: SH3 pins that nothing is put. classifyRuling therefore asks the Classified port again, at every stop of every session, for every classified result of the branch that has kept findings. Once T4w wires the adapter, each such call runs the deployed evidence.sh once per result. On a long branch with many reviewed and classified commits, every stop runs N script processes serially before it returns. The cost grows with branch history, not with new work. The design accepts this, but it is a load cost on the hook's hot path. One mitigation is to record a separate session key for results found classified, so the port is skipped for them.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/review/app/classify.go:145-161 (port called for each result not yet asked; classified ones are not recorded)",
+          "engine/review/app/classify_test.go:280-291 (SH3 asserts nothing is remembered)"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full diff /tmp/claude-1000/-home-labdrian-labdrian-sdd-overlay/45673332-5a42-429f-889a-50c9d8bcb1fc/scratchpad/t4h.diff (all 6 paths)",
+      "Read the worktree's engine/review/app/stop.go in full: Stop/stopReview/once. The new early return keeps the old behaviour when s.classified == nil",
+      "Read engine/review/app/check.go:140-204 (reviewedResult, verdictsOf) and unreviewed.go:50-153 (NextUnreviewed, links) to compare the error handling of the skips",
+      "Grepped engine/ for the consumers of Ruling and Stop: only engine/cmd/review_stop_hook.go:96. It does not call WithClassified, so the hook's behaviour is unchanged in this candidate",
+      "engine/architecture_test.go: review/app is Application, review and sha256hex are Domain. classify.go imports only those, with no adapter code. The port is declared in app",
+      "The Asked key is 'classify-' plus 16 hex digits = 25 bytes of [a-z0-9-], which matches L55/L64 and the test's independent sha256Of in fakes_test.go:603",
+      "Compared the code with the T4h design at odd/tasks/merge-playbook-into-sdd-overlay.md:2611-2616 (L55) and the builder record L66: the port signature, KeptResult, the Has filter before the port, once with the keys, and no cut-off marker (L58) all match",
+      "Did not run any build, test or mutation (reviewer contract: never run)"
+    ]
+  }
+}

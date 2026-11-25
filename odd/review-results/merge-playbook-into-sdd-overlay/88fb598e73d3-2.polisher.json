@@ -1,0 +1,17 @@
+{
+  "kind": "polisher",
+  "base": "255abff5451e43c8b46e6743bc162d69e2d38cba",
+  "head": "88fb598e73d339f72e439792edfa96d1b2dd4041",
+  "diff_sha256": "392b616593eee7c8968f1ca6b7ce4eb20f4903001807aa05393a445110e118bb",
+  "findings": {
+    "findings": [],
+    "evidence": [
+      "Read the full diff t4q.diff.",
+      "Read evidence.sh lines 112-370 in /home/labdrian/labdrian-sdd-overlay-worktrees/review-88fb598e73d3. The only ENVIRON read, line 143, now has the `\"\"` suffix. The `want` comparisons at lines 185 and 222 and the `wanted`/`hit` subscripts are therefore text comparisons.",
+      "Both reviewed and reviewed-each reach the awk_cannot_answer exit-4 line through the same path. That line and the page_state line now print \"$mode\" (lines 251, 259, 261). The updated header and PROVENANCE.md match the code.",
+      "In reviewed-each, an awk that fails to start on an oversized environment string gives a non-zero rc. The script then exits 4 with the one awk-failed line. awk's own stderr is dropped by `2>/dev/null` at line 352, and nothing is printed to stdout.",
+      "The lint changes (a whole-match prose list for task-document identifiers, a here-document report in shellCalls, the ENVIRON lint) were checked against the diff and are self-consistent. No user-impacting defect found.",
+      "Not run: no shell tool was available, so the tests were not run and the claimed RED/GREEN results are unconfirmed."
+    ]
+  }
+}

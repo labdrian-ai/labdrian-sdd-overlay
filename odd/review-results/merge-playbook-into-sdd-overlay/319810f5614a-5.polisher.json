@@ -1,0 +1,17 @@
+{
+  "kind": "polisher",
+  "base": "3a141be270b83f1d6d246bea0395660381267d3c",
+  "head": "319810f5614a97c4e93a89c45c37bcc515c52077",
+  "diff_sha256": "dd72d0144f3218829645c6d56c1ee61c65dbb76be6d4c91d4dd13c901d5ddfe6",
+  "findings": {
+    "findings": [],
+    "evidence": [
+      "Read the full diff t4j.diff, stop.go and classify.go:100-152; once records only missing keys and blocks with the whole lacking list (J7)",
+      "A Stop error is one stderr line with exit 0 and no block (review_stop_hook.go:60-139); no production caller of WithClassified until T4w",
+      "classified-<16 hex> is 27 bytes, accepted by fsstore/asked.go checkKey, no collision with classify- or review keys",
+      "heldResult keeps reviewedResult wrapping and binds=false; Check, CheckChain and NextUnreviewed unchanged",
+      "L67 records the fail-open and per-stop port cost as decided risks",
+      "Not run: go test, vet, mutations"
+    ]
+  }
+}

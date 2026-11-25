@@ -1,0 +1,18 @@
+{
+  "verdicts": [
+    {
+      "id": "F1",
+      "result": "reproduced",
+      "command": "In the scratch copies head-f1 and base-f1, evidence.sh gets two added lines inside the BEGIN block, right after the pinned split line: `    if (each) { w = want` and `    n = split(w, ids2, \"\\n\") }` (perl -0pi). Then: sh -n {head-f1,base-f1}/skills/_shared/evidence/evidence.sh; cd {head-f1,base-f1,head,base}/engine && HOME=$(mktemp -d) go test -count=1 -run 'TestEvidenceStore_MakesSplitIdentifiersText|TestSplitPinProblemHoldsTheWholeStatement' -v ./skills/. Control: in head-f1ctl, the `ids[i] = ids[i] \"\"; ` text is removed from the pinned line and TestEvidenceStore_MakesSplitIdentifiersText is run.",
+      "output": "sh -n head-f1: rc=0. sh -n base-f1: rc=0. head-f1: --- PASS: TestEvidenceStore_MakesSplitIdentifiersText, --- PASS: TestSplitPinProblemHoldsTheWholeStatement, ok engine/skills 0.008s. So the second split, through the alias, is not caught. Unmodified head and base also pass. Control head-f1ctl: FAIL at evidence_store_artifact_test.go:519 'evidence.sh: the line is \"if (each) { nid = split(want, ids, \\\"\\\\n\\\"); for (i = 1; i <= nid; i++) { wanted[ids[i]] = 1 } }\", want ...'. This shows the test reads the probe copy's evidence.sh.",
+      "base_result": "reproduced"
+    },
+    {
+      "id": "F2",
+      "result": "reproduced",
+      "command": "In head-f2, evidence.sh line 53 is replaced by `#   together to ARG_MAX (getconf ARG_MAX, which follows the` and `#   stack limit; measured with glibc: a quarter of the`. Line 54 stays `#   stack limit, kept between 128 KiB and 6 MiB). Past`. In base-f2, `(getconf ARG_MAX, which follows the stack limit). Past` is wrapped to `(getconf ARG_MAX, which follows the` / `#   stack limit). Past`. Control head-f2ctl puts the same old claim on one line. Then: cd {head-f2,base-f2,head-f2ctl,head,base}/engine && HOME=$(mktemp -d) go test -count=1 -run 'TestEvidenceStore_NamesTheEnvironmentBoundInPages' -v ./skills/",
+      "output": "head-f2: --- PASS: TestEvidenceStore_NamesTheEnvironmentBoundInPages, ok 0.003s. The wrapped old claim is not caught. head-f2ctl (one line): FAIL at evidence_store_artifact_test.go:565 'evidence.sh says ARG_MAX follows the stack limit, where the text may state only what was measured (d0108e5f1245-5 F2)'. base-f2: --- PASS, ok 0.003s. Unmodified head and base also pass. Base has no 'follows the stack limit' pin at all, and its unmodified evidence.sh:53 already holds the old claim on one line. So base misses the claim because it has no check for it, not because a check can be split by a line break. That gap is what the new pin narrowed.",
+      "base_result": "reproduced"
+    }
+  ]
+}

@@ -1,0 +1,100 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "239b17a699c443f2e2683a3d91d103c32f584f12",
+    "head": "c0b641e0eb82a3936b4952c8239a9bb3f318c39b",
+    "diff_sha256": "a28b1c93fed44e7a994d3215e430acfbc3eda09aa52115983ea17f6522cdda06",
+    "paths": [
+      "agents/classifier.md",
+      "engine/agentgen/agentgen.go",
+      "engine/agentgen/claude.go",
+      "engine/agentgen/claude_test.go",
+      "engine/agentgen/messages_pin_test.go",
+      "engine/agentgen/problem_line_internal_test.go",
+      "engine/agentgen/roles.go",
+      "engine/skills/classifier_artifact_test.go",
+      "odd/tasks/merge-playbook-into-sdd-overlay.md",
+      "roles/classifier/body.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "hunt",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "239b17a699c443f2e2683a3d91d103c32f584f12",
+      "head": "c0b641e0eb82a3936b4952c8239a9bb3f318c39b",
+      "diff_sha256": "a28b1c93fed44e7a994d3215e430acfbc3eda09aa52115983ea17f6522cdda06"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "agents/classifier.md",
+        "engine/agentgen/agentgen.go",
+        "engine/agentgen/claude.go",
+        "engine/agentgen/claude_test.go",
+        "engine/agentgen/messages_pin_test.go",
+        "engine/agentgen/problem_line_internal_test.go",
+        "engine/agentgen/roles.go",
+        "engine/skills/classifier_artifact_test.go",
+        "odd/tasks/merge-playbook-into-sdd-overlay.md",
+        "roles/classifier/body.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "engine/agentgen/claude.go:44",
+        "severity": "SUGGESTION",
+        "claim": "ClaudeInstructions checks only the first comment line against noticeHeader(); later # lines pass with any text, and a notice role file with no comments at all is accepted, so a classifier file that lost or altered its license text passes; the doc still says exact inverse; no test covers it. Narrowed by this change; remaining gap pre-existing.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "pre-existing",
+        "proof_refs": [
+          "engine/agentgen/claude.go:22",
+          "engine/agentgen/claude.go:44",
+          "engine/agentgen/claude.go:11",
+          "engine/agentgen/claude_test.go:68"
+        ]
+      },
+      {
+        "id": "F2",
+        "location": "engine/agentgen/agentgen.go:57",
+        "severity": "SUGGESTION",
+        "claim": "errEmptyNotice says the file is empty, but build also returns it for a blank-space notice, so Generate prints a false message for a file with bytes while Check words it correctly as has no text.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/agentgen/agentgen.go:57",
+          "engine/agentgen/agentgen.go:89",
+          "engine/agentgen/messages_pin_test.go:175",
+          "engine/agentgen/messages_pin_test.go:233"
+        ]
+      },
+      {
+        "id": "F3",
+        "location": "engine/agentgen/messages_pin_test.go:236",
+        "severity": "SUGGESTION",
+        "claim": "TestCheckNamesAnEmptyNotice says Generate writes nothing but asserts only that agents/classifier.md is absent; a regression writing other roles before refusing would pass.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/agentgen/messages_pin_test.go:211",
+          "engine/agentgen/messages_pin_test.go:236",
+          "engine/agentgen/agentgen.go:205"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the whole diff (10 paths) and the readability row",
+      "-3 F1, -5 F3: comment lines refused for roles without notice and a first line different from noticeHeader(); resolved, remaining gap F1",
+      "-3 F2: empty or blank notice refused; resolved",
+      "-5 F1: code span in body, agent file and K1; resolved",
+      "-5 F2: missing wording only for reading verbs; resolved",
+      "ClaudeInstructions, noticeRole, noticeHeader used only in engine/agentgen",
+      "Not run: go test, gadu-generate --check, gofmt, go vet"
+    ]
+  }
+}
