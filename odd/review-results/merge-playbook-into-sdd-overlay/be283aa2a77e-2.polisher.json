@@ -1,0 +1,16 @@
+{
+  "kind": "polisher",
+  "base": "a5c816569012d1646581f8f0a18ba1419f321072",
+  "head": "be283aa2a77ed81e375bbf8dbc60bb33786d7902",
+  "diff_sha256": "30b14207ed636c258502a6ead03e506fd33f697e4e4a347a227248758381f426",
+  "findings": {
+    "findings": [],
+    "evidence": [
+      "Read the whole diff at /tmp/claude-1000/-home-labdrian-labdrian-sdd-overlay/45673332-5a42-429f-889a-50c9d8bcb1fc/scratchpad/t4ec.diff, in two reads covering lines 1-214.",
+      "Checked the head worktree /home/labdrian/labdrian-sdd-overlay-worktrees/review-be283aa2a77e. engine/review/app/verify.go:46-47 and :110-111 show that a result has one verdict and a second `review verify` returns ErrAlreadyVerified. That supports the claim 'review verify stores no second verdict'.",
+      "engine/review/check.go:119-145 (Clearance) walks every stored result of the head. A result that is not clear and does not block yields ErrNotClear 'findings not checked <ids>'. That supports 'review check refuses the head while the held result is stored, naming the findings not checked'. The same function shows that a newer result does not lift the refusal, and the texts do not say it does.",
+      "engine/cmd/review_findings.go:19-21 and :71-72 show the `unverified` member is always present. That matches step 1 of classify.md, which stops, not blocked, on a non-empty `unverified`.",
+      "The changes are texts, Go doc comments, a manifest approval hash and two tests. The test wording agrees with the new text in README, CHANGELOG, usage.sh and classify.md. No false stated fact that leads to a wrong action was found. I ran no tests."
+    ]
+  }
+}

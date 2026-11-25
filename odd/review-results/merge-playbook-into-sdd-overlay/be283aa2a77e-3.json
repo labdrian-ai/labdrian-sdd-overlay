@@ -1,0 +1,73 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "a5c816569012d1646581f8f0a18ba1419f321072",
+    "head": "be283aa2a77ed81e375bbf8dbc60bb33786d7902",
+    "diff_sha256": "30b14207ed636c258502a6ead03e506fd33f697e4e4a347a227248758381f426",
+    "paths": [
+      "CHANGELOG.md",
+      "README.md",
+      "bin/lib/usage.sh",
+      "engine/cmd/review_stop_hook_docs_test.go",
+      "engine/review/app/classify.go",
+      "engine/review/app/findings.go",
+      "engine/skills/classify_step_artifact_test.go",
+      "odd/tasks/merge-playbook-into-sdd-overlay.md",
+      "skills/role-chain/.approval.json",
+      "skills/role-chain/references/classify.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "hunt"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "a5c816569012d1646581f8f0a18ba1419f321072",
+      "head": "be283aa2a77ed81e375bbf8dbc60bb33786d7902",
+      "diff_sha256": "30b14207ed636c258502a6ead03e506fd33f697e4e4a347a227248758381f426"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "README.md",
+        "bin/lib/usage.sh",
+        "engine/cmd/review_stop_hook_docs_test.go",
+        "engine/review/app/classify.go",
+        "engine/review/app/findings.go",
+        "engine/skills/classify_step_artifact_test.go",
+        "odd/tasks/merge-playbook-into-sdd-overlay.md",
+        "skills/role-chain/.approval.json",
+        "skills/role-chain/references/classify.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "skills/role-chain/references/classify.md:5",
+        "severity": "SUGGESTION",
+        "claim": "Step 1 and the four stop-hook texts point to a new review result of the same head as the only way the check runs again. They also say correctly that `review check` refuses the head while the held result is stored. Clearance requires every stored result of the head to be clear, so a clear new result does not clear the head. None of the texts says what does end the refusal: a new head, or the owner removing or deciding about the held result. The F1 claim of 19d59ac19897-3 named 'a new -<n> or the owner'. The fix keeps only the first, so an agent can still run a new review of the same head expecting it to make the head deliverable, and then hit the same refusal. No stated fact is false, so this stays a SUGGESTION.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "skills/role-chain/references/classify.md:5",
+          "engine/review/check.go:133",
+          "engine/review/app/verify.go:111"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the whole diff t4ec.diff (211 lines, 10 paths), including the L107 entry and the T4e-c segment of the T4 line.",
+      "Closure of 19d59ac19897-3 F1: the old instruction 'A stored `not-run` keeps it waiting: run the check again' is gone. Step 1 now says `review verify` refuses a second verdict and the check runs again only in a new review result of the same head. verify.go:106-111 confirms this: Create on an existing verdict returns ErrExists, which becomes ErrAlreadyVerified, and nothing is stored. A second `review record` on the same head is not refused (app has no such error), and its verify is not ErrCorrectionSpent, because round.go:14 IsCorrection requires another head. F1 is closed.",
+      "Closure of the 19d59ac19897-2.polisher SUGGESTION: the README entry and section, the CHANGELOG and usage.sh replace 'for it' with 'for each check it needs'. This matches decide.go:102-112 (for an unknown disposition the base check must also be reproduced or not-reproduced, unless head is not-reproduced) and decide.go:114-120. The docs test now fails on the stale phrase 'not-reproduced for it'. The polisher SUGGESTION is closed.",
+      "Truth of 'holds it for good': classify.go:96 skips any result where unverifiedOf is non-empty, and a stored not-run on a needed check stays fateUnchecked (decide.go:111, :120) with no second verdict possible (verify.go:111). It is true while the files stay stored.",
+      "Truth of 'review check refuses the head while the held result is stored': Clearance (check.go:128-145) iterates every result of the head and returns ErrNotClear 'findings not checked' for a non-clear, non-blocking one, unless another result blocks (ErrBlocked, check.go:137). This is consistent with the texts.",
+      "findings.go:37-39 and classify.go:45-48 doc comments match the same code paths.",
+      "R14 (classify_step_artifact_test.go) and TestTextsOfTheReviewStopHookSayAHeldResultWaitsForItsCheck check for the new wants ('for good', 'a new review result', 'each check it needs', '`review check` refuses the head') and the stales. The diff's new step 1 sentence contains each R14 want, and none of the stales ('waits for its verdict', 'keeps it waiting', 'run the check again').",
+      "skills/role-chain/.approval.json: only sha256 and approved_at change. I did not recompute the hash.",
+      "No commands were run (no build, test or hash). Everything here comes from reading files."
+    ]
+  }
+}
