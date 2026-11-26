@@ -6,9 +6,9 @@
 
 ## Decision and authority boundary
 
-Use the stable **Phase 0–11** register below as the canonical standalone-product work register; phase numbers are stable IDs, and after Phase 9 the order of work is the one under [Sequencing and completion](#sequencing-and-completion), not the numbering. Product packages **P0–P8** are source aliases, not a second schedule; historical SDD IDs remain provenance or distinct linked work. The two ODD task ledgers retain detailed execution checks and evidence but do not define separate roadmap outcomes. The supporting product narrative is [Standalone product roadmap rationale and crosswalk](../../docs/architecture/standalone-product-roadmap.md); the entry guide is [Standalone product start here](../../docs/architecture/standalone-product-start-here.md).
+Use the stable **Phase 0–11** register below as the canonical standalone-product work register; phase numbers are stable IDs, and after Phase 9 the order of work is the one under [Sequencing and completion](#sequencing-and-completion), not the numbering. Product packages **P0–P8** are source aliases, not a second schedule; historical SDD IDs remain provenance or distinct linked work. The two ODD task ledgers retain detailed execution checks and evidence but do not define separate roadmap outcomes. The supporting product narrative is Standalone product roadmap rationale and crosswalk (historical, removed 2026-11-25; kept in git); the entry guide is Standalone product start here (historical, removed 2026-11-25; kept in git).
 
-`openspec/project/roadmap.md` is a generated **historical SDD mirror, v7**, not an active standalone-product roadmap. Its stated canonical Engram source is observation #2067; the supplied current context identifies that source as **v11 with eight appendices**. Do not regenerate or edit the historical mirror in this reconciliation. The v7 mirror and this supplied v11 locator disagree in version; v11's detailed rows/appendices were not independently available for verification here. Preserve historical SDD IDs and treat any status not corroborated by current task evidence as `unverified`.
+`openspec/project/roadmap.md` (removed 2026-11-25; kept in git) was a generated **historical SDD mirror, v7**, not an active standalone-product roadmap. Its stated canonical Engram source is observation #2067; the supplied current context identifies that source as **v11 with eight appendices**. Do not regenerate or edit the historical mirror in this reconciliation. The v7 mirror and this supplied v11 locator disagree in version; v11's detailed rows/appendices were not independently available for verification here. Preserve historical SDD IDs and treat any status not corroborated by current task evidence as `unverified`.
 
 No roadmap status grants implementation, remote-operation, review, delivery, or release authority. Statuses below describe available evidence only. `unverified` means the outcome's current implementation/acceptance state was not checked. A title match is not completion evidence.
 
@@ -98,8 +98,8 @@ A work item is complete only when its own acceptance evidence, known limitations
 
 ## References
 
-- [Product rationale and P0–P8 source requirements](../../docs/architecture/standalone-product-roadmap.md)
-- [Fresh-session entry and recovery guide](../../docs/architecture/standalone-product-start-here.md)
+- Product rationale and P0–P8 source requirements, `docs/architecture/standalone-product-roadmap.md` (historical, removed 2026-11-25; kept in git)
+- Fresh-session entry and recovery guide, `docs/architecture/standalone-product-start-here.md` (historical, removed 2026-11-25; kept in git)
 - [Phase 1 execution evidence ledger](../../odd/tasks/standalone-goal-contract.md)
 - [Phase 2 execution ledger](../../odd/tasks/workflow-profile-contract.md)
-- [Historical generated SDD roadmap mirror, v7](../project/roadmap.md) — history/reference only; canonical Engram locator #2067, supplied v11/eight appendices.
+- Historical generated SDD roadmap mirror, v7, `openspec/project/roadmap.md` (historical, removed 2026-11-25; kept in git) — history/reference only; canonical Engram locator #2067, supplied v11/eight appendices.
